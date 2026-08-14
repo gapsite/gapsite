@@ -1,0 +1,6 @@
+{
+  "name": "TKDN & Licensing Consulting CRM",
+  "description": "Internal management dashboard for tracking consulting projects, licensing status, TKDN certification pipelines, financial income and expense ledger, document uploads, and team job dispositions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
