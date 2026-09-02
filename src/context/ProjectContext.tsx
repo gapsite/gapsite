@@ -878,9 +878,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [taxObligations, setTaxObligations] = useState<TaxObligation[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_TAX_OBLIGATIONS);
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
@@ -1105,6 +1105,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setTransactionCategories(payload);
           } else if (type === 'PAYMENT_CHANNELS' && Array.isArray(payload)) {
             setPaymentChannels(payload);
+          } else if (type === 'BANK_LOANS' && Array.isArray(payload)) {
+            setBankLoans(payload);
+          } else if (type === 'COMPANY_CAPITAL' && payload) {
+            setCompanyCapital(payload);
+          } else if (type === 'TAX_OBLIGATIONS' && Array.isArray(payload)) {
+            setTaxObligations(payload);
           } else if (type === 'CONSULTING_SERVICES' && Array.isArray(payload)) {
             setConsultingServices(payload);
           } else if (type === 'ROLE_DEFINITIONS' && payload) {
@@ -1156,6 +1162,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_BANK_LOANS) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setBankLoans(parsed);
+        } else if (e.key === STORAGE_KEY_COMPANY_CAPITAL) {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed) setCompanyCapital(parsed);
+        } else if (e.key === STORAGE_KEY_TAX_OBLIGATIONS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setTaxObligations(parsed);
         } else if (e.key === STORAGE_KEY_CONSULTING_SERVICES) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setConsultingServices(parsed);
@@ -1375,7 +1387,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       INITIAL_TRANSACTIONS,
       INITIAL_TEAM_MEMBERS,
       DEFAULT_TRANSACTION_CATEGORIES,
-      DEFAULT_PAYMENT_CHANNELS
+      DEFAULT_PAYMENT_CHANNELS,
+      INITIAL_TAX_OBLIGATIONS,
+      [],
+      DEFAULT_COMPANY_CAPITAL
     );
 
     const unsubProjects = subscribeToProjects((remoteProjects) => {
@@ -1570,6 +1585,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubCompanyCapital = subscribeToSettings('company_capital', (data) => {
+      if (data && typeof data === 'object') {
+        setCompanyCapital((prev) => ({ ...prev, ...data }));
+      }
+    });
+
+    const unsubTaxObligations = subscribeToSettings('tax_obligations', (data) => {
+      if (Array.isArray(data)) {
+        setTaxObligations(data);
+      }
+    });
+
     return () => {
       unsubProjects();
       unsubDeletedUsers();
@@ -1584,6 +1611,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubPaymentChannels();
       unsubTransactionCategories();
       unsubBankLoans();
+      unsubCompanyCapital();
+      unsubTaxObligations();
     };
   }, []);
 
@@ -1602,13 +1631,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveSettingsToFirestore('role_definitions', roleDefinitions),
         saveSettingsToFirestore('payment_channels', paymentChannels),
         saveSettingsToFirestore('transaction_categories', transactionCategories),
+        saveSettingsToFirestore('bank_loans', bankLoans),
+        saveSettingsToFirestore('company_capital', companyCapital),
+        saveSettingsToFirestore('tax_obligations', taxObligations),
       ]);
     } catch (err) {
       console.error('Firestore bulk sync error:', err);
     } finally {
       setIsSyncingWithFirestore(false);
     }
-  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories]);
+  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories, bankLoans, companyCapital, taxObligations]);
 
   // Auth Functions
   const loginWithGoogle = async (): Promise<{ success: boolean; message?: string }> => {
@@ -3832,6 +3864,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser.username || currentUser.name || 'Master Admin',
       };
+      broadcastLiveDataUpdate('COMPANY_CAPITAL', updated);
       saveSettingsToFirestore('company_capital', updated);
       return updated;
     });
@@ -3848,6 +3881,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     setCompanyCapital(DEFAULT_COMPANY_CAPITAL);
+    broadcastLiveDataUpdate('COMPANY_CAPITAL', DEFAULT_COMPANY_CAPITAL);
     saveSettingsToFirestore('company_capital', DEFAULT_COMPANY_CAPITAL);
     return {
       success: true,

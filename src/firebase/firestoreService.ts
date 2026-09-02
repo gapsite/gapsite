@@ -359,7 +359,7 @@ export const subscribeToSettings = (key: string, onUpdate: (data: any) => void) 
     (snapshot) => {
       if (snapshot.exists()) {
         const payload = snapshot.data();
-        if (payload && payload.data) {
+        if (payload && payload.data !== undefined) {
           onUpdate(payload.data);
         }
       }
@@ -380,7 +380,10 @@ export const ensureInitialFirestoreSeed = async (
   defaultTransactions?: FinancialTransaction[],
   defaultTeamMembers?: TeamMember[],
   defaultTransactionCategories?: any[],
-  defaultPaymentChannels?: any[]
+  defaultPaymentChannels?: any[],
+  defaultTaxObligations?: any[],
+  defaultBankLoans?: any[],
+  defaultCompanyCapital?: any
 ): Promise<void> => {
   try {
     // 1. Ensure master admin root user exists in Firestore
@@ -493,6 +496,33 @@ export const ensureInitialFirestoreSeed = async (
       const paySnap = await getDoc(payRef);
       if (!paySnap.exists()) {
         await setDoc(payRef, sanitizeForFirestore({ data: defaultPaymentChannels, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 12. Ensure tax obligations exist in settings if not present
+    if (defaultTaxObligations !== undefined && defaultTaxObligations.length > 0) {
+      const taxRef = doc(db, FirestoreCollections.SETTINGS, 'tax_obligations');
+      const taxSnap = await getDoc(taxRef);
+      if (!taxSnap.exists()) {
+        await setDoc(taxRef, sanitizeForFirestore({ data: defaultTaxObligations, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 13. Ensure bank loans exist in settings if not present
+    if (defaultBankLoans !== undefined && defaultBankLoans.length > 0) {
+      const loanRef = doc(db, FirestoreCollections.SETTINGS, 'bank_loans');
+      const loanSnap = await getDoc(loanRef);
+      if (!loanSnap.exists()) {
+        await setDoc(loanRef, sanitizeForFirestore({ data: defaultBankLoans, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 14. Ensure company capital exists in settings if not present
+    if (defaultCompanyCapital !== undefined && defaultCompanyCapital !== null) {
+      const capRef = doc(db, FirestoreCollections.SETTINGS, 'company_capital');
+      const capSnap = await getDoc(capRef);
+      if (!capSnap.exists()) {
+        await setDoc(capRef, sanitizeForFirestore({ data: defaultCompanyCapital, updatedAt: new Date().toISOString() }));
       }
     }
   } catch (err) {
