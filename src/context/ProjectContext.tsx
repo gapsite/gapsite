@@ -74,8 +74,9 @@ import {
   ReceivableStatus,
   ReceivablePayment,
   ReceivableAgingSummary,
+  LoanRenewalRecord,
 } from '../types';
-import { calculateBankLoanSchedule } from '../utils/loanCalculations';
+import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
 import {
   INITIAL_PROJECTS,
@@ -286,6 +287,20 @@ interface ProjectContextType {
     monthNumber: number,
     channelId?: string
   ) => { success: boolean; message?: string };
+  renewBankLoan: (
+    loanId: string,
+    renewalData: {
+      tenureMonthsAdded?: number;
+      newPrincipal?: number;
+      newInterestRate?: number;
+      renewalDate?: string;
+      adendumNumber?: string;
+      provisionFee?: number;
+      recordProvisionToLedger?: boolean;
+      paymentChannelId?: string;
+      notes?: string;
+    }
+  ) => { success: boolean; message?: string; loan?: BankLoan };
 
   // Company Capital & Equity Management (Modal Dasar, Disetor, Tambahan, Laba Ditahan)
   companyCapital: CompanyCapitalSettings;
@@ -3970,6 +3985,133 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
+  const renewBankLoan = (
+    loanId: string,
+    renewalData: {
+      tenureMonthsAdded?: number;
+      newPrincipal?: number;
+      newInterestRate?: number;
+      renewalDate?: string;
+      adendumNumber?: string;
+      provisionFee?: number;
+      recordProvisionToLedger?: boolean;
+      paymentChannelId?: string;
+      notes?: string;
+    }
+  ): { success: boolean; message?: string; loan?: BankLoan } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && !currentUser.permissions?.includes('MANAGE_USERS_ROLES')) {
+      return { success: false, message: 'Akses Ditolak: Anda tidak memiliki wewenang memperpanjang fasilitas kredit pinjaman bank.' };
+    }
+
+    const loan = bankLoans.find((l) => l.id === loanId);
+    if (!loan) {
+      return { success: false, message: 'Fasilitas pinjaman bank tidak ditemukan.' };
+    }
+
+    const tenureAdded = Math.max(1, Number(renewalData.tenureMonthsAdded) || 12);
+    const newPrincipal = Math.max(0, Number(renewalData.newPrincipal ?? loan.remainingPrincipal ?? loan.principalAmount));
+    const newRate = Math.max(0, Number(renewalData.newInterestRate ?? loan.annualInterestRate));
+    const renewalDate = renewalData.renewalDate || new Date().toISOString().slice(0, 10);
+    const adendumNo = renewalData.adendumNumber?.trim() || `PK-ADD-${loan.bankName.slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
+    const provFee = Math.max(0, Number(renewalData.provisionFee) || 0);
+
+    const renewalRecordId = `renew-${Date.now()}`;
+
+    // Generate renewed schedule and metrics
+    const calc = generateRevolvingRenewalSchedule(
+      loan,
+      tenureAdded,
+      newPrincipal,
+      newRate,
+      renewalDate,
+      renewalRecordId
+    );
+
+    let provisionTxId: string | undefined = undefined;
+
+    // Record provision / admin fee to cash ledger if requested and > 0
+    if (renewalData.recordProvisionToLedger && provFee > 0) {
+      const channel = renewalData.paymentChannelId || loan.paymentChannelId || 'BANK_TRANSFER_BRI';
+      const provTx = addTransaction({
+        date: renewalDate,
+        type: 'EXPENSE',
+        category: 'BANK_LOAN_ADMIN_FEE',
+        amountIDR: provFee,
+        description: `Biaya Provisi & Administrasi Perpanjangan Kredit (Adendum ${adendumNo}) - ${loan.loanName} (${loan.bankName})`,
+        clientOrVendorName: loan.bankName,
+        paymentMethod: channel as any,
+        referenceNumber: `PROV-${adendumNo}`,
+        status: 'CLEARED',
+        notes: `Biaya provisi/administrasi tahunan perpanjangan fasilitas kredit revolving KMK periode ke-${(loan.renewalsCount || 0) + 1}.`,
+        recordedBy: currentUser.name || currentUser.username || 'Admin Finance',
+      });
+      if (provTx?.id) provisionTxId = provTx.id;
+    }
+
+    const previousMaturity = loan.currentMaturityDate || loan.schedule?.[loan.schedule.length - 1]?.dueDate || loan.startDate;
+
+    const renewalRecord: LoanRenewalRecord = {
+      id: renewalRecordId,
+      renewalNumber: (loan.renewalsCount || 0) + 1,
+      renewalDate,
+      previousMaturityDate: previousMaturity,
+      newMaturityDate: calc.newMaturityDate,
+      tenureMonthsAdded: tenureAdded,
+      previousPrincipal: loan.principalAmount,
+      newPrincipal,
+      previousInterestRate: loan.annualInterestRate,
+      newInterestRate: newRate,
+      adendumNumber: adendumNo,
+      provisionFee: provFee > 0 ? provFee : undefined,
+      provisionFeeRecordedToLedger: Boolean(renewalData.recordProvisionToLedger && provFee > 0),
+      provisionFeeTransactionId: provisionTxId,
+      notes: renewalData.notes?.trim() || undefined,
+      approvedBy: currentUser.name || currentUser.username || 'Finance Admin',
+      createdAt: new Date().toISOString(),
+    };
+
+    let updatedLoanTarget: BankLoan | undefined;
+
+    setBankLoans((prev) => {
+      const updated = prev.map((l) => {
+        if (l.id === loanId) {
+          const merged: BankLoan = {
+            ...l,
+            tenureMonths: calc.newTenureTotal,
+            principalAmount: newPrincipal,
+            remainingPrincipal: newPrincipal,
+            annualInterestRate: newRate,
+            monthlyInterest: calc.newMonthlyInterest,
+            monthlyInstallment: calc.newMonthlyInterest,
+            totalInterest: calc.totalInterest,
+            totalPayment: calc.totalPayment,
+            schedule: calc.fullSchedule,
+            status: 'ACTIVE',
+            renewalsCount: (l.renewalsCount || 0) + 1,
+            renewalHistory: [...(l.renewalHistory || []), renewalRecord],
+            lastRenewalDate: renewalDate,
+            currentMaturityDate: calc.newMaturityDate,
+            originalMaturityDate: l.originalMaturityDate || previousMaturity,
+            updatedAt: new Date().toISOString(),
+          };
+          updatedLoanTarget = merged;
+          return merged;
+        }
+        return l;
+      });
+
+      broadcastLiveDataUpdate('BANK_LOANS', updated);
+      saveSettingsToFirestore('bank_loans', updated);
+      return updated;
+    });
+
+    return {
+      success: true,
+      loan: updatedLoanTarget,
+      message: `Perpanjangan kredit (Roll-over) fasilitas "${loan.loanName}" berhasil! Tenor diperpanjang +${tenureAdded} bulan (Jatuh tempo baru: ${calc.newMaturityDate}).`,
+    };
+  };
+
   // Company Capital (Modal Dasar, Disetor, Tambahan, Laba Ditahan) Management Methods
   const updateCompanyCapital = (
     updates: Partial<CompanyCapitalSettings>
@@ -4140,11 +4282,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const billing = options?.billingCode?.trim() || target.billingCode;
     const customNotes = options?.notes?.trim();
 
-    // 1. Create Cleared Expense Transaction in Cash Ledger under category TAX_PPH_PPN
+    // 1. Create Cleared Expense Transaction in Cash Ledger under category based on taxType
     const tx = addTransaction({
       date: payDate,
       type: 'EXPENSE',
-      category: 'TAX_PPH_PPN',
+      category: target.taxType === 'PPN' ? 'PAJAK__PPN_11__' : 'TAX_PPH_PPN',
       amountIDR: paymentAmount,
       description: `Setoran Pajak ${target.taxType === 'PPN' ? 'PPN' : target.taxType} (${target.taxPeriod}) - ${target.title}`,
       clientOrVendorName: target.counterpartyName || 'Kas Negara / KPP Pratama (DJP)',
@@ -5835,6 +5977,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteBankLoan,
         recordLoanDisbursementToLedger,
         recordLoanInstallmentToLedger,
+        renewBankLoan,
         companyCapital,
         updateCompanyCapital,
         resetCompanyCapitalToDefault,

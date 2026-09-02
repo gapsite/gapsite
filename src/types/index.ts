@@ -523,6 +523,26 @@ export type ExpenseCategory =
 
 export type TransactionCategory = IncomeCategory | ExpenseCategory | string;
 
+export interface LoanRenewalRecord {
+  id: string;
+  renewalNumber: number; // 1 (Perpanjangan ke-1), 2 (Perpanjangan ke-2), dst.
+  renewalDate: string; // Tanggal efektif / adendum perpanjangan
+  previousMaturityDate: string; // Tanggal jatuh tempo sebelum diperpanjang
+  newMaturityDate: string; // Tanggal jatuh tempo baru setelah perpanjangan
+  tenureMonthsAdded: number; // Tambahan tenor (default 12 bulan)
+  previousPrincipal: number; // Plafon pokok sebelum perpanjangan
+  newPrincipal: number; // Plafon pokok baru setelah perpanjangan
+  previousInterestRate: number; // Suku bunga sebelum perpanjangan (% p.a.)
+  newInterestRate: number; // Suku bunga baru setelah perpanjangan (% p.a.)
+  adendumNumber?: string; // Nomor Surat Perjanjian Kredit / Adendum PK
+  provisionFee?: number; // Biaya provisi perpanjangan / administrasi bank
+  provisionFeeRecordedToLedger?: boolean;
+  provisionFeeTransactionId?: string;
+  notes?: string;
+  approvedBy?: string;
+  createdAt: string;
+}
+
 export interface LoanInstallmentScheduleItem {
   monthNumber: number;
   dueDate: string;
@@ -535,6 +555,8 @@ export interface LoanInstallmentScheduleItem {
   paidAt?: string;
   transactionIds?: string[];
   paymentType?: 'INTEREST_ONLY' | 'PRINCIPAL_AND_INTEREST' | 'BALLOON_PAYOFF';
+  cycleNumber?: number; // 1 = Periode 12 Bulan Pertama, 2 = Periode Perpanjangan ke-1, dst.
+  renewalId?: string;
 }
 
 export type LoanFacilityType = 'REVOLVING' | 'NON_REVOLVING' | 'OTHER';
@@ -567,6 +589,12 @@ export interface BankLoan {
   disbursementTransactionId?: string;
   schedule?: LoanInstallmentScheduleItem[];
   notes?: string;
+  // Perpanjangan Kredit (Revolving Credit Renewal / Roll-over)
+  renewalHistory?: LoanRenewalRecord[];
+  renewalsCount?: number;
+  originalMaturityDate?: string;
+  currentMaturityDate?: string;
+  lastRenewalDate?: string;
   createdAt: string;
   createdBy: string;
   updatedAt?: string;

@@ -25,12 +25,14 @@ import {
   RefreshCw,
   HelpCircle,
   Users,
+  History,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { BankLoan, LoanInstallmentScheduleItem, LoanFacilityType } from '../../types';
 import {
   calculateBankLoanSchedule,
   calculateLoansAggregateMetrics,
+  getLoanMaturityInfo,
 } from '../../utils/loanCalculations';
 
 export const BankLoanManagement: React.FC = () => {
@@ -41,6 +43,7 @@ export const BankLoanManagement: React.FC = () => {
     deleteBankLoan,
     recordLoanDisbursementToLedger,
     recordLoanInstallmentToLedger,
+    renewBankLoan,
     paymentChannels,
     isMasterAdmin,
     hasPermission,
@@ -95,6 +98,45 @@ export const BankLoanManagement: React.FC = () => {
   const [payNotes, setPayNotes] = useState<string>('');
 
   const [loanToDelete, setLoanToDelete] = useState<BankLoan | null>(null);
+
+  // Renewal (Roll-over) Modal State for Revolving Loans
+  const [loanToRenew, setLoanToRenew] = useState<BankLoan | null>(null);
+  const [renewTenureMonths, setRenewTenureMonths] = useState<number>(12);
+  const [renewPrincipal, setRenewPrincipal] = useState<number | ''>(0);
+  const [renewInterestRate, setRenewInterestRate] = useState<number | ''>(0);
+  const [renewEffectiveDate, setRenewEffectiveDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [renewAdendumNumber, setRenewAdendumNumber] = useState<string>('');
+  const [renewProvisionFee, setRenewProvisionFee] = useState<number | ''>(0);
+  const [renewRecordProvision, setRenewRecordProvision] = useState<boolean>(true);
+  const [renewPaymentChannelId, setRenewPaymentChannelId] = useState<string>('BANK_TRANSFER_BRI');
+  const [renewNotes, setRenewNotes] = useState<string>('');
+  const [showRenewalHistoryTab, setShowRenewalHistoryTab] = useState<boolean>(false);
+
+  // Live calculation preview for the renewal modal
+  const liveRenewalSimulation = useMemo(() => {
+    if (!loanToRenew) return null;
+    const p = typeof renewPrincipal === 'number' ? renewPrincipal : 0;
+    const r = typeof renewInterestRate === 'number' ? renewInterestRate : 0;
+    const t = typeof renewTenureMonths === 'number' ? renewTenureMonths : 12;
+    const monthlyInterest = Math.round((p * (r / 100)) / 12);
+    const totalNewInterest = monthlyInterest * t;
+    const existingCount = (loanToRenew.schedule || []).length;
+    const totalTenureCumulative = existingCount + t;
+    const cycleNumber = Math.ceil(totalTenureCumulative / 12);
+
+    const base = new Date(renewEffectiveDate || new Date());
+    base.setMonth(base.getMonth() + t);
+    const newMaturityDate = base.toISOString().slice(0, 10);
+
+    return {
+      monthlyInterest,
+      totalNewInterest,
+      totalTenureCumulative,
+      newMaturityDate,
+      cycleNumber,
+      existingCount,
+    };
+  }, [loanToRenew, renewPrincipal, renewInterestRate, renewTenureMonths, renewEffectiveDate]);
 
   // Live calculation preview for the form
   const liveFormCalculation = useMemo(() => {
@@ -302,6 +344,72 @@ export const BankLoanManagement: React.FC = () => {
     }
 
     setInstallmentToPay(null);
+  };
+
+  const handleOpenRenewModal = (loan: BankLoan) => {
+    const maturityInfo = getLoanMaturityInfo(loan);
+    const p = loan.remainingPrincipal ?? loan.principalAmount;
+    const r = loan.annualInterestRate || 9.5;
+    const dateToday = new Date().toISOString().slice(0, 10);
+    const effectiveDate = maturityInfo.isPastMaturity ? dateToday : maturityInfo.maturityDate || dateToday;
+    const bankInitials = loan.bankName.slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const adendumNo = `PK-ADD/${bankInitials}/${new Date().getFullYear()}/${Date.now().toString().slice(-4)}`;
+    const standardProvision = Math.round(p * 0.005); // 0.5% standard bank provision fee
+
+    setLoanToRenew(loan);
+    setRenewTenureMonths(12); // Standard 12-month extension requested by user
+    setRenewPrincipal(p);
+    setRenewInterestRate(r);
+    setRenewEffectiveDate(effectiveDate);
+    setRenewAdendumNumber(adendumNo);
+    setRenewProvisionFee(standardProvision);
+    setRenewRecordProvision(true);
+    setRenewPaymentChannelId(loan.paymentChannelId || paymentChannels.find((c) => c.status === 'ACTIVE')?.id || 'BANK_TRANSFER_BRI');
+    setRenewNotes(`Perpanjangan kredit modal kerja revolving (KMK Roll-over ${loan.loanName} periode ke-${(loan.renewalsCount || 0) + 1}).`);
+  };
+
+  const handleConfirmRenewLoan = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loanToRenew) return;
+
+    const p = typeof renewPrincipal === 'number' ? renewPrincipal : 0;
+    const r = typeof renewInterestRate === 'number' ? renewInterestRate : 0;
+    const t = typeof renewTenureMonths === 'number' ? renewTenureMonths : 12;
+
+    if (p <= 0 || t <= 0) {
+      setToastMessage({
+        type: 'error',
+        title: 'Input Tidak Valid',
+        text: 'Plafon baru dan tambahan tenor harus lebih besar dari 0.',
+      });
+      return;
+    }
+
+    const res = renewBankLoan(loanToRenew.id, {
+      tenureMonthsAdded: t,
+      newPrincipal: p,
+      newInterestRate: r,
+      renewalDate: renewEffectiveDate,
+      adendumNumber: renewAdendumNumber.trim() || undefined,
+      provisionFee: typeof renewProvisionFee === 'number' ? renewProvisionFee : 0,
+      recordProvisionToLedger: renewRecordProvision,
+      paymentChannelId: renewPaymentChannelId,
+      notes: renewNotes.trim() || undefined,
+    });
+
+    setToastMessage({
+      type: res.success ? 'success' : 'error',
+      title: res.success ? 'Perpanjangan Berhasil Disetujui' : 'Gagal Perpanjangan',
+      text: res.message || 'Fasilitas kredit revolving berhasil diperpanjang.',
+    });
+
+    if (res.success && res.loan) {
+      if (selectedLoanForSchedule?.id === loanToRenew.id) {
+        setSelectedLoanForSchedule(res.loan);
+      }
+    }
+
+    setLoanToRenew(null);
   };
 
   // Sync selected loan state if bankLoans updates
@@ -559,6 +667,7 @@ export const BankLoanManagement: React.FC = () => {
               const isPaidOff = loan.status === 'PAID_OFF' || remaining <= 0;
               const isRevolving = loan.facilityType === 'REVOLVING';
               const isOther = loan.facilityType === 'OTHER';
+              const maturityInfo = getLoanMaturityInfo(loan);
 
               // Revolving interest & duration progress calculation
               const tenure = loan.tenureMonths || 1;
@@ -623,6 +732,13 @@ export const BankLoanManagement: React.FC = () => {
                             Belum Dicairkan ke Kas
                           </span>
                         )}
+
+                        {loan.renewalsCount && loan.renewalsCount > 0 ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-300 flex items-center gap-1" title={`Fasilitas kredit revolving telah diperpanjang ${loan.renewalsCount} kali`}>
+                            <History className="w-3 h-3 text-purple-600" />
+                            Roll-over ke-{loan.renewalsCount} (+{(loan.renewalHistory || []).reduce((a, b) => a + b.tenureMonthsAdded, 0)} Bln)
+                          </span>
+                        ) : null}
                       </div>
 
                       {/* Financial Badges & Parameters */}
@@ -706,6 +822,63 @@ export const BankLoanManagement: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Revolving Maturity Status & Extension Alert Banner */}
+                      {isRevolving && (
+                        <div className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs transition-all ${
+                          maturityInfo.isPastMaturity
+                            ? 'bg-amber-500/10 border-amber-300 text-amber-950 shadow-xs'
+                            : maturityInfo.isNearMaturity || remainingMonths <= 2
+                            ? 'bg-purple-50/90 border-purple-200 text-purple-950 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-700'
+                        }`}>
+                          <div className="flex items-start sm:items-center gap-2.5">
+                            {maturityInfo.isPastMaturity ? (
+                              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+                            ) : maturityInfo.isNearMaturity || remainingMonths <= 2 ? (
+                              <Clock className="w-4 h-4 text-purple-600 shrink-0 mt-0.5 sm:mt-0" />
+                            ) : (
+                              <ShieldCheck className="w-4 h-4 text-slate-500 shrink-0 mt-0.5 sm:mt-0" />
+                            )}
+                            <div>
+                              <div className="font-bold flex items-center gap-2 flex-wrap">
+                                <span>
+                                  {maturityInfo.isPastMaturity
+                                    ? '⚠️ Telah Jatuh Tempo — Fasilitas Kredit Siap Diperpanjang (Roll-over)'
+                                    : maturityInfo.isNearMaturity || remainingMonths <= 2
+                                    ? `⏳ Mendekati Jatuh Tempo (${maturityInfo.daysRemaining} hari lagi / Jatuh Tempo: ${maturityInfo.maturityDate})`
+                                    : `Jatuh Tempo Periode Berjalan: ${maturityInfo.maturityDate || '-'}`}
+                                </span>
+                                <span className="text-[10px] font-semibold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded border border-purple-200">
+                                  Periode Kredit 12 Bulan
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-600 mt-0.5">
+                                {maturityInfo.isPastMaturity
+                                  ? 'Periode kredit 12 bulan telah berakhir. Pokok pinjaman digulirkan (roll-over) ke periode 12 bulan berikutnya tanpa perlu melunasi pokok sekarang.'
+                                  : 'Fasilitas kredit revolving berjangka 12 bulan dapat diperpanjang saat/setelah jatuh tempo melalui adendum PK.'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRenewModal(loan)}
+                              className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+                                maturityInfo.isPastMaturity
+                                  ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                                  : maturityInfo.isNearMaturity || remainingMonths <= 2
+                                  ? 'bg-purple-700 hover:bg-purple-800 text-white shadow-xs'
+                                  : 'bg-white hover:bg-purple-100 text-purple-800 border border-purple-300'
+                              }`}
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Perpanjang Kredit</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Right: Actions */}
@@ -719,6 +892,19 @@ export const BankLoanManagement: React.FC = () => {
                         <Calendar className="w-4 h-4" />
                         <span>Jadwal Angsuran & Bayar</span>
                       </button>
+
+                      {/* Extend / Renew Loan Button for Revolving Loans */}
+                      {isRevolving && canManage && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRenewModal(loan)}
+                          className="px-3.5 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                          title="Opsi perpanjangan fasilitas kredit revolving KMK (Roll-over 12 bulan)"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Perpanjang Kredit (Roll-over)</span>
+                        </button>
+                      )}
 
                       {/* Disburse to Ledger Button if not yet disbursed */}
                       {!loan.isDisbursed && canManage && (
@@ -849,7 +1035,12 @@ export const BankLoanManagement: React.FC = () => {
 
                   {/* Revolving Card */}
                   <div
-                    onClick={() => setFacilityType('REVOLVING')}
+                    onClick={() => {
+                      setFacilityType('REVOLVING');
+                      if (!editingLoanId && (tenureMonths === 24 || !tenureMonths)) {
+                        setTenureMonths(12);
+                      }
+                    }}
                     className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
                       facilityType === 'REVOLVING'
                         ? 'border-purple-600 bg-purple-50/70 shadow-xs ring-2 ring-purple-500/20'
@@ -873,7 +1064,7 @@ export const BankLoanManagement: React.FC = () => {
                       </div>
                     </div>
                     <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
-                      Kewajiban bulanan hanya Beban Bunga. Pokok fleksibel ditarik/dilunasi atau dilunasi penuh akhir masa fasilitas.
+                      Kewajiban bulanan hanya Beban Bunga. Periode standar kredit 12 bulan dan dapat diperpanjang (roll-over) saat jatuh tempo.
                     </p>
                   </div>
 
@@ -1240,43 +1431,175 @@ export const BankLoanManagement: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedLoanForSchedule(null)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {activeSelectedLoan.facilityType === 'REVOLVING' && canManage && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRenewModal(activeSelectedLoan)}
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                    title="Perpanjang fasilitas kredit revolving KMK untuk periode 12 bulan berikutnya"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Perpanjang Kredit (Roll-over)</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedLoanForSchedule(null)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Schedule Table */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
-                    <tr>
-                      <th className="py-2.5 px-3 text-center">Bln #</th>
-                      <th className="py-2.5 px-3">Jatuh Tempo</th>
-                      <th className="py-2.5 px-3 text-right">Saldo Awal</th>
-                      <th className="py-2.5 px-3 text-right">Angsuran Pokok</th>
-                      <th className="py-2.5 px-3 text-right text-rose-600">Beban Bunga</th>
-                      <th className="py-2.5 px-3 text-right font-mono">Total Bayar</th>
-                      <th className="py-2.5 px-3 text-right">Sisa Pokok</th>
-                      <th className="py-2.5 px-3 text-center">Skema</th>
-                      <th className="py-2.5 px-3 text-center">Status</th>
-                      <th className="py-2.5 px-3 text-center">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
-                    {(activeSelectedLoan.schedule || []).map((item) => (
-                      <tr
-                        key={item.monthNumber}
-                        className={item.isPaid ? 'bg-emerald-50/40 text-slate-700' : 'hover:bg-slate-50'}
-                      >
-                        <td className="py-2.5 px-3 text-center font-bold text-slate-800">
-                          {item.monthNumber}
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-600 font-sans">{item.dueDate}</td>
+            {/* Revolving Renewal History Tabs */}
+            {activeSelectedLoan.facilityType === 'REVOLVING' && activeSelectedLoan.renewalHistory && activeSelectedLoan.renewalHistory.length > 0 && (
+              <div className="px-6 pt-3 bg-slate-100 border-b border-slate-200 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRenewalHistoryTab(false)}
+                  className={`px-3 py-2 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                    !showRenewalHistoryTab
+                      ? 'border-purple-600 text-purple-800 bg-white rounded-t-lg shadow-2xs'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Jadwal Angsuran ({activeSelectedLoan.schedule?.length || 0} Bulan)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRenewalHistoryTab(true)}
+                  className={`px-3 py-2 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                    showRenewalHistoryTab
+                      ? 'border-purple-600 text-purple-800 bg-white rounded-t-lg shadow-2xs'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <History className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Riwayat Perpanjangan / Roll-over</span>
+                  <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded-full font-bold">
+                    {activeSelectedLoan.renewalHistory.length}x
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {showRenewalHistoryTab && activeSelectedLoan.renewalHistory && activeSelectedLoan.renewalHistory.length > 0 ? (
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="bg-purple-50/80 border border-purple-200 rounded-xl p-4 text-xs text-purple-950 flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-purple-600 text-white shrink-0">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-purple-950">Histori Perpanjangan Fasilitas Kredit Revolving (KMK)</h4>
+                    <p className="text-purple-800 mt-0.5 leading-relaxed">
+                      Kredit modal kerja ini berjangka waktu 12 bulan dan telah diperpanjang sebanyak <strong>{activeSelectedLoan.renewalHistory.length} kali</strong>. Pokok kredit digulirkan (roll-over) ke siklus 12 bulan berikutnya sesuai persetujuan adendum bank.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {activeSelectedLoan.renewalHistory.map((rh) => (
+                    <div key={rh.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-3 hover:border-purple-200 transition-colors">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-bold flex items-center justify-center">
+                            {rh.renewalNumber}
+                          </span>
+                          <span className="font-bold text-sm text-slate-900">
+                            Perpanjangan (Roll-over) #{rh.renewalNumber}
+                          </span>
+                          {rh.adendumNumber && (
+                            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                              Adendum: {rh.adendumNumber}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-500 font-medium">
+                          Tanggal Efektif: <strong>{rh.renewalDate}</strong>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">Tambahan Tenor</span>
+                          <strong className="text-purple-700 font-mono">+{rh.tenureMonthsAdded} Bulan</strong>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">Total Tenor: {rh.totalTenureAfter} Bulan</span>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">Plafon Pokok Baru</span>
+                          <strong className="font-mono text-slate-900">Rp {rh.newPrincipal.toLocaleString('id-ID')}</strong>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">Sebelumnya: Rp {rh.previousPrincipal.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">Bunga Efektif Baru</span>
+                          <strong className="font-mono text-indigo-700">{rh.newInterestRate}% p.a.</strong>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">Beban: Rp {Math.round((rh.newPrincipal * (rh.newInterestRate / 100)) / 12).toLocaleString('id-ID')}/bln</span>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">Biaya Provisi Bank</span>
+                          <strong className="font-mono text-slate-800">
+                            {rh.provisionFee > 0 ? `Rp ${rh.provisionFee.toLocaleString('id-ID')}` : 'Bebas Biaya (Rp 0)'}
+                          </strong>
+                          {rh.provisionRecordedInLedger && (
+                            <span className="text-[10px] text-emerald-600 block mt-0.5 font-semibold">✓ Tercatat di Buku Kas</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {rh.notes && (
+                        <div className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          <strong>Catatan:</strong> {rh.notes}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                        <span>Disetujui oleh: <strong className="text-slate-600 font-sans">{rh.renewedBy || 'Divisi Keuangan'}</strong></span>
+                        <span>Jatuh Tempo Baru: <strong className="text-purple-700 font-mono">{rh.newMaturityDate}</strong></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Schedule Table */
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="rounded-xl border border-slate-200 overflow-hidden">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3 text-center">Bln #</th>
+                        <th className="py-2.5 px-3">Jatuh Tempo</th>
+                        <th className="py-2.5 px-3 text-right">Saldo Awal</th>
+                        <th className="py-2.5 px-3 text-right">Angsuran Pokok</th>
+                        <th className="py-2.5 px-3 text-right text-rose-600">Beban Bunga</th>
+                        <th className="py-2.5 px-3 text-right font-mono">Total Bayar</th>
+                        <th className="py-2.5 px-3 text-right">Sisa Pokok</th>
+                        <th className="py-2.5 px-3 text-center">Skema</th>
+                        <th className="py-2.5 px-3 text-center">Status</th>
+                        <th className="py-2.5 px-3 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {(activeSelectedLoan.schedule || []).map((item) => (
+                        <tr
+                          key={item.monthNumber}
+                          className={item.isPaid ? 'bg-emerald-50/40 text-slate-700' : 'hover:bg-slate-50'}
+                        >
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-800">
+                            <div>{item.monthNumber}</div>
+                            {activeSelectedLoan.facilityType === 'REVOLVING' && (
+                              <div className={`text-[9px] font-sans font-medium px-1 rounded inline-block mt-0.5 ${
+                                item.cycleNumber && item.cycleNumber > 1
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'text-slate-400'
+                              }`}>
+                                {item.cycleNumber && item.cycleNumber > 1 ? `Roll-over #${item.cycleNumber - 1}` : 'Thn 1'}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 font-sans">{item.dueDate}</td>
                         <td className="py-2.5 px-3 text-right text-slate-600">
                           Rp {item.beginningBalance.toLocaleString('id-ID')}
                         </td>
@@ -1347,6 +1670,7 @@ export const BankLoanManagement: React.FC = () => {
                 </table>
               </div>
             </div>
+          )}
 
             {/* Footer */}
             <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
@@ -1586,6 +1910,379 @@ export const BankLoanManagement: React.FC = () => {
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Konfirmasi & Catat Pembayaran</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* REVOLVING CREDIT EXTENSION / RENEWAL (ROLL-OVER) MODAL */}
+      {/* ========================================================================= */}
+      {loanToRenew && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-purple-800/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/30 text-purple-300 flex items-center justify-center border border-purple-400/30">
+                  <RefreshCw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base leading-tight flex items-center gap-2">
+                    <span>Perpanjangan Kredit Revolving (KMK Roll-over)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                      Siklus ke-{(loanToRenew.renewalsCount || 0) + 1}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-purple-200">
+                    {loanToRenew.loanName} • {loanToRenew.bankName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLoanToRenew(null)}
+                className="p-1 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleConfirmRenewLoan} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+              {/* Context Explanation */}
+              <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl text-purple-950 flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-purple-700 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong>Ketentuan Perpanjangan KMK Revolving:</strong> Sesuai karakteristik fasilitas kredit rekening koran (KMK), periode kredit berjangka waktu <strong>12 bulan</strong>. Setelah jatuh tempo, fasilitas diperpanjang (roll-over) sehingga pokok pinjaman digulirkan ke siklus berikutnya tanpa harus dilunasi secara tunai pada akhir bulan ke-12.
+                </div>
+              </div>
+
+              {/* Current Loan Snapshot */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Plafon Berjalan</span>
+                  <strong className="font-mono text-slate-900">
+                    Rp {loanToRenew.principalAmount.toLocaleString('id-ID')}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Suku Bunga Saat Ini</span>
+                  <strong className="font-mono text-indigo-700">
+                    {loanToRenew.annualInterestRate}% p.a.
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Tenor Berjalan</span>
+                  <strong className="font-mono text-slate-700">
+                    {loanToRenew.tenureMonths} Bulan
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block">Jatuh Tempo Periode Ini</span>
+                  <strong className="font-mono text-rose-600">
+                    {getLoanMaturityInfo(loanToRenew).maturityDate || '-'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Renewal Controls */}
+              <div className="space-y-3 pt-1">
+                {/* 1. Added Tenure */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-700 font-bold">
+                      Tambahan Tenor Perpanjangan (Bulan) <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[11px] text-slate-500">Standar kredit revolving: 12 bulan</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={renewTenureMonths}
+                      onChange={(e) => setRenewTenureMonths(Math.max(1, parseInt(e.target.value) || 12))}
+                      className="w-32 px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setRenewTenureMonths(12)}
+                        className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                          renewTenureMonths === 12
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        +12 Bulan (1 Tahun KMK)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRenewTenureMonths(6)}
+                        className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                          renewTenureMonths === 6
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        +6 Bulan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRenewTenureMonths(24)}
+                        className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                          renewTenureMonths === 24
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        +24 Bulan
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. New Principal Amount and Interest Rate */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">
+                      Plafon Pokok Baru (IDR) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1000000}
+                      value={renewPrincipal}
+                      onChange={(e) => setRenewPrincipal(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setRenewPrincipal(loanToRenew.remainingPrincipal ?? loanToRenew.principalAmount)}
+                        className="text-[10px] text-purple-700 hover:underline cursor-pointer"
+                      >
+                        Roll-over Penuh (Rp {(loanToRenew.remainingPrincipal ?? loanToRenew.principalAmount).toLocaleString('id-ID')})
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">
+                      Suku Bunga Baru (% p.a.) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      value={renewInterestRate}
+                      onChange={(e) => setRenewInterestRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Disesuaikan dengan persetujuan suku bunga kredit bank terbaru.
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Effective Date & Adendum Reference */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">
+                      Tanggal Efektif Perpanjangan <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={renewEffectiveDate}
+                      onChange={(e) => setRenewEffectiveDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">
+                      No. Adendum / Surat Perjanjian Kredit
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: PK-ADD/BRI/2025/001"
+                      value={renewAdendumNumber}
+                      onChange={(e) => setRenewAdendumNumber(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Bank Provision Fee & Ledger Recording */}
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <label className="text-slate-800 font-bold block">
+                        Biaya Provisi / Administrasi Perpanjangan Bank (IDR)
+                      </label>
+                      <span className="text-[11px] text-slate-500">
+                        Biaya pembaharuan fasilitas kredit modal kerja dari bank
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = typeof renewPrincipal === 'number' ? renewPrincipal : 0;
+                          setRenewProvisionFee(Math.round(p * 0.005));
+                        }}
+                        className="px-2 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded text-[10px] font-semibold text-slate-700 cursor-pointer"
+                      >
+                        0.5% (Standar)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = typeof renewPrincipal === 'number' ? renewPrincipal : 0;
+                          setRenewProvisionFee(Math.round(p * 0.01));
+                        }}
+                        className="px-2 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded text-[10px] font-semibold text-slate-700 cursor-pointer"
+                      >
+                        1.0%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRenewProvisionFee(0)}
+                        className="px-2 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded text-[10px] font-semibold text-slate-700 cursor-pointer"
+                      >
+                        Rp 0 (Gratis)
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    type="number"
+                    min={0}
+                    step={50000}
+                    value={renewProvisionFee}
+                    onChange={(e) => setRenewProvisionFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  />
+
+                  {/* Ledger integration checkbox */}
+                  {(typeof renewProvisionFee === 'number' && renewProvisionFee > 0) && (
+                    <div className="pt-2 border-t border-slate-200 space-y-2">
+                      <label className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={renewRecordProvision}
+                          onChange={(e) => setRenewRecordProvision(e.target.checked)}
+                          className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                        />
+                        <span>Catat Biaya Provisi ke Buku Kas Pengeluaran (Beban Operasional Bank)</span>
+                      </label>
+
+                      {renewRecordProvision && (
+                        <div>
+                          <label className="block text-[11px] text-slate-600 font-bold mb-1">
+                            Rekening / Kas Sumber Pembayaran Biaya Provisi:
+                          </label>
+                          <select
+                            value={renewPaymentChannelId}
+                            onChange={(e) => setRenewPaymentChannelId(e.target.value)}
+                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                          >
+                            {paymentChannels.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} ({c.type}) {c.accountNumber ? `- ${c.accountNumber}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Notes */}
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    Catatan / Keterangan Perpanjangan
+                  </label>
+                  <input
+                    type="text"
+                    value={renewNotes}
+                    onChange={(e) => setRenewNotes(e.target.value)}
+                    placeholder="Contoh: Perpanjangan KMK revolving tahun kedua disetujui komite kredit."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Simulation Box */}
+              {liveRenewalSimulation && (
+                <div className="p-3.5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between font-bold text-purple-950 text-xs">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Simulasi Siklus Perpanjangan Baru:</span>
+                    </span>
+                    <span className="bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full text-[10px]">
+                      Siklus KMK ke-{liveRenewalSimulation.cycleNumber} (+{renewTenureMonths} Bln)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="bg-white p-2.5 rounded-lg border border-purple-100">
+                      <span className="text-[10px] text-slate-500 block">Kewajiban Bunga / Bln</span>
+                      <strong className="font-mono text-purple-700">
+                        Rp {liveRenewalSimulation.monthlyInterest.toLocaleString('id-ID')}
+                      </strong>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-lg border border-purple-100">
+                      <span className="text-[10px] text-slate-500 block">Total Bunga Periode Baru</span>
+                      <strong className="font-mono text-slate-800">
+                        Rp {liveRenewalSimulation.totalNewInterest.toLocaleString('id-ID')}
+                      </strong>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-lg border border-purple-100">
+                      <span className="text-[10px] text-slate-500 block">Total Tenor Kumulatif</span>
+                      <strong className="font-mono text-indigo-700">
+                        {liveRenewalSimulation.totalTenureCumulative} Bulan
+                      </strong>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-lg border border-purple-100">
+                      <span className="text-[10px] text-slate-500 block">Jatuh Tempo Baru</span>
+                      <strong className="font-mono text-emerald-700">
+                        {liveRenewalSimulation.newMaturityDate}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-purple-900 leading-relaxed">
+                    ✓ Pokok bulan ke-{liveRenewalSimulation.existingCount} yang semula jatuh tempo akan otomatis dialihkan menjadi <em>Interest-Only</em>, dan jadwal angsuran baru bulan ke-{liveRenewalSimulation.existingCount + 1} s/d {liveRenewalSimulation.totalTenureCumulative} langsung dibentuk.
+                  </p>
+                </div>
+              )}
+
+              {/* Submit Buttons */}
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setLoanToRenew(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Setujui & Perpanjang Kredit (Roll-over)</span>
                 </button>
               </div>
             </form>

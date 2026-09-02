@@ -51,7 +51,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
-import { FinancialTransaction, ConsultingProject, TransactionType, PaymentChannelDefinition, Receivable } from '../../types';
+import { FinancialTransaction, ConsultingProject, TransactionType, PaymentChannelDefinition, Receivable, TaxObligation, TaxType } from '../../types';
 import {
   formatIDR,
   formatIDRShort,
@@ -60,6 +60,7 @@ import {
   getTransactionStatusBadge,
 } from '../../utils/formatters';
 import { calculateReceivablesAgingSummary, getAgingBucket } from '../../utils/receivableCalculations';
+import { getTaxTypeBadge, TAX_TYPE_CONFIGS } from '../../utils/taxCalculations';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
 
@@ -85,6 +86,41 @@ export type DatePeriodFilter =
   | 'THIS_QUARTER'
   | 'THIS_YEAR'
   | 'CUSTOM';
+
+export const isCapexCategory = (category?: string): boolean => {
+  if (!category) return false;
+  const c = category.toLowerCase();
+  return (
+    c === 'pengadaan_aset' ||
+    c === 'pengadaan_alat_uji' ||
+    c === 'inventaris_aset' ||
+    c === 'equipment' ||
+    c === 'pengadaan_aset_tetap___peralatan' ||
+    c.includes('aset tetap') ||
+    c.includes('pengadaan aset') ||
+    c.includes('alat uji') ||
+    c.includes('inventaris') ||
+    c.includes('peralatan')
+  );
+};
+
+export const isLoanPrincipalCategory = (category?: string): boolean => {
+  if (!category) return false;
+  const c = category.toLowerCase();
+  return category === 'BANK_LOAN_PRINCIPAL' || c.includes('pokok angsuran') || c.includes('pokok pinjaman');
+};
+
+export const isLoanDisbursementCategory = (category?: string): boolean => {
+  if (!category) return false;
+  const c = category.toLowerCase();
+  return category === 'BANK_LOAN_DISBURSEMENT' || c.includes('pencairan pinjaman');
+};
+
+export const isCapitalInjectionCategory = (category?: string): boolean => {
+  if (!category) return false;
+  const c = category.toLowerCase();
+  return c === 'setoran_modal' || c === 'modal_disetor' || c.includes('setoran modal');
+};
 
 interface FinancialReportGeneratorProps {
   onSelectProject?: (projectId: string) => void;
@@ -418,8 +454,8 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
   // Filtered Tax Obligations (Kewajiban Pajak) synchronized with dateBounds, project, status, and search
   const filteredTaxObligations = useMemo(() => {
     return (taxObligations || []).filter((t) => {
-      // 1. Date Range (dueDate, paidAt, or fallback to createdAt date)
-      const tDate = t.dueDate || t.paidAt?.split('T')[0] || t.createdAt?.split('T')[0] || '';
+      // 1. Date Range (dueDate, paidAt, fallback to createdAt date, or taxYear)
+      const tDate = t.dueDate || t.paidAt?.split('T')[0] || t.createdAt?.split('T')[0] || (t.taxYear ? `${t.taxYear}-06-30` : '');
       if (tDate && (tDate < dateBounds.start || tDate > dateBounds.end)) {
         return false;
       }
@@ -534,33 +570,55 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       };
     });
 
+    // Track Operating vs Capex vs Financing transactions
+    let capexExpense = 0;
+    let clearedCapexExpense = 0;
+    let loanPrincipalExpense = 0;
+    let loanDisbursementIncome = 0;
+    let capitalInjectionIncome = 0;
+
     // Process transactions
     filteredTransactions.forEach((t) => {
       if (t.type === 'INCOME') {
-        totalIncome += t.amountIDR;
-        if (t.status === 'CLEARED') {
-          clearedIncome += t.amountIDR;
+        if (isLoanDisbursementCategory(t.category)) {
+          loanDisbursementIncome += t.amountIDR;
+        } else if (isCapitalInjectionCategory(t.category)) {
+          capitalInjectionIncome += t.amountIDR;
         } else {
-          pendingIncome += t.amountIDR;
-        }
-        incomeByCategory[t.category] = (incomeByCategory[t.category] || 0) + t.amountIDR;
+          totalIncome += t.amountIDR;
+          if (t.status === 'CLEARED') {
+            clearedIncome += t.amountIDR;
+          } else {
+            pendingIncome += t.amountIDR;
+          }
+          incomeByCategory[t.category] = (incomeByCategory[t.category] || 0) + t.amountIDR;
 
-        if (t.projectId && projectFinancials[t.projectId]) {
-          projectFinancials[t.projectId].totalIncome += t.amountIDR;
-          projectFinancials[t.projectId].transactionCount += 1;
+          if (t.projectId && projectFinancials[t.projectId]) {
+            projectFinancials[t.projectId].totalIncome += t.amountIDR;
+            projectFinancials[t.projectId].transactionCount += 1;
+          }
         }
       } else if (t.type === 'EXPENSE') {
-        totalExpense += t.amountIDR;
-        if (t.status === 'CLEARED') {
-          clearedExpense += t.amountIDR;
+        if (isCapexCategory(t.category)) {
+          capexExpense += t.amountIDR;
+          if (t.status === 'CLEARED') {
+            clearedCapexExpense += t.amountIDR;
+          }
+        } else if (isLoanPrincipalCategory(t.category)) {
+          loanPrincipalExpense += t.amountIDR;
         } else {
-          pendingExpense += t.amountIDR;
-        }
-        expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amountIDR;
+          totalExpense += t.amountIDR;
+          if (t.status === 'CLEARED') {
+            clearedExpense += t.amountIDR;
+          } else {
+            pendingExpense += t.amountIDR;
+          }
+          expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amountIDR;
 
-        if (t.projectId && projectFinancials[t.projectId]) {
-          projectFinancials[t.projectId].totalExpense += t.amountIDR;
-          projectFinancials[t.projectId].transactionCount += 1;
+          if (t.projectId && projectFinancials[t.projectId]) {
+            projectFinancials[t.projectId].totalExpense += t.amountIDR;
+            projectFinancials[t.projectId].transactionCount += 1;
+          }
         }
       }
     });
@@ -577,14 +635,13 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       return pf.transactionCount > 0 || pf.totalIncome > 0 || pf.totalExpense > 0;
     });
 
-    // Direct Cost vs Overhead categorization
+    // Direct Cost vs Overhead categorization (excluding Capex which is capitalized to Fixed Assets)
     const directCategories = new Set([
       'FEE_SURVEYOR_SUCOFINDO_SI',
       'PENGUJIAN_LAB_TEKNIS',
       'LEGALITAS_OSS_NOTARIS',
       'SITE_SURVEY_INSPEKSI',
       'PERJALANAN_DINAS_AUDIT',
-      'PENGADAAN_ALAT_UJI',
     ]);
 
     let directExpenseTotal = 0;
@@ -600,7 +657,10 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
 
     const grossProfit = totalIncome - directExpenseTotal;
     const grossMargin = totalIncome > 0 ? (grossProfit / totalIncome) * 100 : 0;
-    const taxExpense = expenseByCategory['TAX_PPH_PPN'] || 0;
+    const taxExpense =
+      (expenseByCategory['TAX_PPH_PPN'] || 0) +
+      (expenseByCategory['PAJAK__PPN_11__'] || 0) +
+      (expenseByCategory['PAJAK_PPN_11'] || 0);
     const netProfit = totalIncome - totalExpense;
     const ebit = totalIncome - (totalExpense - taxExpense);
     const profitMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
@@ -659,15 +719,27 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     const totalPaidPrincipal = loansList.reduce((acc, l) => acc + (l.paidPrincipal || 0), 0);
     const totalPaidInterest = loansList.reduce((acc, l) => acc + (l.paidInterest || 0), 0);
 
-    // Loan-specific transactions from filteredTransactions
-    const loanDisbursementTrxs = filteredTransactions.filter((t) => t.category === 'BANK_LOAN_DISBURSEMENT');
-    const loanPrincipalTrxs = filteredTransactions.filter((t) => t.category === 'BANK_LOAN_PRINCIPAL');
-    const loanInterestTrxs = filteredTransactions.filter((t) => t.category === 'BANK_LOAN_INTEREST');
-    const loanFeeTrxs = filteredTransactions.filter((t) => t.category === 'BANK_LOAN_FEES');
+    // Cumulative transactions up to report period end date for Neraca positions
+    const cumulativeTransactions = transactions.filter((t) => {
+      if (selectedProjectId !== 'ALL' && t.projectId !== selectedProjectId) return false;
+      return t.date <= dateBounds.end;
+    });
 
-    const totalDisbursedFromTrxs = loanDisbursementTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
-    const totalPrincipalPaidFromTrxs = loanPrincipalTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
-    const totalInterestPaidFromTrxs = loanInterestTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
+    // Prior transactions before report period start date for Retained Earnings accumulation
+    const priorTransactions = cumulativeTransactions.filter((t) => t.date < dateBounds.start);
+
+    let priorIncome = 0;
+    let priorOperatingExpense = 0;
+    priorTransactions.forEach((t) => {
+      if (t.type === 'INCOME' && !isLoanDisbursementCategory(t.category) && !isCapitalInjectionCategory(t.category)) {
+        priorIncome += t.amountIDR;
+      } else if (t.type === 'EXPENSE') {
+        if (!isCapexCategory(t.category) && !isLoanPrincipalCategory(t.category)) {
+          priorOperatingExpense += t.amountIDR;
+        }
+      }
+    });
+    const priorPeriodsNetProfit = priorIncome - priorOperatingExpense;
 
     // Company Capital Settings (Modal Dasar, Modal Disetor, Modal Tambahan)
     const authorizedCapital = companyCapital?.authorizedCapital || 5000000000;
@@ -677,14 +749,49 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     const capitalNotes = companyCapital?.notes || 'Berdasarkan Akta Pendirian Perusahaan & SK Kemenkumham RI.';
     const totalPaidAndAdditional = paidInCapital + additionalCapital;
 
-    // Equity according to Corporate Accounting Standards:
-    // Total Equity = (Paid-in Capital + Additional Capital) + Retained Earnings + Current Net Profit/Loss
-    const totalEquity = totalPaidAndAdditional + retainedEarningsOpening + netProfit;
+    // Retained Earnings prior to current report period
+    const retainedEarningsPrior =
+      periodFilter === 'ALL'
+        ? retainedEarningsOpening
+        : retainedEarningsOpening + priorPeriodsNetProfit;
 
-    // 5 Fundamental Accounting Elements (Aset, Liabilitas, Ekuitas, Pendapatan, Beban)
-    // Cash & Bank includes Initial Capital + Operating Cash Flow + Loan Disbursements - Loan Repayments
-    const netClearedCash = clearedIncome - clearedExpense;
-    const cashAndBankAsset = Math.max(0, totalPaidAndAdditional + retainedEarningsOpening + netClearedCash + (totalDisbursedFromTrxs - totalPrincipalPaidFromTrxs));
+    // Equity according to Corporate Accounting Standards:
+    // Total Equity = (Paid-in Capital + Additional Capital) + Prior Retained Earnings + Current Net Profit/Loss
+    const totalEquity = totalPaidAndAdditional + retainedEarningsPrior + netProfit;
+
+    // Cumulative cleared cash movements up to dateBounds.end
+    let cumClearedIncome = 0;
+    let cumClearedOperatingExpense = 0;
+    let cumClearedCapex = 0;
+    let cumDisbursed = 0;
+    let cumPrincipalPaid = 0;
+    let cumPendingOperatingExpense = 0;
+
+    cumulativeTransactions.forEach((t) => {
+      if (t.type === 'INCOME') {
+        if (isLoanDisbursementCategory(t.category)) {
+          if (t.status === 'CLEARED') cumDisbursed += t.amountIDR;
+        } else if (!isCapitalInjectionCategory(t.category)) {
+          if (t.status === 'CLEARED') cumClearedIncome += t.amountIDR;
+        }
+      } else if (t.type === 'EXPENSE') {
+        if (isCapexCategory(t.category)) {
+          if (t.status === 'CLEARED') cumClearedCapex += t.amountIDR;
+        } else if (isLoanPrincipalCategory(t.category)) {
+          if (t.status === 'CLEARED') cumPrincipalPaid += t.amountIDR;
+        } else {
+          if (t.status === 'CLEARED') {
+            cumClearedOperatingExpense += t.amountIDR;
+          } else {
+            cumPendingOperatingExpense += t.amountIDR;
+          }
+        }
+      }
+    });
+
+    const netCumulativeCashFlow =
+      cumClearedIncome - cumClearedOperatingExpense - cumClearedCapex + (cumDisbursed - cumPrincipalPaid);
+    const cashAndBankAsset = totalPaidAndAdditional + retainedEarningsOpening + netCumulativeCashFlow;
 
     // Real-time Accounts Receivable (Piutang Usaha) calculation with strict date/search/status filtering
     let current0to30 = { count: 0, amount: 0 };
@@ -834,16 +941,40 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     });
 
     // Base capital from equity (Modal Disetor & Tambahan + Saldo Ditahan + Pinjaman Bersih)
-    const totalBaseCapital = totalPaidAndAdditional + retainedEarningsOpening + (totalDisbursedFromTrxs - totalPrincipalPaidFromTrxs);
+    const totalBaseCapital = totalPaidAndAdditional + retainedEarningsOpening + (cumDisbursed - cumPrincipalPaid);
 
     // Primary operating bank account (BCA or default channel)
     const defaultChannelIndex = channelRawStats.findIndex((c) => c.ch.isDefault || c.ch.id === 'BANK_TRANSFER_BCA');
     const primaryIndex = defaultChannelIndex >= 0 ? defaultChannelIndex : 0;
 
+    // Cumulative transactions per channel to ensure individual bank channel ending balances match cashAndBankAsset
+    const cumChannelTransactionsMap = new Map<string, FinancialTransaction[]>();
+    channelsList.forEach((ch) => {
+      cumChannelTransactionsMap.set(ch.id, []);
+    });
+
+    cumulativeTransactions.forEach((t) => {
+      const assignedId = resolveTransactionToChannelId(t, channelsList);
+      if (cumChannelTransactionsMap.has(assignedId)) {
+        cumChannelTransactionsMap.get(assignedId)!.push(t);
+      }
+    });
+
     const channelSummary = channelRawStats.map((item, idx) => {
-      // Allocate the base capital to primary account; other accounts track their operational cash flow
+      const cumTrxs = cumChannelTransactionsMap.get(item.ch.id) || [];
+      const cumIncomeTrxs = cumTrxs.filter(
+        (t) => t.type === 'INCOME' && !isLoanDisbursementCategory(t.category) && !isCapitalInjectionCategory(t.category)
+      );
+      const cumExpenseTrxs = cumTrxs.filter(
+        (t) => t.type === 'EXPENSE' && !isLoanPrincipalCategory(t.category)
+      );
+
+      const cumClearedInc = cumIncomeTrxs.filter((t) => t.status === 'CLEARED').reduce((acc, t) => acc + t.amountIDR, 0);
+      const cumClearedExp = cumExpenseTrxs.filter((t) => t.status === 'CLEARED').reduce((acc, t) => acc + t.amountIDR, 0);
+      const cumNetFlow = cumClearedInc - cumClearedExp;
+
       const baseShare = idx === primaryIndex ? totalBaseCapital : 0;
-      const balance = baseShare + item.netCashFlow;
+      const balance = baseShare + cumNetFlow;
 
       return {
         id: item.ch.id,
@@ -901,33 +1032,12 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     // Fixed Assets & Equipment (Belanja Modal Aset / Inventaris)
     // 1. Transaction list for the filtered report period:
     const fixedAssetTrxs = filteredTransactions.filter(
-      (t) =>
-        t.type === 'EXPENSE' &&
-        (t.category === 'PENGADAAN_ASET' ||
-          t.category === 'PENGADAAN_ALAT_UJI' ||
-          t.category === 'INVENTARIS_ASET' ||
-          t.category === 'EQUIPMENT' ||
-          t.category === 'SOFTWARE_CLOUD' ||
-          t.category?.toLowerCase().includes('aset') ||
-          t.category?.toLowerCase().includes('peralatan') ||
-          t.category?.toLowerCase().includes('inventaris') ||
-          t.category?.toLowerCase().includes('alat uji'))
+      (t) => t.type === 'EXPENSE' && isCapexCategory(t.category)
     );
 
     // 2. Cumulative balance sheet asset base up to dateBounds.end
-    const cumulativeAssetTrxs = transactions.filter(
-      (t) =>
-        t.type === 'EXPENSE' &&
-        t.date <= dateBounds.end &&
-        (t.category === 'PENGADAAN_ASET' ||
-          t.category === 'PENGADAAN_ALAT_UJI' ||
-          t.category === 'INVENTARIS_ASET' ||
-          t.category === 'EQUIPMENT' ||
-          t.category === 'SOFTWARE_CLOUD' ||
-          t.category?.toLowerCase().includes('aset') ||
-          t.category?.toLowerCase().includes('peralatan') ||
-          t.category?.toLowerCase().includes('inventaris') ||
-          t.category?.toLowerCase().includes('alat uji'))
+    const cumulativeAssetTrxs = cumulativeTransactions.filter(
+      (t) => t.type === 'EXPENSE' && isCapexCategory(t.category)
     );
     const fixedAssetsGross = cumulativeAssetTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
 
@@ -939,10 +1049,9 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
           t.category?.toLowerCase().includes('depreciation'))
     );
 
-    const cumulativeDepreciationTrxs = transactions.filter(
+    const cumulativeDepreciationTrxs = cumulativeTransactions.filter(
       (t) =>
         t.type === 'EXPENSE' &&
-        t.date <= dateBounds.end &&
         (t.category === 'PENYUSUTAN_ASET' ||
           t.category?.toLowerCase().includes('penyusutan') ||
           t.category?.toLowerCase().includes('depreciation'))
@@ -990,15 +1099,83 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       0
     );
 
+    // Detailed Tax Breakdown directly from Menu Debt & Bank Loans -> Pajak & Hutang PPN / PPh (filteredTaxObligations)
+    let taxPpnTotal = 0;
+    let taxPpnPaid = 0;
+    let taxPpnPayable = 0;
+    let taxPpnCount = 0;
+
+    let taxPph23Total = 0;
+    let taxPph23Paid = 0;
+    let taxPph23Payable = 0;
+    let taxPph23Count = 0;
+
+    let taxPph21Total = 0;
+    let taxPph21Paid = 0;
+    let taxPph21Payable = 0;
+    let taxPph21Count = 0;
+
+    let taxPph42Total = 0;
+    let taxPph42Paid = 0;
+    let taxPph42Payable = 0;
+    let taxPph42Count = 0;
+
+    let taxOtherTotal = 0;
+    let taxOtherPaid = 0;
+    let taxOtherPayable = 0;
+    let taxOtherCount = 0;
+
+    let allTaxObligationsTotal = 0;
+    let allTaxObligationsPaid = 0;
+    let allTaxObligationsPayable = 0;
+
+    filteredTaxObligations.forEach((t) => {
+      const amt = t.taxAmount || 0;
+      const paid = t.paidAmount || 0;
+      const rem = t.remainingAmount !== undefined ? t.remainingAmount : (t.status === 'PAID' ? 0 : Math.max(0, amt - paid));
+
+      allTaxObligationsTotal += amt;
+      allTaxObligationsPaid += paid;
+      allTaxObligationsPayable += rem;
+
+      if (t.taxType === 'PPN') {
+        taxPpnTotal += amt;
+        taxPpnPaid += paid;
+        taxPpnPayable += rem;
+        taxPpnCount += 1;
+      } else if (t.taxType === 'PPH_23') {
+        taxPph23Total += amt;
+        taxPph23Paid += paid;
+        taxPph23Payable += rem;
+        taxPph23Count += 1;
+      } else if (t.taxType === 'PPH_21') {
+        taxPph21Total += amt;
+        taxPph21Paid += paid;
+        taxPph21Payable += rem;
+        taxPph21Count += 1;
+      } else if (t.taxType === 'PPH_4_2') {
+        taxPph42Total += amt;
+        taxPph42Paid += paid;
+        taxPph42Payable += rem;
+        taxPph42Count += 1;
+      } else {
+        taxOtherTotal += amt;
+        taxOtherPaid += paid;
+        taxOtherPayable += rem;
+        taxOtherCount += 1;
+      }
+    });
+
     // Synchronize tax liability (primary source: dedicated taxObligations, fallback/addition: pending ledger trxs)
     const taxLiability = totalTaxObligationsLiability > 0 ? totalTaxObligationsLiability : pendingTaxTrxAmount;
-    const payablesLiability = Math.max(0, pendingExpense - pendingTaxTrxAmount);
+    const payablesLiability = Math.max(0, cumPendingOperatingExpense - pendingTaxTrxAmount);
     const longTermBankLoans = totalRemainingPrincipal;
     const totalLiabilities = payablesLiability + taxLiability + longTermBankLoans;
 
     const totalPasiva = totalLiabilities + totalEquity;
-    const balanceDiff = Math.abs(totalAssets - totalPasiva);
-    const isBalanced = balanceDiff === 0;
+    const rawBalanceDiff = Math.abs(totalAssets - totalPasiva);
+    const isBalanced = Math.round(rawBalanceDiff) <= 1;
+    const balanceDiff = isBalanced ? 0 : rawBalanceDiff;
 
     return {
       totalIncome,
@@ -1007,6 +1184,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       totalExpense,
       clearedExpense,
       pendingExpense,
+      capexExpense,
       directExpenseTotal,
       overheadExpenseTotal,
       grossProfit,
@@ -1055,6 +1233,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       paidInCapital,
       additionalCapital,
       retainedEarningsOpening,
+      retainedEarningsPrior,
       capitalNotes,
       totalPaidAndAdditional,
       // Bank Loan Specific Breakdown
@@ -1066,13 +1245,38 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       totalMonthlyInterest,
       totalPaidPrincipal,
       totalPaidInterest,
-      loanDisbursementTrxs,
-      loanPrincipalTrxs,
-      loanInterestTrxs,
-      loanFeeTrxs,
-      totalDisbursedFromTrxs,
-      totalPrincipalPaidFromTrxs,
-      totalInterestPaidFromTrxs,
+      loanDisbursementTrxs: filteredTransactions.filter((t) => t.category === 'BANK_LOAN_DISBURSEMENT'),
+      loanPrincipalTrxs: filteredTransactions.filter((t) => t.category === 'BANK_LOAN_PRINCIPAL'),
+      loanInterestTrxs: filteredTransactions.filter((t) => t.category === 'BANK_LOAN_INTEREST'),
+      loanFeeTrxs: filteredTransactions.filter((t) => t.category === 'BANK_LOAN_FEES'),
+      totalDisbursedFromTrxs: loanDisbursementIncome,
+      totalPrincipalPaidFromTrxs: loanPrincipalExpense,
+      totalInterestPaidFromTrxs: filteredTransactions.filter((t) => t.category === 'BANK_LOAN_INTEREST').reduce((acc, t) => acc + t.amountIDR, 0),
+      // Detailed Separated Tax Obligations Metrics
+      taxPpnTotal,
+      taxPpnPaid,
+      taxPpnPayable,
+      taxPpnCount,
+      taxPph23Total,
+      taxPph23Paid,
+      taxPph23Payable,
+      taxPph23Count,
+      taxPph21Total,
+      taxPph21Paid,
+      taxPph21Payable,
+      taxPph21Count,
+      taxPph42Total,
+      taxPph42Paid,
+      taxPph42Payable,
+      taxPph42Count,
+      taxOtherTotal,
+      taxOtherPaid,
+      taxOtherPayable,
+      taxOtherCount,
+      allTaxObligationsTotal,
+      allTaxObligationsPaid,
+      allTaxObligationsPayable,
+      filteredTaxObligationsCount: filteredTaxObligations.length,
     };
   }, [
     filteredTransactions,
@@ -1312,6 +1516,48 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       });
       rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
       rows.push(['TOTAL IKHTISAR PIUTANG USAHA', '', '', '', '', '', '', '', String(metrics.receivablesAgingSummary.totalInvoiced), String(metrics.receivablesAgingSummary.totalSettled), String(metrics.receivablesAgingSummary.totalOutstanding), `${metrics.receivablesAgingSummary.settlementRate.toFixed(1)}% Terbayar`]);
+    } else if (reportType === 'TAX_AND_SETTLEMENT') {
+      filename = `Laporan_Rekonsiliasi_Pajak_dan_Settlement_${new Date().toISOString().slice(0, 10)}.csv`;
+      headers = [
+        'ID / No',
+        'Jenis Pajak',
+        'Masa Pajak',
+        'Judul / Uraian',
+        'Pihak Pemotong / Rekanan',
+        'Dasar Pengenaan Pajak (DPP)',
+        'Tarif (%)',
+        'No. Faktur / NTPN / Billing',
+        'Nilai Pajak (IDR)',
+        'Pajak Disetor (IDR)',
+        'Sisa Terhutang (IDR)',
+        'Jatuh Tempo',
+        'Status',
+      ];
+      filteredTaxObligations.forEach((t) => {
+        const rem = t.remainingAmount !== undefined ? t.remainingAmount : (t.status === 'PAID' ? 0 : Math.max(0, (t.taxAmount || 0) - (t.paidAmount || 0)));
+        const refNum = t.ntpnNumber ? `NTPN: ${t.ntpnNumber}` : t.billingCode ? `Billing: ${t.billingCode}` : t.taxInvoiceNumber || '-';
+        rows.push([
+          `"${t.id}"`,
+          `"${t.taxType}"`,
+          `"${t.taxPeriod}"`,
+          `"${t.title}"`,
+          `"${t.counterpartyName || '-'}"`,
+          String(t.taxableBaseAmount || 0),
+          `${t.taxRatePercent || 0}%`,
+          `"${refNum}"`,
+          String(t.taxAmount || 0),
+          String(t.paidAmount || 0),
+          String(rem),
+          t.dueDate || '-',
+          t.status,
+        ]);
+      });
+      rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
+      rows.push(['TOTAL ALOKASI KEWAJIBAN PAJAK', '', '', '', '', '', '', '', String(metrics.allTaxObligationsTotal), String(metrics.allTaxObligationsPaid), String(metrics.allTaxObligationsPayable), '', '']);
+      rows.push(['- Subtotal PPN (11%)', '', '', '', '', '', '', '', String(metrics.taxPpnTotal), String(metrics.taxPpnPaid), String(metrics.taxPpnPayable), '', '']);
+      rows.push(['- Subtotal PPh 23 (Jasa Surveyor/Konsultansi)', '', '', '', '', '', '', '', String(metrics.taxPph23Total), String(metrics.taxPph23Paid), String(metrics.taxPph23Payable), '', '']);
+      rows.push(['- Subtotal PPh 21 (Tenaga Ahli/Asesor)', '', '', '', '', '', '', '', String(metrics.taxPph21Total), String(metrics.taxPph21Paid), String(metrics.taxPph21Payable), '', '']);
+      rows.push(['- Subtotal PPh Final 4(2) / Lainnya', '', '', '', '', '', '', '', String(metrics.taxPph42Total + metrics.taxOtherTotal), String(metrics.taxPph42Paid + metrics.taxOtherPaid), String(metrics.taxPph42Payable + metrics.taxOtherPayable), '', '']);
     } else if (reportType === 'EQUITY') {
       filename = `Laporan_Ekuitas_Modal_GAP_CRM_${new Date().toISOString().slice(0, 10)}.csv`;
       headers = ['Komponen Ekuitas', 'Keterangan', 'Nominal (IDR)'];
@@ -1831,7 +2077,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 <option value="ALL">Semua Kategori Akuntansi</option>
                 <optgroup label="── Beban Operasional & Proyek (Expenses) ──">
                   <option value="SURVEYOR_AUDIT_FEES">LVI & AUDIT OFFICIAL FEE</option>
-                  <option value="TAX_PPH_PPN">PAJAK PPN 11%</option>
+                  <option value="PAJAK__PPN_11__">PAJAK PPN 11%</option>
+                  <option value="TAX_PPH_PPN">PAJAK PPH 23 (JASA & KONSULTANSI)</option>
                   <option value="GAJI_KARYAWAN">GAJI KARYAWAN</option>
                   <option value="INTERNET">INTERNET</option>
                   <option value="LISTRIK">LISTRIK</option>
@@ -2891,10 +3138,10 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     </tr>
                     <tr className="bg-white border-b border-slate-200">
                       <td className="py-2.5 px-4 text-slate-700 font-medium pl-6">
-                        3. Saldo Laba Ditahan Periode Sebelumnya (Retained Earnings)
+                        3. Saldo Laba Ditahan Periode Sebelumnya (Retained Earnings Akumulasi)
                       </td>
                       <td className="py-2.5 px-4 text-right font-mono font-semibold text-slate-700">
-                        {formatIDR(metrics.retainedEarningsOpening)}
+                        {formatIDR(metrics.retainedEarningsPrior)}
                       </td>
                     </tr>
                     <tr className="bg-slate-50/50 border-b border-slate-200">
@@ -2950,6 +3197,9 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     <div className="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
                       <div className="text-[10px] text-slate-400 font-bold uppercase">Total Aset (Aktiva)</div>
                       <div className="text-xs font-mono font-bold text-emerald-400 mt-1">{formatIDR(metrics.totalAssets)}</div>
+                      <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+                        Kas/Bank {formatIDR(metrics.cashAndBankAsset)} + Aset Tetap {formatIDR(metrics.fixedAssets)}
+                      </div>
                     </div>
                     <div className="flex items-center justify-center font-extrabold text-slate-400 text-base">
                       {metrics.isBalanced ? '=' : '≠'}
@@ -2960,6 +3210,9 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                         metrics.isBalanced ? 'text-cyan-400' : 'text-amber-400'
                       }`}>
                         {formatIDR(metrics.totalPasiva)}
+                      </div>
+                      <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+                        Liabilitas {formatIDR(metrics.totalLiabilities)} + Ekuitas {formatIDR(metrics.totalEquity)}
                       </div>
                     </div>
                   </div>
@@ -4917,40 +5170,393 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
         {/* ========================================================================= */}
         {reportType === 'TAX_AND_SETTLEMENT' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Pajak Card */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-slate-600" />
-                  Alokasi Pajak (PPh 23, PPN, PPh 21)
-                </h4>
-                <div className="mt-3 text-2xl font-extrabold font-mono text-slate-900">
-                  {formatIDR(metrics.expenseByCategory['TAX_PPH_PPN'] || 0)}
+            {/* Header Information Banner */}
+            <div className="bg-slate-900 text-white p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Total beban pajak yang disetorkan ke kas negara untuk periode berjalan.
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Rekonsiliasi Pajak Terpisah &amp; Settlement Piutang Usaha
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Data perpajakan diambil secara terpisah dari modul <span className="text-emerald-400 font-semibold">Debt &amp; Bank Loans (Pajak &amp; Hutang PPN / PPh)</span>.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">
+                  Total {filteredTaxObligations.length} Dokumen Pajak
+                </span>
+                {metrics.activeTaxObligationsList.length > 0 ? (
+                  <span className="text-[11px] font-mono bg-rose-950/80 border border-rose-800 text-rose-300 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                    {metrics.activeTaxObligationsList.length} Terhutang
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-mono bg-emerald-950/80 border border-emerald-800 text-emerald-300 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Pajak Nihil / Lunas
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* SEPARATED TAX CATEGORIES: PPN, PPH 23, PPH 21, PPH 4(2) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Card 1: PPN */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs hover:border-emerald-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                    PPN (11%)
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    metrics.taxPpnPayable > 0 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {metrics.taxPpnPayable > 0 ? 'Kurang Bayar' : 'Lunas'}
+                  </span>
+                </div>
+                <div className="mt-2 text-xl font-extrabold font-mono text-slate-900">
+                  {formatIDR(metrics.taxPpnTotal)}
+                </div>
+                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px]">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Disetor (NTPN):</span>
+                    <span className="font-mono font-semibold text-emerald-600">{formatIDR(metrics.taxPpnPaid)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Sisa Terhutang:</span>
+                    <span className={`font-mono font-bold ${metrics.taxPpnPayable > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                      {formatIDR(metrics.taxPpnPayable)}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-2">
+                  {metrics.taxPpnCount} faktur/masa penyerahan JKP TKDN
+                </div>
+              </div>
+
+              {/* Card 2: PPh 23 */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs hover:border-purple-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                    PPh Pasal 23 (2%)
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    metrics.taxPph23Payable > 0 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {metrics.taxPph23Payable > 0 ? 'Kurang Bayar' : 'Lunas'}
+                  </span>
+                </div>
+                <div className="mt-2 text-xl font-extrabold font-mono text-slate-900">
+                  {formatIDR(metrics.taxPph23Total)}
+                </div>
+                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px]">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Disetor (Bupot):</span>
+                    <span className="font-mono font-semibold text-emerald-600">{formatIDR(metrics.taxPph23Paid)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Sisa Terhutang:</span>
+                    <span className={`font-mono font-bold ${metrics.taxPph23Payable > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                      {formatIDR(metrics.taxPph23Payable)}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-2">
+                  {metrics.taxPph23Count} bukti potong jasa surveyor &amp; konsultansi
+                </div>
+              </div>
+
+              {/* Card 3: PPh 21 */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs hover:border-blue-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                    PPh Pasal 21
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    metrics.taxPph21Payable > 0 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {metrics.taxPph21Payable > 0 ? 'Kurang Bayar' : 'Lunas'}
+                  </span>
+                </div>
+                <div className="mt-2 text-xl font-extrabold font-mono text-slate-900">
+                  {formatIDR(metrics.taxPph21Total)}
+                </div>
+                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px]">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Disetor (Kas Negara):</span>
+                    <span className="font-mono font-semibold text-emerald-600">{formatIDR(metrics.taxPph21Paid)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Sisa Terhutang:</span>
+                    <span className={`font-mono font-bold ${metrics.taxPph21Payable > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                      {formatIDR(metrics.taxPph21Payable)}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-2">
+                  {metrics.taxPph21Count} bukti potong tenaga ahli &amp; tim audit
+                </div>
+              </div>
+
+              {/* Card 4: PPh Final 4(2) & Lainnya */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs hover:border-amber-300 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                    PPh 4(2) / Final / Badan
+                  </span>
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    (metrics.taxPph42Payable + metrics.taxOtherPayable) > 0 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {(metrics.taxPph42Payable + metrics.taxOtherPayable) > 0 ? 'Kurang Bayar' : 'Lunas'}
+                  </span>
+                </div>
+                <div className="mt-2 text-xl font-extrabold font-mono text-slate-900">
+                  {formatIDR(metrics.taxPph42Total + metrics.taxOtherTotal)}
+                </div>
+                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px]">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Disetor:</span>
+                    <span className="font-mono font-semibold text-emerald-600">{formatIDR(metrics.taxPph42Paid + metrics.taxOtherPaid)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Sisa Terhutang:</span>
+                    <span className={`font-mono font-bold ${(metrics.taxPph42Payable + metrics.taxOtherPayable) > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+                      {formatIDR(metrics.taxPph42Payable + metrics.taxOtherPayable)}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-2">
+                  {metrics.taxPph42Count + metrics.taxOtherCount} kewajiban sewa kantor/final
+                </div>
+              </div>
+            </div>
+
+            {/* OVERVIEW AGGREGATE SUMMARY CARDS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Grand Total Tax Card */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-emerald-600" />
+                    Total Alokasi Kewajiban Pajak (PPN &amp; PPh)
+                  </h4>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200">
+                    Modul Debt &amp; Bank Loans
+                  </span>
+                </div>
+                <div className="mt-3 text-2xl font-extrabold font-mono text-slate-900">
+                  {formatIDR(metrics.allTaxObligationsTotal)}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-200">
+                  <div>
+                    <span className="text-slate-500 text-[11px]">Total Pajak Disetor:</span>
+                    <div className="font-mono font-bold text-emerald-700">{formatIDR(metrics.allTaxObligationsPaid)}</div>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[11px]">Total Sisa Terhutang:</span>
+                    <div className={`font-mono font-bold ${metrics.allTaxObligationsPayable > 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                      {formatIDR(metrics.allTaxObligationsPayable)}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-2">
+                  Kewajiban pajak terhitung dari register Pajak &amp; Hutang PPN/PPh untuk periode pelaporan yang aktif.
                 </p>
               </div>
 
               {/* Piutang / Pending Card */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-amber-50/60 border-amber-200">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-700" />
-                  Outstanding Piutang (Pending Inflow)
-                </h4>
+              <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/60">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-700" />
+                    Outstanding Piutang (Pending Inflow)
+                  </h4>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold border border-amber-300">
+                    Piutang Berjalan
+                  </span>
+                </div>
                 <div className="mt-3 text-2xl font-extrabold font-mono text-amber-950">
                   {formatIDR(metrics.pendingIncome)}
                 </div>
-                <p className="text-[11px] text-amber-700 mt-1">
-                  Tagihan invoice milestone konsultasi yang menunggu pelunasan dari klien.
+                <p className="text-[11px] text-amber-800 mt-3">
+                  Tagihan invoice milestone konsultasi yang menunggu pelunasan dari klien pada periode berjalan.
                 </p>
+              </div>
+            </div>
+
+            {/* TABEL RINCIAN KEWAJIBAN PAJAK TERPISAH (DARI MODUL DEBT & BANK LOANS -> PAJAK & HUTANG PPN/PPH) */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider">
+                  <Receipt className="w-4 h-4 text-emerald-400" />
+                  <span>Daftar Kewajiban Pajak Terpisah (Sumber: Menu Debt &amp; Bank Loans &gt; Pajak &amp; Hutang PPN / PPh)</span>
+                </div>
+                <span className="text-[11px] font-mono text-emerald-400">
+                  {filteredTaxObligations.length} Rekord
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 border-b border-slate-200">
+                      <th className="py-2.5 px-3 text-left font-bold uppercase tracking-wider">No. / ID</th>
+                      <th className="py-2.5 px-3 text-left font-bold uppercase tracking-wider">Jenis Pajak</th>
+                      <th className="py-2.5 px-3 text-left font-bold uppercase tracking-wider">Masa &amp; Uraian Kewajiban</th>
+                      <th className="py-2.5 px-3 text-left font-bold uppercase tracking-wider">Pihak Rekanan / Pemotong</th>
+                      <th className="py-2.5 px-3 text-right font-bold uppercase tracking-wider">DPP &amp; Tarif</th>
+                      <th className="py-2.5 px-3 text-left font-bold uppercase tracking-wider">No. Faktur / NTPN / Billing</th>
+                      <th className="py-2.5 px-3 text-right font-bold uppercase tracking-wider">Nilai Pajak (IDR)</th>
+                      <th className="py-2.5 px-3 text-right font-bold uppercase tracking-wider">Disetor (IDR)</th>
+                      <th className="py-2.5 px-3 text-right font-bold uppercase tracking-wider">Sisa Terhutang (IDR)</th>
+                      <th className="py-2.5 px-3 text-center font-bold uppercase tracking-wider">Jatuh Tempo</th>
+                      <th className="py-2.5 px-3 text-center font-bold uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTaxObligations.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="py-8 text-center text-slate-500 bg-white space-y-2">
+                          <Info className="w-6 h-6 text-slate-400 mx-auto" />
+                          <div className="font-semibold text-slate-700">
+                            Tidak ada catatan kewajiban pajak terdaftar di menu Pajak &amp; Hutang PPN / PPh untuk periode filter ini.
+                          </div>
+                          {(metrics.expenseByCategory['TAX_PPH_PPN'] > 0 || (metrics.expenseByCategory['PAJAK__PPN_11__'] || 0) > 0) && (
+                            <div className="text-[11px] text-slate-500 max-w-md mx-auto">
+                              Catatan: Di Buku Kas Umum periode ini terdapat beban tercatat pada pos &quot;Pajak PPN 11%&quot; sebesar{' '}
+                              <span className="font-mono font-bold text-slate-800">{formatIDR(metrics.expenseByCategory['PAJAK__PPN_11__'] || 0)}</span>
+                              {metrics.expenseByCategory['TAX_PPH_PPN'] > 0 && (
+                                <>
+                                  {' '}dan pos &quot;Pajak PPh 23&quot; sebesar{' '}
+                                  <span className="font-mono font-bold text-slate-800">{formatIDR(metrics.expenseByCategory['TAX_PPH_PPN'])}</span>
+                                </>
+                              )}.
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTaxObligations.map((t, idx) => {
+                        const taxBadge = getTaxTypeBadge(t.taxType);
+                        const rem = t.remainingAmount !== undefined ? t.remainingAmount : (t.status === 'PAID' ? 0 : Math.max(0, (t.taxAmount || 0) - (t.paidAmount || 0)));
+                        const isOverdue = t.status !== 'PAID' && t.dueDate && new Date(t.dueDate).getTime() < new Date().getTime();
+
+                        return (
+                          <tr key={t.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                            <td className="py-2.5 px-3 font-mono text-slate-600 border-b border-slate-200">
+                              {t.id}
+                            </td>
+                            <td className="py-2.5 px-3 border-b border-slate-200 whitespace-nowrap">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${taxBadge.color}`}>
+                                {taxBadge.label}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 border-b border-slate-200 max-w-[220px]">
+                              <div className="font-semibold text-slate-800">{t.title}</div>
+                              <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                                <span className="bg-slate-100 px-1.5 py-0.2 rounded font-mono">Masa: {t.taxPeriod}</span>
+                                {t.projectCode && <span className="text-emerald-700 font-mono font-semibold">{t.projectCode}</span>}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 border-b border-slate-200 text-slate-700">
+                              {t.counterpartyName || '-'}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono border-b border-slate-200 whitespace-nowrap">
+                              <div>{formatIDR(t.taxableBaseAmount || 0)}</div>
+                              <div className="text-[10px] text-slate-400">{t.taxRatePercent}%</div>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] border-b border-slate-200 text-slate-600">
+                              {t.ntpnNumber ? (
+                                <div className="text-emerald-700 font-semibold">NTPN: {t.ntpnNumber}</div>
+                              ) : t.billingCode ? (
+                                <div>Billing: {t.billingCode}</div>
+                              ) : t.taxInvoiceNumber ? (
+                                <div>Faktur: {t.taxInvoiceNumber}</div>
+                              ) : (
+                                <span className="text-slate-400 italic">-</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 border-b border-slate-200">
+                              {formatIDR(t.taxAmount || 0)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-semibold text-emerald-700 border-b border-slate-200">
+                              {formatIDR(t.paidAmount || 0)}
+                            </td>
+                            <td className={`py-2.5 px-3 text-right font-mono font-bold border-b border-slate-200 ${
+                              rem > 0 ? 'text-rose-600' : 'text-slate-700'
+                            }`}>
+                              {formatIDR(rem)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-mono text-slate-600 border-b border-slate-200 whitespace-nowrap">
+                              {t.dueDate || '-'}
+                            </td>
+                            <td className="py-2.5 px-3 text-center border-b border-slate-200">
+                              {t.status === 'PAID' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  LUNAS
+                                </span>
+                              ) : isOverdue ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300">
+                                  <AlertCircle className="w-3 h-3 text-rose-600" />
+                                  OVERDUE
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                                  <Clock className="w-3 h-3 text-amber-600" />
+                                  TERHUTANG
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                  {filteredTaxObligations.length > 0 && (
+                    <tfoot>
+                      <tr className="bg-slate-900 text-white font-bold">
+                        <td colSpan={6} className="py-3 px-3 uppercase tracking-wider">
+                          TOTAL REKAPITULASI ALOKASI PAJAK ({filteredTaxObligations.length} Dokumen)
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono text-white">
+                          {formatIDR(metrics.allTaxObligationsTotal)}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono text-emerald-400">
+                          {formatIDR(metrics.allTaxObligationsPaid)}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono text-rose-400">
+                          {formatIDR(metrics.allTaxObligationsPayable)}
+                        </td>
+                        <td colSpan={2} className="py-3 px-3 text-center text-[10px] text-slate-400 font-normal">
+                          {metrics.activeTaxObligationsList.length} Belum Disetor
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
               </div>
             </div>
 
             {/* Pending Invoices / Transactions List */}
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                Daftar Tagihan & Kewajiban Finansial Menunggu Penyelesaian (Pending / Overdue)
+                Daftar Tagihan &amp; Kewajiban Finansial Menunggu Penyelesaian (Pending / Overdue)
               </h4>
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <table className="w-full text-xs border-collapse">

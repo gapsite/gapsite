@@ -429,7 +429,9 @@ export const getTransactionCategoryLabel = (
     case 'LVI_AUDIT_OFFICIAL_FEE':
       return 'LVI & AUDIT OFFICIAL FEE';
     case 'TAX_PPH_PPN':
+      return 'PAJAK PPH 23 (JASA & KONSULTANSI)';
     case 'PAJAK_PPN_11':
+    case 'PAJAK__PPN_11__':
       return 'PAJAK PPN 11%';
     case 'GAJI_KARYAWAN':
       return 'GAJI KARYAWAN';
@@ -437,9 +439,10 @@ export const getTransactionCategoryLabel = (
       return 'INTERNET';
     case 'LISTRIK':
       return 'LISTRIK';
-    case 'OPERATIONAL_OFFICE':
     case 'OPERASIONAL_KANTOR':
-      return 'OPERASIONAL KANTOR';
+      return 'OPERASIONAL KANTOR (RUTIN)';
+    case 'OPERATIONAL_OFFICE':
+      return 'OPERASIONAL KANTOR (HARIAN)';
     case 'MAKAN_MINUM':
       return 'MAKAN & MINUM';
     case 'TRANSPORTASI':

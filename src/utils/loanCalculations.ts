@@ -73,6 +73,7 @@ export const calculateBankLoanSchedule = (
         endingBalance,
         isPaid: false,
         paymentType: isLastMonth ? 'BALLOON_PAYOFF' : 'INTEREST_ONLY',
+        cycleNumber: Math.ceil(i / 12) || 1,
       });
 
       if (isLastMonth) {
@@ -167,5 +168,139 @@ export const calculateLoansAggregateMetrics = (loans: BankLoan[]) => {
     totalInterestPaid,
     totalMonthlyInterestObligation,
     totalMonthlyInstallmentObligation,
+  };
+};
+
+/**
+ * Maturity & Renewal information for a bank loan
+ */
+export interface LoanMaturityInfo {
+  maturityDate: string;
+  isPastMaturity: boolean;
+  isNearMaturity: boolean; // within 45 days of maturity
+  daysRemaining: number;
+  monthsElapsed: number;
+  totalMonths: number;
+  currentCycle: number;
+  isEligibleForRenewal: boolean;
+}
+
+export const getLoanMaturityInfo = (loan: BankLoan): LoanMaturityInfo => {
+  const schedule = loan.schedule || [];
+  const totalMonths = loan.tenureMonths || 12;
+  const lastScheduleItem = schedule[schedule.length - 1];
+
+  let maturityDateStr = lastScheduleItem?.dueDate;
+  if (!maturityDateStr) {
+    const base = new Date(loan.startDate || new Date());
+    base.setMonth(base.getMonth() + totalMonths);
+    maturityDateStr = base.toISOString().slice(0, 10);
+  }
+
+  const now = new Date();
+  const matDate = new Date(maturityDateStr);
+  const diffTime = matDate.getTime() - now.getTime();
+  const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  const paidCount = schedule.filter((s) => s.isPaid).length;
+  const isPastMaturity = daysRemaining <= 0 || (paidCount >= totalMonths && loan.status === 'ACTIVE');
+  const isNearMaturity = daysRemaining > 0 && daysRemaining <= 45;
+
+  const currentCycle = Math.ceil(totalMonths / 12) || 1;
+  const isEligibleForRenewal = (loan.facilityType === 'REVOLVING' || !loan.facilityType) && loan.status === 'ACTIVE';
+
+  return {
+    maturityDate: maturityDateStr,
+    isPastMaturity,
+    isNearMaturity,
+    daysRemaining,
+    monthsElapsed: paidCount,
+    totalMonths,
+    currentCycle,
+    isEligibleForRenewal,
+  };
+};
+
+/**
+ * Extends / rolls over a revolving credit facility (KMK) by adding additional tenure months (default 12)
+ * Converts prior balloon principal payoff into standard interest-only and appends the new cycle schedule.
+ */
+export const generateRevolvingRenewalSchedule = (
+  loan: BankLoan,
+  tenureMonthsAdded: number = 12,
+  newPrincipal: number = loan.remainingPrincipal ?? loan.principalAmount,
+  newAnnualInterestRate: number = loan.annualInterestRate,
+  renewalDateStr: string = new Date().toISOString().slice(0, 10),
+  renewalRecordId?: string
+) => {
+  const existingSchedule: LoanInstallmentScheduleItem[] = (loan.schedule || []).map((item) => {
+    // If this item was previously marked as BALLOON_PAYOFF, convert it to INTEREST_ONLY
+    // because the principal is being rolled over into the new period
+    if (item.paymentType === 'BALLOON_PAYOFF') {
+      return {
+        ...item,
+        paymentType: 'INTEREST_ONLY',
+        principalPayment: 0,
+        totalPayment: item.interestPayment,
+        endingBalance: newPrincipal,
+      };
+    }
+    return { ...item };
+  });
+
+  const existingCount = existingSchedule.length;
+  const newTenureTotal = existingCount + tenureMonthsAdded;
+  const newMonthlyInterest = Math.round((newPrincipal * (newAnnualInterestRate / 100)) / 12);
+
+  // Determine base date for continuing schedule
+  let lastDueDate = existingSchedule[existingCount - 1]?.dueDate;
+  let baseDate: Date;
+  if (lastDueDate) {
+    baseDate = new Date(lastDueDate);
+  } else {
+    baseDate = new Date(renewalDateStr || new Date());
+  }
+
+  const newScheduleItems: LoanInstallmentScheduleItem[] = [];
+
+  for (let step = 1; step <= tenureMonthsAdded; step++) {
+    const monthNum = existingCount + step;
+    const due = new Date(baseDate);
+    due.setMonth(due.getMonth() + step);
+    const dueDateStr = due.toISOString().slice(0, 10);
+
+    const isFinalMonth = step === tenureMonthsAdded;
+    const principalPayment = isFinalMonth ? newPrincipal : 0;
+    const endingBalance = isFinalMonth ? 0 : newPrincipal;
+    const totalPayment = isFinalMonth ? newPrincipal + newMonthlyInterest : newMonthlyInterest;
+
+    newScheduleItems.push({
+      monthNumber: monthNum,
+      dueDate: dueDateStr,
+      beginningBalance: newPrincipal,
+      principalPayment,
+      interestPayment: newMonthlyInterest,
+      totalPayment,
+      endingBalance,
+      isPaid: false,
+      paymentType: isFinalMonth ? 'BALLOON_PAYOFF' : 'INTEREST_ONLY',
+      cycleNumber: Math.ceil(monthNum / 12) || 2,
+      renewalId: renewalRecordId,
+    });
+  }
+
+  const fullSchedule = [...existingSchedule, ...newScheduleItems];
+  const totalInterest = fullSchedule.reduce((acc, s) => acc + (s.interestPayment || 0), 0);
+  const totalPayment = newPrincipal + totalInterest;
+
+  const newMaturityDate = newScheduleItems[newScheduleItems.length - 1]?.dueDate || '';
+
+  return {
+    fullSchedule,
+    newTenureTotal,
+    newMonthlyInterest,
+    totalInterest,
+    totalPayment,
+    newMaturityDate,
   };
 };

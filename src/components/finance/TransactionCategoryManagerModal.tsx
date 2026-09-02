@@ -549,16 +549,17 @@ export const TransactionCategoryManagerModal: React.FC<TransactionCategoryManage
               {[
                 '1. LVI & AUDIT OFFICIAL FEE',
                 '2. PAJAK PPN 11%',
-                '3. GAJI KARYAWAN',
-                '4. INTERNET',
-                '5. LISTRIK',
-                '6. OPERASIONAL KANTOR',
-                '7. MAKAN & MINUM',
-                '8. TRANSPORTASI',
-                '9. BANK INTEREST',
-                '10. SEWA KANTOR',
-                '11. OFFICE & UTILITIES EXPENSE',
-                '12. MISCELLANEOUS EXPENSE',
+                '3. PAJAK PPH 23 (JASA & KONSULTANSI)',
+                '4. GAJI KARYAWAN',
+                '5. INTERNET',
+                '6. LISTRIK',
+                '7. OPERASIONAL KANTOR',
+                '8. MAKAN & MINUM',
+                '9. TRANSPORTASI',
+                '10. BANK INTEREST',
+                '11. SEWA KANTOR',
+                '12. OFFICE & UTILITIES EXPENSE',
+                '13. MISCELLANEOUS EXPENSE',
               ].map((item) => (
                 <span key={item} className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-800 shadow-2xs">
                   {item}
