@@ -12,6 +12,12 @@ import {
   CheckCircle2,
   Briefcase,
   Sparkles,
+  Settings2,
+  Edit3,
+  Trash2,
+  RotateCcw,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import {
@@ -30,7 +36,17 @@ interface NewProjectModalProps {
 }
 
 export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose }) => {
-  const { addProject, teamMembers, currentUser, activeConsultingServices } = useProjects();
+  const {
+    addProject,
+    teamMembers,
+    currentUser,
+    activeConsultingServices,
+    assignedByOptions,
+    addAssignedByOption,
+    updateAssignedByOption,
+    deleteAssignedByOption,
+    resetAssignedByOptions,
+  } = useProjects();
 
   // Engagement Category (1. TKDN, 2. Izin Perusahaan, 3. Software Dev, 4. Lain-lain)
   const [engagementCategory, setEngagementCategory] = useState<EngagementCategory>('TKDN_CERTIFICATION');
@@ -60,10 +76,28 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClos
   );
 
   const [leadConsultantId, setLeadConsultantId] = useState(currentUser.id);
-  const [surveyorBody, setSurveyorBody] = useState<SurveyorBody>('PT Surveyor Indonesia');
+  const [surveyorBody, setSurveyorBody] = useState<SurveyorBody>(
+    assignedByOptions[0] || 'PT Surveyor Indonesia'
+  );
   const [licensingAuthority, setLicensingAuthority] = useState('Kementerian Investasi / BKPM (OSS-RBA)');
   const [description, setDescription] = useState('');
   const [tagInput, setTagInput] = useState('PLN Tender, Kemenperin');
+
+  // Master Data Manager State for "ASSIGNED BY"
+  const [isManagingAssignedBy, setIsManagingAssignedBy] = useState(false);
+  const [newOptionInput, setNewOptionInput] = useState('');
+  const [editingOptionOriginal, setEditingOptionOriginal] = useState<string | null>(null);
+  const [editingOptionValue, setEditingOptionValue] = useState('');
+  const [manageFeedback, setManageFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Sync surveyorBody if current value is empty or deleted
+  useEffect(() => {
+    if (assignedByOptions && assignedByOptions.length > 0) {
+      if (!surveyorBody || !assignedByOptions.includes(surveyorBody as string)) {
+        setSurveyorBody(assignedByOptions[0]);
+      }
+    }
+  }, [assignedByOptions, surveyorBody]);
 
   // Helper to find the best active service matching the chosen engagement category
   const findBestServiceForCategory = (
@@ -678,21 +712,266 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClos
           {/* LVI Body / Authority & Lead Consultant */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {engagementCategory === 'TKDN_CERTIFICATION' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Assigned LVI (Lembaga Verifikasi Independen)
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    ASSIGNED BY
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsManagingAssignedBy(!isManagingAssignedBy);
+                      setManageFeedback(null);
+                      setEditingOptionOriginal(null);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 transition-colors bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-md px-2 py-0.5 cursor-pointer"
+                  >
+                    <Settings2 className="w-3 h-3" />
+                    {isManagingAssignedBy ? 'Selesai Kelola' : 'Kelola Opsi'}
+                  </button>
+                </div>
+
                 <select
                   value={surveyorBody}
-                  onChange={(e) => setSurveyorBody(e.target.value as SurveyorBody)}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-900 rounded-lg px-3 py-2.5 font-medium"
+                  onChange={(e) => {
+                    if (e.target.value === '__ADD_NEW__') {
+                      setIsManagingAssignedBy(true);
+                      setManageFeedback(null);
+                    } else {
+                      setSurveyorBody(e.target.value as SurveyorBody);
+                    }
+                  }}
+                  className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-900 rounded-lg px-3 py-2.5 font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-colors"
                 >
-                  <option value="PT Surveyor Indonesia">1. PT Surveyor Indonesia</option>
-                  <option value="PT Sucofindo (Persero)">2. PT Sucofindo (Persero)</option>
-                  <option value="PT Biro Klasifikasi Indonesia">3. PT Biro Klasifikasi Indonesia</option>
-                  <option value="PT Anindya Wiraputra Consult">4. PT Anindya Wiraputra Consult</option>
-                  <option value="Badan Standarisasi dan Kebijakan Jasa Industri">5. Badan Standarisasi dan Kebijakan Jasa Industri</option>
+                  {assignedByOptions.map((opt, idx) => (
+                    <option key={opt} value={opt}>
+                      {idx + 1}. {opt}
+                    </option>
+                  ))}
+                  <option value="__ADD_NEW__" className="text-emerald-700 font-semibold bg-emerald-50">
+                    ➕ Tambah Opsi Baru...
+                  </option>
                 </select>
+
+                {/* Management Panel for ASSIGNED BY Options */}
+                {isManagingAssignedBy && (
+                  <div className="p-3 bg-slate-100 rounded-xl border border-slate-300 text-xs space-y-3 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <Settings2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Kelola Daftar "ASSIGNED BY"
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const res = resetAssignedByOptions();
+                          setManageFeedback({ type: 'success', text: res.message || 'Daftar direset ke default.' });
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] text-slate-600 hover:text-slate-900 hover:underline cursor-pointer"
+                        title="Kembalikan ke 5 daftar surveyor standar"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5" />
+                        Reset Default
+                      </button>
+                    </div>
+
+                    {/* Feedback message */}
+                    {manageFeedback && (
+                      <div
+                        className={`p-2 rounded-lg text-[11px] font-medium flex items-center gap-1.5 ${
+                          manageFeedback.type === 'success'
+                            ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                            : 'bg-red-50 border border-red-200 text-red-800'
+                        }`}
+                      >
+                        {manageFeedback.type === 'success' ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                        )}
+                        <span>{manageFeedback.text}</span>
+                      </div>
+                    )}
+
+                    {/* Form Tambah Opsi Baru */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                        Tambah Opsi Baru:
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={newOptionInput}
+                          onChange={(e) => setNewOptionInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (!newOptionInput.trim()) return;
+                              const res = addAssignedByOption(newOptionInput.trim());
+                              if (res.success) {
+                                setSurveyorBody(newOptionInput.trim());
+                                setNewOptionInput('');
+                                setManageFeedback({ type: 'success', text: res.message || 'Opsi berhasil ditambahkan.' });
+                              } else {
+                                setManageFeedback({ type: 'error', text: res.message || 'Gagal menambahkan opsi.' });
+                              }
+                            }
+                          }}
+                          placeholder="Contoh: PT Surveyor Baru / Balai Sertifikasi..."
+                          className="flex-1 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newOptionInput.trim()) {
+                              setManageFeedback({ type: 'error', text: 'Mohon masukkan nama opsi terlebih dahulu.' });
+                              return;
+                            }
+                            const res = addAssignedByOption(newOptionInput.trim());
+                            if (res.success) {
+                              setSurveyorBody(newOptionInput.trim());
+                              setNewOptionInput('');
+                              setManageFeedback({ type: 'success', text: res.message || 'Opsi berhasil ditambahkan.' });
+                            } else {
+                              setManageFeedback({ type: 'error', text: res.message || 'Gagal menambahkan opsi.' });
+                            }
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Tambah
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* List of Existing Options with Edit / Delete */}
+                    <div className="space-y-1 pt-1">
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                        Daftar Opsi Tersedia ({assignedByOptions.length}):
+                      </label>
+                      <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                        {assignedByOptions.map((opt, idx) => (
+                          <div
+                            key={opt}
+                            className={`flex items-center justify-between p-1.5 rounded-lg border text-xs transition-colors ${
+                              surveyorBody === opt
+                                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 font-medium'
+                                : 'bg-white border-slate-200 text-slate-800'
+                            }`}
+                          >
+                            {editingOptionOriginal === opt ? (
+                              <div className="flex items-center gap-1.5 w-full">
+                                <input
+                                  type="text"
+                                  value={editingOptionValue}
+                                  onChange={(e) => setEditingOptionValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      if (!editingOptionValue.trim()) return;
+                                      const res = updateAssignedByOption(opt, editingOptionValue.trim());
+                                      if (res.success) {
+                                        if (surveyorBody === opt) {
+                                          setSurveyorBody(editingOptionValue.trim());
+                                        }
+                                        setEditingOptionOriginal(null);
+                                        setManageFeedback({ type: 'success', text: res.message || 'Opsi diperbarui.' });
+                                      } else {
+                                        setManageFeedback({ type: 'error', text: res.message || 'Gagal memperbarui.' });
+                                      }
+                                    } else if (e.key === 'Escape') {
+                                      setEditingOptionOriginal(null);
+                                    }
+                                  }}
+                                  className="flex-1 bg-white border border-emerald-400 rounded px-2 py-0.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!editingOptionValue.trim()) return;
+                                    const res = updateAssignedByOption(opt, editingOptionValue.trim());
+                                    if (res.success) {
+                                      if (surveyorBody === opt) {
+                                        setSurveyorBody(editingOptionValue.trim());
+                                      }
+                                      setEditingOptionOriginal(null);
+                                      setManageFeedback({ type: 'success', text: res.message || 'Opsi diperbarui.' });
+                                    } else {
+                                      setManageFeedback({ type: 'error', text: res.message || 'Gagal memperbarui.' });
+                                    }
+                                  }}
+                                  className="p-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded cursor-pointer"
+                                  title="Simpan Perubahan"
+                                >
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingOptionOriginal(null)}
+                                  className="p-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded cursor-pointer"
+                                  title="Batal"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="truncate pr-2 flex items-center gap-1.5">
+                                  <span className="text-[10px] text-slate-600 font-bold">{idx + 1}.</span>
+                                  <span>{opt}</span>
+                                  {surveyorBody === opt && (
+                                    <span className="text-[9px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded-full">
+                                      Terpilih
+                                    </span>
+                                  )}
+                                </span>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingOptionOriginal(opt);
+                                      setEditingOptionValue(opt);
+                                      setManageFeedback(null);
+                                    }}
+                                    className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                                    title="Edit nama opsi"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (assignedByOptions.length <= 1) {
+                                        setManageFeedback({
+                                          type: 'error',
+                                          text: 'Minimal harus ada 1 opsi dalam daftar.',
+                                        });
+                                        return;
+                                      }
+                                      if (confirm(`Yakin ingin menghapus opsi "${opt}"?`)) {
+                                        const res = deleteAssignedByOption(opt);
+                                        if (res.success) {
+                                          setManageFeedback({ type: 'success', text: res.message || 'Opsi dihapus.' });
+                                        } else {
+                                          setManageFeedback({ type: 'error', text: res.message || 'Gagal menghapus.' });
+                                        }
+                                      }
+                                    }}
+                                    className="p-1 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                    title="Hapus opsi"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -258,6 +258,13 @@ interface ProjectContextType {
   resetPaymentChannelsToDefault: () => { success: boolean; message?: string };
   getPaymentChannelDefinition: (id: string) => PaymentChannelDefinition | undefined;
 
+  // Master Data: Assigned By Options (LVI / Surveyor / Lembaga Pelaksana - Tambah, Edit, Hapus)
+  assignedByOptions: string[];
+  addAssignedByOption: (name: string) => { success: boolean; message?: string };
+  updateAssignedByOption: (oldName: string, newName: string) => { success: boolean; message?: string };
+  deleteAssignedByOption: (name: string) => { success: boolean; message?: string };
+  resetAssignedByOptions: () => { success: boolean; message?: string };
+
   // Bank Loan Management (Facilities, Principal, Interest, Tenure & Ledger Synchronizer)
   bankLoans: BankLoan[];
   addBankLoan: (
@@ -479,8 +486,17 @@ const STORAGE_KEY_BANK_LOANS = 'verix_crm_bank_loans_v1';
 const STORAGE_KEY_COMPANY_CAPITAL = 'verix_crm_company_capital_v1';
 const STORAGE_KEY_TAX_OBLIGATIONS = 'verix_crm_tax_obligations_v1';
 const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
+const STORAGE_KEY_ASSIGNED_BY_OPTIONS = 'verix_crm_assigned_by_options_v1';
 const STORAGE_KEY_CURRENT_USER_ID = 'verix_crm_current_user_id_v1';
 const STORAGE_KEY_AUTH_STATE = 'verix_crm_auth_state_v1';
+
+export const DEFAULT_ASSIGNED_BY_OPTIONS: string[] = [
+  'PT Surveyor Indonesia',
+  'PT Sucofindo (Persero)',
+  'PT Biro Klasifikasi Indonesia',
+  'PT Anindya Wiraputra Consult',
+  'Badan Standarisasi dan Kebijakan Jasa Industri',
+];
 
 const INITIAL_TAX_OBLIGATIONS: TaxObligation[] = [
   {
@@ -966,6 +982,30 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error('Failed to save receivables to localStorage', e);
     }
   }, [receivables]);
+
+  // Master Data: Assigned By (LVI / Surveyor / Lembaga Pelaksana)
+  const [assignedByOptions, setAssignedByOptions] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_ASSIGNED_BY_OPTIONS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return DEFAULT_ASSIGNED_BY_OPTIONS;
+    } catch {
+      return DEFAULT_ASSIGNED_BY_OPTIONS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_ASSIGNED_BY_OPTIONS, JSON.stringify(assignedByOptions));
+    } catch (e) {
+      console.error('Failed to save assigned by options to localStorage', e);
+    }
+  }, [assignedByOptions]);
 
   const activeDocumentCategories = useMemo(() => {
     return documentCategories.filter((c) => c.status !== 'INACTIVE');
@@ -5643,6 +5683,49 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  const addAssignedByOption = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return { success: false, message: 'Nama instansi/badan penandatangan tidak boleh kosong.' };
+    }
+    if (assignedByOptions.some((opt) => opt.toLowerCase() === trimmed.toLowerCase())) {
+      return { success: false, message: `Opsi "${trimmed}" sudah ada dalam daftar.` };
+    }
+    const updated = [...assignedByOptions, trimmed];
+    setAssignedByOptions(updated);
+    return { success: true, message: `Opsi "${trimmed}" berhasil ditambahkan.` };
+  };
+
+  const updateAssignedByOption = (oldName: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      return { success: false, message: 'Nama opsi tidak boleh kosong.' };
+    }
+    if (oldName !== trimmed && assignedByOptions.some((opt) => opt.toLowerCase() === trimmed.toLowerCase())) {
+      return { success: false, message: `Opsi "${trimmed}" sudah ada dalam daftar.` };
+    }
+    const updated = assignedByOptions.map((opt) => (opt === oldName ? trimmed : opt));
+    setAssignedByOptions(updated);
+    setProjects((prev) =>
+      prev.map((p) => (p.surveyorBody === oldName ? { ...p, surveyorBody: trimmed } : p))
+    );
+    return { success: true, message: `Opsi berhasil diperbarui menjadi "${trimmed}".` };
+  };
+
+  const deleteAssignedByOption = (name: string) => {
+    if (assignedByOptions.length <= 1) {
+      return { success: false, message: 'Minimal harus ada 1 opsi yang tersisa dalam sistem.' };
+    }
+    const updated = assignedByOptions.filter((opt) => opt !== name);
+    setAssignedByOptions(updated);
+    return { success: true, message: `Opsi "${name}" berhasil dihapus.` };
+  };
+
+  const resetAssignedByOptions = () => {
+    setAssignedByOptions(DEFAULT_ASSIGNED_BY_OPTIONS);
+    return { success: true, message: 'Daftar opsi Assigned By berhasil dikembalikan ke standar awal.' };
+  };
+
   // Compute live real-time team members with dynamic workload and capacity linked to dispositions
   const dynamicTeamMembers = useMemo(() => {
     return teamMembers.map((m) => {
@@ -5741,6 +5824,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         togglePaymentChannelStatus,
         resetPaymentChannelsToDefault,
         getPaymentChannelDefinition,
+        assignedByOptions,
+        addAssignedByOption,
+        updateAssignedByOption,
+        deleteAssignedByOption,
+        resetAssignedByOptions,
         bankLoans,
         addBankLoan,
         updateBankLoan,

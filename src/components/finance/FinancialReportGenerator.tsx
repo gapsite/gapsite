@@ -44,6 +44,11 @@ import {
   Plus,
   Settings2,
   Clock,
+  UserCheck,
+  PenTool,
+  User,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { FinancialTransaction, ConsultingProject, TransactionType, PaymentChannelDefinition, Receivable } from '../../types';
@@ -54,7 +59,7 @@ import {
   getPaymentMethodLabel,
   getTransactionStatusBadge,
 } from '../../utils/formatters';
-import { calculateReceivablesAgingSummary } from '../../utils/receivableCalculations';
+import { calculateReceivablesAgingSummary, getAgingBucket } from '../../utils/receivableCalculations';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
 
@@ -91,6 +96,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
   const {
     transactions,
     projects,
+    teamMembers,
     currentUser,
     paymentChannels,
     activePaymentChannels,
@@ -116,6 +122,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
   const [showLetterhead, setShowLetterhead] = useState<boolean>(true);
   const [showSignatures, setShowSignatures] = useState<boolean>(true);
   const [showNotes, setShowNotes] = useState<boolean>(true);
+  const [isSignatoryPanelOpen, setIsSignatoryPanelOpen] = useState<boolean>(false);
   const [documentNumber, setDocumentNumber] = useState<string>(() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -126,11 +133,161 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     'Laporan Keuangan Eksekutif Komprehensif ini disusun berdasarkan data mutasi kas & transaksi operasional resmi konsultasi GAP.CRM. Seluruh angka telah direkonsiliasi dan diverifikasi sesuai bukti pembayaran, faktur pajak, dan invoice terlampir.'
   );
 
+  // ---------------------------------------------------------------------------
+  // ROLE-RESTRICTED SIGNATORY OPTIONS:
+  // - DIPERSIAPKAN: ONLY FINANCE ROLE
+  // - DISETUJUI: ONLY DIRECTOR ROLE
+  // ---------------------------------------------------------------------------
+  const FINANCE_POSITION_OPTIONS = [
+    'Finance & Treasury Officer',
+    'Financial Controller / Billing Specialist',
+    'Head of Finance & Accounting',
+    'Chief Financial Officer (CFO)',
+    'Senior Treasury Specialist',
+    'Staff Akuntansi & Perpajakan',
+    'Kasir & Staff Keuangan Operasional',
+    'Custom (Kustom Jabatan...)',
+  ];
+
+  const DIRECTOR_POSITION_OPTIONS = [
+    'Managing Partner / Director',
+    'President Director & CEO',
+    'Director of Consulting & Operations',
+    'Director of Finance & Strategy',
+    'Executive Director',
+    'Chief Executive Officer (CEO)',
+    'Managing Director & Master Admin',
+    'Custom (Kustom Jabatan...)',
+  ];
+
+  // 1. Finance Role Only for Preparer (Dipersiapkan)
+  const financeEligibleMembers = useMemo(() => {
+    const list = (teamMembers || []).filter(
+      (m) =>
+        m.role === 'FINANCE_OFFICER' ||
+        m.role === 'FINANCE' ||
+        m.department?.toLowerCase().includes('finance') ||
+        m.department?.toLowerCase().includes('invoicing') ||
+        m.department?.toLowerCase().includes('keuangan') ||
+        m.roleTitle?.toLowerCase().includes('finance') ||
+        m.roleTitle?.toLowerCase().includes('controller') ||
+        m.roleTitle?.toLowerCase().includes('treasury') ||
+        m.roleTitle?.toLowerCase().includes('akuntan')
+    );
+    if (list.length === 0) {
+      if (currentUser?.role === 'FINANCE_OFFICER' || currentUser?.role === 'FINANCE') {
+        return [currentUser];
+      }
+      return [
+        {
+          id: 'fin-officer-1',
+          name: 'Siti Nurhaliza, S.Ak',
+          role: 'FINANCE_OFFICER' as const,
+          roleTitle: 'Finance & Treasury Officer',
+          department: 'Divisi Keuangan & Pembukuan',
+          email: 'finance@gapsite.com',
+          avatar: '',
+          status: 'ACTIVE' as const,
+        },
+        {
+          id: 'fin-officer-2',
+          name: 'Dewi Rahmawati, S.E.',
+          role: 'FINANCE_OFFICER' as const,
+          roleTitle: 'Financial Controller & Billing Specialist',
+          department: 'Finance & Invoicing',
+          email: 'billing@gapsite.com',
+          avatar: '',
+          status: 'ACTIVE' as const,
+        },
+      ];
+    }
+    return list;
+  }, [teamMembers, currentUser]);
+
+  // 2. Director Role Only for Approver (Disetujui)
+  const directorEligibleMembers = useMemo(() => {
+    const list = (teamMembers || []).filter(
+      (m) =>
+        m.role === 'DIRECTOR' ||
+        m.role === 'MASTER_ADMIN' ||
+        m.role === 'SUPER_ADMIN' ||
+        m.department?.toLowerCase().includes('board') ||
+        m.department?.toLowerCase().includes('executive') ||
+        m.department?.toLowerCase().includes('direksi') ||
+        m.roleTitle?.toLowerCase().includes('director') ||
+        m.roleTitle?.toLowerCase().includes('direktur') ||
+        m.roleTitle?.toLowerCase().includes('partner') ||
+        m.roleTitle?.toLowerCase().includes('ceo')
+    );
+    if (list.length === 0) {
+      return [
+        {
+          id: 'dir-officer-1',
+          name: 'Adryan Kelvianto',
+          role: 'DIRECTOR' as const,
+          roleTitle: 'Managing Partner / Director',
+          department: 'Dewan Direksi & Manajemen Eksekutif',
+          email: 'admin@gapsite.com',
+          avatar: '',
+          status: 'ACTIVE' as const,
+        },
+      ];
+    }
+    return list;
+  }, [teamMembers]);
+
+  // Preparer (Finance) State
+  const [selectedPreparerId, setSelectedPreparerId] = useState<string>(() => {
+    if (currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE') {
+      return currentUser.id;
+    }
+    return financeEligibleMembers[0]?.id || 'fin-officer-1';
+  });
+  const [preparerName, setPreparerName] = useState<string>(() => {
+    if (currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE') {
+      return currentUser.name;
+    }
+    return financeEligibleMembers[0]?.name || 'Siti Nurhaliza, S.Ak';
+  });
+  const [preparerPosition, setPreparerPosition] = useState<string>('Finance & Treasury Officer');
+  const [customPreparerPosition, setCustomPreparerPosition] = useState<string>('');
+  const [isCustomPreparer, setIsCustomPreparer] = useState<boolean>(false);
+
+  // Approver (Director) State
+  const [selectedApproverId, setSelectedApproverId] = useState<string>(() => {
+    const defaultDir = directorEligibleMembers.find((d) => d.role === 'MASTER_ADMIN' || d.role === 'DIRECTOR');
+    return defaultDir?.id || directorEligibleMembers[0]?.id || 'dir-officer-1';
+  });
+  const [approverName, setApproverName] = useState<string>(() => {
+    const defaultDir = directorEligibleMembers.find((d) => d.role === 'MASTER_ADMIN' || d.role === 'DIRECTOR');
+    return defaultDir?.name || directorEligibleMembers[0]?.name || 'Adryan Kelvianto';
+  });
+  const [approverPosition, setApproverPosition] = useState<string>('Managing Partner / Director');
+  const [customApproverPosition, setCustomApproverPosition] = useState<string>('');
+  const [isCustomApprover, setIsCustomApprover] = useState<boolean>(false);
+
+  const displayPreparerPosition = preparerPosition === 'Custom (Kustom Jabatan...)'
+    ? (customPreparerPosition.trim() || 'Finance Officer')
+    : preparerPosition;
+
+  const displayApproverPosition = approverPosition === 'Custom (Kustom Jabatan...)'
+    ? (customApproverPosition.trim() || 'Director')
+    : approverPosition;
+
   // Copy brief feedback
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState<boolean>(false);
   const [isCapitalModalOpen, setIsCapitalModalOpen] = useState<boolean>(false);
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('EXPENSE');
+
+  // Helper local date formatter to avoid UTC offset discrepancies
+  const formatLocalDate = (year: number, monthZeroIndex: number, day: number): string => {
+    const d = new Date(year, monthZeroIndex, day);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dt = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dt}`;
+  };
 
   // Helper date ranges
   const dateBounds = useMemo(() => {
@@ -139,22 +296,22 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     const currentMonth = now.getMonth(); // 0-11
 
     if (periodFilter === 'THIS_MONTH') {
-      const start = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
-      const end = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+      const start = formatLocalDate(currentYear, currentMonth, 1);
+      const end = formatLocalDate(currentYear, currentMonth + 1, 0);
       return { start, end, label: `Bulan Ini (${now.toLocaleString('id-ID', { month: 'long', year: 'numeric' })})` };
     }
 
     if (periodFilter === 'LAST_MONTH') {
-      const start = new Date(currentYear, currentMonth - 1, 1).toISOString().split('T')[0];
-      const end = new Date(currentYear, currentMonth, 0).toISOString().split('T')[0];
+      const start = formatLocalDate(currentYear, currentMonth - 1, 1);
+      const end = formatLocalDate(currentYear, currentMonth, 0);
       const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
       return { start, end, label: `Bulan Lalu (${lastMonthDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' })})` };
     }
 
     if (periodFilter === 'THIS_QUARTER') {
       const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
-      const start = new Date(currentYear, quarterStartMonth, 1).toISOString().split('T')[0];
-      const end = new Date(currentYear, quarterStartMonth + 3, 0).toISOString().split('T')[0];
+      const start = formatLocalDate(currentYear, quarterStartMonth, 1);
+      const end = formatLocalDate(currentYear, quarterStartMonth + 3, 0);
       const qNum = Math.floor(currentMonth / 3) + 1;
       return { start, end, label: `Kuartal ${qNum} (Q${qNum} ${currentYear})` };
     }
@@ -202,7 +359,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
         return false;
       }
 
-      // 5. Search Query (Transaction #, Description, Counterparty, Reference)
+      // 5. Search Query (Transaction #, Description, Counterparty, Reference, Project Code)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesNumber = t.transactionNumber?.toLowerCase().includes(q);
@@ -218,6 +375,111 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       return true;
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [transactions, dateBounds, statusFilter, selectedProjectId, categoryFilter, searchQuery]);
+
+  // Filtered Receivables (Piutang Usaha) synchronized strictly with dateBounds, project, status, and search
+  const filteredReceivables = useMemo(() => {
+    return (receivables || []).filter((r) => {
+      // 1. Date Range (issueDate or fallback to createdAt date)
+      const rDate = r.issueDate || r.createdAt?.split('T')[0] || '';
+      if (rDate && (rDate < dateBounds.start || rDate > dateBounds.end)) {
+        return false;
+      }
+
+      // 2. Project Filter
+      if (selectedProjectId !== 'ALL' && r.projectId && r.projectId !== selectedProjectId) {
+        return false;
+      }
+
+      // 3. Status Filter
+      if (statusFilter === 'CLEARED_ONLY' && r.status !== 'LUNAS') {
+        return false;
+      }
+      if (statusFilter === 'PENDING_OVERDUE' && r.status === 'LUNAS') {
+        return false;
+      }
+
+      // 4. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesNum = r.invoiceNumber?.toLowerCase().includes(q);
+        const matchesClient = r.clientName?.toLowerCase().includes(q);
+        const matchesProject = r.projectCode?.toLowerCase().includes(q);
+        const matchesTitle = r.title?.toLowerCase().includes(q);
+        const matchesDesc = r.description?.toLowerCase().includes(q);
+        if (!matchesNum && !matchesClient && !matchesProject && !matchesTitle && !matchesDesc) {
+          return false;
+        }
+      }
+
+      return true;
+    }).sort((a, b) => new Date(a.issueDate || a.createdAt).getTime() - new Date(b.issueDate || b.createdAt).getTime());
+  }, [receivables, dateBounds, selectedProjectId, statusFilter, searchQuery]);
+
+  // Filtered Tax Obligations (Kewajiban Pajak) synchronized with dateBounds, project, status, and search
+  const filteredTaxObligations = useMemo(() => {
+    return (taxObligations || []).filter((t) => {
+      // 1. Date Range (dueDate, paidAt, or fallback to createdAt date)
+      const tDate = t.dueDate || t.paidAt?.split('T')[0] || t.createdAt?.split('T')[0] || '';
+      if (tDate && (tDate < dateBounds.start || tDate > dateBounds.end)) {
+        return false;
+      }
+
+      // 2. Project Filter
+      if (selectedProjectId !== 'ALL' && t.projectId && t.projectId !== selectedProjectId) {
+        return false;
+      }
+
+      // 3. Status Filter
+      if (statusFilter === 'CLEARED_ONLY' && t.status !== 'PAID') {
+        return false;
+      }
+      if (statusFilter === 'PENDING_OVERDUE' && t.status === 'PAID') {
+        return false;
+      }
+
+      // 4. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = t.title?.toLowerCase().includes(q);
+        const matchesDesc = t.description?.toLowerCase().includes(q);
+        const matchesTaxPeriod = t.taxPeriod?.toLowerCase().includes(q);
+        const matchesCounterparty = t.counterpartyName?.toLowerCase().includes(q);
+        const matchesProject = t.projectCode?.toLowerCase().includes(q);
+        const matchesBilling = t.billingCode?.toLowerCase().includes(q);
+        const matchesNtpn = t.ntpnNumber?.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesDesc && !matchesTaxPeriod && !matchesCounterparty && !matchesProject && !matchesBilling && !matchesNtpn) {
+          return false;
+        }
+      }
+
+      return true;
+    }).sort((a, b) => new Date(a.dueDate || a.createdAt).getTime() - new Date(b.dueDate || b.createdAt).getTime());
+  }, [taxObligations, dateBounds, selectedProjectId, statusFilter, searchQuery]);
+
+  // Filtered Bank Loans synchronized with dateBounds and search
+  const filteredBankLoans = useMemo(() => {
+    return (bankLoans || []).filter((l) => {
+      // 1. Date filter (if loan was initiated after the selected period end date)
+      const lStart = l.startDate || l.createdAt?.split('T')[0] || '';
+      if (lStart && dateBounds.end && lStart > dateBounds.end) {
+        return false;
+      }
+
+      // 2. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = l.loanName?.toLowerCase().includes(q);
+        const matchesBank = l.bankName?.toLowerCase().includes(q);
+        const matchesNum = l.loanNumber?.toLowerCase().includes(q);
+        const matchesAcc = l.accountNumber?.toLowerCase().includes(q);
+        if (!matchesName && !matchesBank && !matchesNum && !matchesAcc) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [bankLoans, dateBounds, searchQuery]);
 
   // Financial KPI Metrics
   const metrics = useMemo(() => {
@@ -245,8 +507,21 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       }
     > = {};
 
+    // Filter projects matching selected project and search query
+    const relevantProjects = projects.filter((p) => {
+      if (selectedProjectId !== 'ALL' && p.id !== selectedProjectId) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesCode = p.code?.toLowerCase().includes(q);
+        const matchesName = p.name?.toLowerCase().includes(q);
+        const matchesClient = p.clientName?.toLowerCase().includes(q);
+        if (!matchesCode && !matchesName && !matchesClient) return false;
+      }
+      return true;
+    });
+
     // Initialize projects for profitability report
-    projects.forEach((p) => {
+    relevantProjects.forEach((p) => {
       projectFinancials[p.id] = {
         projectId: p.id,
         projectCode: p.code,
@@ -293,6 +568,13 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     // Calculate net profits for projects
     Object.values(projectFinancials).forEach((pf) => {
       pf.netProfit = pf.totalIncome - pf.totalExpense;
+    });
+
+    // When filtering by specific date period, only keep projects that have financial activity or are explicitly selected
+    const activeProjectFinancialsList = Object.values(projectFinancials).filter((pf) => {
+      if (selectedProjectId !== 'ALL') return true;
+      if (periodFilter === 'ALL') return true;
+      return pf.transactionCount > 0 || pf.totalIncome > 0 || pf.totalExpense > 0;
     });
 
     // Direct Cost vs Overhead categorization
@@ -342,7 +624,13 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       }
     > = {};
 
-    projects.forEach((p) => {
+    relevantProjects.forEach((p) => {
+      const pf = projectFinancials[p.id];
+      if (!pf) return;
+      if (periodFilter !== 'ALL' && selectedProjectId === 'ALL' && pf.transactionCount === 0) {
+        return;
+      }
+
       const st = p.serviceType || 'KONSULTASI_UMUM';
       if (!serviceTypeBreakdown[st]) {
         serviceTypeBreakdown[st] = {
@@ -356,16 +644,13 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       }
       serviceTypeBreakdown[st].projectCount += 1;
       serviceTypeBreakdown[st].contractValue += p.contractValueIDR || 0;
-      const pf = projectFinancials[p.id];
-      if (pf) {
-        serviceTypeBreakdown[st].totalIncome += pf.totalIncome;
-        serviceTypeBreakdown[st].totalExpense += pf.totalExpense;
-        serviceTypeBreakdown[st].netProfit += pf.netProfit;
-      }
+      serviceTypeBreakdown[st].totalIncome += pf.totalIncome;
+      serviceTypeBreakdown[st].totalExpense += pf.totalExpense;
+      serviceTypeBreakdown[st].netProfit += pf.netProfit;
     });
 
-    // Bank Loans Management & Liability Breakdown
-    const loansList = bankLoans || [];
+    // Bank Loans Management & Liability Breakdown (strictly filtered)
+    const loansList = filteredBankLoans;
     const activeLoans = loansList.filter((l) => l.status === 'ACTIVE');
     const totalLoanFacility = loansList.reduce((acc, l) => acc + (l.principalAmount || 0), 0);
     const totalRemainingPrincipal = activeLoans.reduce((acc, l) => acc + (l.remainingPrincipal ?? l.principalAmount), 0);
@@ -401,9 +686,59 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     const netClearedCash = clearedIncome - clearedExpense;
     const cashAndBankAsset = Math.max(0, totalPaidAndAdditional + retainedEarningsOpening + netClearedCash + (totalDisbursedFromTrxs - totalPrincipalPaidFromTrxs));
 
-    // Real-time Accounts Receivable (Piutang Usaha) integration
-    const receivablesAgingSummary = calculateReceivablesAgingSummary(receivables || []);
-    const activeReceivablesList = (receivables || []).filter(
+    // Real-time Accounts Receivable (Piutang Usaha) calculation with strict date/search/status filtering
+    let current0to30 = { count: 0, amount: 0 };
+    let aging31to60 = { count: 0, amount: 0 };
+    let aging61to90 = { count: 0, amount: 0 };
+    let agingOver90 = { count: 0, amount: 0 };
+    let totalOutstanding = 0;
+    let totalSettled = 0;
+    let totalInvoiced = 0;
+    let activeReceivablesCount = 0;
+
+    filteredReceivables.forEach((r) => {
+      if (r.status === 'BATAL') return;
+      const total = r.totalAmountIDR || 0;
+      const paid = r.paidAmountIDR || 0;
+      const remaining = r.remainingAmountIDR !== undefined ? r.remainingAmountIDR : Math.max(0, total - paid);
+
+      totalInvoiced += total;
+      totalSettled += paid;
+
+      if (remaining > 0 && r.status !== 'LUNAS') {
+        totalOutstanding += remaining;
+        activeReceivablesCount += 1;
+        const bucket = getAgingBucket(r);
+        if (bucket === '0_30') {
+          current0to30.count += 1;
+          current0to30.amount += remaining;
+        } else if (bucket === '31_60') {
+          aging31to60.count += 1;
+          aging31to60.amount += remaining;
+        } else if (bucket === '61_90') {
+          aging61to90.count += 1;
+          aging61to90.amount += remaining;
+        } else if (bucket === 'OVER_90') {
+          agingOver90.count += 1;
+          agingOver90.amount += remaining;
+        }
+      }
+    });
+
+    const receivablesSettlementRate = totalInvoiced > 0 ? (totalSettled / totalInvoiced) * 100 : 0;
+    const receivablesAgingSummary = {
+      current0to30,
+      aging31to60,
+      aging61to90,
+      agingOver90,
+      totalOutstanding,
+      totalSettled,
+      totalInvoiced,
+      settlementRate: receivablesSettlementRate,
+      activeCount: activeReceivablesCount,
+    };
+
+    const activeReceivablesList = filteredReceivables.filter(
       (r) => r.status !== 'BATAL' && r.status !== 'LUNAS' && (r.remainingAmountIDR === undefined || r.remainingAmountIDR > 0)
     );
     const totalReceivablesOutstanding = receivablesAgingSummary.totalOutstanding;
@@ -564,8 +899,23 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     }
 
     // Fixed Assets & Equipment (Belanja Modal Aset / Inventaris)
-    // Cumulative calculation up to report period end to reflect real-world balance sheet asset base
-    const fixedAssetTrxs = transactions.filter(
+    // 1. Transaction list for the filtered report period:
+    const fixedAssetTrxs = filteredTransactions.filter(
+      (t) =>
+        t.type === 'EXPENSE' &&
+        (t.category === 'PENGADAAN_ASET' ||
+          t.category === 'PENGADAAN_ALAT_UJI' ||
+          t.category === 'INVENTARIS_ASET' ||
+          t.category === 'EQUIPMENT' ||
+          t.category === 'SOFTWARE_CLOUD' ||
+          t.category?.toLowerCase().includes('aset') ||
+          t.category?.toLowerCase().includes('peralatan') ||
+          t.category?.toLowerCase().includes('inventaris') ||
+          t.category?.toLowerCase().includes('alat uji'))
+    );
+
+    // 2. Cumulative balance sheet asset base up to dateBounds.end
+    const cumulativeAssetTrxs = transactions.filter(
       (t) =>
         t.type === 'EXPENSE' &&
         t.date <= dateBounds.end &&
@@ -579,9 +929,17 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
           t.category?.toLowerCase().includes('inventaris') ||
           t.category?.toLowerCase().includes('alat uji'))
     );
-    const fixedAssetsGross = fixedAssetTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
+    const fixedAssetsGross = cumulativeAssetTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
 
-    const depreciationTrxs = transactions.filter(
+    const depreciationTrxs = filteredTransactions.filter(
+      (t) =>
+        t.type === 'EXPENSE' &&
+        (t.category === 'PENYUSUTAN_ASET' ||
+          t.category?.toLowerCase().includes('penyusutan') ||
+          t.category?.toLowerCase().includes('depreciation'))
+    );
+
+    const cumulativeDepreciationTrxs = transactions.filter(
       (t) =>
         t.type === 'EXPENSE' &&
         t.date <= dateBounds.end &&
@@ -589,12 +947,12 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
           t.category?.toLowerCase().includes('penyusutan') ||
           t.category?.toLowerCase().includes('depreciation'))
     );
-    const depreciationTotal = depreciationTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
+    const depreciationTotal = cumulativeDepreciationTrxs.reduce((acc, t) => acc + t.amountIDR, 0);
     const fixedAssets = Math.max(0, fixedAssetsGross - depreciationTotal);
     const totalAssets = cashAndBankAsset + receivablesAsset + fixedAssets;
 
-    // Liabilities Breakdown
-    const activeTaxObligationsList = (taxObligations || []).filter((t) => {
+    // Liabilities Breakdown (strictly synchronized with filteredTaxObligations)
+    const activeTaxObligationsList = filteredTaxObligations.filter((t) => {
       const isUnpaid = t.status !== 'PAID' && ((t.remainingAmount !== undefined ? t.remainingAmount : t.taxAmount) > 0);
       return isUnpaid;
     });
@@ -664,7 +1022,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       expenseByCategory,
       serviceTypeBreakdown: Object.values(serviceTypeBreakdown).sort((a, b) => b.totalIncome - a.totalIncome),
       channelSummary,
-      projectFinancials: Object.values(projectFinancials).sort((a, b) => b.netProfit - a.netProfit),
+      projectFinancials: activeProjectFinancialsList.sort((a, b) => b.netProfit - a.netProfit),
       // 5 Core Accounting Pillars
       cashAndBankAsset,
       receivablesAsset,
@@ -716,7 +1074,21 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       totalPrincipalPaidFromTrxs,
       totalInterestPaidFromTrxs,
     };
-  }, [filteredTransactions, projects, paymentChannels, activePaymentChannels, bankLoans, companyCapital]);
+  }, [
+    filteredTransactions,
+    filteredReceivables,
+    filteredTaxObligations,
+    filteredBankLoans,
+    transactions,
+    projects,
+    paymentChannels,
+    activePaymentChannels,
+    companyCapital,
+    dateBounds,
+    periodFilter,
+    selectedProjectId,
+    searchQuery,
+  ]);
 
   // Export CSV Handler
   const handleExportCSV = () => {
@@ -1517,52 +1889,303 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
           </div>
 
           {/* Additional Print Options Toggles */}
-          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-600">
-            <div className="flex items-center gap-4">
-              <span className="font-semibold text-slate-700 flex items-center gap-1">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                Format Cetak:
-              </span>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showLetterhead}
-                  onChange={(e) => setShowLetterhead(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span>Kop Surat Resmi</span>
-              </label>
+          <div className="pt-3 border-t border-slate-100 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-slate-600">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="font-semibold text-slate-700 flex items-center gap-1">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Format Cetak:
+                </span>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showLetterhead}
+                    onChange={(e) => setShowLetterhead(e.target.checked)}
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>Kop Surat Resmi</span>
+                </label>
 
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showSignatures}
-                  onChange={(e) => setShowSignatures(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span>Lembar Tanda Tangan Pejabat</span>
-              </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showSignatures}
+                    onChange={(e) => setShowSignatures(e.target.checked)}
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>Lembar Tanda Tangan Pejabat</span>
+                </label>
 
-              <label className="flex items-center gap-1.5 cursor-pointer">
+                {showSignatures && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSignatoryPanelOpen((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                      isSignatoryPanelOpen
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                    title="Atur Opsi Penandatangan Laporan (Finance & Director Roles)"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Opsi Penandatangan ({financeEligibleMembers.length} Finance, {directorEligibleMembers.length} Director)</span>
+                    {isSignatoryPanelOpen ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                    )}
+                  </button>
+                )}
+
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showNotes}
+                    onChange={(e) => setShowNotes(e.target.checked)}
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>Catatan / Opini Keuangan</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">No. Dokumen:</span>
                 <input
-                  type="checkbox"
-                  checked={showNotes}
-                  onChange={(e) => setShowNotes(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  type="text"
+                  value={documentNumber}
+                  onChange={(e) => setDocumentNumber(e.target.value)}
+                  className="text-xs font-mono font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 w-48 text-right focus:outline-hidden"
                 />
-                <span>Catatan / Opini Keuangan</span>
-              </label>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">No. Dokumen:</span>
-              <input
-                type="text"
-                value={documentNumber}
-                onChange={(e) => setDocumentNumber(e.target.value)}
-                className="text-xs font-mono font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 w-48 text-right focus:outline-hidden"
-              />
-            </div>
+            {/* Expandable Role-Restricted Signatory Configuration Panel */}
+            {showSignatures && isSignatoryPanelOpen && (
+              <div className="bg-slate-50/80 rounded-xl border border-slate-200 p-3.5 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <PenTool className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-bold text-slate-900">
+                      Pengaturan Otorisasi &amp; Pejabat Penandatangan Dokumen
+                    </span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold uppercase tracking-wider">
+                      Role Enforced
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">
+                    Dipersiapkan: <strong>Hanya Role Finance</strong> | Disetujui: <strong>Hanya Role Director</strong>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  {/* LEFT: DIPERSIAPKAN (FINANCE ONLY) */}
+                  <div className="bg-white rounded-lg border border-emerald-200 p-3 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        1. Dipersiapkan &amp; Diverifikasi Oleh
+                      </span>
+                      <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold uppercase">
+                        Khusus Role Finance
+                      </span>
+                    </div>
+
+                    {/* Person Selection */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Pilih Pejabat / Staf Finance:
+                      </label>
+                      <select
+                        value={isCustomPreparer ? 'CUSTOM' : selectedPreparerId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'CUSTOM') {
+                            setIsCustomPreparer(true);
+                          } else {
+                            setIsCustomPreparer(false);
+                            setSelectedPreparerId(val);
+                            const found = financeEligibleMembers.find((m) => m.id === val);
+                            if (found) {
+                              setPreparerName(found.name);
+                              if (found.roleTitle) {
+                                setPreparerPosition(found.roleTitle);
+                              }
+                            }
+                          }
+                        }}
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <optgroup label="── Anggota Tim dengan Akses / Role Finance ──">
+                          {financeEligibleMembers.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name} ({m.roleTitle || 'Finance Officer'})
+                            </option>
+                          ))}
+                        </optgroup>
+                        <option value="CUSTOM">+ Kustom Nama Personil Finance...</option>
+                      </select>
+                    </div>
+
+                    {/* Custom Name Input if selected */}
+                    {isCustomPreparer && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Nama Personil Finance:
+                        </label>
+                        <input
+                          type="text"
+                          value={preparerName}
+                          onChange={(e) => setPreparerName(e.target.value)}
+                          placeholder="Masukkan nama staf finance..."
+                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                    )}
+
+                    {/* Position Title Selection */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Nama Jabatan Finance:
+                      </label>
+                      <select
+                        value={preparerPosition}
+                        onChange={(e) => setPreparerPosition(e.target.value)}
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                      >
+                        {FINANCE_POSITION_OPTIONS.map((pos) => (
+                          <option key={pos} value={pos}>
+                            {pos}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Custom Position Input if custom selected */}
+                    {preparerPosition === 'Custom (Kustom Jabatan...)' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Tulis Nama Jabatan Khusus Finance:
+                        </label>
+                        <input
+                          type="text"
+                          value={customPreparerPosition}
+                          onChange={(e) => setCustomPreparerPosition(e.target.value)}
+                          placeholder="cth. Head of Treasury &amp; Risk..."
+                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                    )}
+
+                    <div className="text-[11px] text-emerald-800 bg-emerald-50/70 p-2 rounded border border-emerald-100">
+                      <strong>Preview:</strong> {preparerName} — <span className="font-semibold">{displayPreparerPosition}</span>
+                    </div>
+                  </div>
+
+                  {/* RIGHT: DISETUJUI (DIRECTOR ONLY) */}
+                  <div className="bg-white rounded-lg border border-purple-200 p-3 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                        2. Disetujui &amp; Disahkan Oleh
+                      </span>
+                      <span className="text-[10px] bg-purple-50 text-purple-800 border border-purple-200 px-2 py-0.5 rounded font-bold uppercase">
+                        Khusus Role Director
+                      </span>
+                    </div>
+
+                    {/* Person Selection */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Pilih Dewan Direksi / Managing Director:
+                      </label>
+                      <select
+                        value={isCustomApprover ? 'CUSTOM' : selectedApproverId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'CUSTOM') {
+                            setIsCustomApprover(true);
+                          } else {
+                            setIsCustomApprover(false);
+                            setSelectedApproverId(val);
+                            const found = directorEligibleMembers.find((m) => m.id === val);
+                            if (found) {
+                              setApproverName(found.name);
+                              if (found.roleTitle) {
+                                setApproverPosition(found.roleTitle);
+                              }
+                            }
+                          }
+                        }}
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                      >
+                        <optgroup label="── Anggota Tim dengan Hak Direksi (Director / Master Admin) ──">
+                          {directorEligibleMembers.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name} ({m.roleTitle || 'Director'})
+                            </option>
+                          ))}
+                        </optgroup>
+                        <option value="CUSTOM">+ Kustom Nama Direktur...</option>
+                      </select>
+                    </div>
+
+                    {/* Custom Name Input if selected */}
+                    {isCustomApprover && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Nama Direktur:
+                        </label>
+                        <input
+                          type="text"
+                          value={approverName}
+                          onChange={(e) => setApproverName(e.target.value)}
+                          placeholder="Masukkan nama direktur..."
+                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    )}
+
+                    {/* Position Title Selection */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Nama Jabatan Director:
+                      </label>
+                      <select
+                        value={approverPosition}
+                        onChange={(e) => setApproverPosition(e.target.value)}
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                      >
+                        {DIRECTOR_POSITION_OPTIONS.map((pos) => (
+                          <option key={pos} value={pos}>
+                            {pos}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Custom Position Input if custom selected */}
+                    {approverPosition === 'Custom (Kustom Jabatan...)' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Tulis Nama Jabatan Khusus Director:
+                        </label>
+                        <input
+                          type="text"
+                          value={customApproverPosition}
+                          onChange={(e) => setCustomApproverPosition(e.target.value)}
+                          placeholder="cth. President Commissioner &amp; CEO..."
+                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    )}
+
+                    <div className="text-[11px] text-purple-900 bg-purple-50/70 p-2 rounded border border-purple-100">
+                      <strong>Preview:</strong> {approverName} — <span className="font-semibold">{displayApproverPosition}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2760,69 +3383,6 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     </tr>
                   </tfoot>
                 </table>
-              </div>
-            </div>
-
-            {/* SEKSI 9: REKAPITULASI TRANSAKSI MATERIAL */}
-            <div>
-              <div className="bg-slate-900 text-white px-4 py-2.5 rounded-t-lg flex items-center justify-between text-xs font-bold uppercase tracking-wider">
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-emerald-400" />
-                  <span>9. IKHTISAR TRANSAKSI MATERIAL &amp; AUDIT MUTASI</span>
-                </div>
-                <span>Total {filteredTransactions.length} Transaksi</span>
-              </div>
-              <div className="border border-t-0 border-slate-200 rounded-b-lg overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold">
-                      <th className="py-2.5 px-3 text-left">No. Transaksi</th>
-                      <th className="py-2.5 px-3 text-left">Tanggal</th>
-                      <th className="py-2.5 px-3 text-left">Kategori &amp; Uraian</th>
-                      <th className="py-2.5 px-3 text-left">Klien / Vendor</th>
-                      <th className="py-2.5 px-3 text-left">Metode Bayar</th>
-                      <th className="py-2.5 px-3 text-right">Masuk (Inflow)</th>
-                      <th className="py-2.5 px-3 text-right">Keluar (Outflow)</th>
-                      <th className="py-2.5 px-3 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
-                    {filteredTransactions.slice(0, 15).map((t) => (
-                      <tr key={t.id} className="hover:bg-slate-50">
-                        <td className="py-2 px-3 font-sans font-bold text-slate-800">{t.transactionNumber}</td>
-                        <td className="py-2 px-3 text-slate-600">{t.date}</td>
-                        <td className="py-2 px-3 font-sans text-slate-700 max-w-[220px] truncate">
-                          <span className="font-semibold text-slate-900 block">{getTransactionCategoryLabel(t.category)}</span>
-                          <span className="text-[11px] text-slate-500">{t.description}</span>
-                        </td>
-                        <td className="py-2 px-3 font-sans text-slate-700">{t.clientOrVendorName || '-'}</td>
-                        <td className="py-2 px-3 font-sans text-slate-600">{getPaymentMethodLabel(t.paymentMethod, paymentChannels)}</td>
-                        <td className="py-2 px-3 text-right text-emerald-700 font-semibold">
-                          {t.type === 'INCOME' ? formatIDR(t.amountIDR) : '-'}
-                        </td>
-                        <td className="py-2 px-3 text-right text-rose-700 font-semibold">
-                          {t.type === 'EXPENSE' ? formatIDR(t.amountIDR) : '-'}
-                        </td>
-                        <td className="py-2 px-3 text-center font-sans">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            t.status === 'CLEARED'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : t.status === 'PENDING'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}>
-                            {t.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredTransactions.length > 15 && (
-                  <div className="p-2.5 bg-slate-50 text-center text-xs text-slate-500 border-t border-slate-200">
-                    Menampilkan 15 transaksi material pertama. Untuk daftar lengkap seluruh {filteredTransactions.length} transaksi, silakan lihat tab <strong>Buku Besar &amp; Jurnal Harian</strong> atau unduh <strong>Export CSV</strong>.
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -4468,7 +5028,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
               <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Faktur / Tagihan</div>
                 <div className="text-base font-bold font-mono text-slate-900 mt-1">{formatIDR(metrics.receivablesAgingSummary.totalInvoiced)}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">{(receivables || []).length} Total Invoice Terbit</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">{filteredReceivables.length} Total Invoice Terbit</div>
               </div>
               <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Kas Diterima (Lunas)</div>
@@ -4568,14 +5128,14 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     </tr>
                   </thead>
                   <tbody>
-                    {(!receivables || receivables.length === 0) ? (
+                    {(!filteredReceivables || filteredReceivables.length === 0) ? (
                       <tr>
                         <td colSpan={8} className="py-6 text-center text-slate-400 italic">
-                          Belum ada data piutang / invoice termin yang tercatat.
+                          Tidak ada data piutang / invoice termin pada periode atau filter yang dipilih.
                         </td>
                       </tr>
                     ) : (
-                      receivables.map((r, idx) => {
+                      filteredReceivables.map((r, idx) => {
                         const remaining = r.remainingAmountIDR !== undefined ? r.remainingAmountIDR : Math.max(0, r.totalAmountIDR - (r.paidAmountIDR || 0));
                         const isOverdue = r.status === 'JATUH_TEMPO' || (r.status !== 'LUNAS' && r.status !== 'BATAL' && new Date(r.dueDate) < new Date());
                         return (
@@ -4663,35 +5223,193 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
 
         {/* 7. FORMAL SIGNATURE APPROVAL BLOCK (For PDF / Print Verification) */}
         {showSignatures && (
-          <div className="mt-12 pt-8 border-t-2 border-slate-800 grid grid-cols-2 gap-8 text-xs">
-            {/* Preparer */}
-            <div className="text-center">
-              <p className="text-slate-500 font-medium">Dipersiapkan & Diverifikasi Oleh,</p>
-              <p className="font-bold text-slate-800 mt-1">Finance & Treasury Officer</p>
-              <div className="h-20 flex items-center justify-center">
-                <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 uppercase font-bold">
-                  ✓ VERIFIED ON-SYSTEM
+          <div className="mt-12 pt-8 border-t-2 border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-8 text-xs">
+            {/* 1. Preparer (Role: Finance Only) */}
+            <div className="text-center p-3.5 rounded-xl border border-transparent hover:border-emerald-200 transition-all bg-emerald-50/20 print:bg-transparent print:border-none print:p-0">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <p className="text-slate-500 font-medium">Dipersiapkan &amp; Diverifikasi Oleh,</p>
+                <span className="print:hidden text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                  Role: Finance
                 </span>
               </div>
-              <div className="border-t border-slate-400 pt-1 font-semibold text-slate-900">
-                {currentUser.name}
+
+              {/* Position Title: Screen Interactive Selector */}
+              <div className="print:hidden my-1.5 flex flex-col items-center gap-1">
+                <select
+                  value={preparerPosition}
+                  onChange={(e) => setPreparerPosition(e.target.value)}
+                  className="text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-center focus:outline-hidden focus:ring-1 focus:ring-emerald-500 max-w-[280px]"
+                  title="Pilih Nama Jabatan Finance"
+                >
+                  {FINANCE_POSITION_OPTIONS.map((pos) => (
+                    <option key={pos} value={pos}>
+                      {pos}
+                    </option>
+                  ))}
+                </select>
+                {preparerPosition === 'Custom (Kustom Jabatan...)' && (
+                  <input
+                    type="text"
+                    value={customPreparerPosition}
+                    onChange={(e) => setCustomPreparerPosition(e.target.value)}
+                    placeholder="Tulis jabatan finance..."
+                    className="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 text-center focus:outline-hidden w-60"
+                  />
+                )}
               </div>
-              <div className="text-[11px] text-slate-500">{currentUser.roleTitle}</div>
+
+              {/* Position Title: Print Output */}
+              <p className="hidden print:block font-bold text-slate-800 mt-1">{displayPreparerPosition}</p>
+
+              {/* Official Stamp */}
+              <div className="h-16 flex items-center justify-center my-1">
+                <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-300 uppercase font-bold tracking-wider shadow-2xs">
+                  ✓ VERIFIED ON-SYSTEM • FINANCE
+                </span>
+              </div>
+
+              {/* Signatory Name: Screen Interactive Selector */}
+              <div className="print:hidden my-1 flex flex-col items-center gap-1">
+                <select
+                  value={isCustomPreparer ? 'CUSTOM' : selectedPreparerId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'CUSTOM') {
+                      setIsCustomPreparer(true);
+                    } else {
+                      setIsCustomPreparer(false);
+                      setSelectedPreparerId(val);
+                      const found = financeEligibleMembers.find((m) => m.id === val);
+                      if (found) {
+                        setPreparerName(found.name);
+                        if (found.roleTitle) {
+                          setPreparerPosition(found.roleTitle);
+                        }
+                      }
+                    }
+                  }}
+                  className="text-xs font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-center focus:outline-hidden max-w-[280px]"
+                  title="Pilih Staf Finance Penandatangan"
+                >
+                  <optgroup label="── Anggota Tim Role Finance ──">
+                    {financeEligibleMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.roleTitle || 'Finance'})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <option value="CUSTOM">+ Kustom Nama Personil...</option>
+                </select>
+                {isCustomPreparer && (
+                  <input
+                    type="text"
+                    value={preparerName}
+                    onChange={(e) => setPreparerName(e.target.value)}
+                    placeholder="Ketik nama staf finance..."
+                    className="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 text-center focus:outline-hidden w-60"
+                  />
+                )}
+              </div>
+
+              {/* Signatory Name: Print Line */}
+              <div className="border-t border-slate-400 pt-1 font-semibold text-slate-900 text-sm">
+                {preparerName}
+              </div>
+              <div className="text-[11px] text-slate-500">{displayPreparerPosition} • Divisi Keuangan &amp; Akuntansi</div>
             </div>
 
-            {/* Approver / Director */}
-            <div className="text-center">
-              <p className="text-slate-500 font-medium">Disetujui & Disahkan Oleh,</p>
-              <p className="font-bold text-slate-800 mt-1">Managing Partner / Director</p>
-              <div className="h-20 flex items-center justify-center">
-                <span className="text-[10px] font-mono text-slate-800 bg-slate-100 px-2 py-1 rounded border border-slate-300 uppercase font-bold">
-                  ✓ GAP.CRM AUTHORIZED
+            {/* 2. Approver (Role: Director Only) */}
+            <div className="text-center p-3.5 rounded-xl border border-transparent hover:border-purple-200 transition-all bg-purple-50/20 print:bg-transparent print:border-none print:p-0">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <p className="text-slate-500 font-medium">Disetujui &amp; Disahkan Oleh,</p>
+                <span className="print:hidden text-[9px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                  Role: Director
                 </span>
               </div>
-              <div className="border-t border-slate-400 pt-1 font-semibold text-slate-900">
-                Adryan Kelvianto
+
+              {/* Position Title: Screen Interactive Selector */}
+              <div className="print:hidden my-1.5 flex flex-col items-center gap-1">
+                <select
+                  value={approverPosition}
+                  onChange={(e) => setApproverPosition(e.target.value)}
+                  className="text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-center focus:outline-hidden focus:ring-1 focus:ring-purple-500 max-w-[280px]"
+                  title="Pilih Nama Jabatan Director"
+                >
+                  {DIRECTOR_POSITION_OPTIONS.map((pos) => (
+                    <option key={pos} value={pos}>
+                      {pos}
+                    </option>
+                  ))}
+                </select>
+                {approverPosition === 'Custom (Kustom Jabatan...)' && (
+                  <input
+                    type="text"
+                    value={customApproverPosition}
+                    onChange={(e) => setCustomApproverPosition(e.target.value)}
+                    placeholder="Tulis jabatan direktur..."
+                    className="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 text-center focus:outline-hidden w-60"
+                  />
+                )}
               </div>
-              <div className="text-[11px] text-slate-500">Managing Director & Master Admin</div>
+
+              {/* Position Title: Print Output */}
+              <p className="hidden print:block font-bold text-slate-800 mt-1">{displayApproverPosition}</p>
+
+              {/* Official Stamp */}
+              <div className="h-16 flex items-center justify-center my-1">
+                <span className="text-[10px] font-mono text-purple-900 bg-purple-50 px-2.5 py-1 rounded border border-purple-300 uppercase font-bold tracking-wider shadow-2xs">
+                  ✓ GAP.CRM AUTHORIZED • BOARD
+                </span>
+              </div>
+
+              {/* Signatory Name: Screen Interactive Selector */}
+              <div className="print:hidden my-1 flex flex-col items-center gap-1">
+                <select
+                  value={isCustomApprover ? 'CUSTOM' : selectedApproverId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'CUSTOM') {
+                      setIsCustomApprover(true);
+                    } else {
+                      setIsCustomApprover(false);
+                      setSelectedApproverId(val);
+                      const found = directorEligibleMembers.find((m) => m.id === val);
+                      if (found) {
+                        setApproverName(found.name);
+                        if (found.roleTitle) {
+                          setApproverPosition(found.roleTitle);
+                        }
+                      }
+                    }
+                  }}
+                  className="text-xs font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-center focus:outline-hidden max-w-[280px]"
+                  title="Pilih Direktur Penandatangan"
+                >
+                  <optgroup label="── Anggota Tim Role Director ──">
+                    {directorEligibleMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.roleTitle || 'Director'})
+                      </option>
+                    ))}
+                  </optgroup>
+                  <option value="CUSTOM">+ Kustom Nama Direktur...</option>
+                </select>
+                {isCustomApprover && (
+                  <input
+                    type="text"
+                    value={approverName}
+                    onChange={(e) => setApproverName(e.target.value)}
+                    placeholder="Ketik nama direktur..."
+                    className="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 text-center focus:outline-hidden w-60"
+                  />
+                )}
+              </div>
+
+              {/* Signatory Name: Print Line */}
+              <div className="border-t border-slate-400 pt-1 font-semibold text-slate-900 text-sm">
+                {approverName}
+              </div>
+              <div className="text-[11px] text-slate-500">{displayApproverPosition} • Dewan Direksi</div>
             </div>
           </div>
         )}

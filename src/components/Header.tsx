@@ -143,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
   const IconComponent = page.icon;
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-slate-200/90 shadow-2xs">
+    <header className="sticky top-0 z-30 bg-white border-b border-slate-200/90 shadow-2xs print:hidden">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Left: Mobile Sidebar Trigger & Breadcrumb / Page Title */}

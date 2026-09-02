@@ -107,7 +107,7 @@ const DashboardContent: React.FC = () => {
 
       {/* Main Admin Wrapper */}
       <div
-        className={`flex flex-col min-h-screen transition-all duration-200 ease-in-out ${
+        className={`flex flex-col min-h-screen transition-all duration-200 ease-in-out print:pl-0 print:block ${
           isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
         }`}
       >
@@ -131,7 +131,7 @@ const DashboardContent: React.FC = () => {
         />
 
         {/* Main Workspace Body */}
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0 print:m-0 print:max-w-none">
           {/* TAB 1: PROJECTS CRM DASHBOARD */}
           {activeTab === 'projects' && (
             <div className="space-y-4 animate-in fade-in duration-150">

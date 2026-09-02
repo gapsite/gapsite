@@ -25,6 +25,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
     filteredProjects,
     projects,
     activeConsultingServices,
+    assignedByOptions,
   } = useProjects();
 
   const serviceCategories = React.useMemo(() => {
@@ -181,10 +182,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
           </select>
         </div>
 
-        {/* LVI Filter */}
+        {/* LVI / Assigned By Filter */}
         <div className="flex flex-col">
           <label htmlFor="filter-surveyor-select" className="block text-center text-xs font-bold uppercase text-slate-800 mb-1 tracking-wide truncate">
-            Surveyor (LVI)
+            Assigned By (LVI)
           </label>
           <select
             id="filter-surveyor-select"
@@ -193,12 +194,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
             onChange={(e) => setFilters((prev) => ({ ...prev, surveyor: e.target.value as SurveyorBody | 'ALL' }))}
             className="w-full h-8 text-xs bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
           >
-            <option value="ALL">All LVI</option>
-            <option value="PT Surveyor Indonesia">1. PT Surveyor Indonesia</option>
-            <option value="PT Sucofindo (Persero)">2. PT Sucofindo (Persero)</option>
-            <option value="PT Biro Klasifikasi Indonesia">3. PT Biro Klasifikasi Indonesia</option>
-            <option value="PT Anindya Wiraputra Consult">4. PT Anindya Wiraputra Consult</option>
-            <option value="Badan Standarisasi dan Kebijakan Jasa Industri">5. Badan Standarisasi dan Kebijakan Jasa Industri</option>
+            <option value="ALL">All Assigned By</option>
+            {assignedByOptions.map((opt, idx) => (
+              <option key={opt} value={opt}>
+                {idx + 1}. {opt}
+              </option>
+            ))}
           </select>
         </div>
 

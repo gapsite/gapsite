@@ -45,9 +45,11 @@ export type SurveyorBody =
   | 'PT Sucofindo (Persero)'
   | 'PT Biro Klasifikasi Indonesia'
   | 'PT Anindya Wiraputra Consult'
-  | 'Badan Standarisasi dan Kebijakan Jasa Industri';
+  | 'Badan Standarisasi dan Kebijakan Jasa Industri'
+  | (string & {});
 
 export type LviBody = SurveyorBody;
+export type AssignedByBody = SurveyorBody;
 
 export type CompanyType = 'PMDN' | 'PMA' | 'BUMN' | 'UMKM';
 

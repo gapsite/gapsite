@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const totalDocs = projects.reduce((acc, p) => acc + p.documents.length, 0);
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 text-white shadow-lg">
+    <header className="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 text-white shadow-lg print:hidden">
       {/* Top Banner / System Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
