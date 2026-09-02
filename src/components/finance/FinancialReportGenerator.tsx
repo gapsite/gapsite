@@ -398,32 +398,67 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     const cashAndBankAsset = Math.max(0, totalPaidAndAdditional + retainedEarningsOpening + netClearedCash + (totalDisbursedFromTrxs - totalPrincipalPaidFromTrxs));
     const receivablesAsset = pendingIncome;
 
-    // Payment Channel Summaries with robust matching and true ending balance
+    // Payment Channel Summaries with robust 1-to-1 matching and true ending balance (no duplicate counting)
     const channelsList = paymentChannels && paymentChannels.length > 0 ? paymentChannels : activePaymentChannels;
 
-    const matchTransactionToChannel = (t: FinancialTransaction, ch: PaymentChannelDefinition) => {
-      if (!t.paymentMethod) return false;
+    const resolveTransactionToChannelId = (
+      t: FinancialTransaction,
+      channels: PaymentChannelDefinition[]
+    ): string => {
+      if (!t.paymentMethod) return 'UNASSIGNED_OTHER';
       const pm = String(t.paymentMethod).trim();
-      if (pm === ch.id) return true;
+      if (!pm) return 'UNASSIGNED_OTHER';
+
+      // 1. Exact ID match (case-sensitive)
+      const exactIdMatch = channels.find((ch) => ch.id === pm);
+      if (exactIdMatch) return exactIdMatch.id;
+
+      // 2. Case-insensitive ID match
+      const caseIdMatch = channels.find((ch) => ch.id.toLowerCase() === pm.toLowerCase());
+      if (caseIdMatch) return caseIdMatch.id;
+
       const pmLower = pm.toLowerCase();
-      const chIdLower = String(ch.id).toLowerCase();
-      if (pmLower === chIdLower) return true;
 
-      const chAcc = ch.accountNumber ? String(ch.accountNumber).replace(/[^0-9]/g, '') : '';
-      const pmAcc = pm.replace(/[^0-9]/g, '');
-      if (chAcc && chAcc.length >= 6 && pmAcc && pmAcc.includes(chAcc)) return true;
+      // 3. Exact full name match (case-insensitive)
+      const exactNameMatch = channels.find((ch) => ch.name && ch.name.trim().toLowerCase() === pmLower);
+      if (exactNameMatch) return exactNameMatch.id;
 
-      const chNameLower = String(ch.name || '').toLowerCase().trim();
-      if (chNameLower && (pmLower === chNameLower || pmLower.includes(chNameLower) || chNameLower.includes(pmLower))) return true;
+      // 4. Exact shortName match (case-insensitive)
+      const exactShortMatch = channels.find((ch) => ch.shortName && ch.shortName.trim().toLowerCase() === pmLower);
+      if (exactShortMatch) return exactShortMatch.id;
 
-      const chShortNameLower = String(ch.shortName || '').toLowerCase().trim();
-      if (chShortNameLower && (pmLower === chShortNameLower || pmLower.includes(chShortNameLower))) return true;
+      // 5. Exact digits account number match (only when >= 6 digits)
+      const pmDigits = pm.replace(/[^0-9]/g, '');
+      if (pmDigits.length >= 6) {
+        const accMatch = channels.find((ch) => {
+          const chDigits = (ch.accountNumber || '').replace(/[^0-9]/g, '');
+          return chDigits.length >= 6 && chDigits === pmDigits;
+        });
+        if (accMatch) return accMatch.id;
+      }
 
-      return false;
+      return 'UNASSIGNED_OTHER';
     };
 
+    // Group transactions uniquely per channel ID so each transaction belongs to AT MOST ONE channel
+    const channelTransactionsMap = new Map<string, FinancialTransaction[]>();
+    channelsList.forEach((ch) => {
+      channelTransactionsMap.set(ch.id, []);
+    });
+
+    const unassignedTrxs: FinancialTransaction[] = [];
+
+    filteredTransactions.forEach((t) => {
+      const assignedId = resolveTransactionToChannelId(t, channelsList);
+      if (channelTransactionsMap.has(assignedId)) {
+        channelTransactionsMap.get(assignedId)!.push(t);
+      } else {
+        unassignedTrxs.push(t);
+      }
+    });
+
     const channelRawStats = channelsList.map((ch) => {
-      const trxs = filteredTransactions.filter((t) => matchTransactionToChannel(t, ch));
+      const trxs = channelTransactionsMap.get(ch.id) || [];
       const incomeTrxs = trxs.filter((t) => t.type === 'INCOME');
       const expenseTrxs = trxs.filter((t) => t.type === 'EXPENSE');
 
@@ -450,10 +485,6 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
         totalNet,
       };
     });
-
-    // Check for any transactions that did not match any predefined channel
-    const matchedTrxIds = new Set(channelRawStats.flatMap((c) => c.trxs.map((t) => t.id)));
-    const unassignedTrxs = filteredTransactions.filter((t) => !matchedTrxIds.has(t.id));
 
     // Base capital from equity (Modal Disetor & Tambahan + Saldo Ditahan + Pinjaman Bersih)
     const totalBaseCapital = totalPaidAndAdditional + retainedEarningsOpening + (totalDisbursedFromTrxs - totalPrincipalPaidFromTrxs);

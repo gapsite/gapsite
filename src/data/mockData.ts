@@ -6,6 +6,7 @@ import {
   RoleGovernanceMeta,
   FinancialTransaction,
   CompanyCapitalSettings,
+  Receivable,
 } from '../types';
 
 export const DEFAULT_ROLE_GOVERNANCE_META: RoleGovernanceMeta = {
@@ -185,6 +186,8 @@ export const INITIAL_PROJECTS: ConsultingProject[] = [];
 export const INITIAL_DISPOSITIONS: JobDisposition[] = [];
 
 export const INITIAL_TRANSACTIONS: FinancialTransaction[] = [];
+
+export const INITIAL_RECEIVABLES: Receivable[] = [];
 
 export const DEFAULT_COMPANY_CAPITAL: CompanyCapitalSettings = {
   authorizedCapital: 5000000000, // Rp 5.000.000.000 (Modal Dasar Sesuai Akta Notaris)

@@ -701,3 +701,97 @@ export interface TaxObligation {
   createdBy: string;
   updatedAt?: string;
 }
+
+// ==========================================
+// ACCOUNTS RECEIVABLE / PIUTANG USAHA & TERMIN
+// ==========================================
+
+export type ReceivableCategory =
+  | 'TERMIN_KONSULTASI_TKDN'
+  | 'TERMIN_SERTIFIKASI_BMP'
+  | 'JASA_PERIZINAN_LEGAL'
+  | 'SUCCESS_FEE_TENDER'
+  | 'RETAINER_KONSULTANSI'
+  | 'PELATIHAN_WORKSHOP'
+  | 'REIMBURSEMENT_AUDIT_SURVEYOR'
+  | 'PIUTANG_LAINNYA';
+
+export type ReceivableStatus =
+  | 'BELUM_DIBAYAR' // Unpaid (0% paid)
+  | 'DIBAYAR_SEBAGIAN' // Partially Paid (>0% and <100%)
+  | 'LUNAS' // Fully Paid (100%)
+  | 'JATUH_TEMPO' // Overdue
+  | 'BATAL'; // Cancelled / Bad Debt
+
+export interface ReceivablePayment {
+  id: string;
+  receivableId: string;
+  paymentDate: string;
+  amountIDR: number;
+  paymentChannelId?: string;
+  paymentMethod?: string;
+  referenceNumber?: string; // Bukti Transfer / Kwitansi / Slip Bank
+  transactionId?: string; // ID Mutasi Kas Masuk di Buku Kas (FinancialTransaction)
+  recordedBy: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Receivable {
+  id: string;
+  invoiceNumber: string; // e.g. "INV/2026/08/TKDN-001"
+  clientName: string;
+  clientContactPerson?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
+  category: ReceivableCategory;
+  title: string;
+  description?: string;
+  
+  // Project association
+  projectId?: string;
+  projectCode?: string;
+  milestoneTitle?: string; // e.g. "Termin 1 (DP 30%)", "Termin 2 (Audit LVI 40%)", "Pelunasan 30%"
+  
+  // Financial amounts
+  totalAmountIDR: number; // Nilai Total Tagihan
+  paidAmountIDR: number; // Total yang Sudah Dibayar
+  remainingAmountIDR: number; // Sisa Piutang Terhutang
+  
+  // Dates
+  issueDate: string; // Tanggal Terbit Tagihan (YYYY-MM-DD)
+  dueDate: string; // Tanggal Jatuh Tempo (YYYY-MM-DD)
+  fullyPaidDate?: string; // Tanggal Pelunasan Penuh
+  paymentTermsDays?: number; // Jangka Waktu Pembayaran (14, 30, 45, 60 hari)
+  
+  // Status
+  status: ReceivableStatus;
+  
+  // Payments ledger
+  payments: ReceivablePayment[];
+  
+  // Linked transaction IDs
+  linkedTransactionIds?: string[];
+  
+  // Notes & Signatures
+  notes?: string;
+  taxIncluded?: boolean; // PPN 11% / 12% sudah termasuk atau belum
+  taxAmountIDR?: number; // Nominal PPN terhutang
+  
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+}
+
+export interface ReceivableAgingSummary {
+  current0to30: number; // 0-30 Hari (Lancar)
+  aging31to60: number; // 31-60 Hari (Perhatian Khusus)
+  aging61to90: number; // 61-90 Hari (Kurang Lancar)
+  agingOver90: number; // >90 Hari (Diragukan/Macet)
+  totalOutstanding: number; // Total Sisa Piutang
+  totalSettled: number; // Total Piutang Terbayar
+  totalInvoiced: number; // Total Keseluruhan Faktur
+  settlementRate: number; // Persentase Pelunasan (%)
+}
+

@@ -19,7 +19,9 @@ import {
   RoleDefinition,
   DocumentTypeDefinition,
   DocumentCategoryDefinition,
-  DeletedUserRecord
+  DeletedUserRecord,
+  Receivable,
+  TaxObligation
 } from '../types';
 
 export const FirestoreCollections = {
@@ -30,7 +32,9 @@ export const FirestoreCollections = {
   SETTINGS: 'app_settings',
   ACTIVITIES: 'activity_logs',
   DOCUMENT_TYPES: 'document_types',
-  DOCUMENT_CATEGORIES: 'document_categories'
+  DOCUMENT_CATEGORIES: 'document_categories',
+  RECEIVABLES: 'receivables',
+  TAX_OBLIGATIONS: 'tax_obligations',
 };
 
 // Deeply sanitize objects so no `undefined` values are ever sent to Firestore (which causes setDoc to fail)
@@ -352,6 +356,106 @@ export const subscribeToTransactions = (onUpdate: (transactions: FinancialTransa
   );
 };
 
+// Sync Receivable (Piutang Usaha & Termin Proyek) to Firestore
+export const saveReceivableToFirestore = async (receivable: Receivable): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.RECEIVABLES, receivable.id);
+    const sanitized = sanitizeForFirestore({
+      ...receivable,
+      projectId: receivable.projectId || '',
+      projectCode: receivable.projectCode || '',
+      milestoneTitle: receivable.milestoneTitle || '',
+      notes: receivable.notes || '',
+      clientContactPerson: receivable.clientContactPerson || '',
+      clientEmail: receivable.clientEmail || '',
+      clientPhone: receivable.clientPhone || '',
+      clientAddress: receivable.clientAddress || '',
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+  } catch (error) {
+    console.error('Firestore save receivable error:', error);
+  }
+};
+
+export const deleteReceivableFromFirestore = async (receivableId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.RECEIVABLES, receivableId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete receivable error:', error);
+  }
+};
+
+export const subscribeToReceivables = (onUpdate: (receivables: Receivable[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.RECEIVABLES);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: Receivable[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as Receivable;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore receivables listener warning:', err)
+  );
+};
+
+// Sync Tax Obligation (PPN, PPh, & Pajak Terhutang) to Firestore
+export const saveTaxObligationToFirestore = async (tax: TaxObligation): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.TAX_OBLIGATIONS, tax.id);
+    const sanitized = sanitizeForFirestore({
+      ...tax,
+      projectId: tax.projectId || '',
+      projectCode: tax.projectCode || '',
+      billingCode: tax.billingCode || '',
+      taxInvoiceNumber: tax.taxInvoiceNumber || '',
+      counterpartyName: tax.counterpartyName || '',
+      notes: tax.notes || '',
+      ntpnNumber: tax.ntpnNumber || '',
+      paymentChannelId: tax.paymentChannelId || '',
+      transactionId: tax.transactionId || '',
+      paidAt: tax.paidAt || '',
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+  } catch (error) {
+    console.error('Firestore save tax obligation error:', error);
+  }
+};
+
+export const deleteTaxObligationFromFirestore = async (taxId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.TAX_OBLIGATIONS, taxId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete tax obligation error:', error);
+  }
+};
+
+export const subscribeToTaxObligations = (onUpdate: (taxes: TaxObligation[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.TAX_OBLIGATIONS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: TaxObligation[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as TaxObligation;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore tax obligations listener warning:', err)
+  );
+};
+
 export const subscribeToSettings = (key: string, onUpdate: (data: any) => void) => {
   const docRef = doc(db, FirestoreCollections.SETTINGS, key);
   return onSnapshot(
@@ -383,7 +487,8 @@ export const ensureInitialFirestoreSeed = async (
   defaultPaymentChannels?: any[],
   defaultTaxObligations?: any[],
   defaultBankLoans?: any[],
-  defaultCompanyCapital?: any
+  defaultCompanyCapital?: any,
+  defaultReceivables?: Receivable[]
 ): Promise<void> => {
   try {
     // 1. Ensure master admin root user exists in Firestore
@@ -499,12 +604,21 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 12. Ensure tax obligations exist in settings if not present
+    // 12. Ensure tax obligations exist in Firestore if collection is empty
     if (defaultTaxObligations !== undefined && defaultTaxObligations.length > 0) {
-      const taxRef = doc(db, FirestoreCollections.SETTINGS, 'tax_obligations');
-      const taxSnap = await getDoc(taxRef);
-      if (!taxSnap.exists()) {
-        await setDoc(taxRef, sanitizeForFirestore({ data: defaultTaxObligations, updatedAt: new Date().toISOString() }));
+      const taxSnap = await getDocs(collection(db, FirestoreCollections.TAX_OBLIGATIONS));
+      if (taxSnap.empty) {
+        await Promise.all(
+          defaultTaxObligations.map((t) => {
+            const tRef = doc(db, FirestoreCollections.TAX_OBLIGATIONS, t.id);
+            return setDoc(tRef, sanitizeForFirestore(t));
+          })
+        );
+      }
+      const taxSettingsRef = doc(db, FirestoreCollections.SETTINGS, 'tax_obligations');
+      const taxSettingsSnap = await getDoc(taxSettingsRef);
+      if (!taxSettingsSnap.exists()) {
+        await setDoc(taxSettingsRef, sanitizeForFirestore({ data: defaultTaxObligations, updatedAt: new Date().toISOString() }));
       }
     }
 
@@ -523,6 +637,19 @@ export const ensureInitialFirestoreSeed = async (
       const capSnap = await getDoc(capRef);
       if (!capSnap.exists()) {
         await setDoc(capRef, sanitizeForFirestore({ data: defaultCompanyCapital, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 15. Ensure receivables exist in Firestore if collection is empty
+    if (defaultReceivables && defaultReceivables.length > 0) {
+      const recSnap = await getDocs(collection(db, FirestoreCollections.RECEIVABLES));
+      if (recSnap.empty) {
+        await Promise.all(
+          defaultReceivables.map((r) => {
+            const rRef = doc(db, FirestoreCollections.RECEIVABLES, r.id);
+            return setDoc(rRef, sanitizeForFirestore(r));
+          })
+        );
       }
     }
   } catch (err) {

@@ -18,6 +18,12 @@ import {
   saveTransactionToFirestore,
   deleteTransactionFromFirestore,
   saveSettingsToFirestore,
+  saveReceivableToFirestore,
+  deleteReceivableFromFirestore,
+  subscribeToReceivables,
+  saveTaxObligationToFirestore,
+  deleteTaxObligationFromFirestore,
+  subscribeToTaxObligations,
   saveDocumentTypeToFirestore,
   deleteDocumentTypeFromFirestore,
   subscribeToDocumentTypes,
@@ -63,13 +69,20 @@ import {
   TaxType,
   TaxObligationStatus,
   TaxObligation,
+  Receivable,
+  ReceivableCategory,
+  ReceivableStatus,
+  ReceivablePayment,
+  ReceivableAgingSummary,
 } from '../types';
 import { calculateBankLoanSchedule } from '../utils/loanCalculations';
+import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
 import {
   INITIAL_PROJECTS,
   INITIAL_DISPOSITIONS,
   INITIAL_TEAM_MEMBERS,
   INITIAL_TRANSACTIONS,
+  INITIAL_RECEIVABLES,
   DEFAULT_ROLE_DEFINITIONS,
   DEFAULT_ROLE_GOVERNANCE_META,
   DEFAULT_COMPANY_CAPITAL,
@@ -298,6 +311,37 @@ interface ProjectContextType {
   ) => { success: boolean; message?: string; transactionId?: string };
   resetTaxObligationsToDefault: () => { success: boolean; message?: string };
 
+  // Accounts Receivable (Piutang Usaha & Termin Proyek)
+  receivables: Receivable[];
+  addReceivable: (
+    data: Omit<Receivable, 'id' | 'createdAt' | 'createdBy' | 'payments' | 'paidAmountIDR' | 'remainingAmountIDR' | 'status'> & {
+      initialPaidAmountIDR?: number;
+      paymentChannelId?: string;
+      referenceNumber?: string;
+      notesPayment?: string;
+      syncToCashLedger?: boolean;
+    }
+  ) => { success: boolean; receivable?: Receivable; message?: string };
+  updateReceivable: (
+    id: string,
+    updates: Partial<Receivable>
+  ) => { success: boolean; message?: string };
+  deleteReceivable: (id: string) => { success: boolean; message?: string };
+  recordReceivablePayment: (
+    receivableId: string,
+    paymentData: {
+      amountIDR: number;
+      paymentDate: string;
+      paymentChannelId?: string;
+      paymentMethod?: string;
+      referenceNumber?: string;
+      notes?: string;
+      syncToCashLedger?: boolean;
+    }
+  ) => { success: boolean; message?: string; payment?: ReceivablePayment };
+  cancelReceivable: (id: string, reason?: string) => { success: boolean; message?: string };
+  resetReceivablesToDefault: () => { success: boolean; message?: string };
+
   // Milestone Document Requirements customization
   updateMilestoneDocRequirements: (
     projectId: string,
@@ -434,6 +478,7 @@ const STORAGE_KEY_PAYMENT_CHANNELS = 'verix_crm_payment_channels_v1';
 const STORAGE_KEY_BANK_LOANS = 'verix_crm_bank_loans_v1';
 const STORAGE_KEY_COMPANY_CAPITAL = 'verix_crm_company_capital_v1';
 const STORAGE_KEY_TAX_OBLIGATIONS = 'verix_crm_tax_obligations_v1';
+const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
 const STORAGE_KEY_CURRENT_USER_ID = 'verix_crm_current_user_id_v1';
 const STORAGE_KEY_AUTH_STATE = 'verix_crm_auth_state_v1';
 
@@ -898,6 +943,30 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [taxObligations]);
 
+  // Receivables State (Piutang Usaha & Termin Proyek)
+  const [receivables, setReceivables] = useState<Receivable[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_RECEIVABLES);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+      return INITIAL_RECEIVABLES;
+    } catch {
+      return INITIAL_RECEIVABLES;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(receivables));
+    } catch (e) {
+      console.error('Failed to save receivables to localStorage', e);
+    }
+  }, [receivables]);
+
   const activeDocumentCategories = useMemo(() => {
     return documentCategories.filter((c) => c.status !== 'INACTIVE');
   }, [documentCategories]);
@@ -1111,6 +1180,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setCompanyCapital(payload);
           } else if (type === 'TAX_OBLIGATIONS' && Array.isArray(payload)) {
             setTaxObligations(payload);
+          } else if (type === 'RECEIVABLES' && Array.isArray(payload)) {
+            setReceivables(payload);
           } else if (type === 'CONSULTING_SERVICES' && Array.isArray(payload)) {
             setConsultingServices(payload);
           } else if (type === 'ROLE_DEFINITIONS' && payload) {
@@ -1168,6 +1239,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_TAX_OBLIGATIONS) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setTaxObligations(parsed);
+        } else if (e.key === STORAGE_KEY_RECEIVABLES) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setReceivables(parsed);
         } else if (e.key === STORAGE_KEY_CONSULTING_SERVICES) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setConsultingServices(parsed);

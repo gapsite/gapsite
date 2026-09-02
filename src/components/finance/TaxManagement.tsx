@@ -814,7 +814,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-xs uppercase font-semibold">
+                <tr className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs uppercase font-bold tracking-wider">
                   <th className="py-3.5 px-4">Status & Masa</th>
                   <th className="py-3.5 px-4">Jenis Pajak</th>
                   <th className="py-3.5 px-4">Rincian & Dokumen</th>
@@ -833,28 +833,28 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   return (
                     <tr
                       key={t.id}
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors group"
                     >
                       {/* Status & Masa */}
                       <td className="py-4 px-4 align-top">
                         <div className="space-y-1.5">
                           {isPaid ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
                               <CheckCircle className="w-3 h-3" />
                               Disetor Sah
                             </span>
                           ) : isOverdue ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 animate-pulse">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-900 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-300 dark:border-rose-700 animate-pulse">
                               <AlertTriangle className="w-3 h-3" />
                               Jatuh Tempo!
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
                               <Clock className="w-3 h-3" />
                               Terhutang
                             </span>
                           )}
-                          <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                             {t.taxPeriod || `Masa ${t.taxMonth}/${t.taxYear}`}
                           </div>
                         </div>
@@ -866,19 +866,19 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                           <span
                             className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${
                               t.taxType === 'PPN'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
                                 : t.taxType === 'PPH_23'
-                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                                ? 'bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-300'
                                 : t.taxType === 'PPH_21'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                ? 'bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-300'
                                 : t.taxType === 'PPH_4_2'
-                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                                : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
+                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-slate-200 text-slate-900 dark:bg-slate-800 dark:text-slate-200'
                             }`}
                           >
                             {badge.label}
                           </span>
-                          <div className="text-[11px] text-slate-400">
+                          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                             Tarif: {t.taxRatePercent || badge.group}%
                           </div>
                         </div>
@@ -887,28 +887,28 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       {/* Rincian & Dokumen */}
                       <td className="py-4 px-4 align-top max-w-xs">
                         <div className="space-y-1">
-                          <div className="font-semibold text-slate-900 dark:text-white leading-tight">
+                          <div className="font-bold text-slate-900 dark:text-white leading-tight">
                             {t.title}
                           </div>
                           {t.description && (
-                            <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                            <div className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">
                               {t.description}
                             </div>
                           )}
                           <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
                             {t.taxInvoiceNumber && (
-                              <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded">
+                              <span className="inline-flex items-center gap-1 font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                                 <FileText className="w-3 h-3" />
                                 {t.taxInvoiceNumber}
                               </span>
                             )}
                             {t.counterpartyName && (
-                              <span className="text-slate-500 dark:text-slate-400">
+                              <span className="text-slate-600 dark:text-slate-300 font-medium">
                                 Lawan: {t.counterpartyName}
                               </span>
                             )}
                             {t.projectCode && (
-                              <span className="text-emerald-600 font-medium">
+                              <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
                                 Proyek: {t.projectCode}
                               </span>
                             )}
@@ -919,11 +919,11 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       {/* DPP */}
                       <td className="py-4 px-4 align-top">
                         <div className="space-y-1">
-                          <div className="font-medium text-slate-800 dark:text-slate-200">
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">
                             {formatRupiah(t.taxableBaseAmount || 0)}
                           </div>
                           {t.taxType === 'PPN' && (t.ppnOutputAmount || t.ppnInputAmount) && (
-                            <div className="text-[11px] text-slate-500 space-y-0.5">
+                            <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5">
                               <div>Keluaran: {formatRupiah(t.ppnOutputAmount || 0)}</div>
                               <div>Masukan: {formatRupiah(t.ppnInputAmount || 0)}</div>
                             </div>
@@ -935,23 +935,23 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       <td className="py-4 px-4 align-top text-right">
                         <div className="space-y-1">
                           <div
-                            className={`font-bold text-base ${
+                            className={`font-bold text-base tracking-wide ${
                               isPaid ? 'text-slate-400 line-through' : 'text-rose-600 dark:text-rose-400'
                             }`}
                           >
                             {formatRupiah(t.taxAmount)}
                           </div>
                           {isPaid ? (
-                            <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-1">
+                            <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-1">
                               <CheckCircle className="w-3.5 h-3.5" />
                               Lunas {formatRupiah(t.paidAmount || t.taxAmount)}
                             </div>
                           ) : t.paidAmount && t.paidAmount > 0 ? (
-                            <div className="text-xs text-amber-600">
+                            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                               Sisa Hutang: {formatRupiah(t.remainingAmount || t.taxAmount - t.paidAmount)}
                             </div>
                           ) : (
-                            <div className="text-[11px] text-rose-500 font-medium">
+                            <div className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">
                               Liabilitas Belum Disetor
                             </div>
                           )}
@@ -961,23 +961,23 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       {/* Jatuh Tempo & NTPN */}
                       <td className="py-4 px-4 align-top">
                         <div className="space-y-1 text-xs">
-                          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-medium">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                             <span>Jatuh Tempo: {t.dueDate || '-'}</span>
                           </div>
                           {t.billingCode && (
-                            <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                              ID Billing: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{t.billingCode}</span>
+                            <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                              ID Billing: <span className="font-bold text-indigo-600 dark:text-indigo-400">{t.billingCode}</span>
                             </div>
                           )}
                           {t.ntpnNumber && (
-                            <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold">
                               <ShieldCheck className="w-3 h-3" />
                               NTPN: {t.ntpnNumber}
                             </div>
                           )}
                           {t.paidAt && (
-                            <div className="text-[11px] text-slate-400">
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400">
                               Tgl Setor: {t.paidAt}
                             </div>
                           )}
@@ -1032,25 +1032,25 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
 
       {/* MODAL 1: ADD / EDIT TAX OBLIGATION */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 text-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-700/80 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <div className="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400">
                   <Receipt className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-lg font-bold text-white">
                     {editingTax ? 'Edit Kewajiban Pajak' : 'Catat Kewajiban / Hutang Pajak Baru'}
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     Kewajiban pajak akan langsung diakui sebagai Liabilitas Pajak Terhutang di Neraca Keuangan.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsFormModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1"
+                className="text-slate-400 hover:text-white text-xl font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 &times;
               </button>
@@ -1059,8 +1059,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
             <form onSubmit={handleSaveForm} className="space-y-4 mt-4">
               {/* Jenis Pajak Selector */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Jenis Pajak *
+                <label className="block text-xs font-bold text-slate-200 mb-1.5 uppercase tracking-wide">
+                  Jenis Pajak <span className="text-rose-400">*</span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(
@@ -1079,12 +1079,14 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       onClick={() => handleFormTaxTypeChange(item.id)}
                       className={`p-2.5 text-left rounded-xl border text-xs transition-all ${
                         formData.taxType === item.id
-                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-semibold shadow-sm'
-                          : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                          ? 'border-emerald-500 bg-emerald-950/70 text-emerald-300 font-bold shadow-md ring-1 ring-emerald-500/50'
+                          : 'border-slate-700 bg-slate-800/90 text-slate-200 hover:bg-slate-750 hover:border-slate-600'
                       }`}
                     >
-                      <div className="font-bold">{item.label}</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{item.sub}</div>
+                      <div className="font-bold text-slate-100">{item.label}</div>
+                      <div className={`text-[10px] mt-0.5 ${formData.taxType === item.id ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {item.sub}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -1093,8 +1095,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               {/* Masa Pajak & Tahun */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Masa Pajak / Periode *
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
+                    Masa Pajak / Periode <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -1102,27 +1104,27 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     placeholder="Contoh: Masa Agustus 2026, Triwulan III, Tahunan 2026"
                     value={formData.taxPeriod}
                     onChange={(e) => setFormData({ ...formData, taxPeriod: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Tahun Pajak
                   </label>
                   <input
                     type="number"
                     value={formData.taxYear}
                     onChange={(e) => setFormData({ ...formData, taxYear: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
               </div>
 
               {/* Judul Kewajiban Pajak */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Judul Kewajiban Pajak *
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  Judul Kewajiban Pajak <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -1130,26 +1132,26 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   placeholder="Contoh: PPN Masa Agustus 2026 (Kurang Bayar Penyerahan JKP TKDN)"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                 />
               </div>
 
               {/* DPP & Perhitungan Pajak */}
-              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+              <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <Calculator className="w-4 h-4 text-emerald-500" />
+                  <span className="text-xs font-bold text-slate-100 uppercase tracking-wider flex items-center gap-1.5">
+                    <Calculator className="w-4 h-4 text-emerald-400" />
                     Kalkulasi Pajak & DPP
                   </span>
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-xs font-semibold text-emerald-400">
                     Tarif Standar: {formData.taxRatePercent}%
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      DPP (Dasar Pengenaan Pajak) Rp *
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      DPP (Dasar Pengenaan Pajak) Rp <span className="text-rose-400">*</span>
                     </label>
                     <input
                       type="number"
@@ -1160,13 +1162,13 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                         const val = Number(e.target.value);
                         handleDppOrRateChange(val, formData.taxRatePercent);
                       }}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Tarif Pajak (%) *
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      Tarif Pajak (%) <span className="text-rose-400">*</span>
                     </label>
                     <input
                       type="number"
@@ -1177,16 +1179,16 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                         const val = Number(e.target.value);
                         handleDppOrRateChange(formData.taxableBaseAmount, val);
                       }}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                     />
                   </div>
                 </div>
 
                 {/* Specific for PPN: Output vs Input */}
                 {formData.taxType === 'PPN' && (
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="pt-2 border-t border-slate-700/80 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block font-semibold text-slate-200 mb-1">
                         PPN Keluaran (Faktur Keluaran) Rp
                       </label>
                       <input
@@ -1197,11 +1199,11 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                           const outVal = Number(e.target.value);
                           handleDppOrRateChange(formData.taxableBaseAmount, formData.taxRatePercent, outVal, formData.ppnInputAmount);
                         }}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:outline-none"
+                        className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <label className="block font-semibold text-slate-200 mb-1">
                         PPN Masukan (Pajak Masukan Vendor) Rp
                       </label>
                       <input
@@ -1212,18 +1214,18 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                           const inVal = Number(e.target.value);
                           handleDppOrRateChange(formData.taxableBaseAmount, formData.taxRatePercent, formData.ppnOutputAmount, inVal);
                         }}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl focus:outline-none"
+                        className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                   </div>
                 )}
 
                 {/* Calculated Final Payable Amount */}
-                <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                <div className="pt-3 border-t border-slate-700/80 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-200">
                     Nominal Pajak Terhutang (Liabilitas):
                   </span>
-                  <div className="text-lg font-bold text-rose-600 dark:text-rose-400">
+                  <div className="text-xl font-bold text-rose-400 font-mono tracking-wide">
                     {formatRupiah(formData.taxAmount)}
                   </div>
                 </div>
@@ -1232,20 +1234,20 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               {/* Jatuh Tempo & Dokumen Pendukung */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Jatuh Tempo Pembayaran *
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
+                    Jatuh Tempo Pembayaran <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={formData.dueDate}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Kode ID Billing (DJP)
                   </label>
                   <input
@@ -1253,12 +1255,12 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     placeholder="Contoh: 829104829102834"
                     value={formData.billingCode}
                     onChange={(e) => setFormData({ ...formData, billingCode: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     No Faktur Pajak / Bupot
                   </label>
                   <input
@@ -1266,7 +1268,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     placeholder="010.002-26.89102834"
                     value={formData.taxInvoiceNumber}
                     onChange={(e) => setFormData({ ...formData, taxInvoiceNumber: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
               </div>
@@ -1274,17 +1276,17 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               {/* Link ke Proyek & Lawan Transaksi */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Hubungkan ke Proyek (Opsional)
                   </label>
                   <select
                     value={formData.projectId}
                     onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   >
-                    <option value="">-- Bukan Transaksi Proyek Spesifik --</option>
+                    <option value="" className="bg-slate-800 text-slate-300">-- Bukan Transaksi Proyek Spesifik --</option>
                     {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
+                      <option key={p.id} value={p.id} className="bg-slate-800 text-white">
                         {p.code} - {p.name} ({p.clientName})
                       </option>
                     ))}
@@ -1292,7 +1294,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Lawan Transaksi / KPP Pratama
                   </label>
                   <input
@@ -1300,14 +1302,14 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     placeholder="Contoh: PT Sucofindo, KPP Pratama Jakarta"
                     value={formData.counterpartyName}
                     onChange={(e) => setFormData({ ...formData, counterpartyName: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
               </div>
 
               {/* Catatan */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Catatan Tambahan
                 </label>
                 <textarea
@@ -1315,16 +1317,16 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   placeholder="Catatan pelaporan, lampiran e-Faktur, nomor registrasi Bupot..."
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                 />
               </div>
 
               {/* Form Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsFormModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white text-sm font-medium hover:bg-slate-800 transition-colors"
                 >
                   Batal
                 </button>
@@ -1342,39 +1344,39 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
 
       {/* MODAL 2: SETOR PAJAK KE KAS NEGARA (PAY TAX) */}
       {isPayModalOpen && payingTax && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 text-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-700/80">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <div className="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-lg font-bold text-white">
                     Setor Pajak ke Kas Negara
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     Otomatis menerbitkan transaksi pengeluaran kas & menghapus hutang pajak di neraca.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsPayModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1"
+                className="text-slate-400 hover:text-white text-xl font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 &times;
               </button>
             </div>
 
             {/* Tax Info Card */}
-            <div className="mt-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-2 text-sm">
-              <div className="flex justify-between items-center font-bold text-slate-900 dark:text-white">
+            <div className="mt-4 p-4 rounded-xl bg-slate-800/90 border border-slate-700 space-y-2 text-sm">
+              <div className="flex justify-between items-center font-bold text-white">
                 <span>{payingTax.title}</span>
-                <span className="text-emerald-600 dark:text-emerald-400">
+                <span className="text-emerald-400 font-mono">
                   {formatRupiah(payingTax.remainingAmount || payingTax.taxAmount)}
                 </span>
               </div>
-              <div className="text-xs text-slate-500 flex justify-between">
+              <div className="text-xs text-slate-300 flex justify-between">
                 <span>Jenis: {payingTax.taxType} ({payingTax.taxPeriod})</span>
                 <span>DPP: {formatRupiah(payingTax.taxableBaseAmount || 0)}</span>
               </div>
@@ -1382,8 +1384,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
 
             <form onSubmit={handlePaySubmit} className="space-y-4 mt-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Nomor Transaksi Penerimaan Negara (NTPN) *
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  Nomor Transaksi Penerimaan Negara (NTPN) <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -1391,13 +1393,13 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   placeholder="Contoh: 8392019485720194 (16 Digit Bukti BPN)"
                   value={payFormData.ntpnNumber}
                   onChange={(e) => setPayFormData({ ...payFormData, ntpnNumber: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
                     Kode ID Billing (DJP)
                   </label>
                   <input
@@ -1405,36 +1407,36 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     placeholder="Contoh: 918273645019283"
                     value={payFormData.billingCode}
                     onChange={(e) => setPayFormData({ ...payFormData, billingCode: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Tanggal Penyetoran *
+                  <label className="block text-xs font-semibold text-slate-200 mb-1">
+                    Tanggal Penyetoran <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={payFormData.date}
                     onChange={(e) => setPayFormData({ ...payFormData, date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Rekening Sumber Dana (Kas / Bank Pengeluaran) *
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  Rekening Sumber Dana (Kas / Bank Pengeluaran) <span className="text-rose-400">*</span>
                 </label>
                 <select
                   required
                   value={payFormData.paymentChannelId}
                   onChange={(e) => setPayFormData({ ...payFormData, paymentChannelId: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                 >
                   {paymentChannels.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} className="bg-slate-800 text-white">
                       {c.name} {c.accountNumber ? `(${c.accountNumber})` : ''} - {c.category}
                     </option>
                   ))}
@@ -1442,7 +1444,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Catatan Penyetoran Pajak
                 </label>
                 <input
@@ -1450,15 +1452,15 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   placeholder="Contoh: Disetor melalui Internet Banking Corporate BCA"
                   value={payFormData.notes}
                   onChange={(e) => setPayFormData({ ...payFormData, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsPayModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white text-sm font-medium hover:bg-slate-800 transition-colors"
                 >
                   Batal
                 </button>
@@ -1476,25 +1478,25 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
 
       {/* MODAL 3: TAX CALCULATOR & SIMULATOR */}
       {isCalculatorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 text-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-700/80">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <div className="w-10 h-10 rounded-xl bg-amber-950/60 border border-amber-800/60 flex items-center justify-center text-amber-400">
                   <Calculator className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-lg font-bold text-white">
                     Simulator & Kalkulator Pajak Indonesia
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     Hitung estimasi tarif PPN 11%, PPh 23 2%, PPh 21, PPh 4(2) & PPh Final.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCalculatorModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1"
+                className="text-slate-400 hover:text-white text-xl font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 &times;
               </button>
@@ -1502,7 +1504,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
 
             <div className="space-y-4 mt-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Pilih Skema Pajak:
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -1528,8 +1530,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       }}
                       className={`p-2 rounded-xl border text-xs font-medium text-center transition-all ${
                         calcType === item.id
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-bold'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100'
+                          ? 'border-amber-500 bg-amber-950/70 text-amber-300 font-bold shadow-sm ring-1 ring-amber-500/50'
+                          : 'border-slate-700 bg-slate-800/90 text-slate-200 hover:bg-slate-750 hover:border-slate-600'
                       }`}
                     >
                       {item.label}
@@ -1539,7 +1541,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-200 mb-1">
                   Dasar Pengenaan Pajak (DPP / Nilai Transaksi Bruto) Rp:
                 </label>
                 <input
@@ -1554,32 +1556,32 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       setCalcPpnOutput(Math.round((val * calcRate) / 100));
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-base font-bold text-slate-900 dark:text-white focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-base font-bold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               {calcType === 'PPN' && (
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block font-semibold text-slate-200 mb-1">
                       PPN Keluaran (11% DPP)
                     </label>
                     <input
                       type="number"
                       value={calcPpnOutput}
                       onChange={(e) => setCalcPpnOutput(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
+                      className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block font-semibold text-slate-200 mb-1">
                       PPN Masukan (Kredit Pajak)
                     </label>
                     <input
                       type="number"
                       value={calcPpnInput}
                       onChange={(e) => setCalcPpnInput(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
+                      className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                 </div>
@@ -1596,25 +1598,25 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                 });
 
                 return (
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 border border-amber-200 dark:border-amber-800/60 space-y-2">
-                    <div className="text-xs text-amber-800 dark:text-amber-300 font-semibold uppercase tracking-wider">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-amber-950/50 to-orange-950/50 border border-amber-800/80 space-y-2">
+                    <div className="text-xs text-amber-300 font-bold uppercase tracking-wider">
                       Hasil Simulasi Perhitungan Pajak:
                     </div>
-                    <div className="text-2xl font-black text-amber-900 dark:text-amber-100">
+                    <div className="text-2xl font-black text-amber-200 font-mono">
                       {formatRupiah(res.taxAmount)}
                     </div>
-                    <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                    <p className="text-xs text-amber-300/90 leading-relaxed">
                       {res.description}
                     </p>
                   </div>
                 );
               })()}
 
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsCalculatorModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 text-sm hover:underline"
+                  className="px-4 py-2 rounded-xl text-slate-300 hover:text-white text-sm hover:underline"
                 >
                   Tutup
                 </button>
