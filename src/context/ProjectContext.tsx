@@ -1671,6 +1671,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubReceivables = subscribeToReceivables((remoteRecs) => {
+      if (Array.isArray(remoteRecs)) {
+        setReceivables(remoteRecs);
+      }
+    });
+
     return () => {
       unsubProjects();
       unsubDeletedUsers();
@@ -1687,6 +1693,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubBankLoans();
       unsubCompanyCapital();
       unsubTaxObligations();
+      unsubReceivables();
     };
   }, []);
 
@@ -4150,6 +4157,316 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
+  // =========================================================================
+  // ACCOUNTS RECEIVABLE / PIUTANG USAHA & TERMIN PROYEK (ALL ROLES ACCESSIBLE)
+  // =========================================================================
+
+  const addReceivable = (
+    data: Omit<Receivable, 'id' | 'createdAt' | 'createdBy' | 'payments' | 'paidAmountIDR' | 'remainingAmountIDR' | 'status'> & {
+      initialPaidAmountIDR?: number;
+      paymentChannelId?: string;
+      referenceNumber?: string;
+      notesPayment?: string;
+      syncToCashLedger?: boolean;
+    }
+  ): { success: boolean; receivable?: Receivable; message?: string } => {
+    const now = new Date().toISOString();
+    const id = `rec-${Date.now()}`;
+    const totalAmount = Math.max(0, Number(data.totalAmountIDR) || 0);
+    const initialPaid = Math.max(0, Number(data.initialPaidAmountIDR) || 0);
+    const remaining = Math.max(0, totalAmount - initialPaid);
+
+    const payments: ReceivablePayment[] = [];
+    let linkedTxId: string | undefined;
+
+    if (initialPaid > 0) {
+      const paymentId = `pay-${Date.now()}`;
+      if (data.syncToCashLedger !== false) {
+        const tx = addTransaction({
+          date: data.issueDate || now.slice(0, 10),
+          type: 'INCOME',
+          category: 'CONSULTING_FEE',
+          amountIDR: initialPaid,
+          description: `Pembayaran Uang Muka / Piutang: ${data.invoiceNumber} - ${data.title} (${data.clientName})`,
+          clientOrVendorName: data.clientName,
+          projectId: data.projectId,
+          paymentMethod: (data.paymentChannelId as any) || 'BANK_TRANSFER_BRI',
+          referenceNumber: data.referenceNumber || data.invoiceNumber,
+          status: 'CLEARED',
+          notes: data.notesPayment || `Penerimaan kas pembayaran piutang invoice ${data.invoiceNumber}`,
+          recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
+        });
+        linkedTxId = tx?.id;
+      }
+
+      payments.push({
+        id: paymentId,
+        receivableId: id,
+        paymentDate: data.issueDate || now.slice(0, 10),
+        amountIDR: initialPaid,
+        paymentChannelId: data.paymentChannelId,
+        paymentMethod: data.paymentChannelId || 'BANK_TRANSFER_BRI',
+        referenceNumber: data.referenceNumber,
+        transactionId: linkedTxId,
+        recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
+        notes: data.notesPayment || 'Pembayaran awal / Uang muka DP',
+        createdAt: now,
+      });
+    }
+
+    let status: ReceivableStatus = 'BELUM_DIBAYAR';
+    if (remaining <= 0 && totalAmount > 0) {
+      status = 'LUNAS';
+    } else if (initialPaid > 0 && remaining > 0) {
+      status = 'DIBAYAR_SEBAGIAN';
+    } else {
+      const isOverdue = data.dueDate ? calculateDaysOverdue(data.dueDate) > 0 : false;
+      status = isOverdue ? 'JATUH_TEMPO' : 'BELUM_DIBAYAR';
+    }
+
+    const newReceivable: Receivable = {
+      id,
+      invoiceNumber: data.invoiceNumber,
+      title: data.title,
+      clientName: data.clientName,
+      clientContactPerson: data.clientContactPerson,
+      clientEmail: data.clientEmail,
+      clientPhone: data.clientPhone,
+      clientAddress: data.clientAddress,
+      projectId: data.projectId,
+      projectCode: data.projectCode,
+      milestoneTitle: data.milestoneTitle,
+      category: data.category || 'TERMIN_KONSULTASI_TKDN',
+      totalAmountIDR: totalAmount,
+      paidAmountIDR: initialPaid,
+      remainingAmountIDR: remaining,
+      taxIncluded: data.taxIncluded,
+      taxAmountIDR: data.taxAmountIDR,
+      issueDate: data.issueDate,
+      dueDate: data.dueDate,
+      paymentTermsDays: data.paymentTermsDays,
+      status,
+      payments,
+      linkedTransactionIds: linkedTxId ? [linkedTxId] : [],
+      notes: data.notes,
+      createdAt: now,
+      createdBy: currentUser.username || currentUser.name || 'System User',
+    };
+
+    setReceivables((prev) => {
+      const updated = [newReceivable, ...prev];
+      broadcastLiveDataUpdate('RECEIVABLES', updated);
+      saveReceivableToFirestore(newReceivable);
+      return updated;
+    });
+
+    return {
+      success: true,
+      receivable: newReceivable,
+      message: `Invoice piutang "${newReceivable.invoiceNumber}" senilai Rp ${totalAmount.toLocaleString('id-ID')} berhasil dicatat & disinkronkan real-time.`,
+    };
+  };
+
+  const updateReceivable = (
+    id: string,
+    updates: Partial<Receivable>
+  ): { success: boolean; message?: string } => {
+    let found = false;
+    setReceivables((prev) => {
+      const updated = prev.map((r) => {
+        if (r.id === id) {
+          found = true;
+          const merged = { ...r, ...updates, updatedAt: new Date().toISOString() };
+          // Recalculate totals and status
+          const tot = merged.totalAmountIDR !== undefined ? Math.max(0, merged.totalAmountIDR) : r.totalAmountIDR;
+          const paid = merged.payments
+            ? merged.payments.reduce((acc, p) => acc + (p.amountIDR || 0), 0)
+            : (merged.paidAmountIDR !== undefined ? Math.max(0, merged.paidAmountIDR) : r.paidAmountIDR);
+          const rem = Math.max(0, tot - paid);
+          merged.totalAmountIDR = tot;
+          merged.paidAmountIDR = paid;
+          merged.remainingAmountIDR = rem;
+
+          if (merged.status !== 'BATAL') {
+            if (rem <= 0 && tot > 0) {
+              merged.status = 'LUNAS';
+              merged.fullyPaidDate = merged.fullyPaidDate || new Date().toISOString().slice(0, 10);
+            } else if (paid > 0 && rem > 0) {
+              merged.status = 'DIBAYAR_SEBAGIAN';
+            } else {
+              const isOverdue = merged.dueDate ? calculateDaysOverdue(merged.dueDate) > 0 : false;
+              merged.status = isOverdue ? 'JATUH_TEMPO' : 'BELUM_DIBAYAR';
+            }
+          }
+
+          saveReceivableToFirestore(merged);
+          return merged;
+        }
+        return r;
+      });
+
+      if (found) {
+        broadcastLiveDataUpdate('RECEIVABLES', updated);
+      }
+      return updated;
+    });
+
+    if (!found) {
+      return { success: false, message: 'Data tagihan piutang tidak ditemukan.' };
+    }
+    return { success: true, message: 'Data piutang berhasil diperbarui secara real-time.' };
+  };
+
+  const deleteReceivable = (id: string): { success: boolean; message?: string } => {
+    const target = receivables.find((r) => r.id === id);
+    if (!target) {
+      return { success: false, message: 'Data piutang tidak ditemukan.' };
+    }
+
+    setReceivables((prev) => {
+      const updated = prev.filter((r) => r.id !== id);
+      broadcastLiveDataUpdate('RECEIVABLES', updated);
+      return updated;
+    });
+    deleteReceivableFromFirestore(id);
+
+    return { success: true, message: `Invoice piutang "${target.invoiceNumber}" berhasil dihapus.` };
+  };
+
+  const recordReceivablePayment = (
+    receivableId: string,
+    paymentData: {
+      amountIDR: number;
+      paymentDate: string;
+      paymentChannelId?: string;
+      paymentMethod?: string;
+      referenceNumber?: string;
+      notes?: string;
+      syncToCashLedger?: boolean;
+    }
+  ): { success: boolean; message?: string; payment?: ReceivablePayment } => {
+    const target = receivables.find((r) => r.id === receivableId);
+    if (!target) {
+      return { success: false, message: 'Data piutang tidak ditemukan.' };
+    }
+
+    const payAmount = Math.max(0, Number(paymentData.amountIDR) || 0);
+    if (payAmount <= 0) {
+      return { success: false, message: 'Nominal pembayaran harus lebih besar dari Rp 0.' };
+    }
+
+    const now = new Date().toISOString();
+    const paymentId = `pay-${Date.now()}`;
+    let linkedTxId: string | undefined;
+
+    // Record into Cash Ledger / Financial Transactions if sync is enabled
+    if (paymentData.syncToCashLedger !== false) {
+      const tx = addTransaction({
+        date: paymentData.paymentDate || now.slice(0, 10),
+        type: 'INCOME',
+        category: 'CONSULTING_FEE',
+        amountIDR: payAmount,
+        description: `Pelunasan Piutang: ${target.invoiceNumber} - ${target.title} (${target.clientName})`,
+        clientOrVendorName: target.clientName,
+        projectId: target.projectId,
+        paymentMethod: (paymentData.paymentChannelId as any) || 'BANK_TRANSFER_BRI',
+        referenceNumber: paymentData.referenceNumber || `RCV-PAY-${target.invoiceNumber}`,
+        status: 'CLEARED',
+        notes: paymentData.notes || `Penerimaan kas dari pelunasan piutang no. ${target.invoiceNumber}`,
+        recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
+      });
+      linkedTxId = tx?.id;
+    }
+
+    const newPayment: ReceivablePayment = {
+      id: paymentId,
+      receivableId,
+      paymentDate: paymentData.paymentDate || now.slice(0, 10),
+      amountIDR: payAmount,
+      paymentChannelId: paymentData.paymentChannelId,
+      paymentMethod: paymentData.paymentMethod || paymentData.paymentChannelId || 'BANK_TRANSFER_BRI',
+      referenceNumber: paymentData.referenceNumber,
+      transactionId: linkedTxId,
+      recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
+      notes: paymentData.notes,
+      createdAt: now,
+    };
+
+    const newPayments = [...(target.payments || []), newPayment];
+    const totalPaid = newPayments.reduce((sum, p) => sum + (p.amountIDR || 0), 0);
+    const newRemaining = Math.max(0, target.totalAmountIDR - totalPaid);
+
+    let newStatus: ReceivableStatus = target.status;
+    if (newRemaining <= 0) {
+      newStatus = 'LUNAS';
+    } else if (totalPaid > 0) {
+      newStatus = 'DIBAYAR_SEBAGIAN';
+    }
+
+    const updatedReceivable: Receivable = {
+      ...target,
+      paidAmountIDR: totalPaid,
+      remainingAmountIDR: newRemaining,
+      payments: newPayments,
+      status: newStatus,
+      fullyPaidDate: newRemaining <= 0 ? (paymentData.paymentDate || now.slice(0, 10)) : undefined,
+      linkedTransactionIds: linkedTxId
+        ? [...(target.linkedTransactionIds || []), linkedTxId]
+        : target.linkedTransactionIds,
+      updatedAt: now,
+    };
+
+    setReceivables((prev) => {
+      const updated = prev.map((r) => (r.id === receivableId ? updatedReceivable : r));
+      broadcastLiveDataUpdate('RECEIVABLES', updated);
+      saveReceivableToFirestore(updatedReceivable);
+      return updated;
+    });
+
+    return {
+      success: true,
+      payment: newPayment,
+      message: `Penerimaan pembayaran piutang sebesar Rp ${payAmount.toLocaleString('id-ID')} berhasil dicatat & dibukukan ke jurnal kas! Sisa piutang: Rp ${newRemaining.toLocaleString('id-ID')}.`,
+    };
+  };
+
+  const cancelReceivable = (id: string, reason?: string): { success: boolean; message?: string } => {
+    const target = receivables.find((r) => r.id === id);
+    if (!target) {
+      return { success: false, message: 'Data piutang tidak ditemukan.' };
+    }
+
+    const now = new Date().toISOString();
+    const updatedReceivable: Receivable = {
+      ...target,
+      status: 'BATAL',
+      notes: `${target.notes ? target.notes + ' | ' : ''}Dibatalkan / Write-Off pada ${now.slice(0, 10)}. Alasan: ${reason || 'Pembatalan tagihan / penghapusbukuan piutang'}`,
+      updatedAt: now,
+    };
+
+    setReceivables((prev) => {
+      const updated = prev.map((r) => (r.id === id ? updatedReceivable : r));
+      broadcastLiveDataUpdate('RECEIVABLES', updated);
+      saveReceivableToFirestore(updatedReceivable);
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Status piutang "${target.invoiceNumber}" berhasil diubah menjadi Dibatalkan / Write-Off.`,
+    };
+  };
+
+  const resetReceivablesToDefault = (): { success: boolean; message?: string } => {
+    setReceivables(INITIAL_RECEIVABLES);
+    INITIAL_RECEIVABLES.forEach((r) => saveReceivableToFirestore(r));
+    broadcastLiveDataUpdate('RECEIVABLES', INITIAL_RECEIVABLES);
+    return {
+      success: true,
+      message: 'Master data dan buku piutang usaha berhasil direset ke standar sistem.',
+    };
+  };
+
   const updateMilestoneDocRequirements = (
     projectId: string,
     milestoneId: string,
@@ -5439,6 +5756,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteTaxObligation,
         payTaxObligation,
         resetTaxObligationsToDefault,
+        receivables,
+        addReceivable,
+        updateReceivable,
+        deleteReceivable,
+        recordReceivablePayment,
+        cancelReceivable,
+        resetReceivablesToDefault,
         updateMilestoneDocRequirements,
         filters,
         setFilters,

@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 
-export type MainTabType = 'projects' | 'dispositions' | 'finance' | 'bank-loans' | 'financial-reports' | 'documents' | 'calculator' | 'team';
+export type MainTabType = 'projects' | 'dispositions' | 'finance' | 'receivables' | 'bank-loans' | 'financial-reports' | 'documents' | 'calculator' | 'team';
 
 interface SidebarProps {
   activeTab: MainTabType;
@@ -72,6 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     dispositions,
     transactions,
     bankLoans,
+    receivables,
     teamMembers,
     currentUser,
     logout,
@@ -322,6 +323,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }`}
                     >
                       {transactions.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Piutang Usaha & Invoice Termin Tab */}
+                <button
+                  onClick={() => handleNavClick('receivables')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'receivables'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Piutang Usaha, Invoice Termin & Aging Schedule"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Receipt className={`w-4 h-4 shrink-0 ${activeTab === 'receivables' ? 'text-slate-950' : 'text-indigo-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Piutang Usaha (AR)</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'receivables'
+                          ? 'bg-slate-950 text-emerald-300'
+                          : receivables && receivables.filter((r) => r.status !== 'LUNAS' && r.status !== 'BATAL').length > 0
+                          ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      {receivables ? receivables.filter((r) => r.status !== 'LUNAS' && r.status !== 'BATAL').length : 0} Aktif
                     </span>
                   )}
                 </button>

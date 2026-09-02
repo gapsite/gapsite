@@ -43,9 +43,10 @@ import {
   Coins,
   Plus,
   Settings2,
+  Clock,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
-import { FinancialTransaction, ConsultingProject, TransactionType, PaymentChannelDefinition } from '../../types';
+import { FinancialTransaction, ConsultingProject, TransactionType, PaymentChannelDefinition, Receivable } from '../../types';
 import {
   formatIDR,
   formatIDRShort,
@@ -53,6 +54,7 @@ import {
   getPaymentMethodLabel,
   getTransactionStatusBadge,
 } from '../../utils/formatters';
+import { calculateReceivablesAgingSummary } from '../../utils/receivableCalculations';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
 
@@ -68,7 +70,8 @@ export type FinancialReportType =
   | 'PROJECT_PROFITABILITY'
   | 'GENERAL_LEDGER'
   | 'BANK_LOANS'
-  | 'TAX_AND_SETTLEMENT';
+  | 'TAX_AND_SETTLEMENT'
+  | 'RECEIVABLES_AGING';
 
 export type DatePeriodFilter =
   | 'ALL'
@@ -94,6 +97,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     bankLoans,
     companyCapital,
     taxObligations,
+    receivables,
   } = useProjects();
 
   // Active Report Type
@@ -396,7 +400,15 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     // Cash & Bank includes Initial Capital + Operating Cash Flow + Loan Disbursements - Loan Repayments
     const netClearedCash = clearedIncome - clearedExpense;
     const cashAndBankAsset = Math.max(0, totalPaidAndAdditional + retainedEarningsOpening + netClearedCash + (totalDisbursedFromTrxs - totalPrincipalPaidFromTrxs));
-    const receivablesAsset = pendingIncome;
+
+    // Real-time Accounts Receivable (Piutang Usaha) integration
+    const receivablesAgingSummary = calculateReceivablesAgingSummary(receivables || []);
+    const activeReceivablesList = (receivables || []).filter(
+      (r) => r.status !== 'BATAL' && r.status !== 'LUNAS' && (r.remainingAmountIDR === undefined || r.remainingAmountIDR > 0)
+    );
+    const totalReceivablesOutstanding = receivablesAgingSummary.totalOutstanding;
+    // Prefer dedicated AR ledger when available; fallback to pending ledger income
+    const receivablesAsset = totalReceivablesOutstanding > 0 ? totalReceivablesOutstanding : pendingIncome;
 
     // Payment Channel Summaries with robust 1-to-1 matching and true ending balance (no duplicate counting)
     const channelsList = paymentChannels && paymentChannels.length > 0 ? paymentChannels : activePaymentChannels;
@@ -656,6 +668,9 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       // 5 Core Accounting Pillars
       cashAndBankAsset,
       receivablesAsset,
+      receivablesAgingSummary,
+      activeReceivablesList,
+      totalReceivablesOutstanding,
       fixedAssetsGross,
       depreciationTotal,
       fixedAssets,
@@ -874,6 +889,57 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       });
       rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
       rows.push(['TOTAL REKAPITULASI PINJAMAN', '', '', String(metrics.totalLoanFacility), '', '', String(metrics.totalMonthlyPrincipal), String(metrics.totalMonthlyInterest), String(metrics.totalMonthlyPrincipal + metrics.totalMonthlyInterest), String(metrics.totalRemainingPrincipal), String(metrics.totalPaidInterest), '']);
+    } else if (reportType === 'RECEIVABLES_AGING') {
+      filename = `Laporan_Piutang_dan_Aging_GAP_CRM_${new Date().toISOString().slice(0, 10)}.csv`;
+      headers = [
+        'No. Invoice / Tagihan',
+        'Kode Proyek',
+        'Nama Klien / Perusahaan',
+        'Termin / Milestone',
+        'Tanggal Terbit',
+        'Jatuh Tempo',
+        'Umur Piutang (Hari)',
+        'Status Aging',
+        'Nilai Tagihan (IDR)',
+        'Terbayar (IDR)',
+        'Sisa Piutang (IDR)',
+        'Status Pelunasan',
+      ];
+      (receivables || []).forEach((r) => {
+        const remaining = r.remainingAmountIDR !== undefined ? r.remainingAmountIDR : Math.max(0, r.totalAmountIDR - (r.paidAmountIDR || 0));
+        const due = new Date(r.dueDate).getTime();
+        const now = new Date().getTime();
+        const daysDiff = Math.floor((now - due) / (1000 * 60 * 60 * 24));
+        let agingLabel = '0-30 Hari (Lancar)';
+        if (r.status === 'LUNAS') {
+          agingLabel = 'Lunas';
+        } else if (daysDiff > 90) {
+          agingLabel = '> 90 Hari (Macet)';
+        } else if (daysDiff > 60) {
+          agingLabel = '61 - 90 Hari (Diragukan)';
+        } else if (daysDiff > 30) {
+          agingLabel = '31 - 60 Hari (Kurang Lancar)';
+        } else if (daysDiff > 0) {
+          agingLabel = '1 - 30 Hari (Perhatian Khusus)';
+        }
+
+        rows.push([
+          `"${r.invoiceNumber}"`,
+          `"${r.projectCode || '-'}"`,
+          `"${r.clientName}"`,
+          `"${r.milestoneTermin || r.title || '-'}"`,
+          r.issueDate,
+          r.dueDate,
+          String(Math.max(0, daysDiff)),
+          `"${agingLabel}"`,
+          String(r.totalAmountIDR),
+          String(r.paidAmountIDR || 0),
+          String(remaining),
+          r.status,
+        ]);
+      });
+      rows.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+      rows.push(['TOTAL IKHTISAR PIUTANG USAHA', '', '', '', '', '', '', '', String(metrics.receivablesAgingSummary.totalInvoiced), String(metrics.receivablesAgingSummary.totalSettled), String(metrics.receivablesAgingSummary.totalOutstanding), `${metrics.receivablesAgingSummary.settlementRate.toFixed(1)}% Terbayar`]);
     } else if (reportType === 'EQUITY') {
       filename = `Laporan_Ekuitas_Modal_GAP_CRM_${new Date().toISOString().slice(0, 10)}.csv`;
       headers = ['Komponen Ekuitas', 'Keterangan', 'Nominal (IDR)'];
@@ -1215,6 +1281,27 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
           >
             <Scale className="w-4 h-4" />
             <span>Neraca (Balance Sheet)</span>
+          </button>
+
+          <button
+            onClick={() => setReportType('RECEIVABLES_AGING')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              reportType === 'RECEIVABLES_AGING'
+                ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Piutang &amp; Aging AR</span>
+            {metrics.receivablesAgingSummary && metrics.receivablesAgingSummary.activeCount > 0 && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                reportType === 'RECEIVABLES_AGING'
+                  ? 'bg-slate-950 text-emerald-300'
+                  : 'bg-indigo-100 text-indigo-700'
+              }`}>
+                {metrics.receivablesAgingSummary.activeCount}
+              </span>
+            )}
           </button>
 
           <button
@@ -4347,6 +4434,211 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                         ))
                     )}
                   </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 6: LAPORAN PIUTANG USAHA & AGING SCHEDULE (ACCOUNTS RECEIVABLE)       */}
+        {/* ========================================================================= */}
+        {reportType === 'RECEIVABLES_AGING' && (
+          <div className="space-y-6">
+            {/* Header Title for Print / Screen */}
+            <div className="bg-slate-900 text-white p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-emerald-400" />
+                  <span>Laporan Piutang Usaha &amp; Analisis Umur Piutang (AR Aging Schedule)</span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Rekapitulasi tagihan invoice termin milestone, jadwal jatuh tempo, dan status kolektibilitas klien
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 px-3 py-1 rounded-full font-bold">
+                  {metrics.receivablesAgingSummary.activeCount} Invoice Aktif
+                </span>
+              </div>
+            </div>
+
+            {/* KPI Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Faktur / Tagihan</div>
+                <div className="text-base font-bold font-mono text-slate-900 mt-1">{formatIDR(metrics.receivablesAgingSummary.totalInvoiced)}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">{(receivables || []).length} Total Invoice Terbit</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Kas Diterima (Lunas)</div>
+                <div className="text-base font-bold font-mono text-emerald-600 mt-1">{formatIDR(metrics.receivablesAgingSummary.totalSettled)}</div>
+                <div className="text-[10px] text-emerald-700 mt-0.5">{metrics.receivablesAgingSummary.settlementRate.toFixed(1)}% Terkoleksi</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sisa Piutang Berjalan (AR)</div>
+                <div className="text-base font-bold font-mono text-amber-600 mt-1">{formatIDR(metrics.receivablesAgingSummary.totalOutstanding)}</div>
+                <div className="text-[10px] text-amber-700 mt-0.5">{metrics.receivablesAgingSummary.activeCount} Invoice Belum Lunas</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Kolektibilitas / Pelunasan</div>
+                <div className="text-base font-bold font-mono text-indigo-600 mt-1">{metrics.receivablesAgingSummary.settlementRate.toFixed(1)}%</div>
+                <div className="text-[10px] text-indigo-700 mt-0.5">Efisiensi Penagihan Termin</div>
+              </div>
+            </div>
+
+            {/* 4-Bucket Aging Schedule Box */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="bg-slate-100 text-slate-800 px-4 py-2.5 font-bold text-xs uppercase tracking-wider flex items-center justify-between border-b border-slate-200">
+                <span>Distribusi Umur Piutang (Aging Buckets)</span>
+                <span className="font-mono text-slate-600 text-[11px]">Berdasarkan Tanggal Jatuh Tempo Invoice</span>
+              </div>
+              <div className="p-4 bg-slate-50 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-white border border-emerald-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-800">0 - 30 Hari (Lancar)</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                      {metrics.receivablesAgingSummary.current0to30.count} inv
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold font-mono text-emerald-700 mt-1.5">
+                    {formatIDR(metrics.receivablesAgingSummary.current0to30.amount)}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Belum jatuh tempo / jatuh tempo &lt; 30 hr</div>
+                </div>
+
+                <div className="bg-white border border-amber-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-800">31 - 60 Hari (Perhatian)</span>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                      {metrics.receivablesAgingSummary.aging31to60.count} inv
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold font-mono text-amber-700 mt-1.5">
+                    {formatIDR(metrics.receivablesAgingSummary.aging31to60.amount)}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Lewat tempo 1 - 2 bulan</div>
+                </div>
+
+                <div className="bg-white border border-orange-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-orange-800">61 - 90 Hari (Kurang Lancar)</span>
+                    <span className="text-[10px] bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                      {metrics.receivablesAgingSummary.aging61to90.count} inv
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold font-mono text-orange-700 mt-1.5">
+                    {formatIDR(metrics.receivablesAgingSummary.aging61to90.amount)}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Perlu follow-up intensif</div>
+                </div>
+
+                <div className="bg-white border border-rose-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-rose-800">&gt; 90 Hari (Macet / Overdue)</span>
+                    <span className="text-[10px] bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded font-mono font-bold">
+                      {metrics.receivablesAgingSummary.agingOver90.count} inv
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold font-mono text-rose-700 mt-1.5">
+                    {formatIDR(metrics.receivablesAgingSummary.agingOver90.amount)}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">Eskalasi bagian legal / direksi</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Receivables List Table */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                Daftar Rincian Invoice &amp; Sisa Piutang Berjalan
+              </h4>
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-800 text-white">
+                      <th className="py-2.5 px-3 text-left">No. Invoice</th>
+                      <th className="py-2.5 px-3 text-left">Klien &amp; Proyek</th>
+                      <th className="py-2.5 px-3 text-left">Termin / Milestone</th>
+                      <th className="py-2.5 px-3 text-left">Jatuh Tempo</th>
+                      <th className="py-2.5 px-3 text-right">Nilai Tagihan</th>
+                      <th className="py-2.5 px-3 text-right">Terbayar</th>
+                      <th className="py-2.5 px-3 text-right">Sisa Piutang</th>
+                      <th className="py-2.5 px-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(!receivables || receivables.length === 0) ? (
+                      <tr>
+                        <td colSpan={8} className="py-6 text-center text-slate-400 italic">
+                          Belum ada data piutang / invoice termin yang tercatat.
+                        </td>
+                      </tr>
+                    ) : (
+                      receivables.map((r, idx) => {
+                        const remaining = r.remainingAmountIDR !== undefined ? r.remainingAmountIDR : Math.max(0, r.totalAmountIDR - (r.paidAmountIDR || 0));
+                        const isOverdue = r.status === 'JATUH_TEMPO' || (r.status !== 'LUNAS' && r.status !== 'BATAL' && new Date(r.dueDate) < new Date());
+                        return (
+                          <tr key={r.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                            <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{r.invoiceNumber}</td>
+                            <td className="py-2.5 px-3">
+                              <span className="font-semibold text-slate-900 block">{r.clientName}</span>
+                              <span className="text-[11px] text-slate-400 font-mono">{r.projectCode || '-'}</span>
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-700">
+                              <span className="font-medium">{r.milestoneTermin || r.title || 'Termin Pembayaran'}</span>
+                              {r.poNumber && <span className="text-[10px] text-slate-400 block">PO: {r.poNumber}</span>}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono">
+                              <span className={isOverdue ? 'text-rose-600 font-bold' : 'text-slate-600'}>{r.dueDate}</span>
+                              <span className="text-[10px] text-slate-400 block">Terbit: {r.issueDate}</span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-800">
+                              {formatIDR(r.totalAmountIDR)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-emerald-600 font-medium">
+                              {formatIDR(r.paidAmountIDR || 0)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-600">
+                              {formatIDR(remaining)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                                r.status === 'LUNAS'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : r.status === 'SEBAGIAN'
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                  : r.status === 'JATUH_TEMPO' || isOverdue
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                  : 'bg-amber-100 text-amber-800 border border-amber-300'
+                              }`}>
+                                {r.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-900 text-white font-bold font-mono">
+                      <td colSpan={4} className="py-2.5 px-3 uppercase text-xs font-sans">
+                        TOTAL REKAPITULASI PIUTANG USAHA
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        {formatIDR(metrics.receivablesAgingSummary.totalInvoiced)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-emerald-400">
+                        {formatIDR(metrics.receivablesAgingSummary.totalSettled)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-amber-400">
+                        {formatIDR(metrics.receivablesAgingSummary.totalOutstanding)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-xs font-sans text-emerald-300">
+                        {metrics.receivablesAgingSummary.settlementRate.toFixed(1)}% Lunas
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>

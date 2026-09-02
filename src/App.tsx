@@ -190,7 +190,20 @@ const DashboardContent: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3A: DEBT & BANK LOAN MANAGEMENT */}
+          {/* TAB 3A: ACCOUNTS RECEIVABLE & INVOICE MANAGEMENT */}
+          {activeTab === 'receivables' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="RECEIVABLES"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
+          {/* TAB 3B: DEBT & BANK LOAN MANAGEMENT */}
           {activeTab === 'bank-loans' && (
             <div className="animate-in fade-in duration-150">
               <FinancialManagement
