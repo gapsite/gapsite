@@ -66,11 +66,11 @@ export const KpiMetrics: React.FC = () => {
           <span className="text-2xl font-black tracking-tight text-slate-900 font-mono">
             {activeProjects.length}
           </span>
-          <span className="text-[11px] font-medium text-slate-600">/ {totalProjects} Total</span>
+          <span className="text-[11px] font-medium text-slate-600">/ {totalProjects} total</span>
         </div>
         <p className="text-[11px] text-emerald-700 mt-1 font-medium flex items-center gap-1">
           <CheckCircle className="w-3 h-3" />
-          {certifiedProjects.length} Certified & Signed
+          {certifiedProjects.length} certified & signed
         </p>
       </div>
 
@@ -88,7 +88,7 @@ export const KpiMetrics: React.FC = () => {
           </span>
         </div>
         <p className="text-[11px] text-slate-600 mt-1 font-medium">
-          Under Active Engagements
+          Active engagements
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export const KpiMetrics: React.FC = () => {
         </div>
         <p className="text-[11px] text-emerald-700 mt-1 font-medium flex items-center gap-1">
           <ArrowUpRight className="w-3 h-3" />
-          +{formatIDRShort(totalIncome)} Inflow
+          +{formatIDRShort(totalIncome)} inflow
         </p>
       </div>
 
@@ -128,7 +128,7 @@ export const KpiMetrics: React.FC = () => {
           </span>
         </div>
         <p className="text-[11px] text-slate-600 mt-1 font-medium">
-          Target vs Realized Index
+          Target vs realized
         </p>
       </div>
 
@@ -146,19 +146,19 @@ export const KpiMetrics: React.FC = () => {
           </span>
           {urgentDispositions.length > 0 && (
             <span className="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
-              {urgentDispositions.length} Urgent
+              {urgentDispositions.length} urgent
             </span>
           )}
         </div>
         <p className="text-[11px] text-amber-700 mt-1 font-medium">
-          Assigned to Team Members
+          Assigned team members
         </p>
       </div>
 
-      {/* 6. Surveyor Site Audits */}
+      {/* 6. LVI Site Audits */}
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-700">Surveyor Audits</span>
+          <span className="text-xs font-semibold text-slate-700">LVI Site Audits</span>
           <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
             <CalendarCheck className="w-4 h-4" />
           </div>
@@ -169,7 +169,7 @@ export const KpiMetrics: React.FC = () => {
           </span>
         </div>
         <p className="text-[11px] text-indigo-700 mt-1 font-medium">
-          Sucofindo / SI Scheduled
+          Sucofindo / SI scheduled
         </p>
       </div>
     </div>

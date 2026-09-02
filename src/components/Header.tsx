@@ -6,18 +6,24 @@ import {
   Plus,
   Clock,
   Calculator,
-  Download,
   FolderKanban,
   Wallet,
   FileCheck,
+  FileSpreadsheet,
   Users,
   ChevronDown,
   CheckCircle2,
   AlertTriangle,
   Layers,
+  FileText,
   ShieldCheck,
+  ShieldAlert,
   LogOut,
-  UserCheck,
+  BadgeCheck,
+  Lock,
+  User,
+  Sparkles,
+  KeyRound,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { MainTabType } from './Sidebar';
@@ -31,6 +37,9 @@ interface HeaderProps {
   onOpenTkdnCalculator: () => void;
   onOpenExport: () => void;
   onOpenRoleManager?: () => void;
+  onOpenServiceManager?: () => void;
+  onOpenDocTypeManager?: () => void;
+  onOpenUserProfile?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -42,18 +51,24 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTkdnCalculator,
   onOpenExport,
   onOpenRoleManager,
+  onOpenServiceManager,
+  onOpenDocTypeManager,
+  onOpenUserProfile,
 }) => {
   const {
     projects,
     dispositions,
     transactions,
-    currentUser,
-    setCurrentUser,
     teamMembers,
+    currentUser,
     logout,
     hasPermission,
     filters,
     setFilters,
+    pendingMembersCount,
+    isMasterAdmin,
+    consultingServices,
+    documentTypes,
   } = useProjects();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -68,49 +83,56 @@ export const Header: React.FC<HeaderProps> = ({
       case 'projects':
         return {
           title: 'Projects CRM Pipeline',
-          subtitle: 'SIINas industrial licensing & TKDN certification tracker',
+          subtitle: '',
           icon: FolderKanban,
           badge: `${projects.length} Active Accounts`,
         };
       case 'dispositions':
         return {
           title: 'Job Dispositions & Task Dispatch',
-          subtitle: 'Consultant delegation, technical BOM drafting & deadlines',
+          subtitle: '',
           icon: Clock,
           badge: `${pendingDispositions.length} Pending Actions`,
         };
       case 'finance':
         return {
           title: 'Financial Management Suite',
-          subtitle: 'Daily cash flow, surveyor disbursements & consulting fees',
+          subtitle: '',
           icon: Wallet,
           badge: `${transactions.length} Ledger Records`,
+        };
+      case 'financial-reports':
+        return {
+          title: 'Laporan Keuangan & Output Finansial',
+          subtitle: '',
+          icon: FileSpreadsheet,
+          badge: 'Official Reports Studio',
         };
       case 'documents':
         return {
           title: 'Document & Commercial Vault',
-          subtitle: 'Quotation letters, kwitansi, expense proofs & BOM dossiers',
+          subtitle: '',
           icon: FileCheck,
           badge: 'Categorized Vault',
         };
       case 'calculator':
         return {
           title: 'TKDN Permenperin Estimator',
-          subtitle: 'Direct labor, materials & manufacturing index calculator',
+          subtitle: '',
           icon: Calculator,
           badge: 'Permenperin Compliance',
         };
       case 'team':
         return {
           title: 'Team & Workload Matrix',
-          subtitle: 'Consultant capacity, active assignments & certifications',
+          subtitle: '',
           icon: Users,
           badge: `${teamMembers.length} Consultants`,
         };
       default:
         return {
           title: 'Admin Dashboard',
-          subtitle: 'TKDN & Licensing CRM',
+          subtitle: '',
           icon: Layers,
           badge: 'Operations',
         };
@@ -130,10 +152,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onToggleMobileSidebar}
-              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="lg:hidden p-2 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors"
               title="Open Navigation Menu"
+              aria-label="Open Navigation Menu"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
 
             {/* Page Context Details */}
@@ -150,9 +173,11 @@ export const Header: React.FC<HeaderProps> = ({
                     {page.badge}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 truncate hidden sm:block">
-                  {page.subtitle}
-                </p>
+                {page.subtitle && (
+                  <p className="text-[11px] text-slate-500 truncate hidden sm:block">
+                    {page.subtitle}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -160,18 +185,25 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Center: Global Search Bar */}
           <div className="flex-1 max-w-xs sm:max-w-sm lg:max-w-md hidden md:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <label htmlFor="global-search-input" className="sr-only">
+                Search projects, client PT, KBLI, PIC, or disposition
+              </label>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" aria-hidden="true" />
               <input
+                id="global-search-input"
+                name="search"
                 type="text"
                 value={filters.searchQuery}
                 onChange={(e) => setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))}
-                placeholder="Search projects, clients, KBLI, invoices..."
-                className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 text-slate-900 placeholder-slate-400 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-medium"
+                placeholder="Search projects, client PT, KBLI, PIC, disposition #..."
+                className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 text-slate-900 placeholder-slate-500 rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-all font-medium"
               />
               {filters.searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setFilters((prev) => ({ ...prev, searchQuery: '' }))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-700 px-1.5 py-0.5 rounded bg-slate-200"
+                  aria-label="Clear search input"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-600 hover:text-slate-900 px-1.5 py-0.5 rounded bg-slate-200"
                 >
                   Clear
                 </button>
@@ -181,40 +213,63 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right: Quick Action Controls, Notification & Profile */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Quick TKDN Estimator Button */}
-            <button
-              onClick={onOpenTkdnCalculator}
-              className="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors hidden xl:flex items-center gap-1.5 text-xs font-semibold border border-slate-200"
-              title="TKDN Permenperin Formula Estimator"
-            >
-              <Calculator className="w-3.5 h-3.5 text-emerald-600" />
-              <span>TKDN Calc</span>
-            </button>
+            {/* Master Admin / Approver Verification Quick Action Button (Shows when pending members exist and user is authorized) */}
+            {(isMasterAdmin || hasPermission('VERIFY_NEW_USERS') || hasPermission('MANAGE_USERS_ROLES')) && pendingMembersCount > 0 && onOpenRoleManager && (
+              <button
+                onClick={onOpenRoleManager}
+                className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs font-bold shadow-xs cursor-pointer ${
+                  isMasterAdmin
+                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-400 animate-pulse'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                }`}
+                title={isMasterAdmin ? 'Master Admin: Verify Registered Members' : 'View Pending Registrations'}
+              >
+                {isMasterAdmin ? (
+                  <ShieldAlert className="w-4 h-4 text-slate-950 shrink-0" />
+                ) : (
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                )}
+                <span className="hidden sm:inline">{isMasterAdmin ? 'Verify Members' : 'Pending Approvals'}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                  isMasterAdmin ? 'bg-slate-950 text-amber-300' : 'bg-amber-100 text-amber-900'
+                }`}>
+                  {pendingMembersCount}
+                </span>
+              </button>
+            )}
 
-            {/* Quick Export Button */}
-            <button
-              onClick={onOpenExport}
-              className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors hidden lg:flex items-center gap-1.5 text-xs font-semibold border border-slate-200"
-              title="Export Project Reports & Audit Dossiers"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>Export</span>
-            </button>
+            {/* Statutory Services Catalog Button (admin.master exclusive) */}
+            {isMasterAdmin && onOpenServiceManager && (
+              <button
+                onClick={onOpenServiceManager}
+                className="p-2 rounded-xl transition-colors hidden lg:flex items-center gap-1.5 text-xs font-semibold border cursor-pointer text-amber-900 bg-amber-50 hover:bg-amber-100 border-amber-300 dark:bg-amber-950/40 dark:text-amber-200"
+                title="Consulting Services Catalog, Offerings & Statutory Types"
+              >
+                <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Services</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-200/80 text-amber-950">
+                  {consultingServices.length}
+                </span>
+              </button>
+            )}
 
             {/* Notifications Bell */}
             <div className="relative">
               <button
+                type="button"
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setShowUserMenu(false);
                 }}
-                className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200"
+                className="relative p-2 text-slate-700 hover:text-slate-950 hover:bg-slate-100 rounded-xl transition-colors border border-slate-300"
                 title="Notifications & Dispositions"
+                aria-label={`Notifications & Dispositions (${pendingDispositions.length + (isMasterAdmin ? pendingMembersCount : 0)} pending)`}
+                aria-expanded={showNotifications}
               >
-                <Bell className="w-4 h-4" />
-                {pendingDispositions.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] font-mono font-bold flex items-center justify-center ring-2 ring-white">
-                    {pendingDispositions.length}
+                <Bell className="w-4 h-4" aria-hidden="true" />
+                {(pendingDispositions.length > 0 || pendingMembersCount > 0) && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-slate-950 rounded-full text-[9px] font-mono font-bold flex items-center justify-center ring-2 ring-white">
+                    {pendingDispositions.length + (isMasterAdmin ? pendingMembersCount : 0)}
                   </span>
                 )}
               </button>
@@ -224,15 +279,46 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                     <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                       <Bell className="w-4 h-4 text-emerald-600" />
-                      Active Job Dispositions
+                      Active Notifications & Dispositions
                     </h4>
                     <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-mono font-bold">
-                      {pendingDispositions.length} Pending
+                      {pendingDispositions.length + pendingMembersCount} Pending
                     </span>
                   </div>
+
                   <div className="mt-3 space-y-2 max-h-72 overflow-y-auto">
-                    {pendingDispositions.length === 0 ? (
-                      <p className="text-xs text-slate-400 py-4 text-center">No pending dispositions right now.</p>
+                    {/* Master Admin Pending User Notification Banner */}
+                    {pendingMembersCount > 0 && (
+                      <div
+                        onClick={() => {
+                          setShowNotifications(false);
+                          if (onOpenRoleManager) onOpenRoleManager();
+                        }}
+                        className={`p-3 rounded-xl border transition-colors cursor-pointer flex items-start gap-2.5 ${
+                          isMasterAdmin
+                            ? 'bg-amber-50 border-amber-300 hover:bg-amber-100'
+                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <BadgeCheck className={`w-5 h-5 shrink-0 mt-0.5 ${isMasterAdmin ? 'text-amber-700' : 'text-slate-500'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold text-slate-900">New Registrations Pending</p>
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 font-mono">
+                              {pendingMembersCount} PENDING
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 mt-0.5">
+                            {isMasterAdmin
+                              ? `Action Required: ${pendingMembersCount} applicant(s) awaiting your Master Admin verification and signoff.`
+                              : `${pendingMembersCount} applicant(s) awaiting Master Admin (admin.master) statutory signoff.`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {pendingDispositions.length === 0 && pendingMembersCount === 0 ? (
+                      <p className="text-xs text-slate-400 py-4 text-center">No pending notifications right now.</p>
                     ) : (
                       pendingDispositions.slice(0, 5).map((d) => (
                         <div
@@ -271,19 +357,41 @@ export const Header: React.FC<HeaderProps> = ({
                   setShowUserMenu(!showUserMenu);
                   setShowNotifications(false);
                 }}
-                className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-left"
+                className={`flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl transition-all text-left cursor-pointer ${
+                  currentUser.role === 'MASTER_ADMIN'
+                    ? 'bg-gradient-to-r from-amber-50 to-amber-100/60 border-2 border-amber-400 shadow-xs ring-1 ring-amber-400/30 hover:border-amber-500'
+                    : 'border border-slate-200 hover:bg-slate-50'
+                }`}
               >
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-7 h-7 rounded-full object-cover ring-1 ring-emerald-500"
-                />
+                <div className="relative">
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    className={`w-7 h-7 rounded-full object-cover ${
+                      currentUser.role === 'MASTER_ADMIN'
+                        ? 'border border-amber-400 ring-2 ring-amber-400/50'
+                        : 'ring-1 ring-emerald-500'
+                    }`}
+                  />
+                  {currentUser.role === 'MASTER_ADMIN' && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 text-slate-950 rounded-full text-[7px] font-black flex items-center justify-center shadow-xs">
+                      ★
+                    </span>
+                  )}
+                </div>
                 <div className="hidden sm:block text-left">
-                  <p className="text-xs font-bold text-slate-800 leading-none truncate max-w-[100px]">
-                    {currentUser.name.split(',')[0]}
-                  </p>
-                  <p className="text-[10px] text-slate-400 leading-none mt-0.5 truncate max-w-[100px]">
-                    {currentUser.role.split('&')[0]}
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs font-bold text-slate-800 leading-none truncate max-w-[100px]">
+                      {currentUser.name.split(',')[0]}
+                    </p>
+                    {currentUser.role === 'MASTER_ADMIN' && (
+                      <span className="text-[8px] font-black px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono">
+                        SUPREME
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-[10px] leading-none mt-0.5 truncate max-w-[100px] ${currentUser.role === 'MASTER_ADMIN' ? 'text-amber-800 font-bold' : 'text-slate-400'}`}>
+                    {currentUser.role === 'MASTER_ADMIN' ? 'MASTER ADMIN' : currentUser.role.split('&')[0]}
                   </p>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -292,16 +400,40 @@ export const Header: React.FC<HeaderProps> = ({
               {/* User switcher popup */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+                  <div className={`p-2.5 rounded-xl border mb-2 ${
+                    currentUser.role === 'MASTER_ADMIN'
+                      ? 'bg-gradient-to-r from-amber-50 to-amber-100/50 border-2 border-amber-400 shadow-sm'
+                      : 'bg-slate-50 border-slate-100'
+                  }`}>
                     <div className="flex items-center gap-2.5">
-                      <img
-                        src={currentUser.avatar}
-                        alt={currentUser.name}
-                        className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                      />
+                      <div className="relative shrink-0">
+                        <img
+                          src={currentUser.avatar}
+                          alt={currentUser.name}
+                          className={`w-10 h-10 rounded-full object-cover ${
+                            currentUser.role === 'MASTER_ADMIN' ? 'border-2 border-amber-400 ring-2 ring-amber-400/40' : 'border border-slate-200'
+                          }`}
+                        />
+                        {currentUser.role === 'MASTER_ADMIN' && (
+                          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-slate-950 rounded-full text-[9px] font-black flex items-center justify-center shadow-md">
+                            ★
+                          </span>
+                        )}
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 border border-purple-200 inline-block mt-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
+                          {currentUser.role === 'MASTER_ADMIN' && (
+                            <span className="text-[8px] font-black px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-mono">
+                              SUPREME
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded inline-block mt-0.5 border ${
+                          currentUser.role === 'MASTER_ADMIN'
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 font-black'
+                            : 'bg-purple-100 text-purple-800 border-purple-200'
+                        }`}>
                           {currentUser.role.replace('_', ' ')}
                         </span>
                         <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
@@ -311,69 +443,111 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                   </div>
 
-                  {onOpenRoleManager && (
+                  {/* Personalize Profile & My Account - Available for EVERY SINGLE ROLE */}
+                  {onOpenUserProfile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenUserProfile();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors mb-1.5 border border-emerald-200 cursor-pointer shadow-xs"
+                    >
+                      <User className="w-4 h-4 text-emerald-600" />
+                      <span>Personalize My Profile</span>
+                    </button>
+                  )}
+
+                  {isMasterAdmin && onOpenRoleManager && (
                     <button
                       type="button"
                       onClick={() => {
                         setShowUserMenu(false);
                         onOpenRoleManager();
                       }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors mb-2 border border-purple-200 cursor-pointer"
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors mb-1.5 border border-purple-200 cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
                         <ShieldCheck className="w-4 h-4 text-purple-600" />
                         <span>Role & Access Manager</span>
                       </span>
-                      <span className="text-[10px] bg-purple-200/70 text-purple-900 px-1.5 py-0.2 rounded font-mono">
-                        RBAC
+                      {pendingMembersCount > 0 ? (
+                        <span className="text-[10px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded-full font-mono font-bold">
+                          {pendingMembersCount} Pending
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-purple-200/70 text-purple-900 px-1.5 py-0.2 rounded font-mono">
+                          RBAC
+                        </span>
+                      )}
+                    </button>
+                  )}
+
+                  {isMasterAdmin && onOpenServiceManager && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenServiceManager();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-1.5 border cursor-pointer text-amber-900 bg-amber-50 hover:bg-amber-100 border-amber-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-amber-600" />
+                        <span>Services Catalog</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-amber-200 text-amber-950">
+                        {consultingServices.length} Types
                       </span>
                     </button>
                   )}
 
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
-                    <span>Quick Switch Perspective</span>
-                    <span className="font-mono text-[9px]">Demo Mode</span>
-                  </p>
-                  <div className="mt-1 space-y-1 max-h-44 overflow-y-auto">
-                    {teamMembers.map((member) => (
-                      <button
-                        key={member.id}
-                        onClick={() => {
-                          setCurrentUser(member);
-                          setShowUserMenu(false);
-                        }}
-                        className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer ${
-                          currentUser.id === member.id
-                            ? 'bg-emerald-50 border border-emerald-200 text-emerald-950 font-bold'
-                            : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                      >
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-7 h-7 rounded-full object-cover"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold truncate">{member.name}</p>
-                          <p className="text-[10px] text-slate-500 truncate">{member.roleTitle || member.role}</p>
-                        </div>
-                        {currentUser.id === member.id && (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        )}
-                      </button>
-                    ))}
+                  {isMasterAdmin && onOpenDocTypeManager && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenDocTypeManager();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-2 border cursor-pointer text-blue-900 bg-blue-50 hover:bg-blue-100 border-blue-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <span>Required Doc Types</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-blue-200 text-blue-950">
+                        {documentTypes.length} Types
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Active Session Security Card */}
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 mb-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Lock className="w-3 h-3 text-emerald-600" />
+                        <span>Active Session</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Logged In
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                      Account switching is locked to your authenticated session. To use another profile, please sign out and enter that account's login credentials.
+                    </p>
                   </div>
 
-                  <div className="mt-2 pt-2 border-t border-slate-100">
+                  <div className="pt-2 border-t border-slate-100">
                     <button
                       type="button"
                       onClick={() => {
                         setShowUserMenu(false);
                         logout();
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold text-rose-600 bg-rose-50/50 hover:bg-rose-100 hover:text-rose-700 border border-rose-200 rounded-xl transition-all cursor-pointer shadow-xs"
                     >
-                      <LogOut className="w-3.5 h-3.5" />
+                      <LogOut className="w-4 h-4" />
                       <span>Sign Out from Workspace</span>
                     </button>
                   </div>

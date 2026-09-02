@@ -7,6 +7,7 @@ import {
   FileCheck,
   Download,
   Trash2,
+  Edit2,
   Filter,
   Plus,
   Briefcase,
@@ -26,6 +27,8 @@ import {
   Check,
   ArrowUpRight,
   Info,
+  HardDrive,
+  RefreshCw,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import {
@@ -45,6 +48,8 @@ import {
   formatIDRShort,
 } from '../utils/formatters';
 import { CategorizedUploadModal } from './CategorizedUploadModal';
+import { DocumentPreviewModal } from './DocumentPreviewModal';
+import { DocumentTypeManagerModal } from './DocumentTypeManagerModal';
 
 export const DocumentManager: React.FC = () => {
   const {
@@ -54,10 +59,20 @@ export const DocumentManager: React.FC = () => {
     deleteDocument,
     currentUser,
     setSelectedProjectId,
+    documentTypes,
+    isMasterAdmin,
+    isGoogleDriveConnected,
+    connectGoogleDrive,
+    disconnectGoogleDriveAccount,
+    isDriveSyncing,
+    syncDocumentToGoogleDrive,
   } = useProjects();
 
   // Active Sub-menu Category
   const [activeCategoryGroup, setActiveCategoryGroup] = useState<DocumentCategoryGroup>('ALL');
+
+  // Document Types Master Manager Modal
+  const [isDocTypeModalOpen, setIsDocTypeModalOpen] = useState<boolean>(false);
 
   // Filters
   const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('ALL');
@@ -180,14 +195,55 @@ export const DocumentManager: React.FC = () => {
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Categorized document repository for Commercial Offers, Invoices/Receipts, Expense Proofs, and Technical BOM Dossiers
+            Categorized document repository for Commercial Offers, Invoices/Receipts, Expense Proofs, and Technical BOM Files
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* Google Drive Status & Connection */}
+          <button
+            onClick={() => {
+              if (isGoogleDriveConnected) {
+                if (confirm('Google Drive is connected. Would you like to disconnect or switch account?')) {
+                  disconnectGoogleDriveAccount();
+                }
+              } else {
+                connectGoogleDrive();
+              }
+            }}
+            disabled={isDriveSyncing}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all ${
+              isGoogleDriveConnected
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-indigo-50 text-indigo-800 border-indigo-300 hover:bg-indigo-100 shadow-xs'
+            }`}
+            title={isGoogleDriveConnected ? "Google Drive Connected (Click to disconnect/reconnect)" : "Connect Google Drive Vault"}
+          >
+            {isDriveSyncing ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+            ) : (
+              <HardDrive className={`w-3.5 h-3.5 ${isGoogleDriveConnected ? 'text-emerald-600' : 'text-indigo-600'}`} />
+            )}
+            <span>{isGoogleDriveConnected ? 'Drive Connected' : 'Connect Drive'}</span>
+            {isGoogleDriveConnected && <Check className="w-3 h-3 text-emerald-600" />}
+          </button>
+
           <div className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
             Total Vault Files: <span className="font-mono font-bold text-slate-900">{allDocs.length}</span>
           </div>
+          <button
+            id="btn-open-doctype-manager-from-docs"
+            onClick={() => setIsDocTypeModalOpen(true)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all ${
+              isMasterAdmin
+                ? 'bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100 shadow-xs'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+            title="Configure Required Document Types Master Catalog (admin.master)"
+          >
+            <FileText className={`w-4 h-4 ${isMasterAdmin ? 'text-blue-600' : 'text-slate-500'}`} />
+            <span>Master Doc Types ({documentTypes.length})</span>
+          </button>
           <button
             onClick={() => openCategorizedUpload(activeCategoryGroup === 'ALL' ? 'OFFER_QUOTATION' : activeCategoryGroup)}
             className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
@@ -301,7 +357,7 @@ export const DocumentManager: React.FC = () => {
             </span>
           </button>
 
-          {/* Sub-menu 5: Technical Dossiers & BOM */}
+          {/* Sub-menu 5: Technical Files & BOM */}
           <button
             type="button"
             onClick={() => setActiveCategoryGroup('TECHNICAL_DOSSIER')}
@@ -430,10 +486,10 @@ export const DocumentManager: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                Expense Proofs, Surveyor Fee Slips & Struk Pengeluaran
+                Expense Proofs, LVI Fee Slips & Struk Pengeluaran
               </h3>
               <p className="text-xs text-rose-200">
-                Sucofindo / SI auditor verification fees, factory site inspection travel, hotel bills, and PNBP filings
+                LVI official verification fees, factory site inspection travel, hotel bills, and PNBP filings
               </p>
             </div>
           </div>
@@ -464,7 +520,7 @@ export const DocumentManager: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                Technical BOM Dossiers, Cost Sheets & Supplier Certs
+                Technical BOM Files, Cost Sheets & Supplier Certs
               </h3>
               <p className="text-xs text-blue-200">
                 Multi-level Bill of Materials spreadsheets, cost accounting ledgers, direct labor payroll, and machine registries
@@ -475,10 +531,10 @@ export const DocumentManager: React.FC = () => {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-[10px] uppercase font-bold tracking-wider text-blue-300">
-                Verified Technical Dossiers
+                Verified Technical Files
               </p>
               <p className="text-sm font-mono font-bold text-white">
-                {verifiedTechCount} / {technicalDocs.length} Dossiers
+                {verifiedTechCount} / {technicalDocs.length} Files
               </p>
             </div>
             <button
@@ -531,7 +587,7 @@ export const DocumentManager: React.FC = () => {
             <option value="VERIFIED">Verified</option>
             <option value="UNDER_REVIEW">Under Review</option>
             <option value="FLAGGED_DISCREPANCY">Flagged Discrepancy</option>
-            <option value="SUBMITTED_TO_SURVEYOR">Submitted to Surveyor</option>
+            <option value="SUBMITTED_TO_SURVEYOR">Sent</option>
           </select>
         </div>
 
@@ -548,16 +604,16 @@ export const DocumentManager: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-4">Document Title & File</th>
-                <th className="py-3 px-3">Project & Client</th>
-                <th className="py-3 px-3">Category & Subtype</th>
-                {activeCategoryGroup === 'OFFER_QUOTATION' && <th className="py-3 px-3">Quotation Value</th>}
-                {activeCategoryGroup === 'INVOICE_RECEIPT' && <th className="py-3 px-3">Billed / Tax</th>}
-                {activeCategoryGroup === 'EXPENSE_PROOF' && <th className="py-3 px-3">Disbursed Amount</th>}
-                <th className="py-3 px-3">Verification Status</th>
-                <th className="py-3 px-3">Date & Author</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px] text-center">
+                <th className="py-3 px-4 text-center">Document Title & File</th>
+                <th className="py-3 px-3 text-center">Project & Client</th>
+                <th className="py-3 px-3 text-center">Category & Subtype</th>
+                {activeCategoryGroup === 'OFFER_QUOTATION' && <th className="py-3 px-3 text-center">Quotation Value</th>}
+                {activeCategoryGroup === 'INVOICE_RECEIPT' && <th className="py-3 px-3 text-center">Billed / Tax</th>}
+                {activeCategoryGroup === 'EXPENSE_PROOF' && <th className="py-3 px-3 text-center">Disbursed Amount</th>}
+                <th className="py-3 px-3 text-center">Verification Status</th>
+                <th className="py-3 px-3 text-center">Date & Author</th>
+                <th className="py-3 px-4 text-center w-[220px] min-w-[220px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -611,14 +667,53 @@ export const DocumentManager: React.FC = () => {
                             )}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                              <span>{doc.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewDoc(doc)}
+                              className="text-left group/title flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <span className="font-bold text-slate-900 text-xs group-hover/title:text-blue-600 transition-colors">
+                                {doc.name}
+                              </span>
                               {doc.referenceNumber && (
                                 <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-semibold">
                                   #{doc.referenceNumber}
                                 </span>
                               )}
-                            </p>
+                              {doc.googleDriveWebViewLink ? (
+                                <a
+                                  href={doc.googleDriveWebViewLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200"
+                                  title="Open in Google Drive"
+                                >
+                                  <HardDrive className="w-3 h-3 text-emerald-600" />
+                                  <span>Drive</span>
+                                  <ArrowUpRight className="w-2.5 h-2.5" />
+                                </a>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const res = await syncDocumentToGoogleDrive(doc.projectId, doc.id, doc.fileUrl);
+                                    if (res.success) {
+                                      alert('Uploaded to Google Drive project folder!');
+                                    } else {
+                                      alert(`Drive notice: ${res.error || 'Failed'}`);
+                                    }
+                                  }}
+                                  disabled={isDriveSyncing}
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-indigo-700 bg-slate-100 hover:bg-indigo-50 px-1.5 py-0.5 rounded border border-slate-200 transition-colors"
+                                  title={isGoogleDriveConnected ? "Sync to Google Drive" : "Connect Drive & Push"}
+                                >
+                                  <HardDrive className="w-3 h-3" />
+                                  <span>Sync Drive</span>
+                                </button>
+                              )}
+                            </button>
                             <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
                               <span>{doc.fileSize}</span>
                               <span>•</span>
@@ -750,64 +845,78 @@ export const DocumentManager: React.FC = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Preview / Detail Modal Button */}
-                          <button
-                            onClick={() => setPreviewDoc(doc)}
-                            className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
-                            title="View Document Details & Verification Record"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Quick Verify */}
-                          {doc.status !== 'VERIFIED' && (
+                      <td className="py-3 px-4 w-[220px] min-w-[220px]">
+                        <div className="flex items-center justify-start gap-2">
+                          {/* Fixed Column: Edit & Trash Icons always stay in exact same position */}
+                          <div className="flex items-center gap-1 shrink-0 w-14">
+                            {/* Edit / Inspect Document Button */}
                             <button
-                              onClick={() => handleQuickVerify(doc.projectId, doc.id)}
-                              className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold border border-emerald-300 flex items-center gap-1 transition-colors"
-                              title="Mark document verified"
+                              onClick={() => setPreviewDoc(doc)}
+                              className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                              title="Edit / Inspect Document Details & Verification Record"
                             >
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Verify</span>
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
-                          )}
 
-                          {/* Flag Discrepancy */}
-                          {doc.status !== 'FLAGGED_DISCREPANCY' && (
+                            {/* Delete Document Button - ONLY admin.master */}
                             <button
-                              onClick={() => setEditingNotesDocId(doc.id)}
-                              className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded text-[10px] font-bold border border-rose-300 flex items-center gap-1 transition-colors"
-                              title="Flag discrepancy in cost or supplier certificate"
+                              onClick={() => {
+                                if (!isMasterAdmin) {
+                                  alert('Access Denied: Only admin.master (Master Admin) can delete documents from repository.');
+                                  return;
+                                }
+                                if (confirm(`Remove "${doc.name}" from repository? This action cannot be undone.`)) {
+                                  deleteDocument(doc.projectId, doc.id);
+                                }
+                              }}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                isMasterAdmin
+                                  ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
+                                  : 'text-slate-300 dark:text-slate-600 hover:text-rose-400 cursor-not-allowed opacity-60'
+                              }`}
+                              title={isMasterAdmin ? "Delete file (admin.master)" : "Protected: Only admin.master can delete documents"}
                             >
-                              <AlertTriangle className="w-3 h-3" />
-                              <span>Flag Gap</span>
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          )}
+                          </div>
 
-                          {/* Send to Surveyor */}
-                          {doc.status === 'VERIFIED' && (
-                            <button
-                              onClick={() => handleSendToSurveyor(doc.projectId, doc.id)}
-                              className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded text-[10px] font-bold border border-purple-300 flex items-center gap-1 transition-colors"
-                              title="Send verified dossier to Surveyor Indonesia / Sucofindo"
-                            >
-                              <span>Surveyor</span>
-                            </button>
-                          )}
+                          {/* Dynamic Status Action Buttons (Placed to the right without shifting the icon columns) */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Quick Verify */}
+                            {doc.status !== 'VERIFIED' && (
+                              <button
+                                onClick={() => handleQuickVerify(doc.projectId, doc.id)}
+                                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold border border-emerald-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Mark document verified"
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Verify</span>
+                              </button>
+                            )}
 
-                          {/* Delete File */}
-                          <button
-                            onClick={() => {
-                              if (confirm(`Remove "${doc.name}" from repository?`)) {
-                                deleteDocument(doc.projectId, doc.id);
-                              }
-                            }}
-                            className="p-1 text-slate-400 hover:text-red-600 transition-colors"
-                            title="Delete file"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                            {/* Flag Discrepancy */}
+                            {doc.status !== 'FLAGGED_DISCREPANCY' && (
+                              <button
+                                onClick={() => setEditingNotesDocId(doc.id)}
+                                className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded text-[10px] font-bold border border-rose-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Flag discrepancy in cost or supplier certificate"
+                              >
+                                <AlertTriangle className="w-3 h-3" />
+                                <span>Flag Gap</span>
+                              </button>
+                            )}
+
+                            {/* Send */}
+                            {doc.status === 'VERIFIED' && (
+                              <button
+                                onClick={() => handleSendToSurveyor(doc.projectId, doc.id)}
+                                className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded text-[10px] font-bold border border-purple-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Send verified file to LVI (Lembaga Verifikasi Independen)"
+                              >
+                                <span>Send</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Note Input popover if editing */}
@@ -851,111 +960,24 @@ export const DocumentManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Document Detail / Preview Modal */}
-      {previewDoc && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-slate-800 text-emerald-400">
-                  <FileCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Document Vault Dossier</h3>
-                  <p className="text-xs text-slate-400 font-mono">{previewDoc.name}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setPreviewDoc(null)}
-                className="text-slate-400 hover:text-white p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Category</span>
-                  <span className="font-bold text-slate-800">
-                    {getDocCategoryGroupName(previewDoc.categoryGroup || 'TECHNICAL_DOSSIER')}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Specific Type</span>
-                  <span className="font-semibold text-slate-800">{getDocTypeName(previewDoc.type)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Reference / Reg #</span>
-                  <span className="font-mono font-bold text-slate-900">
-                    {previewDoc.referenceNumber || 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Amount / Valuation</span>
-                  <span className="font-mono font-bold text-emerald-700">
-                    {previewDoc.amountIDR ? formatIDR(previewDoc.amountIDR) : 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Project</span>
-                  <span className="font-bold text-slate-800">
-                    [{previewDoc.projectCode}] {previewDoc.clientName}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block">Counterparty / Vendor</span>
-                  <span className="font-semibold text-slate-800">{previewDoc.counterpartyName || 'N/A'}</span>
-                </div>
-              </div>
-
-              {previewDoc.notes && (
-                <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
-                  <p className="text-[11px] font-bold text-indigo-900 mb-0.5">Notes & Terms:</p>
-                  <p className="text-slate-700">{previewDoc.notes}</p>
-                </div>
-              )}
-
-              {previewDoc.reviewNotes && (
-                <div className="p-3 bg-rose-50 rounded-xl border border-rose-200">
-                  <p className="text-[11px] font-bold text-rose-900 mb-0.5">Auditor / Lead Gap Note:</p>
-                  <p className="text-rose-800 font-medium">{previewDoc.reviewNotes}</p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-slate-500">
-                <span>Uploaded by {previewDoc.uploadedBy} on {previewDoc.uploadDate}</span>
-                <span className="font-mono font-bold">{previewDoc.fileSize}</span>
-              </div>
-            </div>
-
-            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  alert(`Downloading simulated verified file: ${previewDoc.name}`);
-                }}
-                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs flex items-center gap-1.5"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Vault Copy</span>
-              </button>
-
-              <button
-                onClick={() => setPreviewDoc(null)}
-                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-semibold text-xs"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Document Detail / Full Preview & Compliance Inspector Modal */}
+      <DocumentPreviewModal
+        isOpen={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        document={previewDoc}
+      />
 
       {/* Categorized File Upload Modal */}
       <CategorizedUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         initialCategory={uploadCategoryTarget}
+      />
+
+      {/* Required Document Types Master Manager Modal (admin.master) */}
+      <DocumentTypeManagerModal
+        isOpen={isDocTypeModalOpen}
+        onClose={() => setIsDocTypeModalOpen(false)}
       />
     </div>
   );

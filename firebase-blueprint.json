@@ -1,0 +1,144 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Authenticated team members and system accounts with role-based access controls.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "role": { "type": "string" },
+        "roleTitle": { "type": "string" },
+        "department": { "type": "string" },
+        "status": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" }
+      },
+      "required": ["id", "email", "name", "role", "status"]
+    },
+    "ConsultingProject": {
+      "title": "Consulting Project",
+      "description": "TKDN and statutory industrial licensing consulting engagement.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "code": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientSector": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "stage": { "type": "string" },
+        "status": { "type": "string" },
+        "targetTkdn": { "type": "number" },
+        "calculatedTkdn": { "type": "number" },
+        "startDate": { "type": "string" },
+        "targetCompletionDate": { "type": "string" },
+        "projectManager": { "type": "string" },
+        "leadConsultant": { "type": "string" },
+        "surveyorAgency": { "type": "string" },
+        "contractValueIDR": { "type": "number" },
+        "costBreakdown": { "type": "object" },
+        "documents": { "type": "array", "items": { "type": "object" } },
+        "activities": { "type": "array", "items": { "type": "object" } },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "title", "clientName", "serviceType", "stage", "status"]
+    },
+    "JobDisposition": {
+      "title": "Job Disposition",
+      "description": "Workflow task disposition and work assignment for consultants and auditors.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "projectTitle": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedTo": { "type": "string" },
+        "assignedBy": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "assignedTo", "priority", "status"]
+    },
+    "FinanceTransaction": {
+      "title": "Finance Transaction",
+      "description": "Consulting engagement income invoices and operational expense records.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "projectTitle": { "type": "string" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "amountIDR": { "type": "number" },
+        "description": { "type": "string" },
+        "date": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "verifiedBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "type", "category", "amountIDR", "status"]
+    },
+    "DocumentTypeDefinition": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "isAutoCompleting": { "type": "boolean" },
+        "requiredForServices": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "acceptedFileTypes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "badgeColor": { "type": "string" },
+        "isSystemDefault": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Registered system users and profile records."
+    },
+    "/projects/{projectId}": {
+      "schema": "ConsultingProject",
+      "description": "Consulting projects and TKDN assessments."
+    },
+    "/dispositions/{dispositionId}": {
+      "schema": "JobDisposition",
+      "description": "Job dispositions and consultant assignments."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "FinanceTransaction",
+      "description": "Revenue billing invoices and operational expenses."
+    },
+    "/document_types/{docTypeId}": {
+      "schema": "DocumentTypeDefinition",
+      "description": "Statutory and custom required document type master definitions."
+    },
+    "/app_settings/{settingId}": {
+      "schema": "object",
+      "description": "System service types and role configurations."
+    }
+  }
+}

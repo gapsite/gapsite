@@ -15,10 +15,15 @@ import { formatIDR } from '../utils/formatters';
 interface ExportReportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenFinancialReports?: () => void;
 }
 
-export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, onClose }) => {
-  const { projects, dispositions } = useProjects();
+export const ExportReportModal: React.FC<ExportReportModalProps> = ({
+  isOpen,
+  onClose,
+  onOpenFinancialReports,
+}) => {
+  const { projects, dispositions, transactions } = useProjects();
 
   if (!isOpen) return null;
 
@@ -35,7 +40,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
       'Target TKDN %',
       'Verified / Projected TKDN %',
       'Contract Value (IDR)',
-      'Surveyor Body',
+      'LVI',
       'Lead Consultant',
       'Start Date',
       'Target Completion Date',
@@ -78,7 +83,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
       encodeURIComponent(JSON.stringify({ projects, dispositions, exportedAt: new Date().toISOString() }, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `VERIX_TKDN_CRM_Dossier_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `VERIX_TKDN_CRM_Files_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -98,7 +103,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
               <Download className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold tracking-tight">Export Consulting Registry & Dossier</h3>
+              <h3 className="text-base font-bold tracking-tight">Export Consulting Registry & Files</h3>
               <p className="text-xs text-slate-400">Download formatted reports for audits, client presentations, and SIINas compliance</p>
             </div>
           </div>
@@ -130,6 +135,36 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
           </div>
 
           <div className="space-y-3">
+            {/* Financial Reports Studio Option */}
+            {onOpenFinancialReports && (
+              <div
+                onClick={onOpenFinancialReports}
+                className="p-4 rounded-xl border-2 border-emerald-500/50 bg-emerald-50/60 hover:bg-emerald-100/60 hover:border-emerald-600 transition-all cursor-pointer flex items-center justify-between group shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-extrabold text-emerald-950 group-hover:text-emerald-800">
+                        Laporan Keuangan Resmi & Laba Rugi (Financial Studio)
+                      </h4>
+                      <span className="bg-emerald-200 text-emerald-900 text-[9px] px-1.5 py-0.2 rounded font-bold uppercase font-mono">
+                        New
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 mt-0.5">
+                      Buka generator laporan keuangan resmi, arus kas, margin laba proyek, dan buku besar ({transactions.length} mutasi).
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-700 group-hover:translate-x-0.5 transition-transform">
+                  Buka &rarr;
+                </span>
+              </div>
+            )}
+
             {/* CSV Export Option */}
             <div
               onClick={handleExportCSV}
@@ -162,7 +197,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-800">
-                    Complete Database Dossier Backup (.json)
+                    Complete Database File Backup (.json)
                   </h4>
                   <p className="text-[11px] text-slate-500">
                     Full JSON dump including all client documents metadata, task checklists, and audit activity logs.

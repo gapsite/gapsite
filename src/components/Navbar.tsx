@@ -15,12 +15,17 @@ import {
   Clock,
   Sparkles,
   Wallet,
+  FileSpreadsheet,
+  Lock,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
+import { MainTabType } from './Sidebar';
 
 interface NavbarProps {
-  activeTab: 'projects' | 'dispositions' | 'finance' | 'documents' | 'calculator' | 'team';
-  setActiveTab: (tab: 'projects' | 'dispositions' | 'finance' | 'documents' | 'calculator' | 'team') => void;
+  activeTab: MainTabType;
+  setActiveTab: (tab: MainTabType) => void;
   onOpenNewProject: () => void;
   onOpenNewDisposition: () => void;
   onOpenTkdnCalculator: () => void;
@@ -39,10 +44,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const {
     projects,
     dispositions,
-    teamMembers,
     transactions,
     currentUser,
-    setCurrentUser,
+    logout,
     filters,
     setFilters,
   } = useProjects();
@@ -108,8 +112,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Quick Export Button */}
             <button
               onClick={onOpenExport}
-              className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors hidden sm:flex items-center gap-1.5 text-xs font-medium border border-slate-700/80"
-              title="Export Project Dossier & Reports"
+              className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors hidden xl:flex items-center gap-1.5 text-xs font-medium border border-slate-700/80"
+              title="Export Report & Ledger"
             >
               <Download className="w-4 h-4 text-slate-400" />
               <span>Export</span>
@@ -224,37 +228,42 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-3 z-50">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">
-                    Switch Active Consultant Perspective
+                  <div className="flex items-center justify-between px-2 py-1 mb-2 bg-slate-800/80 rounded-lg border border-slate-700">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Lock className="w-3 h-3 text-emerald-400" />
+                      <span>Active Session</span>
+                    </span>
+                    <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      LOGGED IN
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 mb-2.5">
+                    <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">{currentUser.roleTitle || currentUser.role}</p>
+                    <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+                      <span className="font-mono">@{currentUser.username}</span>
+                      <span className="truncate max-w-[120px]">{currentUser.email}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 px-1 mb-2.5 leading-relaxed">
+                    Account switching is locked to your authenticated session. To use another profile, please sign out and enter that account's login credentials.
                   </p>
-                  <div className="mt-1 space-y-1">
-                    {teamMembers.map((member) => (
-                      <button
-                        key={member.id}
-                        onClick={() => {
-                          setCurrentUser(member);
-                          setShowUserMenu(false);
-                        }}
-                        className={`w-full flex items-center gap-2.5 p-2 rounded-lg text-left transition-colors ${
-                          currentUser.id === member.id
-                            ? 'bg-emerald-950/80 border border-emerald-700/80 text-white'
-                            : 'hover:bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-7 h-7 rounded-full object-cover"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate">{member.name}</p>
-                          <p className="text-[10px] text-slate-400 truncate">{member.role}</p>
-                        </div>
-                        {currentUser.id === member.id && (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        )}
-                      </button>
-                    ))}
+
+                  <div className="pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-rose-300 hover:text-rose-200 bg-rose-950/40 hover:bg-rose-950/70 border border-rose-800/50 rounded-lg transition-colors cursor-pointer shadow-xs"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sign Out from Workspace</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -313,6 +322,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}>
               {transactions.length}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('financial-reports')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'financial-reports'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Laporan Keuangan</span>
           </button>
 
           <button

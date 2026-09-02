@@ -84,7 +84,7 @@ export const FinancialStatsCards: React.FC<FinancialStatsCardsProps> = ({
               {formatIDRShort(totalIncome)}
             </p>
             <p className="text-xs text-slate-500 font-mono mt-0.5">
-              Rp {totalIncome.toLocaleString('id-ID')}
+              Rp {(totalIncome || 0).toLocaleString('id-ID')}
             </p>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
@@ -117,7 +117,7 @@ export const FinancialStatsCards: React.FC<FinancialStatsCardsProps> = ({
               {formatIDRShort(totalExpense)}
             </p>
             <p className="text-xs text-slate-500 font-mono mt-0.5">
-              Rp {totalExpense.toLocaleString('id-ID')}
+              Rp {(totalExpense || 0).toLocaleString('id-ID')}
             </p>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
@@ -160,7 +160,7 @@ export const FinancialStatsCards: React.FC<FinancialStatsCardsProps> = ({
               {netCashFlow >= 0 ? '+' : '-'}{formatIDRShort(Math.abs(netCashFlow))}
             </p>
             <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Rp {Math.abs(netCashFlow).toLocaleString('id-ID')}
+              Rp {(Math.abs(netCashFlow) || 0).toLocaleString('id-ID')}
             </p>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-300">

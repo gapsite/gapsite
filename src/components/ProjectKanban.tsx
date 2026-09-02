@@ -29,43 +29,43 @@ export const ProjectKanban: React.FC<ProjectKanbanProps> = ({
   onSelectProject,
   onOpenDispositionForProject,
 }) => {
-  const { filteredProjects, changeProjectStage, dispositions } = useProjects();
+  const { filteredProjects, changeProjectStage, dispositions, consultingServices, hasPermission, isMasterAdmin } = useProjects();
 
   const STAGES: { key: ProjectStage; title: string; subtitle: string; color: string }[] = [
     {
       key: 'INQUIRY',
-      title: '1. Inquiry & Scoping',
-      subtitle: 'Legal Check & KBLI Alignment',
+      title: '1. Inquiry & Screening',
+      subtitle: 'KBLI & Service Eligibility',
       color: 'border-t-slate-400 bg-slate-50/50',
     },
     {
       key: 'GAP_ANALYSIS',
       title: '2. Gap Analysis',
-      subtitle: 'Supply Chain & BOM Assessment',
+      subtitle: 'Cost Structure & Roadmap',
       color: 'border-t-amber-500 bg-amber-50/20',
     },
     {
       key: 'DOC_PREPARATION',
-      title: '3. BOM & Doc Prep',
-      subtitle: 'Cost Sheets & Fixed Assets',
+      title: '3. SIINas Prep',
+      subtitle: 'BOM & Evidence Upload',
       color: 'border-t-blue-500 bg-blue-50/20',
     },
     {
       key: 'FIELD_VERIFICATION',
-      title: '4. Field Verification',
-      subtitle: 'Sucofindo / SI Site Audit',
+      title: '4. Surveyor Verification',
+      subtitle: 'Factory Audit & Sampling',
       color: 'border-t-indigo-500 bg-indigo-50/20',
     },
     {
       key: 'MINISTRY_REVIEW',
-      title: '5. SIINas Review',
-      subtitle: 'Kemenperin Directorate Sign-Off',
+      title: '5. Ministry Panel',
+      subtitle: 'Draft BA Verification',
       color: 'border-t-purple-500 bg-purple-50/20',
     },
     {
       key: 'CERTIFICATE_ISSUED',
-      title: '6. Certificate Issued',
-      subtitle: 'Official TKDN Certified',
+      title: '6. Official Certificate',
+      subtitle: 'Signed & Published in SIINas',
       color: 'border-t-emerald-500 bg-emerald-50/20',
     },
   ];
@@ -163,47 +163,59 @@ export const ProjectKanban: React.FC<ProjectKanbanProps> = ({
                       <div className="flex items-center justify-between text-[10px]">
                         <span
                           className={`px-1.5 py-0.5 rounded font-semibold border ${getServiceTypeBadgeColor(
-                            project.serviceType
+                            project.serviceType,
+                            consultingServices
                           )}`}
                         >
-                          {getServiceTypeName(project.serviceType)}
+                          {getServiceTypeName(project.serviceType, consultingServices)}
                         </span>
                         <span className="font-mono text-slate-400 font-semibold">
                           {project.kbliCode.split(' ')[0]}
                         </span>
                       </div>
 
-                      {/* TKDN Target vs Realized Box */}
-                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px]">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-slate-500 font-medium">Target: {project.targetTkdnPercentage}%</span>
-                          <span
-                            className={`font-mono font-bold ${
-                              isTkdnOnTarget ? 'text-emerald-700' : 'text-amber-700'
-                            }`}
-                          >
-                            {project.officialVerifiedTkdnPercentage
-                              ? `${project.officialVerifiedTkdnPercentage}% (Verified)`
-                              : `${project.projectedTkdnPercentage}% (Projected)`}
+                      {/* TKDN Target vs Realized Box or Service Category Box */}
+                      {project.targetTkdnPercentage > 0 ? (
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px]">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-slate-500 font-medium">Target: {project.targetTkdnPercentage}%</span>
+                            <span
+                              className={`font-mono font-bold ${
+                                isTkdnOnTarget ? 'text-emerald-700' : 'text-amber-700'
+                              }`}
+                            >
+                              {project.officialVerifiedTkdnPercentage
+                                ? `${project.officialVerifiedTkdnPercentage}% (Verified)`
+                                : `${project.projectedTkdnPercentage}% (Projected)`}
+                            </span>
+                          </div>
+                          {/* Mini Bar */}
+                          <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${
+                                isTkdnOnTarget ? 'bg-emerald-500' : 'bg-amber-500'
+                              }`}
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  ((project.officialVerifiedTkdnPercentage || project.projectedTkdnPercentage) /
+                                    project.targetTkdnPercentage) *
+                                    100
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-[10px] flex items-center justify-between">
+                          <span className="text-slate-500 font-medium">Kategori Scope:</span>
+                          <span className="font-bold text-slate-700">
+                            {project.projectCategory === 'COMPANY_LICENSING' ? 'Izin Perusahaan' :
+                             project.projectCategory === 'SOFTWARE_DEV' ? 'Software Dev' :
+                             project.projectCategory === 'OTHER_SERVICES' ? 'Lain-Lain' : 'Non-TKDN'}
                           </span>
                         </div>
-                        {/* Mini Bar */}
-                        <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${
-                              isTkdnOnTarget ? 'bg-emerald-500' : 'bg-amber-500'
-                            }`}
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                ((project.officialVerifiedTkdnPercentage || project.projectedTkdnPercentage) /
-                                  project.targetTkdnPercentage) *
-                                  100
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
+                      )}
 
                       {/* Surveyor & Date */}
                       <div className="text-[10px] text-slate-600 flex items-center justify-between">
@@ -222,42 +234,57 @@ export const ProjectKanban: React.FC<ProjectKanbanProps> = ({
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => onOpenDispositionForProject(project)}
-                            className={`px-1.5 py-0.5 rounded font-mono font-semibold flex items-center gap-1 ${
-                              openTasks.length > 0
-                                ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                            title="Open Tasks for this project"
-                          >
-                            <Clock className="w-2.5 h-2.5 text-amber-600" />
-                            <span>{openTasks.length} Tasks</span>
-                          </button>
+                          {hasPermission('MANAGE_DISPOSITIONS') ? (
+                            <button
+                              onClick={() => onOpenDispositionForProject(project)}
+                              className={`px-1.5 py-0.5 rounded font-mono font-semibold flex items-center gap-1 cursor-pointer ${
+                                openTasks.length > 0
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                              title="Dispatch Job Task"
+                            >
+                              <Clock className="w-2.5 h-2.5 text-amber-600" />
+                              <span>{openTasks.length} Tasks</span>
+                            </button>
+                          ) : (
+                            <span
+                              className={`px-1.5 py-0.5 rounded font-mono font-semibold flex items-center gap-1 ${
+                                openTasks.length > 0
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              <Clock className="w-2.5 h-2.5 text-amber-600" />
+                              <span>{openTasks.length} Tasks</span>
+                            </span>
+                          )}
                         </div>
 
-                        {/* Stage movement arrows */}
-                        <div className="flex items-center gap-1">
-                          {colIdx > 0 && (
-                            <button
-                              onClick={() => changeProjectStage(project.id, STAGES[colIdx - 1].key)}
-                              className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                              title={`Move Back to ${STAGES[colIdx - 1].title}`}
-                            >
-                              <ArrowLeft className="w-3 h-3" />
-                            </button>
-                          )}
-                          {colIdx < STAGES.length - 1 && (
-                            <button
-                              onClick={() => changeProjectStage(project.id, STAGES[colIdx + 1].key)}
-                              className="p-1 px-1.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 flex items-center gap-0.5 transition-colors"
-                              title={`Advance to ${STAGES[colIdx + 1].title}`}
-                            >
-                              <span className="text-[9px]">Advance</span>
-                              <ArrowRight className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
+                        {/* Stage movement arrows (only for roles authorized to edit projects) */}
+                        {hasPermission('EDIT_PROJECTS') && (
+                          <div className="flex items-center gap-1">
+                            {colIdx > 0 && (
+                              <button
+                                onClick={() => changeProjectStage(project.id, STAGES[colIdx - 1].key)}
+                                className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                                title={`Move Back to ${STAGES[colIdx - 1].title}`}
+                              >
+                                <ArrowLeft className="w-3 h-3" />
+                              </button>
+                            )}
+                            {colIdx < STAGES.length - 1 && (
+                              <button
+                                onClick={() => changeProjectStage(project.id, STAGES[colIdx + 1].key)}
+                                className="p-1 px-1.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 flex items-center gap-0.5 transition-colors cursor-pointer"
+                                title={`Advance to ${STAGES[colIdx + 1].title}`}
+                              >
+                                <span className="text-[9px]">Advance</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

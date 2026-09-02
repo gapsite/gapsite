@@ -51,7 +51,7 @@ export const CERTIFICATION_MILESTONE_TEMPLATES: Record<ServiceType, MilestoneTem
     {
       id: 'tkdn-b-03',
       stage: 'GAP_ANALYSIS',
-      title: 'Bill of Materials (BOM) & Direct Raw Material Dossier',
+      title: 'Bill of Materials (BOM) & Direct Raw Material Files',
       description:
         'Formulate comprehensive Bill of Materials (BOM) detailing local vs imported component sourcing, invoice pricing, and volume breakdown.',
       regulatoryClause: 'Permenperin No. 16/2011 Lampiran I (KDN Material)',
@@ -107,10 +107,10 @@ export const CERTIFICATION_MILESTONE_TEMPLATES: Record<ServiceType, MilestoneTem
     {
       id: 'tkdn-b-07',
       stage: 'FIELD_VERIFICATION',
-      title: 'Official Surveyor Appointment & Fee Settlement',
+      title: 'Official LVI Appointment & Fee Settlement',
       description:
-        'Appointment of accredited surveyor body (PT Sucofindo / PT Surveyor Indonesia) and official audit fee settlement.',
-      regulatoryClause: 'Permenperin No. 57/M-IND/PER/7/2014 & Juknis Verifikasi',
+        'Appointment of accredited LVI (PT Surveyor Indonesia / PT Sucofindo / PT Biro Klasifikasi Indonesia / PT Anindya Wiraputra Consult / BSKJI) and official audit fee settlement.',
+      regulatoryClause: 'Permenperin No. 57/M-IND/PER/7/2014 & Juknis Verifikasi LVI',
       applicableServices: ['TKDN_BARANG'],
       requiredDocTypes: ['SURVEYOR_FEE_RECEIPT'],
       optionalDocTypes: ['CLIENT_CONTRACT_SPK'],
@@ -121,10 +121,10 @@ export const CERTIFICATION_MILESTONE_TEMPLATES: Record<ServiceType, MilestoneTem
     {
       id: 'tkdn-b-08',
       stage: 'MINISTRY_REVIEW',
-      title: 'Surveyor Site Audit Verification Report (BAV)',
+      title: 'LVI Site Audit Verification Report (BAV)',
       description:
         'Completion of on-site factory physical inspection, sampling, and issuance of Official Verification Report (Berita Acara Verifikasi).',
-      regulatoryClause: 'BAV Surveyor Sucofindo / Surveyor Indonesia',
+      regulatoryClause: 'BAV LVI Terakreditasi Kemenperin',
       applicableServices: ['TKDN_BARANG'],
       requiredDocTypes: ['AUDIT_VERIFICATION_REPORT'],
       optionalDocTypes: ['SIINAS_PROFILE'],
@@ -152,7 +152,7 @@ export const CERTIFICATION_MILESTONE_TEMPLATES: Record<ServiceType, MilestoneTem
     {
       id: 'tkdn-j-01',
       stage: 'INQUIRY',
-      title: 'Service Scope & Corporate Licensing Dossier',
+      title: 'Service Scope & Corporate Licensing Files',
       description:
         'Verify service company legal standing, NIB OSS-RBA, business licenses (PB-UMKU), and tax compliance.',
       regulatoryClause: 'Permenperin No. 16/2011 Pasal 12 (TKDN Jasa Konstruksi & Non-Konstruksi)',
@@ -208,10 +208,10 @@ export const CERTIFICATION_MILESTONE_TEMPLATES: Record<ServiceType, MilestoneTem
     {
       id: 'tkdn-j-05',
       stage: 'FIELD_VERIFICATION',
-      title: 'Surveyor Body Appointment & Field Verification',
+      title: 'LVI Body Appointment & Field Verification',
       description:
-        'Accredited surveyor engagement and on-site audit of service delivery facilities, project sites, and timesheets.',
-      regulatoryClause: 'BAV Verifikasi TKDN Jasa',
+        'Accredited LVI engagement and on-site audit of service delivery facilities, project sites, and timesheets.',
+      regulatoryClause: 'BAV Verifikasi TKDN Jasa LVI',
       applicableServices: ['TKDN_JASA'],
       requiredDocTypes: ['SURVEYOR_FEE_RECEIPT', 'AUDIT_VERIFICATION_REPORT'],
       optionalDocTypes: ['SIINAS_PROFILE'],
@@ -281,10 +281,10 @@ export const CERTIFICATION_MILESTONE_TEMPLATES: Record<ServiceType, MilestoneTem
     {
       id: 'bmp-04',
       stage: 'FIELD_VERIFICATION',
-      title: 'Surveyor BMP Assessment & SIINas Endorsement',
+      title: 'LVI BMP Assessment & SIINas Endorsement',
       description:
-        'Independent surveyor calculation of company Bobot Manfaat score (up to max 15.00%).',
-      regulatoryClause: 'BAV BMP Surveyor Indonesia / Sucofindo',
+        'Independent LVI calculation of company Bobot Manfaat score (up to max 15.00%).',
+      regulatoryClause: 'BAV BMP LVI Terakreditasi',
       applicableServices: ['BMP_COMPANY'],
       requiredDocTypes: ['SURVEYOR_FEE_RECEIPT', 'AUDIT_VERIFICATION_REPORT'],
       optionalDocTypes: ['SIINAS_PROFILE'],
@@ -385,7 +385,7 @@ export const CERTIFICATION_MILESTONE_TEMPLATES: Record<ServiceType, MilestoneTem
     {
       id: 'sni-02',
       stage: 'DOC_PREPARATION',
-      title: 'Quality Management System (QMS) & Factory Testing Dossier',
+      title: 'Quality Management System (QMS) & Factory Testing Files',
       description:
         'Audit factory quality control equipment calibration, raw material incoming inspection records, and testing logs.',
       regulatoryClause: 'Sistem Manajemen Mutu SNI / ISO 9001:2015',
@@ -533,20 +533,33 @@ export function evaluateProjectMilestones(
     })),
   ];
 
-  const evaluated: EvaluatedMilestone[] = allTemplates.map((template) => {
+  // Filter out any milestones that were explicitly deleted by Master Admin
+  const deletedIds = new Set(project.deletedMilestoneIds || []);
+  const activeTemplates = allTemplates.filter((t) => !deletedIds.has(t.id));
+
+  const evaluated: EvaluatedMilestone[] = activeTemplates.map((template) => {
+    // Check if master admin or project consultant configured custom required/optional doc types for this milestone
+    const customDocReq = project.milestoneDocRequirements?.[template.id];
+    const effectiveRequiredDocTypes: DocumentType[] = customDocReq?.requiredDocTypes !== undefined
+      ? customDocReq.requiredDocTypes
+      : (template.requiredDocTypes || []);
+    const effectiveOptionalDocTypes: DocumentType[] = customDocReq?.optionalDocTypes !== undefined
+      ? customDocReq.optionalDocTypes
+      : (template.optionalDocTypes || []);
+
     // Find matching uploaded documents for required and optional document types
     const matchedDocs = projectDocs.filter((doc) => {
-      const isReq = template.requiredDocTypes.includes(doc.type);
-      const isOpt = template.optionalDocTypes ? template.optionalDocTypes.includes(doc.type) : false;
+      const isReq = effectiveRequiredDocTypes.includes(doc.type);
+      const isOpt = effectiveOptionalDocTypes.includes(doc.type);
       return isReq || isOpt;
     });
 
     // Check which required document types have at least one uploaded document
-    const fulfilledReqDocTypes = template.requiredDocTypes.filter((reqType) => {
+    const fulfilledReqDocTypes = effectiveRequiredDocTypes.filter((reqType) => {
       return projectDocs.some((doc) => doc.type === reqType);
     });
 
-    const unfulfilledDocTypes = template.requiredDocTypes.filter((reqType) => {
+    const unfulfilledDocTypes = effectiveRequiredDocTypes.filter((reqType) => {
       return !projectDocs.some((doc) => doc.type === reqType);
     });
 
@@ -558,17 +571,17 @@ export function evaluateProjectMilestones(
 
     // Compute completion: all required doc types must be present OR manually signed off
     const allRequiredDocsUploaded =
-      template.requiredDocTypes.length === 0 || fulfilledReqDocTypes.length === template.requiredDocTypes.length;
+      effectiveRequiredDocTypes.length === 0 || fulfilledReqDocTypes.length === effectiveRequiredDocTypes.length;
 
     const isCompleted = manualSignoff ? manualSignoff.completed : allRequiredDocsUploaded;
 
     let completionPercentage = 0;
     if (manualSignoff && manualSignoff.completed) {
       completionPercentage = 100;
-    } else if (template.requiredDocTypes.length === 0) {
+    } else if (effectiveRequiredDocTypes.length === 0) {
       completionPercentage = matchedDocs.length > 0 ? 100 : 0;
     } else {
-      completionPercentage = Math.round((fulfilledReqDocTypes.length / template.requiredDocTypes.length) * 100);
+      completionPercentage = Math.round((fulfilledReqDocTypes.length / effectiveRequiredDocTypes.length) * 100);
     }
 
     // Determine status
@@ -600,8 +613,8 @@ export function evaluateProjectMilestones(
       title: template.title,
       description: template.description,
       regulatoryClause: template.regulatoryClause,
-      requiredDocTypes: template.requiredDocTypes,
-      optionalDocTypes: template.optionalDocTypes,
+      requiredDocTypes: effectiveRequiredDocTypes,
+      optionalDocTypes: effectiveOptionalDocTypes,
       matchedDocuments: matchedDocs,
       status,
       isCompleted,
@@ -621,7 +634,7 @@ export function evaluateProjectMilestones(
 
   // Total required document types across all milestones
   const allRequiredSet = new Set<DocumentType>();
-  allTemplates.forEach((t) => t.requiredDocTypes.forEach((d) => allRequiredSet.add(d)));
+  evaluated.forEach((m) => m.requiredDocTypes.forEach((d) => allRequiredSet.add(d)));
   const totalRequiredDocTypes = allRequiredSet.size;
 
   const uploadedRequiredDocTypes = Array.from(allRequiredSet).filter((docType) =>
@@ -661,10 +674,10 @@ export function getComplianceReadinessBadge(progressPercentage: number): {
 } {
   if (progressPercentage >= 100) {
     return {
-      label: 'Surveyor & SIINas Ready (100%)',
+      label: 'LVI & SIINas Ready (100%)',
       badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
       textClass: 'text-emerald-700',
-      description: 'All statutory dossier requirements and verification milestones are fully satisfied.',
+      description: 'All statutory file requirements and verification milestones are fully satisfied.',
     };
   }
   if (progressPercentage >= 75) {
@@ -677,7 +690,7 @@ export function getComplianceReadinessBadge(progressPercentage: number): {
   }
   if (progressPercentage >= 40) {
     return {
-      label: 'Dossier Assembly in Progress',
+      label: 'File Assembly in Progress',
       badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
       textClass: 'text-amber-700',
       description: 'Initial scoping and legal proofs collected; technical BOM and cost calculations pending.',

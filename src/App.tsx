@@ -16,8 +16,13 @@ import { NewProjectModal } from './components/NewProjectModal';
 import { TeamWorkloadView } from './components/TeamWorkloadView';
 import { ExportReportModal } from './components/ExportReportModal';
 import { FinancialManagement } from './components/finance/FinancialManagement';
+import { FinancialReportGenerator } from './components/finance/FinancialReportGenerator';
 import { LoginView } from './components/LoginView';
 import { RoleManagerModal } from './components/RoleManagerModal';
+import { ServiceTypeManagerModal } from './components/ServiceTypeManagerModal';
+import { DocumentTypeManagerModal } from './components/DocumentTypeManagerModal';
+import { UserProfileModal } from './components/UserProfileModal';
+import { RealtimeRoleToast } from './components/RealtimeRoleToast';
 import {
   ConsultingProject,
   JobDisposition,
@@ -43,6 +48,9 @@ const DashboardContent: React.FC = () => {
   const [isTkdnCalcOpen, setIsTkdnCalcOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
+  const [isServiceTypeManagerOpen, setIsServiceTypeManagerOpen] = useState(false);
+  const [isDocTypeManagerOpen, setIsDocTypeManagerOpen] = useState(false);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
 
   // Selected state for disposition modal
   const [dispositionTargetProject, setDispositionTargetProject] = useState<ConsultingProject | null>(null);
@@ -72,6 +80,9 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100/90 text-slate-900 font-sans antialiased selection:bg-emerald-500 selection:text-white">
+      {/* Real-time Role Notification Banner/Toast */}
+      <RealtimeRoleToast />
+
       {/* Navigation Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -89,6 +100,9 @@ const DashboardContent: React.FC = () => {
         onOpenTkdnCalculator={() => setIsTkdnCalcOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
         onOpenRoleManager={() => setIsRoleManagerOpen(true)}
+        onOpenServiceManager={() => setIsServiceTypeManagerOpen(true)}
+        onOpenDocTypeManager={() => setIsDocTypeManagerOpen(true)}
+        onOpenUserProfile={() => setIsUserProfileOpen(true)}
       />
 
       {/* Main Admin Wrapper */}
@@ -111,6 +125,9 @@ const DashboardContent: React.FC = () => {
           onOpenTkdnCalculator={() => setIsTkdnCalcOpen(true)}
           onOpenExport={() => setIsExportOpen(true)}
           onOpenRoleManager={() => setIsRoleManagerOpen(true)}
+          onOpenServiceManager={() => setIsServiceTypeManagerOpen(true)}
+          onOpenDocTypeManager={() => setIsDocTypeManagerOpen(true)}
+          onOpenUserProfile={() => setIsUserProfileOpen(true)}
         />
 
         {/* Main Workspace Body */}
@@ -164,6 +181,32 @@ const DashboardContent: React.FC = () => {
           {activeTab === 'finance' && (
             <div className="animate-in fade-in duration-150">
               <FinancialManagement
+                initialTab="LEDGER"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
+          {/* TAB 3A: DEBT & BANK LOAN MANAGEMENT */}
+          {activeTab === 'bank-loans' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="BANK_LOANS"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
+          {/* TAB 3B: OFFICIAL FINANCIAL REPORTS & STATEMENTS OUTPUT */}
+          {activeTab === 'financial-reports' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialReportGenerator
                 onSelectProject={(projectId) => {
                   setSelectedProjectId(projectId);
                 }}
@@ -197,17 +240,8 @@ const DashboardContent: React.FC = () => {
 
         {/* Admin Footer */}
         <footer className="bg-white border-t border-slate-200/90 py-4 text-xs text-slate-500 mt-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-800">VERIX Consulting CRM</span>
-              <span>•</span>
-              <span>SIINas, OSS-RBA & TKDN Permenperin Compliance System</span>
-            </div>
-            <div className="flex items-center gap-4 text-slate-400">
-              <span>Surveyor Indonesia & Sucofindo Audit Interface</span>
-              <span>•</span>
-              <span>Standardized Domestic Component Index</span>
-            </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-center text-center">
+            <span>Copyright © 2026 Adryan Kelvianto. All rights reserved.</span>
           </div>
         </footer>
       </div>
@@ -244,16 +278,38 @@ const DashboardContent: React.FC = () => {
         />
       )}
 
-      {/* 5. Export Dossier Modal */}
+      {/* 5. Export File & Report Modal */}
       <ExportReportModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
+        onOpenFinancialReports={() => {
+          setIsExportOpen(false);
+          setActiveTab('financial-reports');
+        }}
       />
 
       {/* 6. Role & Access Control Manager Modal */}
       <RoleManagerModal
         isOpen={isRoleManagerOpen}
         onClose={() => setIsRoleManagerOpen(false)}
+      />
+
+      {/* 7. Statutory Consulting Services Catalog Manager Modal (admin.master exclusive) */}
+      <ServiceTypeManagerModal
+        isOpen={isServiceTypeManagerOpen}
+        onClose={() => setIsServiceTypeManagerOpen(false)}
+      />
+
+      {/* 8. Required Document Types Master Catalog Modal (admin.master exclusive) */}
+      <DocumentTypeManagerModal
+        isOpen={isDocTypeManagerOpen}
+        onClose={() => setIsDocTypeManagerOpen(false)}
+      />
+
+      {/* 9. Self-Service User Personalization & Profile Modal (Accessible for EVERY role) */}
+      <UserProfileModal
+        isOpen={isUserProfileOpen}
+        onClose={() => setIsUserProfileOpen(false)}
       />
     </div>
   );

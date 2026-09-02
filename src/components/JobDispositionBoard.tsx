@@ -40,8 +40,6 @@ export const JobDispositionBoard: React.FC<JobDispositionBoardProps> = ({
     teamMembers,
     updateDisposition,
     toggleChecklistItem,
-    deleteDisposition,
-    currentUser,
   } = useProjects();
 
   const [filterAssignee, setFilterAssignee] = useState<string>('ALL');
@@ -284,7 +282,7 @@ export const JobDispositionBoard: React.FC<JobDispositionBoardProps> = ({
                           </div>
                         </div>
 
-                        {/* Status Change Quick Dropdown */}
+                        {/* Status Change Quick Dropdown & Actions */}
                         <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1">
                           <select
                             value={disp.status}
@@ -302,12 +300,15 @@ export const JobDispositionBoard: React.FC<JobDispositionBoardProps> = ({
                             <option value="COMPLETED">Mark Done</option>
                           </select>
 
-                          <button
-                            onClick={() => onEditDisposition(disp)}
-                            className="text-[10px] text-slate-500 hover:text-slate-900 font-semibold px-2 py-1 rounded bg-slate-50 hover:bg-slate-100 border border-slate-200"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onEditDisposition(disp)}
+                              className="text-[10px] text-slate-600 hover:text-slate-900 font-semibold px-2.5 py-1 rounded-md bg-slate-50 hover:bg-slate-100 border border-slate-200 cursor-pointer transition-colors"
+                            >
+                              Edit
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

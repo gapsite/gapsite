@@ -17,39 +17,52 @@ interface FilterBarProps {
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) => {
-  const { filters, setFilters, resetFilters, teamMembers, filteredProjects, projects } = useProjects();
+  const {
+    filters,
+    setFilters,
+    resetFilters,
+    teamMembers,
+    filteredProjects,
+    projects,
+    activeConsultingServices,
+  } = useProjects();
 
-  const serviceCategories: { label: string; value: ServiceType | 'ALL'; count?: number }[] = [
-    { label: 'All Services', value: 'ALL' },
-    { label: 'TKDN Barang', value: 'TKDN_BARANG' },
-    { label: 'TKDN Jasa', value: 'TKDN_JASA' },
-    { label: 'BMP Corporate', value: 'BMP_COMPANY' },
-    { label: 'OSS-RBA / PB-UMKU', value: 'OSS_RBA_NIB' },
-    { label: 'SNI & AMDAL', value: 'SNI_CERTIFICATION' },
-  ];
+  const serviceCategories = React.useMemo(() => {
+    const list: { label: string; value: ServiceType | 'ALL'; count?: number }[] = [
+      { label: 'All Services', value: 'ALL' },
+    ];
+    activeConsultingServices.forEach((svc) => {
+      list.push({
+        label: svc.shortName || svc.name,
+        value: svc.id,
+      });
+    });
+    return list;
+  }, [activeConsultingServices]);
 
   const stages: { label: string; value: ProjectStage | 'ALL' }[] = [
     { label: 'All Stages', value: 'ALL' },
-    { label: '1. Inquiry & Scoping', value: 'INQUIRY' },
-    { label: '2. Gap Analysis', value: 'GAP_ANALYSIS' },
-    { label: '3. BOM & Doc Prep', value: 'DOC_PREPARATION' },
-    { label: '4. Field Verification (Surveyor)', value: 'FIELD_VERIFICATION' },
-    { label: '5. SIINas Kemenperin Review', value: 'MINISTRY_REVIEW' },
-    { label: '6. Certificate Issued', value: 'CERTIFICATE_ISSUED' },
+    { label: '1. Inquiry & KBLI Screening', value: 'INQUIRY' },
+    { label: '2. Gap Analysis & Cost Plan', value: 'GAP_ANALYSIS' },
+    { label: '3. SIINas & BOM Compilation', value: 'DOC_PREPARATION' },
+    { label: '4. Surveyor Verification (LVI)', value: 'FIELD_VERIFICATION' },
+    { label: '5. Ministry Review & Panel', value: 'MINISTRY_REVIEW' },
+    { label: '6. Official Certificate Issued', value: 'CERTIFICATE_ISSUED' },
   ];
 
   const surveyors: (SurveyorBody | 'ALL')[] = [
     'ALL',
-    'PT Sucofindo',
     'PT Surveyor Indonesia',
-    'PT Superintending Company',
-    'Kemenperin SIINas Direct',
+    'PT Sucofindo (Persero)',
+    'PT Biro Klasifikasi Indonesia',
+    'PT Anindya Wiraputra Consult',
+    'Badan Standarisasi dan Kebijakan Jasa Industri',
   ];
 
   const statuses: { label: string; value: ProjectStatus | 'ALL' }[] = [
-    { label: 'All Health Status', value: 'ALL' },
+    { label: 'All Statuses', value: 'ALL' },
     { label: 'On Track', value: 'ON_TRACK' },
-    { label: 'At Risk / Gap Flagged', value: 'AT_RISK' },
+    { label: 'At Risk', value: 'AT_RISK' },
     { label: 'Delayed', value: 'DELAYED' },
     { label: 'Completed', value: 'COMPLETED' },
   ];
@@ -146,17 +159,19 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
         </div>
       </div>
 
-      {/* Bottom Dropdowns Row: Stage, Surveyor, Status, Consultant, Priority */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 items-center">
+      {/* Bottom Dropdowns Row: Stage, Surveyor, Status, Consultant, Priority, Reset */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 items-end">
         {/* Stage Filter */}
-        <div>
-          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
+        <div className="flex flex-col">
+          <label htmlFor="filter-stage-select" className="block text-center text-xs font-bold uppercase text-slate-800 mb-1 tracking-wide truncate">
             Stage
           </label>
           <select
+            id="filter-stage-select"
+            name="stage"
             value={filters.stage}
             onChange={(e) => setFilters((prev) => ({ ...prev, stage: e.target.value as ProjectStage | 'ALL' }))}
-            className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+            className="w-full h-8 text-xs bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
           >
             {stages.map((s) => (
               <option key={s.value} value={s.value}>
@@ -166,33 +181,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
           </select>
         </div>
 
-        {/* Surveyor Body Filter */}
-        <div>
-          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
-            Surveyor Body
+        {/* LVI Filter */}
+        <div className="flex flex-col">
+          <label htmlFor="filter-surveyor-select" className="block text-center text-xs font-bold uppercase text-slate-800 mb-1 tracking-wide truncate">
+            Surveyor (LVI)
           </label>
           <select
+            id="filter-surveyor-select"
+            name="surveyor"
             value={filters.surveyor}
             onChange={(e) => setFilters((prev) => ({ ...prev, surveyor: e.target.value as SurveyorBody | 'ALL' }))}
-            className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+            className="w-full h-8 text-xs bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
           >
-            <option value="ALL">All Surveyors</option>
-            <option value="PT Sucofindo">PT Sucofindo</option>
-            <option value="PT Surveyor Indonesia">PT Surveyor Indonesia</option>
-            <option value="PT Superintending Company">PT Superintending Company</option>
-            <option value="Kemenperin SIINas Direct">Kemenperin SIINas Direct</option>
+            <option value="ALL">All LVI</option>
+            <option value="PT Surveyor Indonesia">1. PT Surveyor Indonesia</option>
+            <option value="PT Sucofindo (Persero)">2. PT Sucofindo (Persero)</option>
+            <option value="PT Biro Klasifikasi Indonesia">3. PT Biro Klasifikasi Indonesia</option>
+            <option value="PT Anindya Wiraputra Consult">4. PT Anindya Wiraputra Consult</option>
+            <option value="Badan Standarisasi dan Kebijakan Jasa Industri">5. Badan Standarisasi dan Kebijakan Jasa Industri</option>
           </select>
         </div>
 
         {/* Health Status Filter */}
-        <div>
-          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
-            Health / Risk
+        <div className="flex flex-col">
+          <label htmlFor="filter-status-select" className="block text-center text-xs font-bold uppercase text-slate-800 mb-1 tracking-wide truncate">
+            Risk & Health
           </label>
           <select
+            id="filter-status-select"
+            name="status"
             value={filters.status}
             onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as ProjectStatus | 'ALL' }))}
-            className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+            className="w-full h-8 text-xs bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
           >
             {statuses.map((st) => (
               <option key={st.value} value={st.value}>
@@ -203,14 +223,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
         </div>
 
         {/* Lead Consultant Filter */}
-        <div>
-          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
+        <div className="flex flex-col">
+          <label htmlFor="filter-consultant-select" className="block text-center text-xs font-bold uppercase text-slate-800 mb-1 tracking-wide truncate">
             Lead Consultant
           </label>
           <select
+            id="filter-consultant-select"
+            name="leadConsultant"
             value={filters.leadConsultantId}
             onChange={(e) => setFilters((prev) => ({ ...prev, leadConsultantId: e.target.value }))}
-            className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+            className="w-full h-8 text-xs bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
           >
             <option value="ALL">All Consultants</option>
             {teamMembers.map((m) => (
@@ -222,14 +244,16 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
         </div>
 
         {/* Priority Filter */}
-        <div>
-          <label className="block text-[10px] font-bold uppercase text-slate-600 mb-1">
+        <div className="flex flex-col">
+          <label htmlFor="filter-priority-select" className="block text-center text-xs font-bold uppercase text-slate-800 mb-1 tracking-wide truncate">
             Priority
           </label>
           <select
+            id="filter-priority-select"
+            name="priority"
             value={filters.priority}
             onChange={(e) => setFilters((prev) => ({ ...prev, priority: e.target.value as Priority | 'ALL' }))}
-            className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+            className="w-full h-8 text-xs bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium"
           >
             <option value="ALL">All Priorities</option>
             <option value="URGENT">Urgent</option>
@@ -240,17 +264,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({ viewMode, setViewMode }) =
         </div>
 
         {/* Reset Filter Button */}
-        <div className="flex items-end">
+        <div className="flex flex-col">
+          <label htmlFor="btn-reset-filters" className="block text-center text-xs font-bold uppercase text-slate-800 mb-1 tracking-wide truncate">
+            Reset
+          </label>
           <button
+            id="btn-reset-filters"
+            type="button"
             onClick={resetFilters}
             disabled={!hasActiveFilters}
-            className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
+            aria-label="Reset all search and dropdown filters"
+            className={`w-full h-8 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all ${
               hasActiveFilters
-                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 cursor-pointer'
+                ? 'bg-amber-50 text-amber-900 border-amber-400 hover:bg-amber-100 cursor-pointer font-bold'
                 : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
             }`}
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-3 h-3" aria-hidden="true" />
             <span>Reset Filters</span>
           </button>
         </div>

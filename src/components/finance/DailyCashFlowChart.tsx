@@ -316,13 +316,13 @@ export const DailyCashFlowChart: React.FC<DailyCashFlowChartProps> = ({
                   </div>
                   <div className="flex items-center gap-6 font-mono">
                     <span className="text-emerald-400">
-                      Income: <strong>+Rp {hoveredPoint.income.toLocaleString('id-ID')}</strong>
+                      Income: <strong>+Rp {(hoveredPoint.income || 0).toLocaleString('id-ID')}</strong>
                     </span>
                     <span className="text-rose-400">
-                      Expense: <strong>-Rp {hoveredPoint.expense.toLocaleString('id-ID')}</strong>
+                      Expense: <strong>-Rp {(hoveredPoint.expense || 0).toLocaleString('id-ID')}</strong>
                     </span>
                     <span className={`font-bold ${hoveredPoint.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                      Net: {hoveredPoint.net >= 0 ? '+' : '-'}Rp {Math.abs(hoveredPoint.net).toLocaleString('id-ID')}
+                      Net: {hoveredPoint.net >= 0 ? '+' : '-'}Rp {(Math.abs(hoveredPoint.net) || 0).toLocaleString('id-ID')}
                     </span>
                   </div>
                 </div>
@@ -352,12 +352,12 @@ export const DailyCashFlowChart: React.FC<DailyCashFlowChartProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-slate-700">{c.label}</span>
                     <span className="font-mono font-bold text-slate-900">
-                      Rp {c.amount.toLocaleString('id-ID')} ({c.percentage.toFixed(1)}%)
+                      Rp {(c.amount || 0).toLocaleString('id-ID')} ({(c.percentage || 0).toFixed(1)}%)
                     </span>
                   </div>
                   <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                     <div
-                      style={{ width: `${c.percentage}%` }}
+                      style={{ width: `${c.percentage || 0}%` }}
                       className="h-full bg-rose-500 rounded-full"
                     />
                   </div>
@@ -383,12 +383,12 @@ export const DailyCashFlowChart: React.FC<DailyCashFlowChartProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-slate-700">{c.label}</span>
                     <span className="font-mono font-bold text-slate-900">
-                      Rp {c.amount.toLocaleString('id-ID')} ({c.percentage.toFixed(1)}%)
+                      Rp {(c.amount || 0).toLocaleString('id-ID')} ({(c.percentage || 0).toFixed(1)}%)
                     </span>
                   </div>
                   <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                     <div
-                      style={{ width: `${c.percentage}%` }}
+                      style={{ width: `${c.percentage || 0}%` }}
                       className="h-full bg-emerald-500 rounded-full"
                     />
                   </div>
@@ -404,13 +404,13 @@ export const DailyCashFlowChart: React.FC<DailyCashFlowChartProps> = ({
         <div className="pt-4 overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/70">
-                <th className="py-2.5 px-3">Project & Client</th>
-                <th className="py-2.5 px-3">Contract Value</th>
-                <th className="py-2.5 px-3">Billed / Inflow</th>
-                <th className="py-2.5 px-3">Direct Outflow</th>
-                <th className="py-2.5 px-3">Net Realized</th>
-                <th className="py-2.5 px-3 text-right">Margin %</th>
+              <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/70 text-center">
+                <th className="py-2.5 px-3 text-center">Project & Client</th>
+                <th className="py-2.5 px-3 text-center">Contract Value</th>
+                <th className="py-2.5 px-3 text-center">Billed / Inflow</th>
+                <th className="py-2.5 px-3 text-center">Direct Outflow</th>
+                <th className="py-2.5 px-3 text-center">Net Realized</th>
+                <th className="py-2.5 px-3 text-center">Margin %</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">

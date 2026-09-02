@@ -1,0 +1,502 @@
+import {
+  db,
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot
+} from './config';
+import {
+  ConsultingProject,
+  TeamMember,
+  JobDisposition,
+  FinancialTransaction,
+  ProjectActivity,
+  ServiceType,
+  RoleDefinition,
+  DocumentTypeDefinition,
+  DocumentCategoryDefinition,
+  DeletedUserRecord
+} from '../types';
+
+export const FirestoreCollections = {
+  USERS: 'users',
+  PROJECTS: 'projects',
+  DISPOSITIONS: 'dispositions',
+  TRANSACTIONS: 'transactions',
+  SETTINGS: 'app_settings',
+  ACTIVITIES: 'activity_logs',
+  DOCUMENT_TYPES: 'document_types',
+  DOCUMENT_CATEGORIES: 'document_categories'
+};
+
+// Deeply sanitize objects so no `undefined` values are ever sent to Firestore (which causes setDoc to fail)
+export const sanitizeForFirestore = <T>(obj: T): T => {
+  if (obj === undefined) return null as unknown as T;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeForFirestore) as unknown as T;
+  }
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      clean[key] = sanitizeForFirestore(value);
+    }
+  }
+  return clean as T;
+};
+
+// Sync Projects to Firestore
+export const saveProjectToFirestore = async (project: ConsultingProject): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.PROJECTS, project.id);
+    const sanitized = sanitizeForFirestore({
+      ...project,
+      updatedAt: new Date().toISOString()
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+  } catch (error) {
+    console.error('Firestore save project error:', error);
+  }
+};
+
+export const deleteProjectFromFirestore = async (projectId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.PROJECTS, projectId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete project error:', error);
+  }
+};
+
+// Sync User to Firestore
+export const saveUserToFirestore = async (user: TeamMember): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.USERS, user.id);
+    const sanitized = sanitizeForFirestore({
+      ...user,
+      lastSyncedAt: new Date().toISOString()
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+  } catch (error) {
+    console.error('Firestore save user error:', error);
+  }
+};
+
+export const deleteUserFromFirestore = async (userId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.USERS, userId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete user error:', error);
+  }
+};
+
+// Deleted Users Blacklist Management (prevents deleted users from logging in until re-registered)
+export const saveDeletedUserToFirestore = async (record: DeletedUserRecord): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_users');
+    const snap = await getDoc(docRef);
+    let existingList: DeletedUserRecord[] = [];
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data?.data)) {
+        existingList = data.data;
+      }
+    }
+    // Filter out duplicate records for same id/username/email
+    const updatedList = [
+      ...existingList.filter(
+        (item) =>
+          item.id !== record.id &&
+          item.username?.toLowerCase() !== record.username?.toLowerCase() &&
+          item.email?.toLowerCase() !== record.email?.toLowerCase()
+      ),
+      record,
+    ];
+    await setDoc(docRef, sanitizeForFirestore({ data: updatedList, updatedAt: new Date().toISOString() }), { merge: true });
+  } catch (error) {
+    console.error('Firestore save deleted user record error:', error);
+  }
+};
+
+export const removeDeletedUserFromFirestore = async (identifier: string): Promise<void> => {
+  try {
+    const cleanId = identifier.trim().toLowerCase();
+    const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_users');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data?.data)) {
+        const filtered = data.data.filter(
+          (item: DeletedUserRecord) =>
+            item.id !== identifier &&
+            item.username?.toLowerCase() !== cleanId &&
+            item.email?.toLowerCase() !== cleanId
+        );
+        await setDoc(docRef, sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }), { merge: true });
+      }
+    }
+  } catch (error) {
+    console.error('Firestore remove deleted user record error:', error);
+  }
+};
+
+// Sync Disposition to Firestore
+export const saveDispositionToFirestore = async (disposition: JobDisposition): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.DISPOSITIONS, disposition.id);
+    await setDoc(docRef, sanitizeForFirestore(disposition), { merge: true });
+  } catch (error) {
+    console.error('Firestore save disposition error:', error);
+  }
+};
+
+export const deleteDispositionFromFirestore = async (dispositionId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.DISPOSITIONS, dispositionId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete disposition error:', error);
+  }
+};
+
+// Sync Finance Transaction to Firestore
+export const saveTransactionToFirestore = async (transaction: FinancialTransaction): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.TRANSACTIONS, transaction.id);
+    const sanitized = sanitizeForFirestore({
+      ...transaction,
+      projectId: transaction.projectId || '',
+      projectCode: transaction.projectCode || '',
+      referenceNumber: transaction.referenceNumber || '',
+      notes: transaction.notes || '',
+      attachmentName: transaction.attachmentName || '',
+      attachmentUrl: transaction.attachmentUrl || '',
+      attachmentType: transaction.attachmentType || '',
+      attachmentSize: transaction.attachmentSize || '',
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized);
+  } catch (error) {
+    console.error('Firestore save transaction error:', error);
+  }
+};
+
+export const deleteTransactionFromFirestore = async (transactionId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.TRANSACTIONS, transactionId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete transaction error:', error);
+  }
+};
+
+// Sync Settings (Service Types / Roles)
+export const saveSettingsToFirestore = async (key: string, data: any): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.SETTINGS, key);
+    await setDoc(docRef, sanitizeForFirestore({ data, updatedAt: new Date().toISOString() }), { merge: true });
+  } catch (error) {
+    console.error(`Firestore save settings (${key}) error:`, error);
+  }
+};
+
+// Real-time Listeners
+export const subscribeToProjects = (onUpdate: (projects: ConsultingProject[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.PROJECTS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: ConsultingProject[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as ConsultingProject;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore projects listener warning:', err)
+  );
+};
+
+export const subscribeToUsers = (onUpdate: (users: TeamMember[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.USERS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: TeamMember[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as TeamMember;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore users listener warning:', err)
+  );
+};
+
+// Sync Document Types to Firestore
+export const saveDocumentTypeToFirestore = async (docType: DocumentTypeDefinition): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.DOCUMENT_TYPES, docType.id);
+    await setDoc(docRef, sanitizeForFirestore({ ...docType, updatedAt: new Date().toISOString() }), { merge: true });
+  } catch (error) {
+    console.error('Firestore save document type error:', error);
+  }
+};
+
+export const deleteDocumentTypeFromFirestore = async (id: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.DOCUMENT_TYPES, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete document type error:', error);
+  }
+};
+
+export const subscribeToDocumentTypes = (onUpdate: (docTypes: DocumentTypeDefinition[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.DOCUMENT_TYPES);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: DocumentTypeDefinition[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as DocumentTypeDefinition;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore document types listener warning:', err)
+  );
+};
+
+// Sync Document Categories to Firestore
+export const saveDocumentCategoryToFirestore = async (category: DocumentCategoryDefinition): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.DOCUMENT_CATEGORIES, category.id);
+    await setDoc(docRef, sanitizeForFirestore({ ...category, updatedAt: new Date().toISOString() }), { merge: true });
+  } catch (error) {
+    console.error('Firestore save document category error:', error);
+  }
+};
+
+export const deleteDocumentCategoryFromFirestore = async (id: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.DOCUMENT_CATEGORIES, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Firestore delete document category error:', error);
+  }
+};
+
+export const subscribeToDocumentCategories = (onUpdate: (categories: DocumentCategoryDefinition[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.DOCUMENT_CATEGORIES);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: DocumentCategoryDefinition[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as DocumentCategoryDefinition;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore document categories listener warning:', err)
+  );
+};
+
+export const subscribeToDispositions = (onUpdate: (dispositions: JobDisposition[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.DISPOSITIONS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: JobDisposition[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as JobDisposition;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore dispositions listener warning:', err)
+  );
+};
+
+export const subscribeToTransactions = (onUpdate: (transactions: FinancialTransaction[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.TRANSACTIONS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: FinancialTransaction[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as FinancialTransaction;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore transactions listener warning:', err)
+  );
+};
+
+export const subscribeToSettings = (key: string, onUpdate: (data: any) => void) => {
+  const docRef = doc(db, FirestoreCollections.SETTINGS, key);
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        const payload = snapshot.data();
+        if (payload && payload.data) {
+          onUpdate(payload.data);
+        }
+      }
+    },
+    (err) => console.warn(`Firestore settings (${key}) listener warning:`, err)
+  );
+};
+
+// Ensure critical baseline documents and Master Admin account exist in Firestore
+export const ensureInitialFirestoreSeed = async (
+  masterAdmin: TeamMember,
+  defaultServices: any[],
+  defaultDocTypes: any[],
+  defaultCategories: any[],
+  defaultRoles: any,
+  defaultProjects?: ConsultingProject[],
+  defaultDispositions?: JobDisposition[],
+  defaultTransactions?: FinancialTransaction[],
+  defaultTeamMembers?: TeamMember[],
+  defaultTransactionCategories?: any[],
+  defaultPaymentChannels?: any[]
+): Promise<void> => {
+  try {
+    // 1. Ensure master admin root user exists in Firestore
+    const masterDocRef = doc(db, FirestoreCollections.USERS, masterAdmin.id);
+    const masterSnap = await getDoc(masterDocRef);
+    if (!masterSnap.exists()) {
+      await setDoc(masterDocRef, sanitizeForFirestore({ ...masterAdmin, lastSyncedAt: new Date().toISOString() }));
+    }
+
+    // 2. Ensure initial users exist if collection is empty
+    if (defaultTeamMembers && defaultTeamMembers.length > 0) {
+      const usersSnap = await getDocs(collection(db, FirestoreCollections.USERS));
+      if (usersSnap.empty) {
+        await Promise.all(
+          defaultTeamMembers.map((u) => {
+            const uRef = doc(db, FirestoreCollections.USERS, u.id);
+            return setDoc(uRef, sanitizeForFirestore(u));
+          })
+        );
+      }
+    }
+
+    // 3. Ensure consulting services config exists
+    const servicesRef = doc(db, FirestoreCollections.SETTINGS, 'consulting_services');
+    const servicesSnap = await getDoc(servicesRef);
+    if (!servicesSnap.exists()) {
+      await setDoc(servicesRef, sanitizeForFirestore({ data: defaultServices, updatedAt: new Date().toISOString() }));
+    }
+
+    // 4. Ensure role definitions exist
+    const rolesRef = doc(db, FirestoreCollections.SETTINGS, 'role_definitions');
+    const rolesSnap = await getDoc(rolesRef);
+    if (!rolesSnap.exists()) {
+      await setDoc(rolesRef, sanitizeForFirestore({ data: defaultRoles, updatedAt: new Date().toISOString() }));
+    }
+
+    // 5. Ensure master document types exist
+    const docTypesSnap = await getDocs(collection(db, FirestoreCollections.DOCUMENT_TYPES));
+    if (docTypesSnap.empty) {
+      await Promise.all(
+        defaultDocTypes.map((dt) => {
+          const dRef = doc(db, FirestoreCollections.DOCUMENT_TYPES, dt.id);
+          return setDoc(dRef, sanitizeForFirestore({ ...dt, updatedAt: new Date().toISOString() }));
+        })
+      );
+    }
+
+    // 6. Ensure master document categories exist
+    const categoriesSnap = await getDocs(collection(db, FirestoreCollections.DOCUMENT_CATEGORIES));
+    if (categoriesSnap.empty) {
+      await Promise.all(
+        defaultCategories.map((dc) => {
+          const cRef = doc(db, FirestoreCollections.DOCUMENT_CATEGORIES, dc.id);
+          return setDoc(cRef, sanitizeForFirestore({ ...dc, updatedAt: new Date().toISOString() }));
+        })
+      );
+    }
+
+    // 7. Ensure projects exist if empty
+    if (defaultProjects && defaultProjects.length > 0) {
+      const projectsSnap = await getDocs(collection(db, FirestoreCollections.PROJECTS));
+      if (projectsSnap.empty) {
+        await Promise.all(
+          defaultProjects.map((p) => {
+            const pRef = doc(db, FirestoreCollections.PROJECTS, p.id);
+            return setDoc(pRef, sanitizeForFirestore(p));
+          })
+        );
+      }
+    }
+
+    // 8. Ensure dispositions exist if empty
+    if (defaultDispositions && defaultDispositions.length > 0) {
+      const dispSnap = await getDocs(collection(db, FirestoreCollections.DISPOSITIONS));
+      if (dispSnap.empty) {
+        await Promise.all(
+          defaultDispositions.map((d) => {
+            const dRef = doc(db, FirestoreCollections.DISPOSITIONS, d.id);
+            return setDoc(dRef, sanitizeForFirestore(d));
+          })
+        );
+      }
+    }
+
+    // 9. Ensure transactions exist if empty
+    if (defaultTransactions && defaultTransactions.length > 0) {
+      const trxsSnap = await getDocs(collection(db, FirestoreCollections.TRANSACTIONS));
+      if (trxsSnap.empty) {
+        await Promise.all(
+          defaultTransactions.map((t) => {
+            const tRef = doc(db, FirestoreCollections.TRANSACTIONS, t.id);
+            return setDoc(tRef, sanitizeForFirestore(t));
+          })
+        );
+      }
+    }
+
+    // 10. Ensure transaction categories exist in settings
+    if (defaultTransactionCategories && defaultTransactionCategories.length > 0) {
+      const catRef = doc(db, FirestoreCollections.SETTINGS, 'transaction_categories');
+      const catSnap = await getDoc(catRef);
+      if (!catSnap.exists()) {
+        await setDoc(catRef, sanitizeForFirestore({ data: defaultTransactionCategories, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 11. Ensure payment channels (banks & accounts) exist in settings
+    if (defaultPaymentChannels && defaultPaymentChannels.length > 0) {
+      const payRef = doc(db, FirestoreCollections.SETTINGS, 'payment_channels');
+      const paySnap = await getDoc(payRef);
+      if (!paySnap.exists()) {
+        await setDoc(payRef, sanitizeForFirestore({ data: defaultPaymentChannels, updatedAt: new Date().toISOString() }));
+      }
+    }
+  } catch (err) {
+    console.warn('Firestore initial baseline check notice:', err);
+  }
+};
+

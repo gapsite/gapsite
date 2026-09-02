@@ -4,7 +4,28 @@ export type ServiceType =
   | 'BMP_COMPANY'
   | 'OSS_RBA_NIB'
   | 'SNI_CERTIFICATION'
-  | 'AMDAL_UKL_UPL';
+  | 'AMDAL_UKL_UPL'
+  | (string & {});
+
+export interface ConsultingServiceConfig {
+  id: string; // Unique identifier/slug e.g. 'TKDN_BARANG', 'CUSTOM_GREEN_INDUSTRY'
+  name: string; // Full title e.g. 'TKDN Manufaktur Barang (Goods)'
+  shortName: string; // Short badge label e.g. 'TKDN Barang'
+  code: string; // Statutory acronym e.g. 'TKDN-BRG'
+  category: string; // Domain e.g. 'Perindustrian & Manufaktur'
+  description: string; // Description & scope of service
+  regulatoryBasis?: string; // e.g. 'Permenperin No. 16/2011, Permenperin No. 43/2022'
+  defaultSurveyor?: string; // Default accredited surveyor/verifier body
+  typicalDurationDays?: number; // Typical SLA in business days
+  basePriceIDR?: number; // Base consulting fee in IDR
+  badgeColor: string; // Tailwind class string for badge
+  iconName?: string; // Lucide icon identifier
+  isDefault?: boolean; // True if core built-in system service
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
 
 export type ProjectStage =
   | 'INQUIRY'
@@ -20,12 +41,21 @@ export type ProjectStatus = 'ON_TRACK' | 'AT_RISK' | 'DELAYED' | 'COMPLETED';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export type SurveyorBody =
-  | 'PT Sucofindo'
   | 'PT Surveyor Indonesia'
-  | 'PT Superintending Company'
-  | 'Kemenperin SIINas Direct';
+  | 'PT Sucofindo (Persero)'
+  | 'PT Biro Klasifikasi Indonesia'
+  | 'PT Anindya Wiraputra Consult'
+  | 'Badan Standarisasi dan Kebijakan Jasa Industri';
+
+export type LviBody = SurveyorBody;
 
 export type CompanyType = 'PMDN' | 'PMA' | 'BUMN' | 'UMKM';
+
+export type EngagementCategory =
+  | 'TKDN_CERTIFICATION'
+  | 'COMPANY_LICENSING'
+  | 'SOFTWARE_DEV'
+  | 'OTHER_SERVICES';
 
 export type DocumentCategoryGroup =
   | 'ALL'
@@ -33,7 +63,22 @@ export type DocumentCategoryGroup =
   | 'INVOICE_RECEIPT'
   | 'EXPENSE_PROOF'
   | 'TECHNICAL_DOSSIER'
-  | 'LEGAL_COMPLIANCE';
+  | 'LEGAL_COMPLIANCE'
+  | (string & {});
+
+export type DocumentCategory = Exclude<DocumentCategoryGroup, 'ALL'>;
+
+export interface DocumentCategoryDefinition {
+  id: string; // e.g. 'TECHNICAL_DOSSIER', 'LEGAL_COMPLIANCE', 'CUSTOM_CATEGORY'
+  name: string; // Display name e.g. 'Legal & Statutory Licensing'
+  description?: string;
+  badgeColor?: string; // Tailwind class e.g. 'bg-cyan-50 text-cyan-700 border-cyan-300'
+  isSystemDefault?: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
 
 export type DocumentType =
   // Offer & Quotations
@@ -63,7 +108,24 @@ export type DocumentType =
   | 'ISO_QMS_CERT'
   | 'LAB_TEST_REPORT'
   | 'AMDAL_UKL_DOCUMENT'
-  | 'DEED_AHU_LEGAL';
+  | 'DEED_AHU_LEGAL'
+  | (string & {});
+
+export interface DocumentTypeDefinition {
+  id: string; // Unique slug/code e.g. 'BOM_EXCEL', 'HALAL_CERTIFICATE'
+  name: string; // Full human label e.g. 'Bill of Materials (BOM Sheet)'
+  category: DocumentCategoryGroup; // Category group
+  description: string; // Compliance explanation
+  isAutoCompleting: boolean; // True if uploading this document auto-satisfies linked milestone requirements
+  requiredForServices?: ServiceType[]; // Specific statutory services linked to this requirement
+  acceptedFileTypes?: string[]; // Allowed extensions e.g. ['.pdf', '.xlsx']
+  badgeColor?: string; // Custom badge styling
+  isSystemDefault?: boolean; // True for built-in statutory documents
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
 
 export type DocumentStatus =
   | 'DRAFT'
@@ -131,6 +193,19 @@ export interface ProjectDocument {
   version: string;
   verifiedBy?: string;
   downloadUrl?: string;
+
+  // File Preview & Storage Properties
+  fileUrl?: string; // Data URL or Blob URL for uploaded files / PDFs / images
+  fileType?: string; // MIME type or extension e.g. 'application/pdf', 'image/png'
+  previewData?: {
+    pagesCount?: number;
+    extractedText?: string;
+    spreadsheetRows?: Array<Record<string, any>>;
+    complianceScore?: number;
+    signatureVerified?: boolean;
+    qrCodeVerified?: boolean;
+    checksum?: string;
+  };
   
   // Categorization & Financial / Offer Metadata
   categoryGroup?: DocumentCategoryGroup;
@@ -142,6 +217,14 @@ export interface ProjectDocument {
   paymentMethod?: PaymentMethod;
   notes?: string;
   tags?: string[];
+
+  // Google Drive Cloud Sync Metadata
+  googleDriveFileId?: string;
+  googleDriveWebViewLink?: string;
+  googleDriveWebContentLink?: string;
+  googleDriveFolderId?: string;
+  googleDriveSyncedAt?: string;
+  googleDriveSyncStatus?: 'SYNCED' | 'FAILED' | 'PENDING' | 'LOCAL_ONLY';
 }
 
 export type DispositionCategory =
@@ -197,6 +280,33 @@ export interface TkdnCostBreakdown {
   directLaborWNA: number;
   factoryOverheadDomestic: number;
   factoryOverheadImported: number;
+  // Permenperin 35/2025 statutory additions:
+  hasDomesticFactory?: boolean; // Active manufacturing facility in Indonesia & >= 50% WNI (Baseline 25% floor)
+  rdDomesticBonusPercentage?: number; // Local Research & Development bonus (Max +20.0%)
+  bmpScore?: number; // Bobot Manfaat Perusahaan based on 15 criteria (Max +15.0%)
+  calculationMethod?: 'PERMENPERIN_35_2025' | 'LEGACY_COST_BASED';
+  productCategoryWeightProfile?: 'STANDARD_MANUFACTURING' | 'ELECTRONICS_DIGITAL' | 'HEAVY_EQUIPMENT' | 'PHARMA_CHEMICAL';
+}
+
+export interface TkdnCalculationResult {
+  tkdnPercentage: number; // Final statutory TKDN percentage
+  baseProductionTkdn: number; // Raw weighted factor score (Material 75%, Labor 10%, Overhead 15%)
+  isFactoryIncentiveApplied: boolean; // True if 25% baseline threshold was triggered
+  rdBonusPercentage: number; // R&D incentive added
+  materialTkdn: number; // % Domestic material
+  laborTkdn: number; // % Domestic labor (WNI)
+  overheadTkdn: number; // % Domestic overhead
+  materialWeightedScore: number; // materialTkdn * 0.75
+  laborWeightedScore: number; // laborTkdn * 0.10
+  overheadWeightedScore: number; // overheadTkdn * 0.15
+  kdnTotal: number; // Total nominal KDN
+  grandTotal: number; // Total nominal COGS
+  combinedScoreWithBmp: number; // TKDN + BMP
+  regulatoryStandard: string; // 'Permenperin No. 35/2025'
+  meetsBasicTender: boolean; // >= 25%
+  meetsEkatalogPriority: boolean; // >= 40% (TKDN + BMP)
+  meetsHighDomestic: boolean; // >= 60%
+  certificateValidityYears: number; // 5 years under Permenperin 35/2025
 }
 
 export type ActivityType =
@@ -236,6 +346,7 @@ export interface ConsultingProject {
   clientName: string;
   productOrServiceName: string;
   companyType: CompanyType;
+  projectCategory?: EngagementCategory;
   industry: string;
   kbliCode: string;
   serviceType: ServiceType;
@@ -262,6 +373,14 @@ export interface ConsultingProject {
   activities: ProjectActivity[];
   tags: string[];
   customMilestones?: EvaluatedMilestone[];
+  deletedMilestoneIds?: string[];
+  milestoneDocRequirements?: Record<
+    string,
+    {
+      requiredDocTypes?: DocumentType[];
+      optionalDocTypes?: DocumentType[];
+    }
+  >;
   manualMilestoneSignoffs?: Record<
     string,
     {
@@ -274,6 +393,7 @@ export interface ConsultingProject {
 }
 
 export type UserRole =
+  | 'MASTER_ADMIN'
   | 'DIRECTOR'
   | 'LEAD_CONSULTANT'
   | 'TECHNICAL_CONSULTANT'
@@ -281,8 +401,28 @@ export type UserRole =
   | 'FINANCE_OFFICER'
   | 'CLIENT_VIEWER';
 
+export interface RoleDefinition {
+  role: UserRole;
+  title: string;
+  department: string;
+  color: string;
+  desc: string;
+  defaultPermissions: UserPermission[];
+  isCustomizable?: boolean;
+}
+
+export type RoleDefinitionsMap = Record<UserRole, RoleDefinition>;
+
+export interface RoleGovernanceMeta {
+  title: string;
+  desc: string;
+}
+
 export type UserPermission =
   | 'MANAGE_USERS_ROLES'
+  | 'VERIFY_NEW_USERS'
+  | 'MANAGE_SERVICE_TYPES'
+  | 'MANAGE_DOCUMENT_TYPES'
   | 'VIEW_PROJECTS'
   | 'CREATE_PROJECTS'
   | 'EDIT_PROJECTS'
@@ -305,7 +445,7 @@ export interface AppUser {
   roleTitle: string;
   department: string;
   avatar: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION';
   permissions: UserPermission[];
   specialization?: string[];
   activeTaskCount?: number;
@@ -314,9 +454,33 @@ export interface AppUser {
   lastLoginAt?: string;
   clientCompany?: string; // For CLIENT_VIEWER
   pin?: string;
+  registeredAt?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  verificationNotes?: string;
+  bio?: string;
+  registrationNumber?: string; // e.g. Asesor TKDN ID / Auditor License / SKA
+  themeAccent?: 'indigo' | 'emerald' | 'amber' | 'blue' | 'purple' | 'rose' | 'slate' | 'teal';
+  signatureText?: string;
+  signatureImage?: string;
+  notificationPreferences?: {
+    emailNotifications: boolean;
+    whatsappAlerts: boolean;
+    inAppDispatches: boolean;
+    weeklySummary: boolean;
+  };
 }
 
 export interface TeamMember extends AppUser {}
+
+export interface DeletedUserRecord {
+  id: string;
+  username: string;
+  email: string;
+  name?: string;
+  deletedAt: string;
+  deletedBy: string;
+}
 
 export type TransactionType = 'INCOME' | 'EXPENSE';
 
@@ -327,9 +491,18 @@ export type IncomeCategory =
   | 'LEGAL_RETAINER'
   | 'SUCCESS_FEE'
   | 'TRAINING_WORKSHOP'
+  | 'BANK_LOAN_DISBURSEMENT'
   | 'OTHER_INCOME';
 
 export type ExpenseCategory =
+  | 'LISTRIK'
+  | 'GAJI_KARYAWAN'
+  | 'MAKAN_MINUM'
+  | 'ENTERTAINMENT'
+  | 'TRANSPORTASI'
+  | 'AKOMODASI'
+  | 'UANG_RAPAT'
+  | 'LAIN_LAIN'
   | 'SURVEYOR_AUDIT_FEES'
   | 'REGULATORY_FILING'
   | 'CONSULTANT_SALARIES'
@@ -338,19 +511,118 @@ export type ExpenseCategory =
   | 'SOFTWARE_CLOUD'
   | 'MARKETING_ACQUISITION'
   | 'TAX_PPH_PPN'
+  | 'BANK_INTEREST'
+  | 'BANK_LOAN_PRINCIPAL'
+  | 'BANK_LOAN_INTEREST'
+  | 'BANK_LOAN_ADMIN_FEE'
+  | 'SEWA_KANTOR'
+  | 'OFFICE_UTILITIES_EXPENSE'
   | 'MISCELLANEOUS_EXPENSE';
 
-export type TransactionCategory = IncomeCategory | ExpenseCategory;
+export type TransactionCategory = IncomeCategory | ExpenseCategory | string;
+
+export interface LoanInstallmentScheduleItem {
+  monthNumber: number;
+  dueDate: string;
+  beginningBalance: number;
+  principalPayment: number;
+  interestPayment: number;
+  totalPayment: number;
+  endingBalance: number;
+  isPaid: boolean;
+  paidAt?: string;
+  transactionIds?: string[];
+  paymentType?: 'INTEREST_ONLY' | 'PRINCIPAL_AND_INTEREST' | 'BALLOON_PAYOFF';
+}
+
+export type LoanFacilityType = 'REVOLVING' | 'NON_REVOLVING' | 'OTHER';
+
+export interface BankLoan {
+  id: string;
+  loanName: string;
+  bankName: string;
+  loanNumber?: string;
+  accountNumber?: string;
+  purpose?: string;
+  facilityType?: LoanFacilityType; // 'REVOLVING' (KMK/Rekening Koran) vs 'NON_REVOLVING' (Term Loan)
+  principalAmount: number;
+  annualInterestRate: number; // in percentage e.g. 9.5
+  tenureMonths: number;
+  startDate: string;
+  paymentChannelId?: string;
+  interestType?: 'FLAT' | 'EFFECTIVE';
+  monthlyPrincipal: number;
+  monthlyInterest: number;
+  monthlyInstallment: number;
+  totalInterest: number;
+  totalPayment: number;
+  remainingPrincipal: number;
+  paidPrincipal: number;
+  paidInterest: number;
+  status: 'ACTIVE' | 'PAID_OFF' | 'DRAFT';
+  isDisbursed: boolean;
+  disbursedAt?: string;
+  disbursementTransactionId?: string;
+  schedule?: LoanInstallmentScheduleItem[];
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+}
+
+export interface TransactionCategoryDefinition {
+  id: string;
+  name: string;
+  type: TransactionType;
+  group?: string;
+  description?: string;
+  isDefault?: boolean;
+  color?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  createdAt?: string;
+  createdBy?: string;
+}
+
+export type PaymentChannelCategory = 'BANK_TRANSFER' | 'CARD' | 'CASH' | 'DIGITAL' | 'OTHER';
+
+export interface PaymentChannelDefinition {
+  id: string; // e.g. 'BANK_TRANSFER_BRI', 'BANK_TRANSFER_BCA', or custom ID
+  name: string; // Display label e.g. 'BRI Corporate Transfer'
+  shortName?: string; // Short badge label e.g. 'Bank BRI'
+  accountNumber?: string; // e.g. '0206-01-002980-30-5'
+  accountHolder?: string; // e.g. 'PT GAP CONSULTING INDONESIA'
+  category?: PaymentChannelCategory;
+  description?: string;
+  isDefault?: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  badgeColor?: string;
+  createdAt?: string;
+  createdBy?: string;
+}
 
 export type PaymentMethod =
   | 'BANK_TRANSFER_BCA'
   | 'BANK_TRANSFER_MANDIRI'
   | 'BANK_TRANSFER_BNI'
+  | 'BANK_TRANSFER_BRI'
+  | 'BANK_TRANSFER_BSI'
   | 'CORPORATE_CARD'
   | 'PETTY_CASH'
-  | 'VIRTUAL_ACCOUNT';
+  | 'VIRTUAL_ACCOUNT'
+  | 'QRIS_PAYMENT'
+  | (string & {});
 
-export type TransactionStatus = 'CLEARED' | 'PENDING' | 'OVERDUE';
+export type TransactionStatus = 'CLEARED' | 'PENDING' | 'OVERDUE' | 'TERHUTANG' | 'HUTANG';
+
+export interface CompanyCapitalSettings {
+  authorizedCapital: number; // Modal Dasar Perusahaan (e.g. Rp 5.000.000.000)
+  paidInCapital: number; // Modal Ditempatkan / Disetor (e.g. Rp 1.250.000.000)
+  additionalCapital: number; // Modal Tambahan / Agio Modal / Tambahan Modal Disetor
+  retainedEarningsOpening?: number; // Saldo Laba Ditahan Periode Lalu
+  notes?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
 
 export interface FinancialTransaction {
   id: string;
@@ -366,8 +638,66 @@ export interface FinancialTransaction {
   paymentMethod: PaymentMethod;
   referenceNumber?: string;
   status: TransactionStatus;
+  isFromDebt?: boolean;
+  loanId?: string;
   notes?: string;
   recordedBy: string;
   attachmentName?: string;
+  attachmentUrl?: string;
+  attachmentType?: 'pdf' | 'image' | 'excel' | 'word' | 'other';
+  attachmentSize?: string;
   createdAt: string;
+}
+
+export type TaxType =
+  | 'PPN' // Pajak Pertambahan Nilai (PPN 11% / 12%)
+  | 'PPH_21' // PPh Pasal 21 (Gaji Pegawai, Tenaga Ahli, Asesor & Konsultan)
+  | 'PPH_23' // PPh Pasal 23 (Jasa Konsultasi / Jasa Surveyor / Sewa Harta 2%)
+  | 'PPH_4_2' // PPh Final Pasal 4 ayat (2) (Sewa Gedung Kantor 10%, Konstruksi)
+  | 'PPH_FINAL_UMKM' // PPh Final PP 23/55 (0.5% Omzet Bruto)
+  | 'PPH_25_29' // PPh Badan Pasal 25 / 29 Tahunan
+  | 'OTHER_TAX';
+
+export type TaxObligationStatus = 'TERHUTANG' | 'PAID' | 'OVERDUE' | 'DRAFT';
+
+export interface TaxObligation {
+  id: string;
+  taxType: TaxType;
+  taxPeriod: string; // e.g. "Agustus 2026", "2026-08", "Masa 08/2026"
+  taxYear: number;
+  taxMonth?: number; // 1-12
+  title: string;
+  description?: string;
+  taxableBaseAmount?: number; // DPP (Dasar Pengenaan Pajak)
+  taxRatePercent?: number; // e.g. 11%, 2%, 10%, 0.5%
+  
+  // PPN Specific Breakdown
+  ppnOutputAmount?: number; // PPN Keluaran (Faktur Pajak Keluaran ke Klien)
+  ppnInputAmount?: number; // PPN Masukan (Faktur Pajak Masukan dari Vendor)
+  
+  // Final Payable Tax Amount (Hutang Pajak)
+  taxAmount: number; // Nominal Pajak Terhutang (IDR)
+  paidAmount: number; // Nominal yang sudah disetor (IDR)
+  remainingAmount: number; // Sisa Hutang Pajak Terhutang (IDR)
+  
+  status: TaxObligationStatus;
+  dueDate: string; // Tanggal Jatuh Tempo Pembayaran/Pelaporan
+  
+  // Payment & Settlement Info (NTPN & ID Billing)
+  paidAt?: string;
+  ntpnNumber?: string; // Nomor Transaksi Penerimaan Negara (NTPN)
+  billingCode?: string; // Kode ID Billing DJP (15 digit)
+  taxInvoiceNumber?: string; // Nomor Seri Faktur Pajak (NSFP) / Bukti Potong (Bupot)
+  paymentChannelId?: string; // Rekening Kas Pengeluaran Pembayar Pajak
+  transactionId?: string; // ID Transaksi Pengeluaran di Buku Kas
+  
+  // Project / Counterparty Association
+  projectId?: string;
+  projectCode?: string;
+  counterpartyName?: string; // Klien / Vendor / Surveyor / KPP Pratama
+  
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
 }

@@ -29,10 +29,12 @@ import {
   Receipt,
   CreditCard,
   CheckSquare,
+  Eye,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { TransactionModal } from './finance/TransactionModal';
 import { CategorizedUploadModal } from './CategorizedUploadModal';
+import { DocumentPreviewModal } from './DocumentPreviewModal';
 import { ActivityLog } from './ActivityLog';
 import { CertificationChecklist } from './CertificationChecklist';
 import { evaluateProjectMilestones } from '../utils/checklistGenerator';
@@ -42,6 +44,7 @@ import {
   DocumentType,
   DocumentCategoryGroup,
   DocumentStatus,
+  ProjectDocument,
   ProjectStatus,
   Priority,
   SurveyorBody,
@@ -75,6 +78,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onOpenNewDispositionForProject,
 }) => {
   const {
+    projects,
     updateProject,
     changeProjectStage,
     deleteProject,
@@ -88,7 +92,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     transactions,
     deleteTransaction,
     updateTransaction,
+    consultingServices,
+    isMasterAdmin,
+    paymentChannels,
   } = useProjects();
+
+  const currentProject = useMemo(() => {
+    if (!project) return null;
+    return projects.find((p) => p.id === project.id) || project;
+  }, [projects, project]);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'checklist' | 'dispositions' | 'documents' | 'tkdn' | 'finance' | 'audit'>('overview');
   
@@ -99,18 +111,19 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   // Document sub-tab filter and modal state
   const [docCategorySubTab, setDocCategorySubTab] = useState<DocumentCategoryGroup>('ALL');
   const [isDocUploadModalOpen, setIsDocUploadModalOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<ProjectDocument | null>(null);
   
   // Quick doc upload state
   const [docUploadName, setDocUploadName] = useState('');
   const [docUploadType, setDocUploadType] = useState<DocumentType>('BOM_EXCEL');
   const [docUploadSize, setDocUploadSize] = useState('2.4 MB');
 
-  if (!project) return null;
+  if (!currentProject) return null;
 
   // Real-time evaluation of certification checklist milestones
   const { milestones: evaluatedMilestones, summary: evaluatedSummary } = useMemo(() => {
-    return evaluateProjectMilestones(project);
-  }, [project]);
+    return evaluateProjectMilestones(currentProject);
+  }, [currentProject]);
 
   const projectDispositions = dispositions.filter((d) => d.projectId === project.id);
   const openDispositions = projectDispositions.filter((d) => d.status !== 'COMPLETED');
@@ -186,7 +199,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 <option value="INQUIRY">1. Inquiry & Scoping</option>
                 <option value="GAP_ANALYSIS">2. Gap Analysis</option>
                 <option value="DOC_PREPARATION">3. BOM & Doc Prep</option>
-                <option value="FIELD_VERIFICATION">4. Field Verification (Surveyor)</option>
+                <option value="FIELD_VERIFICATION">4. Field Verification (LVI)</option>
                 <option value="MINISTRY_REVIEW">5. SIINas Kemenperin Review</option>
                 <option value="CERTIFICATE_ISSUED">6. Certificate Issued</option>
               </select>
@@ -331,32 +344,53 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                  <span className="text-[10px] font-bold text-emerald-800 uppercase">TKDN Index</span>
-                  <div className="flex items-baseline gap-2 mt-0.5">
-                    <span className="text-lg font-black font-mono text-emerald-900">
-                      {project.officialVerifiedTkdnPercentage
-                        ? `${project.officialVerifiedTkdnPercentage}%`
-                        : `${project.projectedTkdnPercentage}%`}
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">
-                      / Target {project.targetTkdnPercentage}%
-                    </span>
+                {project.targetTkdnPercentage > 0 ? (
+                  <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase">TKDN Index</span>
+                    <div className="flex items-baseline gap-2 mt-0.5">
+                      <span className="text-lg font-black font-mono text-emerald-900">
+                        {project.officialVerifiedTkdnPercentage
+                          ? `${project.officialVerifiedTkdnPercentage}%`
+                          : `${project.projectedTkdnPercentage}%`}
+                      </span>
+                      <span className="text-xs text-slate-500 font-medium">
+                        / Target {project.targetTkdnPercentage}%
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700 font-medium mt-1">
+                      {isTkdnOnTarget ? 'Meets statutory requirement' : 'Gap optimization needed'}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-emerald-700 font-medium mt-1">
-                    {isTkdnOnTarget ? 'Meets statutory requirement' : 'Gap optimization needed'}
-                  </p>
-                </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200">
+                    <span className="text-[10px] font-bold text-blue-800 uppercase">Kategori Project</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm font-extrabold text-blue-950">
+                        {project.projectCategory === 'COMPANY_LICENSING' ? 'Izin Perusahaan' :
+                         project.projectCategory === 'SOFTWARE_DEV' ? 'Software Development' :
+                         project.projectCategory === 'OTHER_SERVICES' ? 'Lain - Lain' : 'Non-TKDN'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-blue-700 font-medium mt-1">
+                      Non-TKDN Service Scope
+                    </p>
+                  </div>
+                )}
 
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">Surveyor Body</span>
-                  <p className="text-sm font-bold text-slate-900 mt-1">{project.surveyorBody}</p>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">
+                    {project.projectCategory === 'COMPANY_LICENSING' ? 'Instansi / Lembaga' :
+                     project.projectCategory === 'SOFTWARE_DEV' ? 'Engineering Unit' : 'LVI / Surveyor'}
+                  </span>
+                  <p className="text-sm font-bold text-slate-900 mt-1">{project.surveyorBody || '-'}</p>
                   {project.surveyorAuditDate ? (
                     <p className="text-[11px] text-indigo-700 font-semibold mt-1">
                       Audit Site Date: {project.surveyorAuditDate}
                     </p>
                   ) : (
-                    <p className="text-[11px] text-slate-400 mt-1">Site inspection unassigned</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {project.projectCategory === 'SOFTWARE_DEV' ? 'Internal Development' : 'Site inspection unassigned'}
+                    </p>
                   )}
                 </div>
 
@@ -469,7 +503,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         Doc Vault Status
                       </span>
                       <span className="text-xs font-bold text-emerald-400">
-                        {evaluatedSummary.uploadedRequiredDocTypes}/{evaluatedSummary.totalRequiredDocTypes} Dossiers Attached
+                        {evaluatedSummary.uploadedRequiredDocTypes}/{evaluatedSummary.totalRequiredDocTypes} Files Attached
                       </span>
                     </div>
 
@@ -505,7 +539,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           {/* TAB 2: CERTIFICATION CHECKLIST */}
           {activeTab === 'checklist' && (
             <CertificationChecklist
-              project={project}
+              project={currentProject}
               onOpenUploadModal={(docType) => {
                 setDocUploadType(docType || 'BOM_EXCEL');
                 setIsDocUploadModalOpen(true);
@@ -803,7 +837,14 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <p className="font-bold text-xs text-slate-900">{doc.name}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewDoc(doc)}
+                                  className="font-bold text-xs text-slate-900 hover:text-blue-600 transition-colors text-left flex items-center gap-1.5"
+                                >
+                                  <span>{doc.name}</span>
+                                  <Eye className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
+                                </button>
                                 {doc.referenceNumber && (
                                   <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 font-semibold">
                                     #{doc.referenceNumber}
@@ -853,28 +894,48 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                           </div>
 
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setPreviewDoc(doc)}
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold border border-slate-300 flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Preview document & run compliance checks"
+                            >
+                              <Eye className="w-3 h-3 text-slate-500" />
+                              <span>Preview & Check</span>
+                            </button>
+
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded border ${statusInfo.color}`}
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded border ${statusInfo.color} min-w-[75px] text-center inline-block`}
                             >
                               {statusInfo.label}
                             </span>
 
-                            {doc.status !== 'VERIFIED' && (
-                              <button
-                                onClick={() => updateDocumentStatus(project.id, doc.id, 'VERIFIED')}
-                                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded text-[11px] font-bold border border-emerald-300"
-                              >
-                                Verify
-                              </button>
-                            )}
+                            <div className="w-[60px] flex items-center justify-end shrink-0">
+                              {doc.status !== 'VERIFIED' && (
+                                <button
+                                  onClick={() => updateDocumentStatus(project.id, doc.id, 'VERIFIED')}
+                                  className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded text-[11px] font-bold border border-emerald-300 cursor-pointer"
+                                >
+                                  Verify
+                                </button>
+                              )}
+                            </div>
 
                             <button
                               onClick={() => {
-                                if (confirm(`Remove document ${doc.name}?`)) {
+                                if (!isMasterAdmin) {
+                                  alert('Access Denied: Only admin.master (Master Admin) can delete documents.');
+                                  return;
+                                }
+                                if (confirm(`Remove document "${doc.name}"? This action cannot be undone.`)) {
                                   deleteDocument(project.id, doc.id);
                                 }
                               }}
-                              className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                              className={`p-1.5 rounded-lg transition-colors shrink-0 ${
+                                isMasterAdmin
+                                  ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
+                                  : 'text-slate-300 dark:text-slate-600 hover:text-rose-400 cursor-not-allowed opacity-60'
+                              }`}
+                              title={isMasterAdmin ? "Delete document (admin.master)" : "Protected: Only admin.master can delete documents"}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -887,20 +948,30 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: TKDN BREAKDOWN */}
+          {/* TAB 4: TKDN BREAKDOWN (Permenperin 35/2025) */}
           {activeTab === 'tkdn' && (
             <div className="space-y-5">
               {/* Visual Formula Result Card */}
-              <div className="bg-slate-900 text-white rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
+              <div className="bg-slate-900 text-white rounded-xl p-5 flex flex-wrap items-center justify-between gap-4 border border-slate-800">
                 <div>
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
-                    Calculated TKDN Domestic Level
-                  </span>
-                  <div className="text-4xl font-black font-mono text-emerald-400 mt-1">
-                    {calculated.tkdnPercentage}%
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+                      Calculated TKDN Domestic Level
+                    </span>
+                    <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/60 px-2 py-0.5 rounded font-mono font-bold">
+                      Permenperin 35/2025
+                    </span>
+                  </div>
+                  <div className="text-4xl font-black font-mono text-emerald-400 mt-1 flex items-baseline gap-2">
+                    <span>{calculated.tkdnPercentage}%</span>
+                    {calculated.isFactoryIncentiveApplied && (
+                      <span className="text-xs font-sans font-bold text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-700/60">
+                        Incentive Floor Applied (25% Min)
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-400 mt-1">
-                    Calculated from Direct Material, Direct Labor, and Overhead ratios
+                    Weighted-factor formula: (Material 75%) + (Labor 10%) + (Overhead 15%) • 5-Year Certificate Validity
                   </p>
                 </div>
 
@@ -912,8 +983,34 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     Domestic Cost Share: <strong className="text-emerald-300 font-mono">{formatIDR(calculated.kdnTotal)}</strong>
                   </p>
                   <p className="text-slate-400">
-                    Total Cost of Goods Sold: <strong className="text-white font-mono">{formatIDR(calculated.grandTotal)}</strong>
+                    Total Production COGS: <strong className="text-white font-mono">{formatIDR(calculated.grandTotal)}</strong>
                   </p>
+                </div>
+              </div>
+
+              {/* Permenperin 35/2025 Statutory Weighted Formula Pipeline */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Permenperin 35/2025 Weighted Factor Decomposition
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-600 font-semibold">
+                    Base Weighted Score: {calculated.baseProductionTkdn}%
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+                    <span className="text-slate-600">Material (75%):</span>
+                    <span className="font-bold text-emerald-700">+{calculated.materialWeightedScore}%</span>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+                    <span className="text-slate-600">Labor WNI (10%):</span>
+                    <span className="font-bold text-blue-700">+{calculated.laborWeightedScore}%</span>
+                  </div>
+                  <div className="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+                    <span className="text-slate-600">Overhead (15%):</span>
+                    <span className="font-bold text-teal-700">+{calculated.overheadWeightedScore}%</span>
+                  </div>
                 </div>
               </div>
 
@@ -923,7 +1020,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-800">
                     <span>1. Direct Material (BOM)</span>
-                    <span className="font-mono text-emerald-700">{calculated.materialTkdn}%</span>
+                    <div className="text-right">
+                      <span className="font-mono text-emerald-700">{calculated.materialTkdn}%</span>
+                      <span className="text-[10px] text-slate-400 block font-normal">Bobot 75%</span>
+                    </div>
                   </div>
                   <div className="text-[11px] text-slate-600 space-y-1 pt-1 border-t border-slate-200">
                     <div className="flex justify-between">
@@ -941,7 +1041,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-800">
                     <span>2. Direct Labor (Payroll)</span>
-                    <span className="font-mono text-blue-700">{calculated.laborTkdn}%</span>
+                    <div className="text-right">
+                      <span className="font-mono text-blue-700">{calculated.laborTkdn}%</span>
+                      <span className="text-[10px] text-slate-400 block font-normal">Bobot 10%</span>
+                    </div>
                   </div>
                   <div className="text-[11px] text-slate-600 space-y-1 pt-1 border-t border-slate-200">
                     <div className="flex justify-between">
@@ -959,7 +1062,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-800">
                     <span>3. Factory Overhead</span>
-                    <span className="font-mono text-teal-700">{calculated.overheadTkdn}%</span>
+                    <div className="text-right">
+                      <span className="font-mono text-teal-700">{calculated.overheadTkdn}%</span>
+                      <span className="text-[10px] text-slate-400 block font-normal">Bobot 15%</span>
+                    </div>
                   </div>
                   <div className="text-[11px] text-slate-600 space-y-1 pt-1 border-t border-slate-200">
                     <div className="flex justify-between">
@@ -1079,14 +1185,14 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
-                        <th className="py-2.5 px-3">Date & Ref</th>
-                        <th className="py-2.5 px-3">Description</th>
-                        <th className="py-2.5 px-3">Category</th>
-                        <th className="py-2.5 px-3">Party & Channel</th>
-                        <th className="py-2.5 px-3">Amount (IDR)</th>
-                        <th className="py-2.5 px-3">Status</th>
-                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase text-center">
+                        <th className="py-2.5 px-3 text-center">Date & Ref</th>
+                        <th className="py-2.5 px-3 text-center">Description</th>
+                        <th className="py-2.5 px-3 text-center">Category</th>
+                        <th className="py-2.5 px-3 text-center">Party & Channel</th>
+                        <th className="py-2.5 px-3 text-center">Amount (IDR)</th>
+                        <th className="py-2.5 px-3 text-center">Status</th>
+                        <th className="py-2.5 px-3 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1108,10 +1214,24 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                               <td className="py-2.5 px-3">
                                 <p className="font-semibold text-slate-800">{t.description}</p>
                                 {t.attachmentName && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded font-medium mt-0.5">
-                                    <Paperclip className="w-2.5 h-2.5" />
-                                    {t.attachmentName}
-                                  </span>
+                                  t.attachmentUrl ? (
+                                    <a
+                                      href={t.attachmentUrl}
+                                      download={t.attachmentName}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[10px] text-indigo-700 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-900 px-1.5 py-0.5 rounded font-medium mt-0.5 border border-indigo-200 transition-colors"
+                                      title="Download / View Attachment"
+                                    >
+                                      <Paperclip className="w-2.5 h-2.5" />
+                                      <span className="truncate max-w-[140px]">{t.attachmentName}</span>
+                                    </a>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded font-medium mt-0.5">
+                                      <Paperclip className="w-2.5 h-2.5" />
+                                      <span className="truncate max-w-[140px]">{t.attachmentName}</span>
+                                    </span>
+                                  )
                                 )}
                               </td>
                               <td className="py-2.5 px-3">
@@ -1123,11 +1243,11 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                               </td>
                               <td className="py-2.5 px-3 text-slate-700">
                                 <div className="font-medium">{t.clientOrVendorName}</div>
-                                <div className="text-[10px] text-slate-400">{getPaymentMethodLabel(t.paymentMethod)}</div>
+                                <div className="text-[10px] text-slate-400">{getPaymentMethodLabel(t.paymentMethod, paymentChannels)}</div>
                               </td>
                               <td className="py-2.5 px-3 font-mono font-bold whitespace-nowrap">
                                 <span className={t.type === 'INCOME' ? 'text-emerald-600' : 'text-rose-600'}>
-                                  {t.type === 'INCOME' ? '+' : '-'}Rp {t.amountIDR.toLocaleString('id-ID')}
+                                  {t.type === 'INCOME' ? '+' : '-'}Rp {(t.amountIDR || 0).toLocaleString('id-ID')}
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 whitespace-nowrap">
@@ -1138,12 +1258,23 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                                   {badge.label}
                                 </button>
                               </td>
-                              <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                              <td className="py-2.5 px-3 text-center whitespace-nowrap">
                                 <button
                                   onClick={() => {
-                                    if (confirm('Delete this transaction?')) deleteTransaction(t.id);
+                                    if (!isMasterAdmin) {
+                                      alert('Access Denied: Only admin.master (Master Admin) can delete transactions.');
+                                      return;
+                                    }
+                                    if (confirm(`Delete transaction "${t.transactionNumber}"? This action cannot be undone.`)) {
+                                      deleteTransaction(t.id);
+                                    }
                                   }}
-                                  className="text-slate-400 hover:text-rose-600 p-1"
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    isMasterAdmin
+                                      ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
+                                      : 'text-slate-300 dark:text-slate-600 hover:text-rose-400 cursor-not-allowed opacity-60'
+                                  }`}
+                                  title={isMasterAdmin ? "Delete transaction (admin.master)" : "Protected: Only admin.master can delete transactions"}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -1182,22 +1313,25 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (confirm(`Are you sure you want to delete project ${project.code}?`)) {
-                  deleteProject(project.id);
-                  onClose();
-                }
-              }}
-              className="px-3 py-1.5 text-xs text-red-600 hover:text-red-800 font-semibold hover:bg-red-50 rounded-lg transition-colors"
-            >
-              Delete Project
-            </button>
+            {isMasterAdmin && (
+              <button
+                onClick={() => {
+                  if (confirm(`Are you sure you want to permanently delete project ${project.code} (${project.title})? This will delete the project regardless of its status/data.`)) {
+                    deleteProject(project.id);
+                    onClose();
+                  }
+                }}
+                className="px-3 py-1.5 text-xs text-red-600 hover:text-red-800 font-semibold hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                title="Delete Project (admin_master only)"
+              >
+                Delete Project
+              </button>
+            )}
             <button
               onClick={onClose}
               className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-xs"
             >
-              Close Dossier
+              Close File
             </button>
           </div>
         </div>
@@ -1217,6 +1351,14 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
         onClose={() => setIsDocUploadModalOpen(false)}
         initialProject={project}
         initialCategory={docCategorySubTab === 'ALL' ? 'OFFER_QUOTATION' : docCategorySubTab}
+      />
+
+      {/* Document Full Preview & Compliance Inspector Modal */}
+      <DocumentPreviewModal
+        isOpen={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        document={previewDoc}
+        project={project}
       />
     </div>
   );

@@ -15,6 +15,7 @@ import { useProjects } from '../context/ProjectContext';
 import {
   ConsultingProject,
   DispositionCategory,
+  DispositionStatus,
   Priority,
   ChecklistItem,
   JobDisposition,
@@ -33,13 +34,22 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
   initialProject,
   editingDisposition,
 }) => {
-  const { projects, teamMembers, currentUser, addDisposition, updateDisposition } = useProjects();
+  const {
+    projects,
+    teamMembers,
+    currentUser,
+    addDisposition,
+    updateDisposition,
+    deleteDisposition,
+    isMasterAdmin,
+  } = useProjects();
 
   const [projectId, setProjectId] = useState<string>('');
   const [title, setTitle] = useState<string>('');
   const [category, setCategory] = useState<DispositionCategory>('TKDN_CALCULATION');
   const [assignedToId, setAssignedToId] = useState<string>('');
   const [priority, setPriority] = useState<Priority>('HIGH');
+  const [status, setStatus] = useState<DispositionStatus>('PENDING');
   const [dueDate, setDueDate] = useState<string>('');
   const [instructions, setInstructions] = useState<string>('');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
@@ -56,6 +66,7 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
       setCategory(editingDisposition.category);
       setAssignedToId(editingDisposition.assignedToId);
       setPriority(editingDisposition.priority);
+      setStatus(editingDisposition.status || 'PENDING');
       setDueDate(editingDisposition.dueDate);
       setInstructions(editingDisposition.instructions);
       setChecklist(editingDisposition.checklist || []);
@@ -69,6 +80,7 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
       setTitle('');
       setCategory('TKDN_CALCULATION');
       setPriority('HIGH');
+      setStatus('PENDING');
       // Default due date: 7 days from now
       const in7Days = new Date();
       in7Days.setDate(in7Days.getDate() + 7);
@@ -119,6 +131,7 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
         assignedToRole: selectedAssignee.role,
         assignedToAvatar: selectedAssignee.avatar,
         priority,
+        status,
         dueDate,
         instructions: instructions.trim(),
         checklist,
@@ -139,7 +152,7 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
         assignedByName: currentUser.name,
         dueDate,
         priority,
-        status: 'PENDING',
+        status: status || 'PENDING',
         instructions: instructions.trim(),
         checklist,
       });
@@ -195,7 +208,7 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
             </select>
             {selectedProject && (
               <p className="text-[11px] text-slate-500 mt-1">
-                KBLI: <span className="font-mono text-slate-700">{selectedProject.kbliCode}</span> | Surveyor:{' '}
+                KBLI: <span className="font-mono text-slate-700">{selectedProject.kbliCode}</span> | LVI:{' '}
                 <span className="font-semibold text-slate-700">{selectedProject.surveyorBody}</span>
               </p>
             )}
@@ -216,8 +229,8 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
             />
           </div>
 
-          {/* Category, Priority, and Due Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Category, Priority, Status, and Due Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Category */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -230,7 +243,7 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
               >
                 <option value="TKDN_CALCULATION">TKDN Calculation & BOM</option>
                 <option value="DOC_COLLECTION">Document Collection</option>
-                <option value="FIELD_AUDIT_PREP">Field Audit (Surveyor) Prep</option>
+                <option value="FIELD_AUDIT_PREP">Field Audit (LVI) Prep</option>
                 <option value="REGULATORY_SUBMISSION">SIINas / OSS-RBA Submission</option>
                 <option value="LEGAL_COMPLIANCE">Legal & Permits Review</option>
                 <option value="CLIENT_CONSULTATION">Client Consultation & Workshop</option>
@@ -251,6 +264,24 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
                 <option value="HIGH">High (3 - 5 days)</option>
                 <option value="MEDIUM">Medium (1 - 2 weeks)</option>
                 <option value="LOW">Low (Standard)</option>
+              </select>
+            </div>
+
+            {/* Status (when editing or dispatching) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Task Status
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as DispositionStatus)}
+                className="w-full text-xs bg-slate-50 border border-slate-200 text-slate-900 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 font-medium"
+              >
+                <option value="PENDING">Pending Assignment</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="AWAITING_CLIENT">Awaiting Client Data</option>
+                <option value="UNDER_REVIEW">Under Lead Review</option>
+                <option value="COMPLETED">Done / Approved</option>
               </select>
             </div>
 
@@ -381,18 +412,38 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
 
           {/* Footer Actions */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              {/* Master Admin Delete Option: Available when editing any task or completed task */}
+              {editingDisposition && isMasterAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Hapus tugas "${editingDisposition.title}" (${editingDisposition.clientName}) secara permanen dari sistem dan database? Tindakan ini tidak dapat dibatalkan.`)) {
+                      deleteDisposition(editingDisposition.id);
+                      onClose();
+                    }
+                  }}
+                  className="px-3 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Hapus Tugas</span>
+                </button>
+              )}
+            </div>
+
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-700/20 transition-all hover:scale-[1.01]"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-700/20 transition-all hover:scale-[1.01] cursor-pointer"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{editingDisposition ? 'Update Disposition' : 'Dispatch Disposition'}</span>
             </button>
           </div>

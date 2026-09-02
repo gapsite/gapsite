@@ -356,7 +356,7 @@ export const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({
     { id: 'INQUIRY', label: '1. Scoping & NIB', color: 'bg-slate-400', order: 1 },
     { id: 'GAP_ANALYSIS', label: '2. Gap Analysis', color: 'bg-amber-500', order: 2 },
     { id: 'DOC_PREPARATION', label: '3. BOM & Cost Prep', color: 'bg-blue-500', order: 3 },
-    { id: 'FIELD_VERIFICATION', label: '4. Surveyor Audit', color: 'bg-indigo-500', order: 4 },
+    { id: 'FIELD_VERIFICATION', label: '4. LVI Audit', color: 'bg-indigo-500', order: 4 },
     { id: 'MINISTRY_REVIEW', label: '5. SIINas Review', color: 'bg-purple-500', order: 5 },
     { id: 'CERTIFICATE_ISSUED', label: '6. TKDN Certified', color: 'bg-emerald-500', order: 6 },
   ];
@@ -466,7 +466,7 @@ export const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({
                   ? 'bg-indigo-600 text-white'
                   : 'bg-slate-100 text-slate-400 line-through'
               }`}
-              title="Toggle Surveyor Field Audit Pins"
+              title="Toggle LVI Field Audit Pins"
             >
               🔍 Audit
             </button>
@@ -950,11 +950,11 @@ export const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({
                           style={{ left: `${surveyorAuditX}px` }}
                           onMouseEnter={(e) =>
                             handleMilestoneHover(e, {
-                              title: `Surveyor Field Audit (${project.surveyorBody})`,
+                              title: `LVI Field Audit (${project.surveyorBody})`,
                               subtitle: project.clientName,
                               date: project.surveyorAuditDate || '',
                               type: 'surveyor_audit',
-                              assignee: project.surveyorAuditorName || 'Assigned Lead Surveyor',
+                              assignee: project.surveyorAuditorName || 'Assigned Lead LVI Auditor',
                               details: `Site verification and factory inspection at plant location.`,
                             })
                           }
@@ -962,7 +962,7 @@ export const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({
                         >
                           <div className="px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold text-[9px] shadow-sm border-2 border-white flex items-center gap-1">
                             <ShieldCheck className="w-2.5 h-2.5 text-indigo-200" />
-                            <span>Audit: {project.surveyorBody.split(' ')[1] || 'Surveyor'}</span>
+                            <span>LVI: {project.surveyorBody.split(' ')[1] || 'LVI'}</span>
                           </div>
                         </div>
                       )}
@@ -1193,7 +1193,7 @@ export const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({
             <span className="px-1.5 py-0.2 rounded bg-indigo-600 text-white text-[9px] font-bold">
               🔍 Audit
             </span>
-            <span>Surveyor Field Audit</span>
+            <span>LVI Field Audit</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -1213,7 +1213,7 @@ export const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({
         </div>
 
         <div className="text-[11px] text-slate-400 font-medium">
-          Click any project row or milestone pin to inspect full compliance dossier
+          Click any project row or milestone pin to inspect full compliance file
         </div>
       </div>
     </div>

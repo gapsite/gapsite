@@ -4,10 +4,12 @@ import {
   Priority,
   ProjectStatus,
   DocumentType,
+  DocumentTypeDefinition,
   DocumentCategoryGroup,
   DocumentStatus,
   DispositionStatus,
 } from '../types';
+import { DEFAULT_DOCUMENT_TYPES } from '../data/documentTypesData';
 
 export const formatIDR = (amount: number): string => {
   return new Intl.NumberFormat('id-ID', {
@@ -16,6 +18,9 @@ export const formatIDR = (amount: number): string => {
     maximumFractionDigits: 0,
   }).format(amount);
 };
+
+export const formatCurrencyIDR = formatIDR;
+export const formatRupiah = formatIDR;
 
 export const formatIDRShort = (amount: number): string => {
   if (amount >= 1_000_000_000) {
@@ -36,7 +41,7 @@ export const getStageName = (stage: ProjectStage): string => {
     case 'DOC_PREPARATION':
       return '3. BOM & Doc Prep';
     case 'FIELD_VERIFICATION':
-      return '4. Field Audit (Surveyor)';
+      return '4. Field Audit (LVI)';
     case 'MINISTRY_REVIEW':
       return '5. SIINas Kemenperin Review';
     case 'CERTIFICATE_ISSUED':
@@ -69,7 +74,19 @@ export const getStageColor = (stage: ProjectStage) => {
   }
 };
 
-export const getServiceTypeName = (type: ServiceType): string => {
+import { DEFAULT_CONSULTING_SERVICES } from '../data/serviceTypesData';
+
+export const getServiceTypeName = (
+  type: ServiceType,
+  services?: import('../types').ConsultingServiceConfig[]
+): string => {
+  if (services && services.length > 0) {
+    const found = services.find((s) => s.id === type);
+    if (found) return found.name;
+  }
+  const defaultFound = DEFAULT_CONSULTING_SERVICES.find((s) => s.id === type);
+  if (defaultFound) return defaultFound.name;
+
   switch (type) {
     case 'TKDN_BARANG':
       return 'TKDN Barang (Goods)';
@@ -84,26 +101,39 @@ export const getServiceTypeName = (type: ServiceType): string => {
     case 'AMDAL_UKL_UPL':
       return 'AMDAL / UKL-UPL Permit';
     default:
+      if (typeof type === 'string') {
+        return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      }
       return type;
   }
 };
 
-export const getServiceTypeBadgeColor = (type: ServiceType): string => {
+export const getServiceTypeBadgeColor = (
+  type: ServiceType,
+  services?: import('../types').ConsultingServiceConfig[]
+): string => {
+  if (services && services.length > 0) {
+    const found = services.find((s) => s.id === type);
+    if (found && found.badgeColor) return found.badgeColor;
+  }
+  const defaultFound = DEFAULT_CONSULTING_SERVICES.find((s) => s.id === type);
+  if (defaultFound && defaultFound.badgeColor) return defaultFound.badgeColor;
+
   switch (type) {
     case 'TKDN_BARANG':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      return 'bg-emerald-100 text-emerald-800 border-emerald-300';
     case 'TKDN_JASA':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-blue-100 text-blue-800 border-blue-300';
     case 'BMP_COMPANY':
-      return 'bg-teal-100 text-teal-800 border-teal-200';
+      return 'bg-teal-100 text-teal-800 border-teal-300';
     case 'OSS_RBA_NIB':
-      return 'bg-amber-100 text-amber-800 border-amber-200';
+      return 'bg-amber-100 text-amber-800 border-amber-300';
     case 'SNI_CERTIFICATION':
-      return 'bg-rose-100 text-rose-800 border-rose-200';
+      return 'bg-rose-100 text-rose-800 border-rose-300';
     case 'AMDAL_UKL_UPL':
-      return 'bg-cyan-100 text-cyan-800 border-cyan-200';
+      return 'bg-cyan-100 text-cyan-800 border-cyan-300';
     default:
-      return 'bg-slate-100 text-slate-800 border-slate-200';
+      return 'bg-indigo-100 text-indigo-800 border-indigo-300';
   }
 };
 
@@ -137,7 +167,17 @@ export const getStatusBadge = (status: ProjectStatus) => {
   }
 };
 
-export const getDocTypeName = (type: DocumentType): string => {
+export const getDocTypeName = (
+  type: DocumentType,
+  customDocTypes?: DocumentTypeDefinition[]
+): string => {
+  if (customDocTypes && customDocTypes.length > 0) {
+    const found = customDocTypes.find((d) => d.id === type);
+    if (found) return found.name;
+  }
+  const defaultFound = DEFAULT_DOCUMENT_TYPES.find((d) => d.id === type);
+  if (defaultFound) return defaultFound.name;
+
   switch (type) {
     // Offer & Quotations
     case 'OFFER_QUOTATION_LETTER':
@@ -161,7 +201,7 @@ export const getDocTypeName = (type: DocumentType): string => {
     case 'EXPENSE_PROOF_STRUK':
       return 'Expense Receipt / Struk Pengeluaran';
     case 'SURVEYOR_FEE_RECEIPT':
-      return 'Surveyor Official Fee Proof (Sucofindo/SI)';
+      return 'LVI Official Fee Proof (Sucofindo / SI / BKI / etc)';
     case 'TRAVEL_LODGING_RECEIPT':
       return 'Site Visit Flight & Hotel Receipt';
     case 'GOV_PNBP_FILING_RECEIPT':
@@ -183,7 +223,7 @@ export const getDocTypeName = (type: DocumentType): string => {
     case 'SIINAS_PROFILE':
       return 'SIINas Account & Submission';
     case 'AUDIT_VERIFICATION_REPORT':
-      return 'Surveyor Verification Report';
+      return 'LVI Verification Report (BAV)';
     case 'LEGAL_PERMIT':
       return 'Legal / Environmental Permit';
     case 'ISO_QMS_CERT':
@@ -195,11 +235,24 @@ export const getDocTypeName = (type: DocumentType): string => {
     case 'DEED_AHU_LEGAL':
       return 'Company Deed & AHU Kemenkumham Legal';
     default:
+      if (typeof type === 'string') {
+        return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      }
       return type;
   }
 };
 
-export const getDocCategoryGroup = (type: DocumentType): DocumentCategoryGroup => {
+export const getDocCategoryGroup = (
+  type: DocumentType,
+  customDocTypes?: DocumentTypeDefinition[]
+): DocumentCategoryGroup => {
+  if (customDocTypes && customDocTypes.length > 0) {
+    const found = customDocTypes.find((d) => d.id === type);
+    if (found) return found.category;
+  }
+  const defaultFound = DEFAULT_DOCUMENT_TYPES.find((d) => d.id === type);
+  if (defaultFound) return defaultFound.category;
+
   switch (type) {
     case 'OFFER_QUOTATION_LETTER':
     case 'CLIENT_CONTRACT_SPK':
@@ -240,26 +293,51 @@ export const getDocCategoryGroup = (type: DocumentType): DocumentCategoryGroup =
   }
 };
 
-export const getDocCategoryGroupName = (group: DocumentCategoryGroup): string => {
+export const getDocCategoryGroupName = (
+  group: DocumentCategoryGroup,
+  categories?: import('../types').DocumentCategoryDefinition[]
+): string => {
+  if (categories && categories.length > 0) {
+    const found = categories.find((c) => c.id === group);
+    if (found) return found.name;
+  }
+
   switch (group) {
     case 'ALL':
       return 'All Vault Documents';
     case 'OFFER_QUOTATION':
-      return 'Offers & Quotation Letters';
+      return 'Offers, Proposals & Contracts';
     case 'INVOICE_RECEIPT':
       return 'Invoices & Official Receipts';
     case 'EXPENSE_PROOF':
       return 'Expense Proofs & Disbursements';
     case 'TECHNICAL_DOSSIER':
-      return 'Technical BOM & TKDN Dossiers';
+      return 'Technical BOM & TKDN Files';
     case 'LEGAL_COMPLIANCE':
-      return 'Legal & Licensing Permits';
+      return 'Legal & Statutory Licensing';
     default:
+      if (typeof group === 'string') {
+        return group.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      }
       return group;
   }
 };
 
-export const getDocCategoryBadge = (group: DocumentCategoryGroup) => {
+export const getDocCategoryBadge = (
+  group: DocumentCategoryGroup,
+  categories?: import('../types').DocumentCategoryDefinition[]
+) => {
+  if (categories && categories.length > 0) {
+    const found = categories.find((c) => c.id === group);
+    if (found) {
+      return {
+        label: found.name,
+        color: found.badgeColor || 'bg-slate-50 text-slate-700 border-slate-200',
+        dot: 'bg-blue-500',
+      };
+    }
+  }
+
   switch (group) {
     case 'OFFER_QUOTATION':
       return {
@@ -281,7 +359,7 @@ export const getDocCategoryBadge = (group: DocumentCategoryGroup) => {
       };
     case 'TECHNICAL_DOSSIER':
       return {
-        label: 'Technical Dossier',
+        label: 'Technical File',
         color: 'bg-blue-50 text-blue-700 border-blue-200',
         dot: 'bg-blue-500',
       };
@@ -293,7 +371,7 @@ export const getDocCategoryBadge = (group: DocumentCategoryGroup) => {
       };
     default:
       return {
-        label: 'General Document',
+        label: typeof group === 'string' ? group.replace(/_/g, ' ') : 'General Document',
         color: 'bg-slate-50 text-slate-700 border-slate-200',
         dot: 'bg-slate-500',
       };
@@ -309,7 +387,7 @@ export const getDocStatusBadge = (status: DocumentStatus) => {
     case 'FLAGGED_DISCREPANCY':
       return { label: 'Flagged / Needs Fix', color: 'bg-red-100 text-red-800 border-red-300' };
     case 'SUBMITTED_TO_SURVEYOR':
-      return { label: 'Sent to Surveyor', color: 'bg-purple-100 text-purple-800 border-purple-300' };
+      return { label: 'Sent', color: 'bg-purple-100 text-purple-800 border-purple-300' };
     case 'DRAFT':
       return { label: 'Draft', color: 'bg-slate-100 text-slate-700 border-slate-300' };
     default:
@@ -336,49 +414,97 @@ export const getDispositionStatusBadge = (status: DispositionStatus) => {
   }
 };
 
-export const getTransactionCategoryLabel = (category: string): string => {
-  switch (category) {
-    // Income
-    case 'CLIENT_CONSULTING_FEE':
-      return 'Client Consulting Fee';
-    case 'TKDN_MILESTONE_PAYMENT':
-      return 'TKDN Milestone Payment';
-    case 'SURVEYOR_FACILITATION':
-      return 'Surveyor Facilitation Fee';
-    case 'LEGAL_RETAINER':
-      return 'Legal & OSS Retainer';
-    case 'SUCCESS_FEE':
-      return 'Certification Success Fee';
-    case 'TRAINING_WORKSHOP':
-      return 'Training & Workshop Fee';
-    case 'OTHER_INCOME':
-      return 'Other Operating Income';
+export const getTransactionCategoryLabel = (
+  category: string,
+  customCategories?: import('../types').TransactionCategoryDefinition[]
+): string => {
+  if (customCategories && customCategories.length > 0) {
+    const found = customCategories.find((c) => c.id === category);
+    if (found) return found.name.toUpperCase();
+  }
 
-    // Expense
+  switch (category) {
+    // 12 Requested Standard Categories
     case 'SURVEYOR_AUDIT_FEES':
-      return 'Surveyor & Audit Official Fee';
-    case 'REGULATORY_FILING':
-      return 'Regulatory & NIB Filing Fee';
-    case 'CONSULTANT_SALARIES':
-      return 'Consultant Honorarium & Payroll';
-    case 'OPERATIONAL_OFFICE':
-      return 'Office & Utilities Expense';
-    case 'TRAVEL_SITE_VISIT':
-      return 'Travel & Plant Site Verification';
-    case 'SOFTWARE_CLOUD':
-      return 'Software, Cloud & SIINas Tools';
-    case 'MARKETING_ACQUISITION':
-      return 'Marketing & Client Acquisition';
+    case 'LVI_AUDIT_OFFICIAL_FEE':
+      return 'LVI & AUDIT OFFICIAL FEE';
     case 'TAX_PPH_PPN':
-      return 'Tax (PPh 23 / PPN / PPh 21)';
+    case 'PAJAK_PPN_11':
+      return 'PAJAK PPN 11%';
+    case 'GAJI_KARYAWAN':
+      return 'GAJI KARYAWAN';
+    case 'INTERNET':
+      return 'INTERNET';
+    case 'LISTRIK':
+      return 'LISTRIK';
+    case 'OPERATIONAL_OFFICE':
+    case 'OPERASIONAL_KANTOR':
+      return 'OPERASIONAL KANTOR';
+    case 'MAKAN_MINUM':
+      return 'MAKAN & MINUM';
+    case 'TRANSPORTASI':
+      return 'TRANSPORTASI';
+    case 'BANK_INTEREST':
+      return 'BANK INTEREST';
+    case 'SEWA_KANTOR':
+      return 'SEWA KANTOR';
+    case 'OFFICE_UTILITIES_EXPENSE':
+      return 'OFFICE & UTILITIES EXPENSE';
     case 'MISCELLANEOUS_EXPENSE':
-      return 'Miscellaneous Expense';
+      return 'MISCELLANEOUS EXPENSE';
+
+    // Additional Standard Expenses
+    case 'ENTERTAINMENT':
+      return 'ENTERTAINMENT';
+    case 'AKOMODASI':
+      return 'AKOMODASI';
+    case 'UANG_RAPAT':
+      return 'UANG RAPAT';
+    case 'LAIN_LAIN':
+      return 'LAIN - LAIN';
+    case 'REGULATORY_FILING':
+      return 'REGULATORY & NIB / PNBP FILING FEE';
+    case 'CONSULTANT_SALARIES':
+      return 'CONSULTANT HONORARIUM & TENAGA AHLI';
+    case 'TRAVEL_SITE_VISIT':
+      return 'TRAVEL & PLANT SITE VERIFICATION';
+    case 'SOFTWARE_CLOUD':
+      return 'SOFTWARE, CLOUD & SIINAS TOOLS';
+    case 'MARKETING_ACQUISITION':
+      return 'MARKETING & CLIENT ACQUISITION';
+
+    // Income Categories
+    case 'CLIENT_CONSULTING_FEE':
+      return 'CLIENT CONSULTING FEE';
+    case 'TKDN_MILESTONE_PAYMENT':
+      return 'TKDN MILESTONE PAYMENT (TERMIN)';
+    case 'SURVEYOR_FACILITATION':
+      return 'LVI FACILITATION FEE';
+    case 'LEGAL_RETAINER':
+      return 'LEGAL & OSS RETAINER';
+    case 'SUCCESS_FEE':
+      return 'CERTIFICATION SUCCESS FEE';
+    case 'TRAINING_WORKSHOP':
+      return 'TRAINING & WORKSHOP FEE';
+    case 'BANK_LOAN_DISBURSEMENT':
+      return 'PENCAIRAN PINJAMAN / HUTANG (LOAN INFLOW)';
+    case 'OTHER_INCOME':
+      return 'OTHER OPERATING INCOME';
+
     default:
-      return category.replace(/_/g, ' ');
+      return category.replace(/_/g, ' ').toUpperCase();
   }
 };
 
-export const getPaymentMethodLabel = (method: string): string => {
+export const getPaymentMethodLabel = (
+  method: string,
+  customChannels?: import('../types').PaymentChannelDefinition[]
+): string => {
+  if (customChannels && customChannels.length > 0) {
+    const found = customChannels.find((c) => c.id === method);
+    if (found) return found.name;
+  }
+
   switch (method) {
     case 'BANK_TRANSFER_BCA':
       return 'BCA Corporate Transfer';
@@ -386,14 +512,20 @@ export const getPaymentMethodLabel = (method: string): string => {
       return 'Mandiri Corporate Transfer';
     case 'BANK_TRANSFER_BNI':
       return 'BNI Giro Transfer';
+    case 'BANK_TRANSFER_BRI':
+      return 'BRI Corporate Transfer';
+    case 'BANK_TRANSFER_BSI':
+      return 'BSI Giro Syariah';
     case 'CORPORATE_CARD':
       return 'Corporate Credit Card';
     case 'PETTY_CASH':
       return 'Petty Cash / Kas Kecil';
     case 'VIRTUAL_ACCOUNT':
       return 'Virtual Account (VA)';
+    case 'QRIS_PAYMENT':
+      return 'QRIS & Digital Wallet';
     default:
-      return method.replace(/_/g, ' ');
+      return method ? method.replace(/_/g, ' ') : 'General Bank';
   }
 };
 
@@ -401,6 +533,10 @@ export const getTransactionStatusBadge = (status: string) => {
   switch (status) {
     case 'CLEARED':
       return { label: 'Cleared / Paid', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    case 'HUTANG':
+      return { label: 'Hutang / Pinjaman', color: 'bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold' };
+    case 'TERHUTANG':
+      return { label: 'Terhutang (Utang Usaha)', color: 'bg-rose-100 text-rose-800 border-rose-300 font-semibold' };
     case 'PENDING':
       return { label: 'Pending Settlement', color: 'bg-amber-50 text-amber-700 border-amber-200' };
     case 'OVERDUE':

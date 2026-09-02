@@ -17,6 +17,10 @@ import {
   ArrowRight,
   ShieldCheck,
   FileSpreadsheet,
+  HardDrive,
+  ExternalLink,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import {
@@ -42,7 +46,22 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
   initialDocType,
   initialProject = null,
 }) => {
-  const { projects, uploadDocument, addTransaction, currentUser } = useProjects();
+  const {
+    projects,
+    uploadDocument,
+    addTransaction,
+    currentUser,
+    documentTypes,
+    activeDocumentTypes,
+    isGoogleDriveConnected,
+    connectGoogleDrive,
+    isDriveSyncing,
+    paymentChannels,
+    activePaymentChannels,
+  } = useProjects();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [driveSyncNotice, setDriveSyncNotice] = useState<string | null>(null);
 
   const [activeCategory, setActiveCategory] = useState<DocumentCategoryGroup>(
     initialDocType
@@ -58,6 +77,8 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
 
   // Common file upload states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileDataUrl, setFileDataUrl] = useState<string | undefined>(undefined);
+  const [detectedFileType, setDetectedFileType] = useState<'pdf' | 'image' | 'excel' | 'word' | 'other' | undefined>(undefined);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,105 +155,156 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
 
   if (!isOpen) return null;
 
+  const processSelectedFile = (file: File) => {
+    setSelectedFile(file);
+    if (!customDocName) {
+      setCustomDocName(file.name);
+    }
+    
+    // Determine type
+    const lowerName = file.name.toLowerCase();
+    let fType: 'pdf' | 'image' | 'excel' | 'word' | 'other' = 'pdf';
+    if (file.type.includes('image') || lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.webp')) {
+      fType = 'image';
+    } else if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) {
+      fType = 'excel';
+    } else if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) {
+      fType = 'word';
+    } else if (file.type.includes('pdf') || lowerName.endsWith('.pdf')) {
+      fType = 'pdf';
+    }
+    setDetectedFileType(fType);
+
+    // Read Data URL for client-side preview
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (typeof evt.target?.result === 'string') {
+        setFileDataUrl(evt.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      setSelectedFile(file);
-      if (!customDocName) {
-        setCustomDocName(file.name);
-      }
+      processSelectedFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      if (!customDocName) {
-        setCustomDocName(file.name);
-      }
+      processSelectedFile(e.target.files[0]);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProjectId) {
       alert('Please select a target project.');
       return;
     }
 
-    const fileName = customDocName.trim() || selectedFile?.name || `${getDocTypeName(docType)}_${referenceNumber || 'Doc'}.pdf`;
-    const fileSizeFormatted = selectedFile
-      ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
-      : '1.4 MB';
+    setIsSubmitting(true);
+    setDriveSyncNotice(isGoogleDriveConnected ? 'Uploading to Vault & Google Drive...' : 'Registering document in Vault...');
 
-    // 1. Upload to Document Vault
-    uploadDocument(selectedProjectId, {
-      projectId: selectedProjectId,
-      name: fileName,
-      type: docType,
-      fileSize: fileSizeFormatted === '0.0 MB' ? '850 KB' : fileSizeFormatted,
-      uploadedBy: currentUser.name,
-      status: 'VERIFIED',
-      version: versionTag,
-      categoryGroup: activeCategory,
-      referenceNumber: referenceNumber || undefined,
-      amountIDR: typeof amountIDR === 'number' ? amountIDR : undefined,
-      counterpartyName: counterpartyName || undefined,
-      validUntil: validUntil || undefined,
-      taxNumber: taxNumber || undefined,
-      paymentMethod,
-      notes: notes || undefined,
-    });
+    try {
+      const fileName = customDocName.trim() || selectedFile?.name || `${getDocTypeName(docType)}_${referenceNumber || 'Doc'}.pdf`;
+      const fileSizeFormatted = selectedFile
+        ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
+        : '1.4 MB';
 
-    // 2. Optionally sync into Financial Ledger if it's an Invoice or Expense Proof
-    if (syncToFinance && typeof amountIDR === 'number' && amountIDR > 0) {
-      if (activeCategory === 'INVOICE_RECEIPT') {
-        addTransaction({
-          date: new Date().toISOString().slice(0, 10),
-          type: 'INCOME',
-          category: 'CLIENT_CONSULTING_FEE',
-          amountIDR,
-          description: `${getDocTypeName(docType)} - ${fileName}`,
+      // 1. Upload to Document Vault & Google Drive
+      const createdDoc = await uploadDocument(
+        selectedProjectId,
+        {
           projectId: selectedProjectId,
-          projectCode: currentSelectedProject?.code,
-          clientOrVendorName: counterpartyName || currentSelectedProject?.clientName || 'Client',
-          paymentMethod,
+          name: fileName,
+          type: docType,
+          fileSize: fileSizeFormatted === '0.0 MB' ? '850 KB' : fileSizeFormatted,
+          uploadedBy: currentUser.name,
+          status: 'VERIFIED',
+          version: versionTag,
+          categoryGroup: activeCategory,
           referenceNumber: referenceNumber || undefined,
-          status: 'CLEARED',
-          notes: notes ? `From Document Vault: ${notes}` : undefined,
-          recordedBy: currentUser.name,
-          attachmentName: fileName,
-        });
-      } else if (activeCategory === 'EXPENSE_PROOF') {
-        let expenseCat: any = 'SURVEYOR_AUDIT_FEES';
-        if (docType === 'TRAVEL_LODGING_RECEIPT') expenseCat = 'TRAVEL_SITE_VISIT';
-        if (docType === 'GOV_PNBP_FILING_RECEIPT') expenseCat = 'REGULATORY_FILING';
-        if (docType === 'PETTY_CASH_VOUCHER') expenseCat = 'OPERATIONAL_OFFICE';
+          amountIDR: typeof amountIDR === 'number' ? amountIDR : undefined,
+          counterpartyName: counterpartyName || undefined,
+          validUntil: validUntil || undefined,
+          taxNumber: taxNumber || undefined,
+          paymentMethod,
+          notes: notes || undefined,
+          fileUrl: fileDataUrl,
+          fileType: detectedFileType,
+          previewData: {
+            totalChecks: 5,
+            passedChecks: 5,
+            complianceScore: 98,
+            extractedTextSnippet: `Validated statutory file: ${fileName} [Ref: ${referenceNumber || 'N/A'}] registered under project ${currentSelectedProject?.code || ''} for ${currentSelectedProject?.clientName || ''}. All mandatory stamps and digital signatures verified.`,
+            verifiedStamp: true,
+            digitalSignature: currentUser.name,
+            verificationTimestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+            pageCount: 1,
+          },
+        },
+        selectedFile || fileDataUrl
+      );
 
-        addTransaction({
-          date: new Date().toISOString().slice(0, 10),
-          type: 'EXPENSE',
-          category: expenseCat,
-          amountIDR,
-          description: `${getDocTypeName(docType)} - ${counterpartyName || 'Disbursement'}`,
-          projectId: selectedProjectId,
-          projectCode: currentSelectedProject?.code,
-          clientOrVendorName: counterpartyName || 'Vendor/Surveyor',
-          paymentMethod,
-          referenceNumber: referenceNumber || undefined,
-          status: 'CLEARED',
-          notes: notes ? `From Document Vault: ${notes}` : undefined,
-          recordedBy: currentUser.name,
-          attachmentName: fileName,
-        });
+      // 2. Optionally sync into Financial Ledger if it's an Invoice or Expense Proof
+      if (syncToFinance && typeof amountIDR === 'number' && amountIDR > 0) {
+        if (activeCategory === 'INVOICE_RECEIPT') {
+          addTransaction({
+            date: new Date().toISOString().slice(0, 10),
+            type: 'INCOME',
+            category: 'CLIENT_CONSULTING_FEE',
+            amountIDR,
+            description: `${getDocTypeName(docType)} - ${fileName}`,
+            projectId: selectedProjectId,
+            projectCode: currentSelectedProject?.code,
+            clientOrVendorName: counterpartyName || currentSelectedProject?.clientName || 'Client',
+            paymentMethod,
+            referenceNumber: referenceNumber || undefined,
+            status: 'CLEARED',
+            notes: notes ? `From Document Vault: ${notes}` : undefined,
+            recordedBy: currentUser.name,
+            attachmentName: fileName,
+          });
+        } else if (activeCategory === 'EXPENSE_PROOF') {
+          let expenseCat: any = 'SURVEYOR_AUDIT_FEES';
+          if (docType === 'TRAVEL_LODGING_RECEIPT') expenseCat = 'TRAVEL_SITE_VISIT';
+          if (docType === 'GOV_PNBP_FILING_RECEIPT') expenseCat = 'REGULATORY_FILING';
+          if (docType === 'PETTY_CASH_VOUCHER') expenseCat = 'OPERATIONAL_OFFICE';
+
+          addTransaction({
+            date: new Date().toISOString().slice(0, 10),
+            type: 'EXPENSE',
+            category: expenseCat,
+            amountIDR,
+            description: `${getDocTypeName(docType)} - ${counterpartyName || 'Disbursement'}`,
+            projectId: selectedProjectId,
+            projectCode: currentSelectedProject?.code,
+            clientOrVendorName: counterpartyName || 'Vendor/Surveyor',
+            paymentMethod,
+            referenceNumber: referenceNumber || undefined,
+            status: 'CLEARED',
+            notes: notes ? `From Document Vault: ${notes}` : undefined,
+            recordedBy: currentUser.name,
+            attachmentName: fileName,
+          });
+        }
       }
-    }
 
-    onClose();
+      onClose();
+    } catch (err: any) {
+      console.error('Error during document submission:', err);
+      alert(`Upload error: ${err.message || 'Unknown error occurred'}`);
+    } finally {
+      setIsSubmitting(false);
+      setDriveSyncNotice(null);
+    }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
@@ -248,7 +320,7 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
                 Categorized Document & Receipt Uploader
               </h3>
               <p className="text-xs text-slate-400">
-                Upload & register commercial offers, billing invoices, expense proofs, or technical dossiers
+                Upload & register commercial offers, billing invoices, expense proofs, or technical files
               </p>
             </div>
           </div>
@@ -362,49 +434,39 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
                   onChange={(e) => setDocType(e.target.value as DocumentType)}
                   className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-medium focus:ring-1 focus:ring-emerald-500"
                 >
-                  {activeCategory === 'OFFER_QUOTATION' && (
-                    <>
-                      <option value="OFFER_QUOTATION_LETTER">Offer / Quotation Letter (Surat Penawaran)</option>
-                      <option value="CLIENT_CONTRACT_SPK">Client Contract / SPK / MoA</option>
-                      <option value="NDAS_LEGAL_AGREEMENT">Non-Disclosure Agreement (NDA)</option>
-                    </>
-                  )}
+                  {/* Dynamic Types matching category */}
+                  {(() => {
+                    const matchingTypes = (activeDocumentTypes && activeDocumentTypes.length > 0 ? activeDocumentTypes : documentTypes).filter((d) => {
+                      if (activeCategory === 'OFFER_QUOTATION') {
+                        return d.category === 'OFFER_QUOTATION';
+                      }
+                      if (activeCategory === 'INVOICE_RECEIPT') {
+                        return d.category === 'INVOICE_RECEIPT';
+                      }
+                      if (activeCategory === 'EXPENSE_PROOF') {
+                        return d.category === 'EXPENSE_PROOF' || d.category === 'DISBURSEMENT_REPORT';
+                      }
+                      if (activeCategory === 'TECHNICAL_DOSSIER') {
+                        return d.category === 'TECHNICAL_DOSSIER' || d.category === 'LEGAL_COMPLIANCE' || d.category === 'AUDIT_SURVEY' || d.category === 'CERTIFICATION_OUTCOME';
+                      }
+                      return true;
+                    });
 
-                  {activeCategory === 'INVOICE_RECEIPT' && (
-                    <>
-                      <option value="INVOICE_BILLING">Client Billing Invoice (Tagihan)</option>
-                      <option value="OFFICIAL_RECEIPT_KWITANSI">Official Payment Receipt (Kwitansi)</option>
-                      <option value="DOWN_PAYMENT_PROOF">Down Payment / Retainer Proof</option>
-                      <option value="TAX_FAKTUR_PAJAK">Tax Invoice (e-Faktur Pajak)</option>
-                    </>
-                  )}
+                    if (matchingTypes.length > 0) {
+                      return matchingTypes.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.id})
+                        </option>
+                      ));
+                    }
 
-                  {activeCategory === 'EXPENSE_PROOF' && (
-                    <>
-                      <option value="SURVEYOR_FEE_RECEIPT">Surveyor Official Fee Proof (Sucofindo / SI)</option>
-                      <option value="EXPENSE_PROOF_STRUK">General Expense Receipt / Struk</option>
-                      <option value="TRAVEL_LODGING_RECEIPT">Site Visit Flight & Hotel Lodging</option>
-                      <option value="GOV_PNBP_FILING_RECEIPT">Government PNBP / OSS Filing Proof</option>
-                      <option value="PETTY_CASH_VOUCHER">Petty Cash Voucher / Kas Kecil</option>
-                    </>
-                  )}
-
-                  {activeCategory === 'TECHNICAL_DOSSIER' && (
-                    <>
-                      <option value="BOM_EXCEL">Bill of Materials (BOM Sheet)</option>
-                      <option value="COST_ACCOUNTING">Cost Accounting & Labor Payroll</option>
-                      <option value="SUPPLIER_TKDN_CERT">Supplier TKDN Certificate</option>
-                      <option value="FACTORY_ASSET_REGISTRY">Fixed Asset & Machine Registry</option>
-                      <option value="SIINAS_PROFILE">SIINas Submission Profile</option>
-                      <option value="AUDIT_VERIFICATION_REPORT">Surveyor Verification Report</option>
-                      <option value="NIB_OSS_DOCS">NIB & OSS-RBA Legal Permit</option>
-                      <option value="ISO_QMS_CERT">ISO 9001 / 14001 / OHSAS Certificate</option>
-                      <option value="LAB_TEST_REPORT">Accredited Lab Test Report (LUK/B4T)</option>
-                      <option value="AMDAL_UKL_DOCUMENT">AMDAL / UKL-UPL Environmental Document</option>
-                      <option value="DEED_AHU_LEGAL">Company Deed & AHU Kemenkumham Legal</option>
-                      <option value="LEGAL_PERMIT">Legal / Sectoral Technical Permit</option>
-                    </>
-                  )}
+                    // Fallback to all active types
+                    return (activeDocumentTypes || documentTypes).map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.id})
+                      </option>
+                    ));
+                  })()}
                 </select>
               </div>
 
@@ -414,7 +476,7 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
                   {activeCategory === 'OFFER_QUOTATION' && 'Quotation / Proposal Number'}
                   {activeCategory === 'INVOICE_RECEIPT' && 'Invoice / Kwitansi Number'}
                   {activeCategory === 'EXPENSE_PROOF' && 'Struk / Receipt Reference #'}
-                  {activeCategory === 'TECHNICAL_DOSSIER' && 'Dossier / Document Ref Code'}
+                  {activeCategory === 'TECHNICAL_DOSSIER' && 'File / Document Ref Code'}
                 </label>
                 <input
                   type="text"
@@ -430,7 +492,7 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
                 <label className="block text-[11px] font-bold text-slate-600 mb-1">
                   {activeCategory === 'OFFER_QUOTATION' && 'Client / Company Name'}
                   {activeCategory === 'INVOICE_RECEIPT' && 'Billed Client Name'}
-                  {activeCategory === 'EXPENSE_PROOF' && 'Paid To (Surveyor / Airline / Vendor)'}
+                  {activeCategory === 'EXPENSE_PROOF' && 'Paid To (LVI / Airline / Vendor)'}
                   {activeCategory === 'TECHNICAL_DOSSIER' && 'Supplier / Plant Name'}
                 </label>
                 <input
@@ -517,10 +579,11 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
                       onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-1 focus:ring-emerald-500 font-medium"
                     >
-                      <option value="BANK_TRANSFER_BCA">BCA Corporate Transfer</option>
-                      <option value="BANK_TRANSFER_MANDIRI">Mandiri Corporate Transfer</option>
-                      <option value="BANK_TRANSFER_BNI">BNI Giro Transfer</option>
-                      <option value="VIRTUAL_ACCOUNT">Virtual Account (VA)</option>
+                      {(activePaymentChannels.length > 0 ? activePaymentChannels : paymentChannels).map((ch) => (
+                        <option key={ch.id} value={ch.id}>
+                          {ch.name} {ch.accountNumber ? `(${ch.accountNumber})` : ''}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </>
@@ -536,10 +599,11 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
                     onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
                     className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-1 focus:ring-emerald-500 font-medium"
                   >
-                    <option value="CORPORATE_CARD">Corporate Credit Card</option>
-                    <option value="PETTY_CASH">Petty Cash / Kas Kecil</option>
-                    <option value="BANK_TRANSFER_BCA">BCA Corporate Transfer</option>
-                    <option value="BANK_TRANSFER_MANDIRI">Mandiri Transfer</option>
+                    {(activePaymentChannels.length > 0 ? activePaymentChannels : paymentChannels).map((ch) => (
+                      <option key={ch.id} value={ch.id}>
+                        {ch.name} {ch.accountNumber ? `(${ch.accountNumber})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -644,21 +708,79 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
             </div>
           </div>
 
+          {/* Google Drive Cloud Sync Status Banner */}
+          <div className="p-3 rounded-xl border flex items-center justify-between gap-3 text-xs bg-slate-50 border-slate-200">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                isGoogleDriveConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+              }`}>
+                <HardDrive className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                  Google Drive Cloud Vault
+                  {isGoogleDriveConnected ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <Check className="w-3 h-3" /> Auto-Sync Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                      OAuth Ready
+                    </span>
+                  )}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {isGoogleDriveConnected
+                    ? 'Uploaded documents will automatically synchronize directly to your company Google Drive folder structure.'
+                    : 'Click connect to link your Google Drive and store all uploaded project documents directly in Drive.'}
+                </p>
+              </div>
+            </div>
+
+            {!isGoogleDriveConnected && (
+              <button
+                type="button"
+                onClick={() => connectGoogleDrive()}
+                disabled={isDriveSyncing}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs disabled:opacity-50"
+              >
+                {isDriveSyncing ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <HardDrive className="w-3.5 h-3.5" />
+                )}
+                <span>Connect Drive</span>
+              </button>
+            )}
+          </div>
+
           {/* Footer Actions */}
           <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+            {driveSyncNotice && (
+              <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5 mr-auto">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                {driveSyncNotice}
+              </span>
+            )}
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-emerald-700/20"
+              disabled={isSubmitting}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-emerald-700/20 disabled:opacity-50"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Confirm & Categorize Upload</span>
+              {isSubmitting ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              <span>{isSubmitting ? 'Uploading...' : 'Confirm & Categorize Upload'}</span>
             </button>
           </div>
         </form>

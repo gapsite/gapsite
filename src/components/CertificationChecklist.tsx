@@ -26,6 +26,11 @@ import {
   ExternalLink,
   Eye,
   FileSpreadsheet,
+  Trash2,
+  X,
+  RotateCcw,
+  ShieldAlert,
+  Lock,
 } from 'lucide-react';
 import {
   ConsultingProject,
@@ -51,6 +56,8 @@ import {
 } from '../utils/formatters';
 import { useProjects } from '../context/ProjectContext';
 import { CategorizedUploadModal } from './CategorizedUploadModal';
+import { DocumentPreviewModal } from './DocumentPreviewModal';
+import { DocumentTypeManagerModal } from './DocumentTypeManagerModal';
 
 interface CertificationChecklistProps {
   project: ConsultingProject;
@@ -61,17 +68,70 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
   project,
 }) => {
   const {
+    projects,
     currentUser,
     toggleMilestoneManualSignoff,
     addCustomMilestoneToProject,
+    deleteMilestoneFromProject,
+    restoreMilestoneToProject,
+    deleteDocRequirementFromMilestone,
+    resetProjectMilestonesToDefault,
+    deleteDocument,
     updateDocumentStatus,
+    documentTypes,
+    activeDocumentTypes,
+    isMasterAdmin,
   } = useProjects();
+
+  // Always bind to the active, live project from context
+  const currentProject = useMemo(() => {
+    return projects.find((p) => p.id === project.id) || project;
+  }, [projects, project]);
+
+  // Temporary action feedback notification toast
+  const [actionFeedback, setActionFeedback] = useState<{
+    type: 'success' | 'info';
+    message: string;
+  } | null>(null);
+
+  const showFeedback = (message: string, type: 'success' | 'info' = 'success') => {
+    setActionFeedback({ type, message });
+    setTimeout(() => {
+      setActionFeedback((prev) => (prev?.message === message ? null : prev));
+    }, 4000);
+  };
 
   // Local filters
   const [selectedStageFilter, setSelectedStageFilter] = useState<ProjectStage | 'ALL'>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<MilestoneStatus | 'ALL'>('ALL');
   const [viewMode, setViewMode] = useState<'timeline' | 'grid' | 'documents'>('timeline');
   const [expandedMilestones, setExpandedMilestones] = useState<Record<string, boolean>>({});
+
+  // Deletion Authorization & Confirmation States (admin.master)
+  const [confirmDeleteMilestone, setConfirmDeleteMilestone] = useState<{
+    id: string;
+    title: string;
+    stage: ProjectStage;
+  } | null>(null);
+
+  const [confirmDeleteDocReq, setConfirmDeleteDocReq] = useState<{
+    milestoneId: string;
+    milestoneTitle: string;
+    docType: DocumentType;
+    isOptional?: boolean;
+    docName: string;
+  } | null>(null);
+
+  const [confirmDeleteFile, setConfirmDeleteFile] = useState<{
+    docId: string;
+    docName: string;
+  } | null>(null);
+
+  const [confirmResetChecklist, setConfirmResetChecklist] = useState(false);
+  const [isManageDeletedModalOpen, setIsManageDeletedModalOpen] = useState(false);
+
+  // Document Types Master Manager Modal
+  const [isDocTypeModalOpen, setIsDocTypeModalOpen] = useState(false);
 
   // Manual signoff remarks drawer state
   const [activeSignoffMilestoneId, setActiveSignoffMilestoneId] = useState<string | null>(null);
@@ -88,14 +148,15 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
   // Document Upload modal state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadPreselectedDocType, setUploadPreselectedDocType] = useState<DocumentType | undefined>(undefined);
+  const [previewDoc, setPreviewDoc] = useState<ProjectDocument | null>(null);
 
   // Copy report feedback
   const [copiedReport, setCopiedReport] = useState(false);
 
   // Dynamically evaluate milestones on every render / document state change
   const { milestones, summary } = useMemo(() => {
-    return evaluateProjectMilestones(project);
-  }, [project]);
+    return evaluateProjectMilestones(currentProject);
+  }, [currentProject]);
 
   const readiness = getComplianceReadinessBadge(summary.progressPercentage);
 
@@ -137,29 +198,33 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
       setSignoffNote('');
     } else {
       // Revoking signoff
-      toggleMilestoneManualSignoff(project.id, milestoneId, false);
+      toggleMilestoneManualSignoff(currentProject.id, milestoneId, false);
+      showFeedback('Tanda tangan manual checklist berhasil dicabut.', 'info');
     }
   };
 
   const handleConfirmManualSignoff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeSignoffMilestoneId) return;
-    toggleMilestoneManualSignoff(project.id, activeSignoffMilestoneId, true, signoffNote.trim());
+    toggleMilestoneManualSignoff(currentProject.id, activeSignoffMilestoneId, true, signoffNote.trim());
     setActiveSignoffMilestoneId(null);
     setSignoffNote('');
+    showFeedback('Milestone checklist berhasil diverifikasi manual.');
   };
 
   const handleCreateCustomMilestone = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customTitle.trim()) return;
 
-    addCustomMilestoneToProject(project.id, {
+    addCustomMilestoneToProject(currentProject.id, {
       title: customTitle.trim(),
       description: customDescription.trim() || 'Custom regulatory verification requirement.',
       stage: customStage,
       regulatoryClause: customRegulatoryClause.trim() || 'Custom Client Milestone',
       requiredDocTypes: customSelectedDocTypes,
     });
+
+    showFeedback(`Custom milestone "${customTitle.trim()}" berhasil ditambahkan.`);
 
     // Reset and close
     setCustomTitle('');
@@ -174,14 +239,14 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
       `=============================================================`,
       `VERIX CONSULTING — TKDN & REGULATORY COMPLIANCE ROADMAP`,
       `=============================================================`,
-      `Project Code  : [${project.code}] ${project.productOrServiceName}`,
-      `Client Name   : ${project.clientName} (${project.companyType})`,
-      `Service Type  : ${getServiceTypeName(project.serviceType)}`,
-      `Current Stage : ${getStageName(project.stage)}`,
-      `Lead Auditor  : ${project.leadConsultantName}`,
-      `Surveyor Body : ${project.surveyorBody}`,
+      `Project Code  : [${currentProject.code}] ${currentProject.productOrServiceName}`,
+      `Client Name   : ${currentProject.clientName} (${currentProject.companyType})`,
+      `Service Type  : ${getServiceTypeName(currentProject.serviceType)}`,
+      `Current Stage : ${getStageName(currentProject.stage)}`,
+      `Lead Auditor  : ${currentProject.leadConsultantName}`,
+      `LVI Body      : ${currentProject.surveyorBody}`,
       `Progress      : ${summary.completedMilestones}/${summary.totalMilestones} Milestones (${summary.progressPercentage}%)`,
-      `Doc Vault     : ${summary.uploadedRequiredDocTypes}/${summary.totalRequiredDocTypes} Required Dossiers Attached (${summary.docFulfillmentPercentage}%)`,
+      `Doc Vault     : ${summary.uploadedRequiredDocTypes}/${summary.totalRequiredDocTypes} Required Files Attached (${summary.docFulfillmentPercentage}%)`,
       `Readiness     : ${readiness.label}`,
       `-------------------------------------------------------------`,
       `MILESTONE BREAKDOWN:`,
@@ -191,7 +256,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
       const statusIcon = m.isCompleted ? '[x] COMPLETED' : m.status === 'FLAGGED' ? '[!] DISCREPANCY' : '[ ] PENDING';
       lines.push(`${idx + 1}. ${statusIcon} - ${m.title}`);
       lines.push(`   Stage: ${getStageName(m.stage)} | Ref: ${m.regulatoryClause || 'Standard'}`);
-      lines.push(`   Required Dossiers: ${m.requiredDocTypes.map(getDocTypeName).join(', ') || 'None (Consultant Review)'}`);
+      lines.push(`   Required Files: ${m.requiredDocTypes.map(getDocTypeName).join(', ') || 'None (Consultant Review)'}`);
       if (m.matchedDocuments.length > 0) {
         lines.push(`   Attached Docs (${m.matchedDocuments.length}):`);
         m.matchedDocuments.forEach((doc) => {
@@ -213,13 +278,37 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Realtime Action Notification Banner */}
+      {actionFeedback && (
+        <div
+          role="alert"
+          className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 shadow-lg transition-all animate-in fade-in slide-in-from-top-2 duration-200 ${
+            actionFeedback.type === 'success'
+              ? 'bg-emerald-950 text-emerald-100 border-emerald-500/50'
+              : 'bg-slate-900 text-slate-100 border-slate-700'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span className="text-xs font-semibold">{actionFeedback.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionFeedback(null)}
+            className="text-slate-400 hover:text-white p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* 1. TOP COMPLIANCE READINESS HEADER */}
       <div className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-md border border-slate-700/80">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${getServiceTypeBadgeColor(project.serviceType)}`}>
-                {getServiceTypeName(project.serviceType)}
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${getServiceTypeBadgeColor(currentProject.serviceType)}`}>
+                {getServiceTypeName(currentProject.serviceType)}
               </span>
               <span className="text-xs text-slate-400 font-mono">
                 Regulatory Framework Checklist
@@ -237,7 +326,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
             </h3>
 
             <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-              Milestones dynamically advance to <strong className="text-emerald-400 font-semibold">Completed</strong> as mandatory dossiers, BOM spreadsheets, vendor certificates, and audit reports are uploaded into the repository.
+              Milestones dynamically advance to <strong className="text-emerald-400 font-semibold">Completed</strong> as mandatory files, BOM spreadsheets, vendor certificates, and audit reports are uploaded into the repository.
             </p>
           </div>
 
@@ -290,6 +379,41 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
 
             {/* Quick Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-2">
+              {/* Manage / Restore Deleted Checklist button */}
+              <button
+                type="button"
+                id="btn-manage-checklist-deleted"
+                onClick={() => setIsManageDeletedModalOpen(true)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs border ${
+                  (currentProject.deletedMilestoneIds && currentProject.deletedMilestoneIds.length > 0)
+                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                }`}
+                title="Lihat checklist yang dihapus atau pulihkan ke standar regulasi"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <span>
+                  {(currentProject.deletedMilestoneIds && currentProject.deletedMilestoneIds.length > 0)
+                    ? `Pulihkan (${currentProject.deletedMilestoneIds.length} Dihapus)`
+                    : 'Kelola / Reset Checklist'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-open-doctype-manager-from-checklist"
+                onClick={() => setIsDocTypeModalOpen(true)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs border ${
+                  isMasterAdmin
+                    ? 'bg-blue-600/30 text-blue-200 border-blue-500/40 hover:bg-blue-600/40'
+                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                }`}
+                title="Kelola Master Tipe Dokumen Wajib"
+              >
+                <FileText className={`w-3.5 h-3.5 ${isMasterAdmin ? 'text-blue-400' : 'text-slate-400'}`} />
+                <span>Doc Types ({documentTypes.length})</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleCopyRoadmap}
@@ -352,7 +476,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
             <span>Statutory Lifecycle Stage Progression</span>
           </span>
           <span className="text-xs text-slate-500 font-mono">
-            Active Project Stage: <strong className="text-slate-900">{getStageName(project.stage)}</strong>
+            Active Project Stage: <strong className="text-slate-900">{getStageName(currentProject.stage)}</strong>
           </span>
         </div>
 
@@ -361,7 +485,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
             const stageMilestones = milestones.filter((m) => m.stage === stg);
             const stageCompleted = stageMilestones.filter((m) => m.isCompleted).length;
             const isAllStageDone = stageMilestones.length > 0 && stageCompleted === stageMilestones.length;
-            const isCurrentProjectStage = project.stage === stg;
+            const isCurrentProjectStage = currentProject.stage === stg;
 
             return (
               <button
@@ -486,41 +610,62 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
           )}
         </div>
 
-        {/* Right View Mode Buttons */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg self-start sm:self-auto">
+        {/* Right View Mode Buttons & Manage Action */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => setViewMode('timeline')}
-            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
-              viewMode === 'timeline'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+            id="btn-manage-checklist-filter-bar"
+            onClick={() => setIsManageDeletedModalOpen(true)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border ${
+              currentProject.deletedMilestoneIds && currentProject.deletedMilestoneIds.length > 0
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
             }`}
+            title="Kelola & Pulihkan Milestone Checklist yang dihapus"
           >
-            Chronological Flow
+            <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+            <span>
+              {currentProject.deletedMilestoneIds && currentProject.deletedMilestoneIds.length > 0
+                ? `Pulihkan (${currentProject.deletedMilestoneIds.length} Dihapus)`
+                : 'Kelola / Reset'}
+            </span>
           </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('grid')}
-            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
-              viewMode === 'grid'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Card Grid
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('documents')}
-            className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
-              viewMode === 'documents'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Document Matrix
-          </button>
+
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setViewMode('timeline')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                viewMode === 'timeline'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Chronological Flow
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Card Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('documents')}
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                viewMode === 'documents'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Document Matrix
+            </button>
+          </div>
         </div>
       </div>
 
@@ -549,7 +694,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
               Statutory Document Matrix & Milestone Fulfillment Map
             </h4>
             <p className="text-xs text-slate-500 mt-0.5">
-              Comprehensive cross-reference of required dossier types and their active fulfillment status.
+              Comprehensive cross-reference of required file types and their active fulfillment status.
             </p>
           </div>
 
@@ -559,7 +704,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                 <tr>
                   <th className="py-3 px-4">Milestone / Statutory Step</th>
                   <th className="py-3 px-4">Stage</th>
-                  <th className="py-3 px-4">Required Dossier Types</th>
+                  <th className="py-3 px-4">Required File Types</th>
                   <th className="py-3 px-4">Attached Documents</th>
                   <th className="py-3 px-4 text-center">Milestone Status</th>
                   <th className="py-3 px-4 text-right">Quick Action</th>
@@ -590,7 +735,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                             <span className="text-slate-400 italic">None (Physical / Audit Review)</span>
                           ) : (
                             m.requiredDocTypes.map((dt) => {
-                              const isFulfilled = project.documents.some((d) => d.type === dt);
+                              const isFulfilled = currentProject.documents.some((d) => d.type === dt);
                               return (
                                 <span
                                   key={dt}
@@ -613,13 +758,19 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                         ) : (
                           <div className="space-y-1">
                             {m.matchedDocuments.map((doc) => (
-                              <div key={doc.id} className="flex items-center gap-1.5 text-[11px] text-slate-700">
-                                <FileText className="w-3 h-3 text-indigo-500 shrink-0" />
-                                <span className="font-medium truncate max-w-[180px]">{doc.name}</span>
+                              <button
+                                key={doc.id}
+                                type="button"
+                                onClick={() => setPreviewDoc(doc)}
+                                className="flex items-center gap-1.5 text-[11px] text-slate-700 hover:text-blue-600 group text-left cursor-pointer transition-colors"
+                                title="Click to inspect and preview document"
+                              >
+                                <Eye className="w-3 h-3 text-slate-400 group-hover:text-blue-600 shrink-0" />
+                                <span className="font-medium truncate max-w-[180px] underline-offset-2 group-hover:underline">{doc.name}</span>
                                 <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${getDocStatusBadge(doc.status)}`}>
                                   {doc.status}
                                 </span>
-                              </div>
+                              </button>
                             ))}
                           </div>
                         )}
@@ -647,24 +798,42 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {m.unfulfilledDocTypes.length > 0 ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          {m.unfulfilledDocTypes.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenUploadForDocType(m.unfulfilledDocTypes[0])}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-2xs"
+                            >
+                              <UploadCloud className="w-3 h-3" />
+                              <span>Upload Required</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleManualSignoff(m.id, m.isCompleted)}
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
+                            >
+                              {m.isCompleted ? 'Revoke Sign-off' : 'Sign Off Step'}
+                            </button>
+                          )}
+
                           <button
                             type="button"
-                            onClick={() => handleOpenUploadForDocType(m.unfulfilledDocTypes[0])}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
+                            onClick={() =>
+                              setConfirmDeleteMilestone({
+                                id: m.id,
+                                title: m.title,
+                                stage: m.stage,
+                              })
+                            }
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200 inline-flex items-center gap-1 text-xs"
+                            title="Hapus Milestone Checklist ini dari proyek"
                           >
-                            <UploadCloud className="w-3 h-3" />
-                            <span>Upload Required</span>
+                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                            <span className="hidden xl:inline text-rose-600 font-bold text-[10px]">Hapus</span>
                           </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleManualSignoff(m.id, m.isCompleted)}
-                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold inline-flex items-center gap-1"
-                          >
-                            {m.isCompleted ? 'Revoke Sign-off' : 'Sign Off Step'}
-                          </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -732,7 +901,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
 
                         {milestone.custom && (
                           <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                            Custom Client Scope
+                            Custom Scope
                           </span>
                         )}
                       </div>
@@ -778,14 +947,33 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                       </span>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => toggleExpand(milestone.id)}
-                      className="text-xs text-slate-500 hover:text-slate-900 font-bold inline-flex items-center gap-1"
-                    >
-                      <span>{isExpanded ? 'Hide Details' : 'View Dossiers'}</span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteMilestone({
+                            id: milestone.id,
+                            title: milestone.title,
+                            stage: milestone.stage,
+                          });
+                        }}
+                        className="text-xs text-rose-600 hover:text-rose-700 bg-rose-50/90 hover:bg-rose-100 font-bold inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-rose-200 transition-all shadow-2xs hover:shadow-xs active:scale-95"
+                        title="Hapus Milestone Checklist ini dari proyek"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Checklist</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(milestone.id)}
+                        className="text-xs text-slate-500 hover:text-slate-900 font-bold inline-flex items-center gap-1"
+                      >
+                        <span>{isExpanded ? 'Hide Details' : 'View Files'}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -813,12 +1001,12 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                       </div>
                     )}
 
-                    {/* REQUIRED STATUTORY DOSSIERS GRID */}
+                    {/* REQUIRED STATUTORY FILES GRID */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                           <FileCheck className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>Required Regulatory Dossiers ({milestone.requiredDocTypes.length})</span>
+                          <span>Required Regulatory Files ({milestone.requiredDocTypes.length})</span>
                         </span>
                         <span className="text-[10px] text-slate-500 font-mono">
                           {milestone.matchedDocuments.length} / {milestone.requiredDocTypes.length} Document Types Attached
@@ -832,7 +1020,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {milestone.requiredDocTypes.map((reqDocType) => {
-                            const matchingUploaded = project.documents.filter((d) => d.type === reqDocType);
+                            const matchingUploaded = currentProject.documents.filter((d) => d.type === reqDocType);
                             const hasUploaded = matchingUploaded.length > 0;
 
                             return (
@@ -862,26 +1050,47 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                                     </span>
                                   </div>
 
-                                  {!hasUploaded ? (
+                                  <div className="flex items-center gap-1">
+                                    {!hasUploaded ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenUploadForDocType(reqDocType)}
+                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all shadow-xs"
+                                      >
+                                        <UploadCloud className="w-3 h-3" />
+                                        <span>Upload</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenUploadForDocType(reqDocType)}
+                                        className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold flex items-center gap-1"
+                                        title="Upload new version"
+                                      >
+                                        <Plus className="w-2.5 h-2.5" />
+                                        <span>New Ver</span>
+                                      </button>
+                                    )}
+
+                                    {/* Delete Doc Requirement button */}
                                     <button
                                       type="button"
-                                      onClick={() => handleOpenUploadForDocType(reqDocType)}
-                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all shadow-xs"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setConfirmDeleteDocReq({
+                                          milestoneId: milestone.id,
+                                          milestoneTitle: milestone.title,
+                                          docType: reqDocType,
+                                          isOptional: false,
+                                          docName: getDocTypeName(reqDocType),
+                                        });
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                                      title="Hapus Syarat Dokumen Wajib dari Checklist"
                                     >
-                                      <UploadCloud className="w-3 h-3" />
-                                      <span>Upload</span>
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenUploadForDocType(reqDocType)}
-                                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-bold flex items-center gap-1"
-                                      title="Upload new version"
-                                    >
-                                      <Plus className="w-2.5 h-2.5" />
-                                      <span>New Ver</span>
-                                    </button>
-                                  )}
+                                  </div>
                                 </div>
 
                                 {/* Matching Uploaded Files List */}
@@ -892,17 +1101,44 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                                         key={file.id}
                                         className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 text-[11px]"
                                       >
-                                        <div className="flex items-center gap-1.5 truncate">
-                                          <FileText className="w-3 h-3 text-indigo-600 shrink-0" />
-                                          <span className="font-semibold text-slate-800 truncate" title={file.name}>
+                                        <button
+                                          type="button"
+                                          onClick={() => setPreviewDoc(file)}
+                                          className="flex items-center gap-1.5 truncate text-left group cursor-pointer hover:text-blue-600"
+                                          title="Inspect & preview uploaded document"
+                                        >
+                                          <FileText className="w-3 h-3 text-indigo-600 shrink-0 group-hover:text-blue-600" />
+                                          <span className="font-semibold text-slate-800 group-hover:text-blue-600 truncate underline-offset-2 group-hover:underline" title={file.name}>
                                             {file.name}
                                           </span>
                                           <span className="text-[9px] px-1 py-0.2 rounded bg-slate-200 text-slate-700 font-mono">
                                             {file.version}
                                           </span>
-                                        </div>
+                                        </button>
 
                                         <div className="flex items-center gap-1.5 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => setPreviewDoc(file)}
+                                            className="p-1 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded transition-colors"
+                                            title="Quick Preview"
+                                          >
+                                            <Eye className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setConfirmDeleteFile({
+                                                docId: file.id,
+                                                docName: file.name,
+                                              });
+                                            }}
+                                            className="p-1 hover:bg-rose-100 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                                            title="Hapus Dokumen dari repositori proyek"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </button>
                                           <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${getDocStatusBadge(file.status)}`}>
                                             {file.status}
                                           </span>
@@ -921,7 +1157,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                       )}
                     </div>
 
-                    {/* OPTIONAL SUPPORTING DOSSIERS (If any exist) */}
+                    {/* OPTIONAL SUPPORTING FILES (If any exist) */}
                     {milestone.optionalDocTypes && milestone.optionalDocTypes.length > 0 && (
                       <div className="pt-2">
                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
@@ -929,7 +1165,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {milestone.optionalDocTypes.map((optType) => {
-                            const optUploaded = project.documents.filter((d) => d.type === optType);
+                            const optUploaded = currentProject.documents.filter((d) => d.type === optType);
                             return (
                               <div
                                 key={optType}
@@ -954,6 +1190,23 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                                     <Plus className="w-3 h-3" />
                                   </button>
                                 )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmDeleteDocReq({
+                                      milestoneId: milestone.id,
+                                      milestoneTitle: milestone.title,
+                                      docType: optType,
+                                      isOptional: true,
+                                      docName: getDocTypeName(optType),
+                                    });
+                                  }}
+                                  className="text-slate-400 hover:text-rose-600 ml-0.5 p-0.5 hover:bg-rose-100 rounded"
+                                  title="Hapus Syarat Opsional dari Checklist"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
                               </div>
                             );
                           })}
@@ -965,10 +1218,28 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                     <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
                         <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Lead Consultant Review: {project.leadConsultantName}</span>
+                        <span>Lead Consultant Review: {currentProject.leadConsultantName}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          id={`btn-delete-milestone-footer-${milestone.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteMilestone({
+                              id: milestone.id,
+                              title: milestone.title,
+                              stage: milestone.stage,
+                            });
+                          }}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs hover:border-rose-300"
+                          title="Hapus Milestone Checklist ini dari proyek"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Hapus Checklist</span>
+                        </button>
+
                         {!milestone.isCompleted ? (
                           <button
                             type="button"
@@ -1104,7 +1375,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                     <option value="INQUIRY">1. Inquiry & Scoping</option>
                     <option value="GAP_ANALYSIS">2. Gap Analysis</option>
                     <option value="DOC_PREPARATION">3. BOM & Doc Prep</option>
-                    <option value="FIELD_VERIFICATION">4. Field Audit (Surveyor)</option>
+                    <option value="FIELD_VERIFICATION">4. Field Audit (LVI)</option>
                     <option value="MINISTRY_REVIEW">5. SIINas Review</option>
                     <option value="CERTIFICATE_ISSUED">6. Certificate Issued</option>
                   </select>
@@ -1142,33 +1413,17 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                   Required Document Types (Auto-completes when uploaded)
                 </label>
                 <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto p-2 bg-slate-50 rounded-lg border border-slate-200">
-                  {[
-                    'BOM_EXCEL',
-                    'COST_ACCOUNTING',
-                    'SUPPLIER_TKDN_CERT',
-                    'FACTORY_ASSET_REGISTRY',
-                    'NIB_OSS_DOCS',
-                    'SIINAS_PROFILE',
-                    'AUDIT_VERIFICATION_REPORT',
-                    'LEGAL_PERMIT',
-                    'ISO_QMS_CERT',
-                    'LAB_TEST_REPORT',
-                    'AMDAL_UKL_DOCUMENT',
-                    'DEED_AHU_LEGAL',
-                    'OFFER_QUOTATION_LETTER',
-                    'CLIENT_CONTRACT_SPK',
-                    'SURVEYOR_FEE_RECEIPT',
-                  ].map((dt) => {
-                    const isSelected = customSelectedDocTypes.includes(dt as DocumentType);
+                  {(activeDocumentTypes && activeDocumentTypes.length > 0 ? activeDocumentTypes : documentTypes).map((dt) => {
+                    const isSelected = customSelectedDocTypes.includes(dt.id as DocumentType);
                     return (
                       <button
-                        key={dt}
+                        key={dt.id}
                         type="button"
                         onClick={() => {
                           if (isSelected) {
-                            setCustomSelectedDocTypes(customSelectedDocTypes.filter((t) => t !== dt));
+                            setCustomSelectedDocTypes(customSelectedDocTypes.filter((t) => t !== dt.id));
                           } else {
-                            setCustomSelectedDocTypes([...customSelectedDocTypes, dt as DocumentType]);
+                            setCustomSelectedDocTypes([...customSelectedDocTypes, dt.id as DocumentType]);
                           }
                         }}
                         className={`p-1.5 rounded text-[11px] text-left font-medium transition-all flex items-center justify-between ${
@@ -1177,7 +1432,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                             : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
-                        <span className="truncate">{getDocTypeName(dt as DocumentType)}</span>
+                        <span className="truncate">{dt.name}</span>
                         {isSelected && <Check className="w-3 h-3 text-emerald-700 shrink-0" />}
                       </button>
                     );
@@ -1213,9 +1468,405 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
           setIsUploadModalOpen(false);
           setUploadPreselectedDocType(undefined);
         }}
-        initialProject={project}
+        initialProject={currentProject}
         initialDocType={uploadPreselectedDocType}
       />
+
+      {/* 8. DOCUMENT FULL PREVIEW & COMPLIANCE INSPECTOR MODAL */}
+      <DocumentPreviewModal
+        isOpen={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        document={previewDoc}
+        project={currentProject}
+      />
+
+      {/* 9. MASTER DOCUMENT TYPE REPOSITORY MODAL (admin.master) */}
+      <DocumentTypeManagerModal
+        isOpen={isDocTypeModalOpen}
+        onClose={() => setIsDocTypeModalOpen(false)}
+      />
+
+      {/* 10. CONFIRM DELETE MILESTONE CHECKLIST MODAL */}
+      {confirmDeleteMilestone && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Hapus Permanen Milestone Checklist</h4>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Konfirmasi penghapusan permanen dari sistem
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteMilestone(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-2">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-bold">Milestone / Langkah</span>
+                <p className="font-bold text-slate-900 mt-0.5">{confirmDeleteMilestone.title}</p>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getStageColor(confirmDeleteMilestone.stage)}`}>
+                  {confirmDeleteMilestone.stage.replace(/_/g, ' ')}
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">ID: {confirmDeleteMilestone.id}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                Milestone checklist ini akan <strong>dihapus secara permanen dari sistem</strong> dan dihilangkan dari alur evaluasi kepatuhan sertifikasi proyek.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteMilestone(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const mTitle = confirmDeleteMilestone.title;
+                  deleteMilestoneFromProject(currentProject.id, confirmDeleteMilestone.id);
+                  showFeedback(`Milestone "${mTitle}" berhasil dihapus secara permanen dari sistem.`);
+                  setConfirmDeleteMilestone(null);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Permanen di Sistem</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. CONFIRM DELETE DOC REQUIREMENT MODAL */}
+      {confirmDeleteDocReq && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">
+                    Hapus Syarat {confirmDeleteDocReq.isOptional ? 'Opsional' : 'Wajib'}
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Konfirmasi perubahan syarat dokumen
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteDocReq(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-2">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-bold">Syarat Dokumen</span>
+                <p className="font-bold text-slate-900 mt-0.5">{confirmDeleteDocReq.docName}</p>
+                <span className="text-[10px] font-mono text-slate-500 block mt-0.5">
+                  Type: {confirmDeleteDocReq.docType} ({confirmDeleteDocReq.isOptional ? 'Optional' : 'Required'})
+                </span>
+              </div>
+              <div className="pt-1 border-t border-slate-200">
+                <span className="text-[10px] text-slate-400 uppercase font-bold">Dari Milestone</span>
+                <p className="text-slate-700 font-medium mt-0.5">{confirmDeleteDocReq.milestoneTitle}</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                Syarat dokumen ini tidak lagi diwajibkan untuk penyelesaian milestone ini. Dokumen yang sudah terunggah tetap tersimpan di repositori proyek.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteDocReq(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteDocRequirementFromMilestone(
+                    currentProject.id,
+                    confirmDeleteDocReq.milestoneId,
+                    confirmDeleteDocReq.docType,
+                    confirmDeleteDocReq.isOptional
+                  );
+                  showFeedback(`Syarat dokumen "${confirmDeleteDocReq.docName}" berhasil dihapus.`);
+                  setConfirmDeleteDocReq(null);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Syarat</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 12. CONFIRM DELETE UPLOADED FILE MODAL */}
+      {confirmDeleteFile && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Hapus Dokumen Terunggah</h4>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Hapus file dari repositori proyek
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteFile(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+              <span className="text-[10px] text-slate-400 uppercase font-bold">Nama File</span>
+              <p className="font-bold text-slate-900 mt-0.5 break-all">{confirmDeleteFile.docName}</p>
+            </div>
+
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                File akan dihapus dari repositori proyek. Jika dokumen ini memenuhi checklist, status milestone akan kembali menjadi missing/in progress.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteFile(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteDocument(currentProject.id, confirmDeleteFile.docId);
+                  showFeedback(`File "${confirmDeleteFile.docName}" berhasil dihapus.`);
+                  setConfirmDeleteFile(null);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Dokumen</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 13. MANAGE & RESTORE DELETED CHECKLIST MODAL */}
+      {isManageDeletedModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Kelola / Pulihkan Checklist</h4>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Lihat dan pulihkan milestone checklist yang telah dihapus
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsManageDeletedModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1">
+              {currentProject.deletedMilestoneIds && currentProject.deletedMilestoneIds.length > 0 ? (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-slate-700 block">
+                    Daftar Milestone Dihapus ({currentProject.deletedMilestoneIds.length})
+                  </span>
+                  {currentProject.deletedMilestoneIds.map((deletedId) => {
+                    const defaultTemplates =
+                      CERTIFICATION_MILESTONE_TEMPLATES[currentProject.serviceType] ||
+                      CERTIFICATION_MILESTONE_TEMPLATES.TKDN_BARANG;
+                    const tmpl = defaultTemplates.find((t) => t.id === deletedId);
+                    const customItem = currentProject.customMilestones?.find((c) => c.id === deletedId);
+                    const title = tmpl?.title || customItem?.title || `Milestone #${deletedId}`;
+                    const stage = tmpl?.stage || customItem?.stage || 'DOC_PREPARATION';
+
+                    return (
+                      <div
+                        key={deletedId}
+                        className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <p className="font-bold text-slate-900 truncate">{title}</p>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.2 rounded border ${getStageColor(stage)}`}>
+                              {stage.replace(/_/g, ' ')}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">ID: {deletedId}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            restoreMilestoneToProject(currentProject.id, deletedId);
+                            showFeedback(`Milestone "${title}" berhasil dipulihkan.`);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0 shadow-xs"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Pulihkan</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-6 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-2">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                  <p className="font-bold text-slate-800">Tidak ada checklist yang sedang dihapus</p>
+                  <p className="text-slate-500 text-[11px]">
+                    Semua milestone standar regulasi aktif dan dievaluasi secara realtime.
+                  </p>
+                </div>
+              )}
+
+              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="leading-relaxed text-[11px]">
+                  Anda juga dapat mereset seluruh modifikasi dan memulihkan checklist ke pengaturan standar regulasi Kemenperin / BSN asli.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManageDeletedModalOpen(false);
+                  setConfirmResetChecklist(true);
+                }}
+                className="px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                <span>Reset Seluruh ke Default</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsManageDeletedModalOpen(false)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 14. CONFIRM RESET CHECKLIST MODAL */}
+      {confirmResetChecklist && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-200 animate-in fade-in zoom-in-95 duration-150 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Reset Checklist ke Default</h4>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Kembalikan seluruh roadmap ke regulasi resmi
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmResetChecklist(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 space-y-1.5">
+              <p className="font-bold text-slate-900">
+                Memulihkan {currentProject.deletedMilestoneIds?.length || 0} milestone yang telah dihapus.
+              </p>
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                Tindakan ini akan mengembalikan seluruh template milestone dan daftar dokumen wajib sesuai standar regulasi Kemenperin / BSN asli.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmResetChecklist(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetProjectMilestonesToDefault(currentProject.id);
+                  showFeedback('Seluruh checklist milestone telah direset ke standar regulasi resmi.');
+                  setConfirmResetChecklist(false);
+                }}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset ke Default</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

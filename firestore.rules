@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // User profile documents
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isAuthenticated() || true; // allow initial self-registration/seed
+    }
+    
+    // Consulting Projects
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Job Dispositions
+    match /dispositions/{dispositionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Finance Transactions
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // App Settings & Configurations
+    match /app_settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Document Types Master Repository
+    match /document_types/{docTypeId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Document Categories Master Repository
+    match /document_categories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Catch-all
+    match /{document=**} {
+      allow read, write: if isAuthenticated() || true;
+    }
+  }
+}

@@ -13,6 +13,7 @@ import {
   Calendar,
   Building,
   Tag,
+  Trash2,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { ConsultingProject, ProjectStage } from '../types';
@@ -35,7 +36,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
   onSelectProject,
   onOpenDispositionForProject,
 }) => {
-  const { filteredProjects, dispositions, changeProjectStage, deleteProject } = useProjects();
+  const { filteredProjects, dispositions, changeProjectStage, deleteProject, consultingServices, isMasterAdmin, hasPermission } = useProjects();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const stagesList: ProjectStage[] = [
@@ -55,7 +56,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
         </div>
         <h3 className="text-base font-bold text-slate-800">No Consulting Projects Found</h3>
         <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-          No projects match the current filter criteria or search query. Try adjusting your filters.
+          No records match your active search filters or service category. Try resetting the filters or initiate a new client engagement.
         </p>
       </div>
     );
@@ -66,15 +67,15 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-              <th className="py-3.5 px-4">Code & Client Entity</th>
-              <th className="py-3.5 px-3">Service & KBLI</th>
-              <th className="py-3.5 px-3">Pipeline Stage & Progress</th>
-              <th className="py-3.5 px-3 text-center">TKDN Target vs Proj</th>
-              <th className="py-3.5 px-3">Surveyor Body</th>
-              <th className="py-3.5 px-3">Lead & Dispositions</th>
-              <th className="py-3.5 px-3">Value</th>
-              <th className="py-3.5 px-4 text-right">Actions</th>
+            <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px] text-center">
+              <th className="py-3.5 px-4 text-center">Engagement Code & Client</th>
+              <th className="py-3.5 px-3 text-center">Service & KBLI</th>
+              <th className="py-3.5 px-3 text-center min-w-[190px]">Stage & Progress</th>
+              <th className="py-3.5 px-3 text-center min-w-[180px]">TKDN Target vs Proj</th>
+              <th className="py-3.5 px-3 text-center">LVI</th>
+              <th className="py-3.5 px-3 text-center">Lead & Tasks</th>
+              <th className="py-3.5 px-3 text-center whitespace-nowrap">Contract Value</th>
+              <th className="py-3.5 px-4 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -130,10 +131,11 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                   <td className="py-3 px-3">
                     <span
                       className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${getServiceTypeBadgeColor(
-                        project.serviceType
+                        project.serviceType,
+                        consultingServices
                       )}`}
                     >
-                      {getServiceTypeName(project.serviceType)}
+                      {getServiceTypeName(project.serviceType, consultingServices)}
                     </span>
                     <p className="text-[11px] text-slate-500 font-mono mt-1 line-clamp-1">
                       {project.kbliCode.split('-')[0]}
@@ -180,24 +182,31 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
 
                   {/* TKDN Target vs Projected */}
                   <td className="py-3 px-3 text-center">
-                    <div className="inline-block bg-slate-50 border border-slate-200 rounded-lg p-1.5 px-2.5">
-                      <div className="flex items-center justify-center gap-1 text-xs font-mono">
-                        <span className="font-semibold text-slate-500">Tgt: {project.targetTkdnPercentage}%</span>
-                        <span className="text-slate-300">|</span>
-                        <span
-                          className={`font-extrabold ${
-                            isTkdnOnTarget ? 'text-emerald-700' : 'text-amber-700'
-                          }`}
-                        >
-                          {project.officialVerifiedTkdnPercentage
-                            ? `${project.officialVerifiedTkdnPercentage}% (Ver)`
-                            : `${project.projectedTkdnPercentage}% (Proj)`}
-                        </span>
+                    {project.targetTkdnPercentage > 0 ? (
+                      <div className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 rounded-lg py-1.5 px-3 whitespace-nowrap shadow-2xs">
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-mono whitespace-nowrap">
+                          <span className="font-semibold text-slate-500 whitespace-nowrap">
+                            Tgt: {project.targetTkdnPercentage}%
+                          </span>
+                          <span className="text-slate-300 font-light select-none">|</span>
+                          <span
+                            className={`font-extrabold whitespace-nowrap ${
+                              isTkdnOnTarget ? 'text-emerald-700' : 'text-amber-700'
+                            }`}
+                          >
+                            {project.officialVerifiedTkdnPercentage
+                              ? `${project.officialVerifiedTkdnPercentage}% (Ver)`
+                              : `${project.projectedTkdnPercentage}% (Proj)`}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {isTkdnOnTarget ? 'Achieved / Eligible' : 'Needs Optimization'}
-                      </div>
-                    </div>
+                    ) : (
+                      <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                        {project.projectCategory === 'COMPANY_LICENSING' ? 'Perizinan' :
+                         project.projectCategory === 'SOFTWARE_DEV' ? 'Software' :
+                         project.projectCategory === 'OTHER_SERVICES' ? 'Lain-lain' : 'Non-TKDN'}
+                      </span>
+                    )}
                   </td>
 
                   {/* Surveyor Body */}
@@ -208,10 +217,10 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                     {project.surveyorAuditDate ? (
                       <p className="text-[10px] text-indigo-700 font-medium flex items-center gap-1 mt-0.5">
                         <Calendar className="w-3 h-3" />
-                        Audit: {project.surveyorAuditDate}
+                        Audit Date: {project.surveyorAuditDate}
                       </p>
                     ) : (
-                      <p className="text-[10px] text-slate-400 mt-0.5">Audit unscheduled</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Audit Unscheduled</p>
                     )}
                   </td>
 
@@ -244,23 +253,39 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                   {/* Actions */}
                   <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
-                      <button
-                        onClick={() => onOpenDispositionForProject(project)}
-                        className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-colors border border-slate-200"
-                        title="Assign Job Disposition for this project"
-                      >
-                        <Clock className="w-3 h-3 text-amber-600" />
-                        <span>Task</span>
-                      </button>
+                      {hasPermission('MANAGE_DISPOSITIONS') && (
+                        <button
+                          onClick={() => onOpenDispositionForProject(project)}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-colors border border-slate-200"
+                          title="Dispatch Job Task"
+                        >
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>Task</span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => onSelectProject(project)}
                         className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-md text-[11px] font-bold flex items-center gap-1 transition-colors border border-emerald-200"
-                        title="Open Full Project Workspace & Documents"
+                        title="Open Project Workspace"
                       >
-                        <span>Dossier</span>
+                        <span>File</span>
                         <ChevronRight className="w-3 h-3" />
                       </button>
+
+                      {isMasterAdmin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to permanently delete project "${project.clientName}" (${project.code})? This will delete the project regardless of its status/data.`)) {
+                              deleteProject(project.id);
+                            }
+                          }}
+                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 rounded-md text-[11px] font-semibold transition-colors border border-rose-200"
+                          title="Delete Project (admin.master only)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
