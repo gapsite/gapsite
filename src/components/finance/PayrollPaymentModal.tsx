@@ -34,6 +34,21 @@ import {
   DEFAULT_ROLE_COMPENSATION,
 } from '../../utils/payrollCalculations';
 
+const CALENDAR_MONTHS = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
+
 interface PayrollPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,6 +68,16 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
     paymentChannels,
     currentUser,
   } = useProjects();
+
+  const availableYears = useMemo(() => {
+    const startYear = 2021;
+    const endYear = 2100;
+    const years: number[] = [];
+    for (let y = startYear; y <= endYear; y++) {
+      years.push(y);
+    }
+    return years;
+  }, []);
 
   // Employee details
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
@@ -443,7 +468,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Jabatan / Posisi
@@ -469,24 +494,57 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                   className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600"
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Periode Gaji (Bulan/Tahun)
+                  Bulan Gaji <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                  placeholder="September 2026"
-                  required
-                  className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-medium"
-                />
+                <select
+                  value={
+                    CALENDAR_MONTHS.find((m) => period.toLowerCase().includes(m.toLowerCase())) || 'September'
+                  }
+                  onChange={(e) => {
+                    const newMonth = e.target.value;
+                    const currentYear = period.match(/\d{4}/)?.[0] || '2026';
+                    setPeriod(`${newMonth} ${currentYear}`);
+                  }}
+                  className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-semibold cursor-pointer"
+                >
+                  {CALENDAR_MONTHS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Tanggal Pencairan / Bayar
+                  Tahun Gaji <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={Number(period.match(/\d{4}/)?.[0]) || 2026}
+                  onChange={(e) => {
+                    const newYear = e.target.value;
+                    const currentMonth =
+                      CALENDAR_MONTHS.find((m) => period.toLowerCase().includes(m.toLowerCase())) || 'September';
+                    setPeriod(`${currentMonth} ${newYear}`);
+                  }}
+                  className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-semibold cursor-pointer"
+                >
+                  {availableYears.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Tanggal Pencairan / Bayar <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"

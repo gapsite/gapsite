@@ -42,6 +42,21 @@ interface BatchEmployeeRow {
   selected: boolean;
 }
 
+const CALENDAR_MONTHS = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
+
 export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
   isOpen,
   onClose,
@@ -49,7 +64,25 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
 }) => {
   const { teamMembers, currentUser } = useProjects();
 
-  const [period, setPeriod] = useState<string>('September 2026');
+  const availableYears = useMemo(() => {
+    const startYear = 2021;
+    const endYear = 2100;
+    const years: number[] = [];
+    for (let y = startYear; y <= endYear; y++) {
+      years.push(y);
+    }
+    return years;
+  }, []);
+
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    return CALENDAR_MONTHS[now.getMonth()] || 'September';
+  });
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    return now.getFullYear() || 2026;
+  });
+
+  const period = `${selectedMonth} ${selectedYear}`;
   const [paymentDate, setPaymentDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
@@ -221,17 +254,41 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
         </div>
 
         {/* Global Controls */}
-        <div className="bg-slate-50 p-4 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-slate-50 p-4 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Periode Penggajian Masal
+              Bulan Penggajian
             </label>
-            <input
-              type="text"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-semibold"
-            />
+            <select
+              id="batch-payroll-month-select"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-semibold cursor-pointer"
+            >
+              {CALENDAR_MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Tahun Penggajian
+            </label>
+            <select
+              id="batch-payroll-year-select"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-semibold cursor-pointer"
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

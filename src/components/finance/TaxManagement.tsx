@@ -39,6 +39,35 @@ import {
 } from '../../utils/taxCalculations';
 import { formatRupiah } from '../../utils/formatters';
 
+export const CALENDAR_MONTHS = [
+  { value: 1, name: 'Januari' },
+  { value: 2, name: 'Februari' },
+  { value: 3, name: 'Maret' },
+  { value: 4, name: 'April' },
+  { value: 5, name: 'Mei' },
+  { value: 6, name: 'Juni' },
+  { value: 7, name: 'Juli' },
+  { value: 8, name: 'Agustus' },
+  { value: 9, name: 'September' },
+  { value: 10, name: 'Oktober' },
+  { value: 11, name: 'November' },
+  { value: 12, name: 'Desember' },
+];
+
+const parseTaxMonth = (month?: number, period?: string): number => {
+  if (month && month >= 1 && month <= 12) {
+    return month;
+  }
+  if (period) {
+    const lower = period.toLowerCase();
+    const found = CALENDAR_MONTHS.find((m) => lower.includes(m.name.toLowerCase()));
+    if (found) {
+      return found.value;
+    }
+  }
+  return new Date().getMonth() + 1;
+};
+
 interface TaxManagementProps {
   onOpenLedgerWithFilter?: (category: string) => void;
 }
@@ -106,7 +135,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     notes: string;
   }>({
     taxType: 'PPN',
-    taxPeriod: `Masa ${new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`,
+    taxPeriod: `Masa ${CALENDAR_MONTHS[new Date().getMonth()]?.name || 'Januari'} ${new Date().getFullYear()}`,
     taxYear: new Date().getFullYear(),
     taxMonth: new Date().getMonth() + 1,
     title: '',
@@ -224,7 +253,9 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
   // Open Add Modal
   const handleOpenAdd = () => {
     const now = new Date();
-    const periodName = `Masa ${now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+    const curMonth = now.getMonth() + 1;
+    const curMonthObj = CALENDAR_MONTHS.find((m) => m.value === curMonth) || CALENDAR_MONTHS[0];
+    const periodName = `Masa ${curMonthObj.name} ${now.getFullYear()}`;
     const initialType: TaxType = 'PPN';
     const initialRate = TAX_TYPE_CONFIGS[initialType]?.defaultRate || 11;
     const initialDesc = getDefaultTaxDescription({
@@ -237,7 +268,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       taxType: initialType,
       taxPeriod: periodName,
       taxYear: now.getFullYear(),
-      taxMonth: now.getMonth() + 1,
+      taxMonth: curMonth,
       title: `PPN Kurang Bayar ${periodName}`,
       description: initialDesc,
       taxableBaseAmount: 100000000,
@@ -268,11 +299,16 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       projectCode: t.projectCode,
     });
 
+    const parsedMonth = parseTaxMonth(t.taxMonth, t.taxPeriod);
+    const mName = CALENDAR_MONTHS.find((m) => m.value === parsedMonth)?.name || 'Januari';
+    const yearVal = t.taxYear || new Date().getFullYear();
+    const periodVal = t.taxPeriod || `Masa ${mName} ${yearVal}`;
+
     setFormData({
       taxType: t.taxType,
-      taxPeriod: t.taxPeriod || '',
-      taxYear: t.taxYear || new Date().getFullYear(),
-      taxMonth: t.taxMonth || new Date().getMonth() + 1,
+      taxPeriod: periodVal,
+      taxYear: yearVal,
+      taxMonth: parsedMonth,
       title: t.title || '',
       description: desc,
       taxableBaseAmount: t.taxableBaseAmount || 0,
@@ -288,6 +324,65 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       notes: t.notes || '',
     });
     setIsFormModalOpen(true);
+  };
+
+  // Handle calendar month change in form
+  const handleMonthChange = (monthValue: number) => {
+    const selectedMonth = CALENDAR_MONTHS.find((m) => m.value === monthValue) || CALENDAR_MONTHS[0];
+    const newPeriodName = `Masa ${selectedMonth.name} ${formData.taxYear}`;
+
+    // Auto-update title if it followed the standard auto-generated pattern
+    const currentMonthName = CALENDAR_MONTHS.find((m) => m.value === formData.taxMonth)?.name || '';
+    let updatedTitle = formData.title;
+    if (
+      !updatedTitle ||
+      updatedTitle.includes(formData.taxPeriod) ||
+      (currentMonthName && updatedTitle.includes(currentMonthName)) ||
+      updatedTitle.startsWith('PPN Kurang Bayar') ||
+      updatedTitle.startsWith('PPh ')
+    ) {
+      if (formData.taxType === 'PPN') {
+        updatedTitle = `PPN Kurang Bayar ${newPeriodName}`;
+      } else {
+        const cfg = TAX_TYPE_CONFIGS[formData.taxType] || TAX_TYPE_CONFIGS.OTHER_TAX;
+        updatedTitle = `${cfg.shortName} ${newPeriodName}`;
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      taxMonth: monthValue,
+      taxPeriod: newPeriodName,
+      title: updatedTitle,
+    }));
+  };
+
+  // Handle tax year change in form
+  const handleYearChange = (yearValue: number) => {
+    const selectedMonth = CALENDAR_MONTHS.find((m) => m.value === formData.taxMonth) || CALENDAR_MONTHS[0];
+    const newPeriodName = `Masa ${selectedMonth.name} ${yearValue}`;
+
+    let updatedTitle = formData.title;
+    if (
+      !updatedTitle ||
+      updatedTitle.includes(formData.taxPeriod) ||
+      updatedTitle.startsWith('PPN Kurang Bayar') ||
+      updatedTitle.startsWith('PPh ')
+    ) {
+      if (formData.taxType === 'PPN') {
+        updatedTitle = `PPN Kurang Bayar ${newPeriodName}`;
+      } else {
+        const cfg = TAX_TYPE_CONFIGS[formData.taxType] || TAX_TYPE_CONFIGS.OTHER_TAX;
+        updatedTitle = `${cfg.shortName} ${newPeriodName}`;
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      taxYear: yearValue,
+      taxPeriod: newPeriodName,
+      title: updatedTitle,
+    }));
   };
 
   // Dynamic recalculation inside form
@@ -1212,27 +1307,33 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               {/* Masa Pajak & Tahun */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  <label htmlFor="tax-form-period-select" className="block text-xs font-semibold text-slate-200 mb-1">
                     Masa Pajak / Periode <span className="text-rose-400">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <select
+                    id="tax-form-period-select"
                     required
-                    placeholder="Contoh: Masa Agustus 2026, Triwulan III, Tahunan 2026"
-                    value={formData.taxPeriod}
-                    onChange={(e) => setFormData({ ...formData, taxPeriod: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                  />
+                    value={formData.taxMonth}
+                    onChange={(e) => handleMonthChange(Number(e.target.value))}
+                    className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all cursor-pointer"
+                  >
+                    {CALENDAR_MONTHS.map((m) => (
+                      <option key={m.value} value={m.value} className="bg-slate-900 text-white">
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-200 mb-1">
+                  <label htmlFor="tax-form-year-input" className="block text-xs font-semibold text-slate-200 mb-1">
                     Tahun Pajak
                   </label>
                   <input
+                    id="tax-form-year-input"
                     type="number"
                     value={formData.taxYear}
-                    onChange={(e) => setFormData({ ...formData, taxYear: Number(e.target.value) })}
+                    onChange={(e) => handleYearChange(Number(e.target.value))}
                     className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
@@ -1801,13 +1902,15 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     });
 
                     const now = new Date();
-                    const periodName = `Masa ${now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+                    const curMonth = now.getMonth() + 1;
+                    const curMonthObj = CALENDAR_MONTHS.find((m) => m.value === curMonth) || CALENDAR_MONTHS[0];
+                    const periodName = `Masa ${curMonthObj.name} ${now.getFullYear()}`;
 
                     setFormData({
                       taxType: calcType,
                       taxPeriod: periodName,
                       taxYear: now.getFullYear(),
-                      taxMonth: now.getMonth() + 1,
+                      taxMonth: curMonth,
                       title: `${TAX_TYPE_CONFIGS[calcType].shortName} ${periodName}`,
                       description: res.description,
                       taxableBaseAmount: calcDpp,
