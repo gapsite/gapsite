@@ -690,7 +690,10 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
           setEditingConfig(null);
         }}
         initialConfig={editingConfig}
-        defaultYear={selectedYearFilter !== 'ALL' ? Number(selectedYearFilter) : 2026}
+        defaultYear={selectedYearFilter !== 'ALL' ? Number(selectedYearFilter) : 2025}
+        onSaved={(savedYear) => {
+          setSelectedYearFilter(String(savedYear));
+        }}
       />
 
       {/* Modal: Full Detail Breakdown */}

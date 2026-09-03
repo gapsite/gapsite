@@ -26,6 +26,7 @@ interface AnnualSalaryConfigModalProps {
   onClose: () => void;
   initialConfig?: EmployeeAnnualSalaryConfig | null;
   defaultYear?: number;
+  onSaved?: (savedYear: number) => void;
 }
 
 export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = ({
@@ -33,12 +34,14 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
   onClose,
   initialConfig,
   defaultYear,
+  onSaved,
 }) => {
   const {
     teamMembers,
     currentUser,
     employeeSalaryConfigs,
     addOrUpdateEmployeeSalaryConfig,
+    addOrUpdateMultipleEmployeeSalaryConfigs,
     roleDefinitions,
   } = useProjects();
 
@@ -142,9 +145,9 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
 
     const yr = currentSelectedYear || year;
 
-    // Check if there's already an existing config for this employee in this year or prior year
+    // Check if there's already an existing config for this employee in this year
     const existingSameYear = employeeSalaryConfigs.find(
-      (c) => c.employeeId === empId && c.year === yr && (!initialConfig || c.id !== initialConfig.id)
+      (c) => c.employeeId === empId && Number(c.year) === Number(yr)
     );
 
     if (existingSameYear) {
@@ -157,7 +160,27 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
       setAnnualBonusEstimate(existingSameYear.annualBonusEstimate || 0);
       setThrMonths(existingSameYear.thrMonths ?? 1);
       setSkNumber(existingSameYear.skNumber || '');
+      setEffectiveDate(existingSameYear.effectiveDate || `${yr}-01-01`);
+      setStatus(existingSameYear.status || 'ACTIVE');
       setNotes(existingSameYear.notes || '');
+      return;
+    }
+
+    // Check if there's any config for this employee in other years to carry over values
+    const existingOtherYear = employeeSalaryConfigs.find((c) => c.employeeId === empId);
+    if (existingOtherYear) {
+      setBasicSalary(existingOtherYear.basicSalary);
+      setPositionAllowance(existingOtherYear.positionAllowance);
+      setTransportAllowance(existingOtherYear.transportAllowance);
+      setMealAllowance(existingOtherYear.mealAllowance);
+      setCommunicationAllowance(existingOtherYear.communicationAllowance || 0);
+      setFixedAllowance(existingOtherYear.fixedAllowance || 0);
+      setAnnualBonusEstimate(existingOtherYear.annualBonusEstimate || 0);
+      setThrMonths(existingOtherYear.thrMonths ?? 1);
+      setSkNumber(`SK-DIR/${String(employeeSalaryConfigs.length + 1).padStart(3, '0')}/REMUN/${yr}`);
+      setEffectiveDate(`${yr}-01-01`);
+      setStatus('ACTIVE');
+      setNotes(existingOtherYear.notes || `Penetapan standar gaji tahunan ${yr}.`);
       return;
     }
 
@@ -172,6 +195,9 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
     setFixedAllowance(benchmark.fixedAllowance ?? 0);
     setAnnualBonusEstimate(benchmark.basicSalary * 1.5);
     setThrMonths(1);
+    setSkNumber(`SK-DIR/${String(employeeSalaryConfigs.length + 1).padStart(3, '0')}/REMUN/${yr}`);
+    setEffectiveDate(`${yr}-01-01`);
+    setStatus('ACTIVE');
     setNotes(`Penetapan standar gaji tahunan berdasarkan benchmark kompetensi jabatan ${member.roleTitle || member.role}.`);
   };
 
@@ -254,8 +280,14 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
 
     setIsSubmitting(true);
     try {
-      const res = await addOrUpdateEmployeeSalaryConfig({
-        id: initialConfig?.id,
+      // Check existing config for this employee in the target year
+      const existingInYear = employeeSalaryConfigs.find(
+        (c) => c.employeeId === selectedEmployeeId && Number(c.year) === Number(year)
+      );
+      const targetId = existingInYear?.id || (initialConfig && Number(initialConfig.year) === Number(year) ? initialConfig.id : undefined);
+
+      const payload = {
+        id: targetId,
         employeeId: selectedEmployeeId,
         employeeName,
         year,
@@ -274,13 +306,18 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
         effectiveDate,
         status,
         notes,
-      });
+      };
 
-      if (res.success) {
-        if (syncToAllWithSameRole) {
-          const peers = teamMembers.filter((m) => m.role === role && m.id !== selectedEmployeeId);
-          for (const peer of peers) {
-            await addOrUpdateEmployeeSalaryConfig({
+      if (syncToAllWithSameRole) {
+        const peers = teamMembers.filter((m) => m.role === role && m.id !== selectedEmployeeId);
+        const allItems = [
+          payload,
+          ...peers.map((peer) => {
+            const peerExisting = employeeSalaryConfigs.find(
+              (c) => c.employeeId === peer.id && Number(c.year) === Number(year)
+            );
+            return {
+              id: peerExisting?.id,
               employeeId: peer.id,
               employeeName: peer.name,
               year,
@@ -299,20 +336,33 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
               effectiveDate,
               status,
               notes: `Disinkronkan otomatis seragam dengan ${employeeName} (${roleTitle || role}).`,
-            });
-          }
-        }
+            };
+          }),
+        ];
 
-        setSuccessNotice(
-          syncToAllWithSameRole
-            ? `Standar remunerasi ${year} untuk ${employeeName} & seluruh karyawan jabatan ${roleTitle || role} berhasil disimpan dan disinkronkan secara realtime!`
-            : res.message
-        );
-        setTimeout(() => {
-          onClose();
-        }, 1400);
+        const res = await addOrUpdateMultipleEmployeeSalaryConfigs(allItems);
+        if (res.success) {
+          setSuccessNotice(
+            `Standar remunerasi ${year} untuk ${employeeName} & seluruh karyawan jabatan ${roleTitle || role} (${allItems.length} orang) berhasil disimpan dan disinkronkan ke Cloud Firestore!`
+          );
+          onSaved?.(year);
+          setTimeout(() => {
+            onClose();
+          }, 1200);
+        } else {
+          setErrorMsg(res.message);
+        }
       } else {
-        setErrorMsg(res.message);
+        const res = await addOrUpdateEmployeeSalaryConfig(payload);
+        if (res.success) {
+          setSuccessNotice(`Penetapan gaji tahun ${year} untuk ${employeeName} berhasil disimpan ke Cloud Firestore!`);
+          onSaved?.(year);
+          setTimeout(() => {
+            onClose();
+          }, 1200);
+        } else {
+          setErrorMsg(res.message);
+        }
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Terjadi kesalahan saat menyimpan penetapan gaji.');

@@ -837,7 +837,8 @@ export const ensureInitialFirestoreSeed = async (
   defaultCompanyLetterhead?: CompanyLetterhead,
   defaultEmployeeSalaryConfigs?: any[],
   defaultInstitutionTypes?: any[],
-  defaultTermSchemes?: any[]
+  defaultTermSchemes?: any[],
+  defaultOfficeRents?: any[]
 ): Promise<void> => {
   try {
     // 1. Ensure master admin root user exists in Firestore
@@ -1100,6 +1101,15 @@ export const ensureInitialFirestoreSeed = async (
       const termSnap = await getDoc(termRef);
       if (!termSnap.exists()) {
         await setDoc(termRef, sanitizeForFirestore({ data: defaultTermSchemes, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 21. Ensure office rent contracts exist in settings if not present
+    if (defaultOfficeRents !== undefined && defaultOfficeRents.length > 0) {
+      const rentRef = doc(db, FirestoreCollections.SETTINGS, 'office_rents');
+      const rentSnap = await getDoc(rentRef);
+      if (!rentSnap.exists()) {
+        await setDoc(rentRef, sanitizeForFirestore({ data: defaultOfficeRents, updatedAt: new Date().toISOString() }));
       }
     }
   } catch (err) {

@@ -591,6 +591,9 @@ interface ProjectContextType {
   addOrUpdateEmployeeSalaryConfig: (
     config: Omit<EmployeeAnnualSalaryConfig, 'id' | 'updatedAt' | 'createdAt'> & { id?: string }
   ) => Promise<{ success: boolean; message: string; config?: EmployeeAnnualSalaryConfig }>;
+  addOrUpdateMultipleEmployeeSalaryConfigs: (
+    configs: (Omit<EmployeeAnnualSalaryConfig, 'id' | 'updatedAt' | 'createdAt'> & { id?: string })[]
+  ) => Promise<{ success: boolean; message: string; configs?: EmployeeAnnualSalaryConfig[] }>;
   deleteEmployeeSalaryConfig: (id: string) => Promise<{ success: boolean; message: string }>;
   resetEmployeeSalaryConfigsToDefault: () => Promise<{ success: boolean; message: string }>;
   getEmployeeSalaryConfigForYear: (
@@ -1723,7 +1726,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
+  const employeeSalaryConfigsRef = useRef<EmployeeAnnualSalaryConfig[]>(employeeSalaryConfigs);
+
   useEffect(() => {
+    employeeSalaryConfigsRef.current = employeeSalaryConfigs;
     try {
       localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(employeeSalaryConfigs));
     } catch (e) {
@@ -2748,8 +2754,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     const unsubSalaryConfigs = subscribeToSettings('employee_salary_configs', (data) => {
-      if (Array.isArray(data)) {
+      if (Array.isArray(data) && data.length > 0) {
         setEmployeeSalaryConfigs(data);
+        employeeSalaryConfigsRef.current = data;
         try {
           localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(data));
         } catch (e) {
@@ -2836,6 +2843,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveSettingsToFirestore('company_letterhead', companyLetterhead),
         saveSettingsToFirestore('institution_types', institutionTypes),
         saveSettingsToFirestore('term_distribution_schemes', termDistributionSchemes),
+        saveSettingsToFirestore('employee_salary_configs', employeeSalaryConfigs),
         ...receivables.map((r) => saveReceivableToFirestore(r)),
         ...governmentProjects.map((gp) => saveGovernmentProjectToFirestore(gp)),
         ...retailProjects.map((rp) => saveRetailProjectToFirestore(rp)),
@@ -9051,50 +9059,57 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const nowStr = new Date().toISOString();
       const targetYear = Number(configData.year) || new Date().getFullYear();
-      const configId = configData.id || `SALCFG-${targetYear}-${configData.employeeId}-${Date.now().toString(36)}`;
+      const currentConfigs = [...(employeeSalaryConfigsRef.current || employeeSalaryConfigs)];
 
-      const newConfig: EmployeeAnnualSalaryConfig = {
-        ...configData,
-        id: configId,
-        year: targetYear,
-        createdAt: nowStr,
-        updatedAt: nowStr,
-        updatedBy: currentUser?.name || 'Master Admin',
-      };
+      // Match by exact (employeeId AND year) or ID if matches target year
+      const existsIndex = currentConfigs.findIndex(
+        (c) =>
+          (c.employeeId === configData.employeeId && Number(c.year) === targetYear) ||
+          (Boolean(configData.id) && c.id === configData.id && Number(c.year) === targetYear)
+      );
 
-      let updatedList: EmployeeAnnualSalaryConfig[] = [];
+      let finalConfigId: string;
+      let finalConfig: EmployeeAnnualSalaryConfig;
+      let updatedList: EmployeeAnnualSalaryConfig[];
 
-      setEmployeeSalaryConfigs((prev) => {
-        const existsIndex = prev.findIndex(
-          (c) => c.id === configId || (c.employeeId === configData.employeeId && Number(c.year) === targetYear)
-        );
+      if (existsIndex >= 0) {
+        finalConfigId = currentConfigs[existsIndex].id || `SALCFG-${targetYear}-${configData.employeeId}`;
+        finalConfig = {
+          ...currentConfigs[existsIndex],
+          ...configData,
+          id: finalConfigId,
+          year: targetYear,
+          updatedAt: nowStr,
+          updatedBy: currentUser?.name || 'Master Admin',
+        };
+        updatedList = [...currentConfigs];
+        updatedList[existsIndex] = finalConfig;
+      } else {
+        finalConfigId = configData.id || `SALCFG-${targetYear}-${configData.employeeId}-${Date.now().toString(36)}`;
+        finalConfig = {
+          ...configData,
+          id: finalConfigId,
+          year: targetYear,
+          createdAt: nowStr,
+          updatedAt: nowStr,
+          updatedBy: currentUser?.name || 'Master Admin',
+        };
+        updatedList = [finalConfig, ...currentConfigs];
+      }
 
-        if (existsIndex >= 0) {
-          updatedList = [...prev];
-          updatedList[existsIndex] = {
-            ...prev[existsIndex],
-            ...newConfig,
-            id: prev[existsIndex].id || configId,
-            createdAt: prev[existsIndex].createdAt || nowStr,
-            updatedAt: nowStr,
-            updatedBy: currentUser?.name || 'Master Admin',
-          };
-        } else {
-          updatedList = [newConfig, ...prev];
-        }
+      // Synchronously update ref and state
+      employeeSalaryConfigsRef.current = updatedList;
+      setEmployeeSalaryConfigs(updatedList);
 
-        // 1. Broadcast real-time across tabs and roles
-        broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedList);
+      // 1. Broadcast real-time across tabs and roles
+      broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedList);
 
-        // 2. Persist to localStorage
-        try {
-          localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
-        } catch (e) {
-          console.warn('LocalStorage save salary config error:', e);
-        }
-
-        return updatedList;
-      });
+      // 2. Persist to localStorage
+      try {
+        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn('LocalStorage save salary config error:', e);
+      }
 
       // 3. Persist to Cloud Firestore settings collection
       try {
@@ -9106,7 +9121,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return {
         success: true,
         message: `Standar gaji tahunan untuk ${configData.employeeName} (${targetYear}) berhasil disimpan dan disinkronisasikan ke seluruh role secara real-time.`,
-        config: newConfig,
+        config: finalConfig,
       };
     } catch (err: any) {
       console.error('Error saving employee salary config:', err);
@@ -9117,23 +9132,92 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const addOrUpdateMultipleEmployeeSalaryConfigs = async (
+    configsData: (Omit<EmployeeAnnualSalaryConfig, 'id' | 'updatedAt' | 'createdAt'> & { id?: string })[]
+  ): Promise<{ success: boolean; message: string; configs?: EmployeeAnnualSalaryConfig[] }> => {
+    try {
+      const nowStr = new Date().toISOString();
+      let currentConfigs = [...(employeeSalaryConfigsRef.current || employeeSalaryConfigs)];
+      const savedConfigs: EmployeeAnnualSalaryConfig[] = [];
+
+      for (const item of configsData) {
+        const targetYear = Number(item.year) || new Date().getFullYear();
+        const existsIndex = currentConfigs.findIndex(
+          (c) =>
+            (c.employeeId === item.employeeId && Number(c.year) === targetYear) ||
+            (Boolean(item.id) && c.id === item.id && Number(c.year) === targetYear)
+        );
+
+        let finalConfig: EmployeeAnnualSalaryConfig;
+        if (existsIndex >= 0) {
+          const finalConfigId = currentConfigs[existsIndex].id || `SALCFG-${targetYear}-${item.employeeId}`;
+          finalConfig = {
+            ...currentConfigs[existsIndex],
+            ...item,
+            id: finalConfigId,
+            year: targetYear,
+            updatedAt: nowStr,
+            updatedBy: currentUser?.name || 'Master Admin',
+          };
+          currentConfigs[existsIndex] = finalConfig;
+        } else {
+          const finalConfigId = item.id || `SALCFG-${targetYear}-${item.employeeId}-${Date.now().toString(36)}`;
+          finalConfig = {
+            ...item,
+            id: finalConfigId,
+            year: targetYear,
+            createdAt: nowStr,
+            updatedAt: nowStr,
+            updatedBy: currentUser?.name || 'Master Admin',
+          };
+          currentConfigs = [finalConfig, ...currentConfigs];
+        }
+        savedConfigs.push(finalConfig);
+      }
+
+      employeeSalaryConfigsRef.current = currentConfigs;
+      setEmployeeSalaryConfigs(currentConfigs);
+      broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', currentConfigs);
+      try {
+        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(currentConfigs));
+      } catch (e) {
+        console.warn('LocalStorage save salary configs error:', e);
+      }
+      try {
+        await saveSettingsToFirestore('employee_salary_configs', currentConfigs);
+      } catch (err) {
+        console.warn('Firestore save employee_salary_configs notice:', err);
+      }
+
+      return {
+        success: true,
+        message: `${savedConfigs.length} penetapan gaji berhasil disimpan dan disinkronkan ke seluruh role.`,
+        configs: savedConfigs,
+      };
+    } catch (err: any) {
+      console.error('Save multiple salary configs error:', err);
+      return {
+        success: false,
+        message: 'Gagal menyimpan penetapan gaji: ' + (err?.message || 'Unknown error'),
+      };
+    }
+  };
+
   const deleteEmployeeSalaryConfig = async (
     id: string
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      let updatedList: EmployeeAnnualSalaryConfig[] = [];
+      const currentConfigs = employeeSalaryConfigsRef.current || employeeSalaryConfigs;
+      const updatedList = currentConfigs.filter((c) => c.id !== id);
 
-      setEmployeeSalaryConfigs((prev) => {
-        updatedList = prev.filter((c) => c.id !== id);
-        broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedList);
-        try {
-          localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
-        } catch (e) {
-          console.warn('LocalStorage delete salary config error:', e);
-        }
-        return updatedList;
-      });
-
+      employeeSalaryConfigsRef.current = updatedList;
+      setEmployeeSalaryConfigs(updatedList);
+      broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedList);
+      try {
+        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn('LocalStorage delete salary config error:', e);
+      }
       await saveSettingsToFirestore('employee_salary_configs', updatedList);
 
       return {
@@ -9150,6 +9234,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const resetEmployeeSalaryConfigsToDefault = async (): Promise<{ success: boolean; message: string }> => {
     try {
+      employeeSalaryConfigsRef.current = DEFAULT_EMPLOYEE_SALARY_CONFIGS;
       setEmployeeSalaryConfigs(DEFAULT_EMPLOYEE_SALARY_CONFIGS);
       broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', DEFAULT_EMPLOYEE_SALARY_CONFIGS);
       try {
@@ -9694,6 +9779,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         resetPayrollToDefault,
         employeeSalaryConfigs,
         addOrUpdateEmployeeSalaryConfig,
+        addOrUpdateMultipleEmployeeSalaryConfigs,
         deleteEmployeeSalaryConfig,
         resetEmployeeSalaryConfigsToDefault,
         getEmployeeSalaryConfigForYear,

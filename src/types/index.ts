@@ -616,6 +616,95 @@ export interface BankLoan {
   updatedAt?: string;
 }
 
+// ==========================================
+// SEWA KANTOR / OFFICE RENT MANAGEMENT
+// ==========================================
+
+export interface OfficeRentRenewalRecord {
+  id: string;
+  renewalNumber: number; // 1 = Perpanjangan ke-1, 2 = Perpanjangan ke-2, dst.
+  renewalDate: string; // Tanggal efektif adendum
+  fromYear: number;
+  toYear: number;
+  previousAnnualRent: number;
+  newAnnualRent: number;
+  escalationPercent: number; // e.g. 5%
+  adendumNumber?: string;
+  newContractId?: string;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export type OfficeRentScheduleStatus = 'UNPAID' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+
+export interface OfficeRentMonthlyScheduleItem {
+  id: string;
+  monthIndex: number; // 1 to 12
+  monthName: string; // e.g. "Januari", "Februari"
+  periodMonthYear: string; // e.g. "2025-01", "01/2025"
+  dueDate: string; // YYYY-MM-DD
+  rentAmountIDR: number; // Nilai sewa pokok bulan ini
+  serviceChargeIDR?: number; // Biaya IPL / maintenance gedung bulanan
+  grossTotalIDR: number; // Total Tagihan Kotor = rentAmountIDR + serviceChargeIDR
+  pph42RatePercent: number; // Default 10% (PPh Final Pasal 4(2) Sewa Bangunan)
+  pph42AmountIDR: number; // Dipotong PPh 4(2) 10%
+  ppnRatePercent?: number; // 11% jika PKP
+  ppnAmountIDR?: number; // PPN 11% jika ada
+  netPayableToLandlordIDR: number; // Nilai Bersih ditransfer ke Pemilik Gedung
+  status: OfficeRentScheduleStatus;
+  paidDate?: string;
+  paymentChannelId?: string;
+  paymentMethod?: string;
+  referenceNumber?: string; // Nomor bukti transfer / slip bank
+  transactionId?: string; // ID transaksi pengeluaran di Buku Kas (FinancialTransaction)
+  taxObligationId?: string; // ID kewajiban pajak PPh 4(2) di TaxObligation
+  ppnTaxObligationId?: string; // ID faktur PPN jika ada
+  notes?: string;
+}
+
+export type OfficeRentStatus = 'ACTIVE' | 'EXTENDED' | 'TERMINATED' | 'DRAFT';
+
+export interface OfficeRentContract {
+  id: string;
+  contractNumber: string; // e.g. "SPK-SEWA/JKT/2025/001"
+  officeName: string; // e.g. "Kantor Pusat Jakarta - Menara Kadin"
+  buildingName?: string; // e.g. "Menara Kadin Indonesia Lt. 15"
+  address: string; // e.g. "Jl. H.R. Rasuna Said Blok X-5 Kav. 2-3, Jakarta Selatan"
+  landlordName: string; // e.g. "PT Graha Sarana Gedung" atau nama pemilik
+  landlordType: 'CORPORATE_PKP' | 'CORPORATE_NON_PKP' | 'INDIVIDUAL';
+  landlordNpwp?: string;
+  landlordPhone?: string;
+  landlordEmail?: string;
+  landlordBankAccount?: string; // e.g. "BCA 5410-988-123 a/n PT Graha Sarana Gedung"
+  year: number; // Tahun Anggaran Sewa e.g. 2025, 2026
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  tenureMonths: number; // Default 12
+  annualRentAmountIDR: number; // Harga Sewa Per Tahun
+  monthlyRentAmountIDR: number; // Harga Sewa Per Bulan (annual / tenureMonths)
+  monthlyServiceChargeIDR?: number; // IPL / Service Charge bulanan
+  securityDepositIDR?: number; // Uang jaminan / deposit sewa
+  pph42RatePercent: number; // Default 10%
+  isSubjectToPpn: boolean; // True jika pemilik gedung PKP (PPN 11%)
+  ppnRatePercent: number; // 11%
+  autoSyncToLedger: boolean; // Otomatis catat ke Buku Kas & Cashflow saat dibayar
+  autoSyncToTax: boolean; // Otomatis catat ke Pajak PPh 4(2) saat dibayar / dijadwalkan
+  schedules: OfficeRentMonthlyScheduleItem[];
+  status: OfficeRentStatus;
+  // Perpanjangan Tahunan
+  isRenewed?: boolean;
+  renewedToContractId?: string;
+  previousContractId?: string;
+  renewalHistory?: OfficeRentRenewalRecord[];
+  notes?: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+}
+
 export interface TransactionCategoryDefinition {
   id: string;
   name: string;
@@ -754,6 +843,10 @@ export interface TaxObligation {
   payrollNumber?: string;
   employeeId?: string;
   employeeName?: string;
+
+  // Office Rent Linkage (Integrasi Sewa Kantor PPh 4(2))
+  officeRentContractId?: string;
+  officeRentMonthIndex?: number;
   
   notes?: string;
   createdAt: string;
@@ -1317,3 +1410,4 @@ export interface RetailProjectStats {
   totalPpnOutputIDR: number;
   totalPphWithheldIDR: number;
 }
+
