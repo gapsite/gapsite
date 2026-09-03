@@ -26,6 +26,7 @@ import {
   Layers,
   ChevronRight,
   Info,
+  Users,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { TaxObligation, TaxType, TaxObligationStatus } from '../../types';
@@ -664,6 +665,36 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
         </div>
       </div>
 
+      {/* Auto-Sync & Anti-Double Input Status Banner */}
+      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-indigo-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                Integrasi Pajak Gaji Karyawan (PPh 21) &amp; Laporan Keuangan
+              </h4>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                Anti Double-Input Aktif
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+              Pemotongan PPh 21 dari menu <strong>Pembayaran Gaji Karyawan</strong> otomatis tersinkronisasi sebagai kewajiban pajak di menu ini dan diakui pada Neraca/Laporan Keuangan tanpa perlu input ulang manual.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+          <div className="text-right">
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">PPh 21 Payroll Terhubung:</div>
+            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+              {taxObligations.filter((t) => t.taxType === 'PPH_21' && (t.payrollId || t.payrollNumber)).length} Dokumen Slip
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -896,6 +927,12 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                             </div>
                           )}
                           <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                            {t.payrollNumber && (
+                              <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                <Users className="w-3 h-3 text-emerald-600" />
+                                Slip Payroll: {t.payrollNumber}
+                              </span>
+                            )}
                             {t.taxInvoiceNumber && (
                               <span className="inline-flex items-center gap-1 font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                                 <FileText className="w-3 h-3" />
@@ -1090,6 +1127,19 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     </button>
                   ))}
                 </div>
+
+                {/* Anti-Double Input Warning for PPh 21 */}
+                {formData.taxType === 'PPH_21' && (
+                  <div className="mt-3 p-3 bg-indigo-950/60 border border-indigo-700/60 rounded-xl text-xs text-indigo-200 flex items-start gap-2.5">
+                    <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-white">Catatan Anti-Double Input (PPh 21):</div>
+                      <div>
+                        Pemotongan PPh 21 gaji pegawai sudah terbit secara otomatis setiap kali Anda mencatat pembayaran di menu <strong>Pembayaran Gaji Karyawan</strong>. Gunakan form manual ini khusus untuk pemotongan PPh 21 non-karyawan rutin (misal: honor tim ahli eksternal/narasumber).
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Masa Pajak & Tahun */}
@@ -1380,6 +1430,14 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                 <span>Jenis: {payingTax.taxType} ({payingTax.taxPeriod})</span>
                 <span>DPP: {formatRupiah(payingTax.taxableBaseAmount || 0)}</span>
               </div>
+              {payingTax.payrollNumber && (
+                <div className="mt-2 pt-2 border-t border-slate-700/80 flex items-center gap-2 text-xs text-emerald-300 bg-emerald-950/40 px-2.5 py-1.5 rounded-lg border border-emerald-800/60">
+                  <Users className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>
+                    Pemotongan otomatis dari Slip Gaji: <strong>{payingTax.payrollNumber}</strong> {payingTax.employeeName ? `(${payingTax.employeeName})` : ''}
+                  </span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handlePaySubmit} className="space-y-4 mt-4">

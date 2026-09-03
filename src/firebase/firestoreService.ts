@@ -488,7 +488,8 @@ export const ensureInitialFirestoreSeed = async (
   defaultTaxObligations?: any[],
   defaultBankLoans?: any[],
   defaultCompanyCapital?: any,
-  defaultReceivables?: Receivable[]
+  defaultReceivables?: Receivable[],
+  defaultPayrollRecords?: PayrollPayment[]
 ): Promise<void> => {
   try {
     // 1. Ensure master admin root user exists in Firestore
@@ -650,6 +651,15 @@ export const ensureInitialFirestoreSeed = async (
             return setDoc(rRef, sanitizeForFirestore(r));
           })
         );
+      }
+    }
+
+    // 16. Ensure payroll records exist in settings if not present
+    if (defaultPayrollRecords && defaultPayrollRecords.length > 0) {
+      const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
+      const payrollSnap = await getDoc(payrollRef);
+      if (!payrollSnap.exists()) {
+        await setDoc(payrollRef, sanitizeForFirestore({ data: defaultPayrollRecords, updatedAt: new Date().toISOString() }));
       }
     }
   } catch (err) {

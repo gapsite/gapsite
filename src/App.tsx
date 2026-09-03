@@ -216,7 +216,20 @@ const DashboardContent: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3B: OFFICIAL FINANCIAL REPORTS & STATEMENTS OUTPUT */}
+          {/* TAB 3C: EMPLOYEE SALARY & PAYROLL MANAGEMENT */}
+          {activeTab === 'payroll' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="PAYROLL"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
+          {/* TAB 3D: OFFICIAL FINANCIAL REPORTS & STATEMENTS OUTPUT */}
           {activeTab === 'financial-reports' && (
             <div className="animate-in fade-in duration-150">
               <FinancialReportGenerator

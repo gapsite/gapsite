@@ -17,6 +17,7 @@ import {
   Receipt,
   BarChart3,
   CreditCard,
+  Users,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { FinancialStatsCards } from './FinancialStatsCards';
@@ -25,6 +26,7 @@ import { FinancialLedgerTable } from './FinancialLedgerTable';
 import { BankLoanManagement } from './BankLoanManagement';
 import { TaxManagement } from './TaxManagement';
 import { ReceivableManagement } from './ReceivableManagement';
+import { PayrollManagement } from './PayrollManagement';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
 import {
@@ -35,7 +37,7 @@ import {
 import { formatIDR } from '../../utils/formatters';
 
 interface FinancialManagementProps {
-  initialTab?: 'LEDGER' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'ANALYTICS';
+  initialTab?: 'LEDGER' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS';
   onSelectProject?: (projectId: string) => void;
   onOpenReports?: () => void;
 }
@@ -51,11 +53,12 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
     bankLoans,
     taxObligations,
     receivables,
+    payrollRecords,
     updateTransaction,
     deleteTransaction,
   } = useProjects();
 
-  const [activeTab, setActiveTab] = useState<'LEDGER' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'ANALYTICS'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'LEDGER' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS'>(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -125,6 +128,15 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
                 <span>Output Laporan Keuangan</span>
               </button>
             )}
+
+            <button
+              onClick={() => setActiveTab('PAYROLL')}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+              title="Kelola & Bayar Gaji Karyawan"
+            >
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span>Gaji Karyawan</span>
+            </button>
 
             <button
               onClick={() => handleOpenNewTransaction('EXPENSE')}
@@ -217,6 +229,25 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('PAYROLL')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'PAYROLL'
+              ? 'bg-emerald-800 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <Users className="w-4 h-4 text-emerald-400" />
+          <span>Gaji Karyawan & Payroll</span>
+          {payrollRecords && payrollRecords.length > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+              activeTab === 'PAYROLL' ? 'bg-emerald-950 text-emerald-200' : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {payrollRecords.length} Slip
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab('ANALYTICS')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'ANALYTICS'
@@ -256,14 +287,19 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
         <ReceivableManagement />
       )}
 
-      {/* Tab 2: Bank Loan Management Sub-Section */}
+      {/* Tab 3: Bank Loan Management Sub-Section */}
       {activeTab === 'BANK_LOANS' && (
         <BankLoanManagement />
       )}
 
-      {/* Tab 3: Tax Management & Tax Liabilities (PPN / PPh) */}
+      {/* Tab 4: Tax Management & Tax Liabilities (PPN / PPh) */}
       {activeTab === 'TAX_MANAGEMENT' && (
         <TaxManagement />
+      )}
+
+      {/* Tab 5: Employee Salary & Payroll Management */}
+      {activeTab === 'PAYROLL' && (
+        <PayrollManagement />
       )}
 
       {/* Tab 4: Detailed Analytics & Cashflow Chart */}

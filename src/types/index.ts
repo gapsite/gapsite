@@ -726,6 +726,12 @@ export interface TaxObligation {
   projectCode?: string;
   counterpartyName?: string; // Klien / Vendor / Surveyor / KPP Pratama
   
+  // Payroll Linkage (Integrasi Otomatis dari Penggajian Karyawan)
+  payrollId?: string;
+  payrollNumber?: string;
+  employeeId?: string;
+  employeeName?: string;
+  
   notes?: string;
   createdAt: string;
   createdBy: string;
@@ -824,4 +830,77 @@ export interface ReceivableAgingSummary {
   totalInvoiced: number; // Total Keseluruhan Faktur
   settlementRate: number; // Persentase Pelunasan (%)
 }
+
+// ==========================================
+// EMPLOYEE SALARY & PAYROLL (PENGGAJIAN KARYAWAN)
+// ==========================================
+
+export type PayrollStatus = 'PAID' | 'PENDING' | 'DRAFT';
+
+export interface PayrollPayment {
+  id: string;
+  payrollNumber: string; // e.g. "PAY/2026/08/EMP-001" or "SLIP-202608-01"
+  period: string; // e.g. "Agustus 2026", "September 2026", "2026-08"
+  paymentDate: string; // YYYY-MM-DD
+
+  // Employee Identity
+  employeeId: string;
+  employeeName: string;
+  employeeEmail?: string;
+  employeePhone?: string;
+  employeeNik?: string;
+  roleTitle: string;
+  department: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountHolder?: string;
+
+  // Earnings Breakdown (Komponen Penghasilan / Gaji & Tunjangan)
+  basicSalary: number; // Gaji Pokok
+  positionAllowance: number; // Tunjangan Jabatan / Fungsional
+  transportAllowance: number; // Tunjangan Transportasi & Dinas
+  mealAllowance: number; // Tunjangan Makan
+  projectBonus: number; // Bonus / Insentif Proyek TKDN & Legal
+  overtimeAmount: number; // Upah Lembur
+  otherAllowances: number; // Tunjangan Lainnya
+  totalEarnings: number; // Total Penghasilan Kotor (Gross)
+
+  // Deductions Breakdown (Komponen Potongan)
+  bpjsKesehatan: number; // Potongan BPJS Kesehatan (1%)
+  bpjsKetenagakerjaan: number; // Potongan BPJS Ketenagakerjaan (2%)
+  pph21Amount: number; // Potongan Pajak PPh Pasal 21
+  cashAdvanceDeduction: number; // Potongan Kasbon / Pinjaman Karyawan
+  otherDeductions: number; // Potongan Absensi / Lainnya
+  totalDeductions: number; // Total Potongan
+
+  // Net Payout (Take Home Pay)
+  netSalary: number; // totalEarnings - totalDeductions
+
+  // Payment Method & Bank Channel
+  paymentMethod: PaymentMethod;
+  paymentChannelId?: string; // ID of source bank account (e.g. Bank Mandiri / BRI / BCA)
+
+  // Ledger & Tax Linkage
+  status: PayrollStatus;
+  transactionId?: string; // Linked ID in FinancialTransaction (Buku Kas & Arus Kas)
+  pph21ObligationId?: string; // Linked TaxObligation ID if recorded to Tax Management
+
+  notes?: string;
+  recordedBy: string;
+  paidAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PayrollSummary {
+  totalPaidIDR: number;
+  totalGrossIDR: number;
+  totalDeductionsIDR: number;
+  totalPph21IDR: number;
+  totalBpjsIDR: number;
+  paidCount: number;
+  pendingCount: number;
+  employeeCount: number;
+}
+
 

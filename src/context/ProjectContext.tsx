@@ -75,6 +75,9 @@ import {
   ReceivablePayment,
   ReceivableAgingSummary,
   LoanRenewalRecord,
+  PayrollPayment,
+  PayrollStatus,
+  PayrollSummary,
 } from '../types';
 import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
@@ -88,6 +91,7 @@ import {
   DEFAULT_ROLE_GOVERNANCE_META,
   DEFAULT_COMPANY_CAPITAL,
 } from '../data/mockData';
+import { INITIAL_PAYROLL_RECORDS } from '../data/payrollData';
 import { DEFAULT_CONSULTING_SERVICES } from '../data/serviceTypesData';
 import { DEFAULT_DOCUMENT_TYPES, DEFAULT_DOCUMENT_CATEGORIES } from '../data/documentTypesData';
 import { DEFAULT_TRANSACTION_CATEGORIES } from '../data/transactionCategoriesData';
@@ -364,6 +368,25 @@ interface ProjectContextType {
   cancelReceivable: (id: string, reason?: string) => { success: boolean; message?: string };
   resetReceivablesToDefault: () => { success: boolean; message?: string };
 
+  // Employee Salary & Payroll Management (Pembayaran Gaji Karyawan & Integrasi Arus Kas)
+  payrollRecords: PayrollPayment[];
+  addPayrollPayment: (
+    data: Omit<PayrollPayment, 'id' | 'payrollNumber' | 'createdAt'>
+  ) => { success: boolean; payroll?: PayrollPayment; message?: string };
+  updatePayrollPayment: (
+    id: string,
+    updates: Partial<PayrollPayment>
+  ) => { success: boolean; message?: string };
+  deletePayrollPayment: (id: string) => { success: boolean; message?: string };
+  batchAddPayrollPayments: (
+    records: Array<Omit<PayrollPayment, 'id' | 'payrollNumber' | 'createdAt'>>
+  ) => { success: boolean; count: number; message?: string };
+  markPayrollAsPaid: (
+    id: string,
+    paymentDate?: string
+  ) => { success: boolean; message?: string };
+  resetPayrollToDefault: () => { success: boolean; message?: string };
+
   // Milestone Document Requirements customization
   updateMilestoneDocRequirements: (
     projectId: string,
@@ -501,6 +524,7 @@ const STORAGE_KEY_BANK_LOANS = 'verix_crm_bank_loans_v1';
 const STORAGE_KEY_COMPANY_CAPITAL = 'verix_crm_company_capital_v1';
 const STORAGE_KEY_TAX_OBLIGATIONS = 'verix_crm_tax_obligations_v1';
 const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
+const STORAGE_KEY_PAYROLL = 'verix_crm_payroll_v1';
 const STORAGE_KEY_ASSIGNED_BY_OPTIONS = 'verix_crm_assigned_by_options_v1';
 const STORAGE_KEY_CURRENT_USER_ID = 'verix_crm_current_user_id_v1';
 const STORAGE_KEY_AUTH_STATE = 'verix_crm_auth_state_v1';
@@ -568,7 +592,7 @@ const INITIAL_TAX_OBLIGATIONS: TaxObligation[] = [
     taxYear: 2026,
     taxMonth: 8,
     title: 'PPh 21 Tenaga Ahli & Konsultan Asesor TKDN Periode Agustus 2026',
-    description: 'Pemotongan PPh Pasal 21 atas honorarium tenaga ahli audit internal dan tim konsultan lapangan.',
+    description: 'Pemotongan PPh Pasal 21 atas honorarium tenaga ahli audit internal dan tim konsultan lapangan non-pegawai.',
     taxableBaseAmount: 48000000,
     taxRatePercent: 5,
     taxAmount: 2400000,
@@ -577,10 +601,88 @@ const INITIAL_TAX_OBLIGATIONS: TaxObligation[] = [
     status: 'TERHUTANG',
     dueDate: '2026-09-10',
     billingCode: '619283019283745',
-    counterpartyName: 'KPP Pratama / Tenaga Ahli',
-    notes: 'Kewajiban PPh 21 Tenaga Ahli & Konsultan Lepas.',
+    counterpartyName: 'KPP Pratama / Tenaga Ahli Non-Pegawai',
+    notes: 'Kewajiban PPh 21 Tenaga Ahli & Konsultan Lepas Eksternal.',
     createdAt: '2026-08-30T16:00:00.000Z',
     createdBy: 'Adryan kelvianto',
+  },
+  {
+    id: 'tax-pay-202608-01',
+    taxType: 'PPH_21',
+    taxPeriod: 'Agustus 2026',
+    taxYear: 2026,
+    taxMonth: 8,
+    title: 'PPh 21 Karyawan: Adryan kelvianto (Agustus 2026)',
+    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 30.500.000 (Chief Role Master & System SuperAdmin) - Slip PAY/2026/08/EMP-001. Terintegrasi otomatis dari modul Payroll.',
+    taxableBaseAmount: 30500000,
+    taxRatePercent: 6.07,
+    taxAmount: 1850000,
+    paidAmount: 0,
+    remainingAmount: 1850000,
+    status: 'TERHUTANG',
+    dueDate: '2026-09-15',
+    billingCode: '718294018294819',
+    taxInvoiceNumber: 'BUPOT-21/2026/08/0001',
+    counterpartyName: 'Adryan kelvianto / KPP Pratama',
+    payrollId: 'pay-202608-01',
+    payrollNumber: 'PAY/2026/08/EMP-001',
+    employeeId: 'usr-0',
+    employeeName: 'Adryan kelvianto',
+    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-001. Mencegah double input di Menu Pajak.',
+    createdAt: '2026-08-28T09:00:00.000Z',
+    createdBy: 'Finance Officer',
+  },
+  {
+    id: 'tax-pay-202608-02',
+    taxType: 'PPH_21',
+    taxPeriod: 'Agustus 2026',
+    taxYear: 2026,
+    taxMonth: 8,
+    title: 'PPh 21 Karyawan: Bambang Irawan, S.T., M.T. (Agustus 2026)',
+    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 21.650.000 (Lead Assessor / Senior Consultant) - Slip PAY/2026/08/EMP-002. Terintegrasi otomatis dari modul Payroll.',
+    taxableBaseAmount: 21650000,
+    taxRatePercent: 5.0,
+    taxAmount: 1082500,
+    paidAmount: 0,
+    remainingAmount: 1082500,
+    status: 'TERHUTANG',
+    dueDate: '2026-09-15',
+    billingCode: '718392019485721',
+    taxInvoiceNumber: 'BUPOT-21/2026/08/0002',
+    counterpartyName: 'Bambang Irawan / KPP Pratama',
+    payrollId: 'pay-202608-02',
+    payrollNumber: 'PAY/2026/08/EMP-002',
+    employeeId: 'usr-lead-01',
+    employeeName: 'Bambang Irawan, S.T., M.T.',
+    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-002. Mencegah double input di Menu Pajak.',
+    createdAt: '2026-08-28T09:15:00.000Z',
+    createdBy: 'Finance Officer',
+  },
+  {
+    id: 'tax-pay-202608-03',
+    taxType: 'PPH_21',
+    taxPeriod: 'Agustus 2026',
+    taxYear: 2026,
+    taxMonth: 8,
+    title: 'PPh 21 Karyawan: Siti Rahmawati, S.Kom. (Agustus 2026)',
+    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 15.900.000 (Technical Consultant / BOM Specialist) - Slip PAY/2026/08/EMP-003. Terintegrasi otomatis dari modul Payroll.',
+    taxableBaseAmount: 15900000,
+    taxRatePercent: 4.0,
+    taxAmount: 636000,
+    paidAmount: 0,
+    remainingAmount: 636000,
+    status: 'TERHUTANG',
+    dueDate: '2026-09-15',
+    billingCode: '718482019485910',
+    taxInvoiceNumber: 'BUPOT-21/2026/08/0003',
+    counterpartyName: 'Siti Rahmawati / KPP Pratama',
+    payrollId: 'pay-202608-03',
+    payrollNumber: 'PAY/2026/08/EMP-003',
+    employeeId: 'usr-tech-01',
+    employeeName: 'Siti Rahmawati, S.Kom.',
+    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-003. Mencegah double input di Menu Pajak.',
+    createdAt: '2026-08-28T09:30:00.000Z',
+    createdBy: 'Finance Officer',
   },
   {
     id: 'tax-1004',
@@ -1022,6 +1124,90 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [assignedByOptions]);
 
+  // Employee Salary & Payroll Records State
+  const [payrollRecords, setPayrollRecords] = useState<PayrollPayment[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PAYROLL);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return INITIAL_PAYROLL_RECORDS;
+    } catch {
+      return INITIAL_PAYROLL_RECORDS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(payrollRecords));
+    } catch (e) {
+      console.error('Failed to save payroll records to localStorage', e);
+    }
+  }, [payrollRecords]);
+
+  // Auto-sync any existing payroll records with Tax Management (anti double-input safeguard)
+  useEffect(() => {
+    if (!payrollRecords || payrollRecords.length === 0) return;
+
+    setTaxObligations((currentTaxes) => {
+      let hasChanges = false;
+      const missingTaxes: TaxObligation[] = [];
+
+      payrollRecords.forEach((record) => {
+        if (record.pph21Amount && record.pph21Amount > 0) {
+          const alreadyLinked = currentTaxes.some(
+            (t) => t.payrollId === record.id || (record.pph21ObligationId && t.id === record.pph21ObligationId)
+          );
+          if (!alreadyLinked) {
+            hasChanges = true;
+            const payDate = record.paymentDate || new Date().toISOString().slice(0, 10);
+            const dateObj = new Date(payDate);
+            const year = !isNaN(dateObj.getFullYear()) ? dateObj.getFullYear() : new Date().getFullYear();
+            const month = !isNaN(dateObj.getMonth()) ? dateObj.getMonth() + 1 : new Date().getMonth() + 1;
+            const nextMonth = month === 12 ? 1 : month + 1;
+            const nextYear = month === 12 ? year + 1 : year;
+            const dueDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`;
+
+            missingTaxes.push({
+              id: `tax-pay-${record.id}`,
+              taxType: 'PPH_21',
+              taxPeriod: record.period,
+              taxYear: year,
+              taxMonth: month,
+              title: `PPh 21 Karyawan: ${record.employeeName} (${record.period})`,
+              description: `Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp ${record.totalEarnings.toLocaleString('id-ID')} (${record.roleTitle || 'Pegawai Tetap'}) - Slip ${record.payrollNumber}`,
+              taxableBaseAmount: record.totalEarnings,
+              taxRatePercent: record.totalEarnings > 0 ? Number(((record.pph21Amount / record.totalEarnings) * 100).toFixed(2)) : 5,
+              taxAmount: record.pph21Amount,
+              paidAmount: 0,
+              remainingAmount: record.pph21Amount,
+              status: 'TERHUTANG',
+              dueDate,
+              billingCode: `718${String(year).slice(-2)}${String(month).padStart(2, '0')}${Math.floor(100000 + Math.random() * 900000)}`,
+              taxInvoiceNumber: `BUPOT-21/${year}/${String(month).padStart(2, '0')}/${record.payrollNumber.split('/').pop() || '001'}`,
+              counterpartyName: `${record.employeeName} / KPP Pratama`,
+              payrollId: record.id,
+              payrollNumber: record.payrollNumber,
+              employeeId: record.employeeId,
+              employeeName: record.employeeName,
+              notes: `Otomatis disinkronisasi dari Slip Gaji: ${record.payrollNumber}. Terintegrasi ke Menu Pajak & Neraca Keuangan (anti double input).`,
+              createdAt: record.createdAt || new Date().toISOString(),
+              createdBy: record.recordedBy || 'System Payroll Sync',
+            });
+          }
+        }
+      });
+
+      if (hasChanges && missingTaxes.length > 0) {
+        return [...missingTaxes, ...currentTaxes];
+      }
+      return currentTaxes;
+    });
+  }, [payrollRecords]);
+
   const activeDocumentCategories = useMemo(() => {
     return documentCategories.filter((c) => c.status !== 'INACTIVE');
   }, [documentCategories]);
@@ -1237,6 +1423,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setTaxObligations(payload);
           } else if (type === 'RECEIVABLES' && Array.isArray(payload)) {
             setReceivables(payload);
+          } else if (type === 'PAYROLL_PAYMENTS' && Array.isArray(payload)) {
+            setPayrollRecords(payload);
           } else if (type === 'CONSULTING_SERVICES' && Array.isArray(payload)) {
             setConsultingServices(payload);
           } else if (type === 'ROLE_DEFINITIONS' && payload) {
@@ -1297,6 +1485,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_RECEIVABLES) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setReceivables(parsed);
+        } else if (e.key === STORAGE_KEY_PAYROLL) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setPayrollRecords(parsed);
         } else if (e.key === STORAGE_KEY_CONSULTING_SERVICES) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setConsultingServices(parsed);
@@ -5538,6 +5729,403 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     deleteTransactionFromFirestore(id);
   };
 
+  // =========================================================================
+  // EMPLOYEE SALARY & PAYROLL MANAGEMENT (PEMBAYARAN GAJI KARYAWAN & ARUS KAS)
+  // =========================================================================
+
+  // Helper to construct a linked TaxObligation for PPh 21 employee salary deduction
+  const buildPph21TaxObligationForPayroll = (params: {
+    payrollId: string;
+    payrollNumber: string;
+    period: string;
+    paymentDate?: string;
+    employeeId?: string;
+    employeeName: string;
+    employeeNik?: string;
+    roleTitle?: string;
+    totalEarnings: number;
+    pph21Amount: number;
+    recordedBy?: string;
+  }): TaxObligation => {
+    const payDate = params.paymentDate || new Date().toISOString().slice(0, 10);
+    const dateObj = new Date(payDate);
+    const year = !isNaN(dateObj.getFullYear()) ? dateObj.getFullYear() : new Date().getFullYear();
+    const month = !isNaN(dateObj.getMonth()) ? dateObj.getMonth() + 1 : new Date().getMonth() + 1;
+
+    // Due date for PPh 21 withholding tax is the 15th of following month (Pasal 10 PMK-242/PMK.03/2014)
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    const dueDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`;
+
+    const randomBillingSuffix = Math.floor(100000 + Math.random() * 900000);
+    const billingCode = `718${String(year).slice(-2)}${String(month).padStart(2, '0')}${randomBillingSuffix}`;
+    const invoiceNum = `BUPOT-21/${year}/${String(month).padStart(2, '0')}/${params.payrollNumber.split('/').pop() || '001'}`;
+
+    return {
+      id: `tax-pay-${params.payrollId}`,
+      taxType: 'PPH_21',
+      taxPeriod: params.period,
+      taxYear: year,
+      taxMonth: month,
+      title: `PPh 21 Karyawan: ${params.employeeName} (${params.period})`,
+      description: `Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp ${params.totalEarnings.toLocaleString('id-ID')} (${params.roleTitle || 'Pegawai Tetap'}) - Slip ${params.payrollNumber}`,
+      taxableBaseAmount: params.totalEarnings,
+      taxRatePercent: params.totalEarnings > 0 ? Number(((params.pph21Amount / params.totalEarnings) * 100).toFixed(2)) : 5,
+      taxAmount: params.pph21Amount,
+      paidAmount: 0,
+      remainingAmount: params.pph21Amount,
+      status: 'TERHUTANG',
+      dueDate,
+      billingCode,
+      taxInvoiceNumber: invoiceNum,
+      counterpartyName: `${params.employeeName} / KPP Pratama`,
+      payrollId: params.payrollId,
+      payrollNumber: params.payrollNumber,
+      employeeId: params.employeeId,
+      employeeName: params.employeeName,
+      notes: `Otomatis tersinkronisasi dari Slip Gaji: ${params.payrollNumber}. Terintegrasi ke Menu Pajak & Neraca Keuangan (anti double input).`,
+      createdAt: new Date().toISOString(),
+      createdBy: params.recordedBy || currentUser.name || currentUser.username || 'System Payroll Sync',
+    };
+  };
+
+  const addPayrollPayment = (
+    data: Omit<PayrollPayment, 'id' | 'payrollNumber' | 'createdAt'>
+  ): { success: boolean; payroll?: PayrollPayment; message?: string } => {
+    const id = `pay-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const count = payrollRecords.length + 1;
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    const payrollNumber = `PAY/${year}/${month}/EMP-${String(count).padStart(3, '0')}`;
+
+    // Automatically create cleared expense FinancialTransaction into Finance & Cash Flow
+    let createdTxId: string | undefined = undefined;
+    if (data.status === 'PAID') {
+      const tx = addTransaction({
+        date: data.paymentDate || new Date().toISOString().slice(0, 10),
+        type: 'EXPENSE',
+        category: 'GAJI_KARYAWAN',
+        amountIDR: data.netSalary,
+        description: `Gaji Karyawan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`,
+        clientOrVendorName: data.employeeName,
+        paymentMethod: data.paymentMethod,
+        referenceNumber: payrollNumber,
+        status: 'CLEARED',
+        notes: `Slip: ${payrollNumber} | Bruto: Rp ${data.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${data.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${data.netSalary.toLocaleString('id-ID')}${data.notes ? ' | ' + data.notes : ''}`,
+        recordedBy: data.recordedBy || currentUser.name || currentUser.username || 'Finance Officer',
+      });
+      if (tx && tx.id) {
+        createdTxId = tx.id;
+      }
+    }
+
+    // Automatically create linked TaxObligation in Tax Management if pph21Amount > 0
+    let createdTaxObligationId: string | undefined = undefined;
+    if (data.pph21Amount && data.pph21Amount > 0) {
+      const taxObligation = buildPph21TaxObligationForPayroll({
+        payrollId: id,
+        payrollNumber,
+        period: data.period,
+        paymentDate: data.paymentDate,
+        employeeId: data.employeeId,
+        employeeName: data.employeeName,
+        employeeNik: data.employeeNik,
+        roleTitle: data.roleTitle,
+        totalEarnings: data.totalEarnings,
+        pph21Amount: data.pph21Amount,
+        recordedBy: data.recordedBy,
+      });
+      createdTaxObligationId = taxObligation.id;
+
+      setTaxObligations((prevTaxes) => {
+        const updatedTaxes = [taxObligation, ...prevTaxes.filter((t) => t.payrollId !== id && t.id !== taxObligation.id)];
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
+        saveSettingsToFirestore('tax_obligations', updatedTaxes);
+        return updatedTaxes;
+      });
+    }
+
+    const newRecord: PayrollPayment = {
+      ...data,
+      id,
+      payrollNumber,
+      transactionId: createdTxId,
+      pph21ObligationId: createdTaxObligationId,
+      createdAt: new Date().toISOString(),
+      paidAt: data.status === 'PAID' ? (data.paidAt || data.paymentDate) : undefined,
+    };
+
+    setPayrollRecords((prev) => {
+      const updated = [newRecord, ...prev];
+      broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
+      saveSettingsToFirestore('payroll_records', updated);
+      return updated;
+    });
+
+    return {
+      success: true,
+      payroll: newRecord,
+      message: `Gaji karyawan ${data.employeeName} periode ${data.period} berhasil dicatat, dibukukan ke Arus Kas, dan PPh 21 tersinkronisasi otomatis ke Menu Pajak!`,
+    };
+  };
+
+  const updatePayrollPayment = (
+    id: string,
+    updates: Partial<PayrollPayment>
+  ): { success: boolean; message?: string } => {
+    const existing = payrollRecords.find((r) => r.id === id);
+    if (!existing) {
+      return { success: false, message: 'Slip gaji tidak ditemukan.' };
+    }
+
+    // 1. Update linked cash ledger transaction if present
+    if (existing.transactionId) {
+      updateTransaction(existing.transactionId, {
+        amountIDR: updates.netSalary !== undefined ? updates.netSalary : existing.netSalary,
+        date: updates.paymentDate || existing.paymentDate,
+        paymentMethod: updates.paymentMethod || existing.paymentMethod,
+        description: `Gaji Karyawan: ${updates.employeeName || existing.employeeName} (${updates.roleTitle || existing.roleTitle}) - Periode ${updates.period || existing.period}`,
+        status: (updates.status === 'PAID' || (updates.status === undefined && existing.status === 'PAID')) ? 'CLEARED' : 'PENDING',
+      });
+    } else if (updates.status === 'PAID' && existing.status !== 'PAID') {
+      // If it wasn't paid previously but is now marked PAID, create transaction!
+      const tx = addTransaction({
+        date: updates.paymentDate || existing.paymentDate || new Date().toISOString().slice(0, 10),
+        type: 'EXPENSE',
+        category: 'GAJI_KARYAWAN',
+        amountIDR: updates.netSalary !== undefined ? updates.netSalary : existing.netSalary,
+        description: `Gaji Karyawan: ${updates.employeeName || existing.employeeName} (${updates.roleTitle || existing.roleTitle}) - Periode ${updates.period || existing.period}`,
+        clientOrVendorName: updates.employeeName || existing.employeeName,
+        paymentMethod: updates.paymentMethod || existing.paymentMethod,
+        referenceNumber: existing.payrollNumber,
+        status: 'CLEARED',
+        notes: `Slip: ${existing.payrollNumber} | THP: Rp ${(updates.netSalary !== undefined ? updates.netSalary : existing.netSalary).toLocaleString('id-ID')}`,
+        recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
+      });
+      if (tx?.id) {
+        updates.transactionId = tx.id;
+        updates.paidAt = updates.paymentDate || new Date().toISOString().slice(0, 10);
+      }
+    }
+
+    // 2. Synchronize linked PPh 21 Tax Obligation in Tax Management
+    const pphAmount = updates.pph21Amount !== undefined ? updates.pph21Amount : existing.pph21Amount;
+    const employee = updates.employeeName || existing.employeeName;
+    const period = updates.period || existing.period;
+    const role = updates.roleTitle || existing.roleTitle;
+    const gross = updates.totalEarnings !== undefined ? updates.totalEarnings : existing.totalEarnings;
+    const payDate = updates.paymentDate || existing.paymentDate;
+
+    setTaxObligations((prevTaxes) => {
+      const existingTaxIndex = prevTaxes.findIndex(
+        (t) => t.payrollId === id || (existing.pph21ObligationId && t.id === existing.pph21ObligationId)
+      );
+
+      if (pphAmount && pphAmount > 0) {
+        if (existingTaxIndex >= 0) {
+          const currentTax = prevTaxes[existingTaxIndex];
+          const isAlreadyPaid = currentTax.status === 'PAID';
+          const updatedTax: TaxObligation = {
+            ...currentTax,
+            title: `PPh 21 Karyawan: ${employee} (${period})`,
+            description: `Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp ${gross.toLocaleString('id-ID')} (${role}) - Slip ${existing.payrollNumber}`,
+            taxPeriod: period,
+            taxableBaseAmount: gross,
+            taxAmount: pphAmount,
+            taxRatePercent: gross > 0 ? Number(((pphAmount / gross) * 100).toFixed(2)) : currentTax.taxRatePercent,
+            remainingAmount: isAlreadyPaid ? 0 : Math.max(0, pphAmount - (currentTax.paidAmount || 0)),
+            counterpartyName: `${employee} / KPP Pratama`,
+            employeeName: employee,
+            updatedAt: new Date().toISOString(),
+          };
+          const updatedTaxes = [...prevTaxes];
+          updatedTaxes[existingTaxIndex] = updatedTax;
+          broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
+          saveSettingsToFirestore('tax_obligations', updatedTaxes);
+          return updatedTaxes;
+        } else {
+          const newTax = buildPph21TaxObligationForPayroll({
+            payrollId: id,
+            payrollNumber: existing.payrollNumber,
+            period,
+            paymentDate: payDate,
+            employeeId: existing.employeeId,
+            employeeName: employee,
+            employeeNik: updates.employeeNik || existing.employeeNik,
+            roleTitle: role,
+            totalEarnings: gross,
+            pph21Amount: pphAmount,
+            recordedBy: updates.recordedBy || existing.recordedBy,
+          });
+          updates.pph21ObligationId = newTax.id;
+          const updatedTaxes = [newTax, ...prevTaxes];
+          broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
+          saveSettingsToFirestore('tax_obligations', updatedTaxes);
+          return updatedTaxes;
+        }
+      } else if (existingTaxIndex >= 0) {
+        const updatedTaxes = prevTaxes.filter((_, idx) => idx !== existingTaxIndex);
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
+        saveSettingsToFirestore('tax_obligations', updatedTaxes);
+        return updatedTaxes;
+      }
+      return prevTaxes;
+    });
+
+    setPayrollRecords((prev) => {
+      const updated = prev.map((r) => (r.id === id ? { ...r, ...updates } : r));
+      broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
+      saveSettingsToFirestore('payroll_records', updated);
+      return updated;
+    });
+
+    return { success: true, message: 'Data slip gaji dan sinkronisasi pajak berhasil diperbarui.' };
+  };
+
+  const deletePayrollPayment = (id: string): { success: boolean; message?: string } => {
+    const existing = payrollRecords.find((r) => r.id === id);
+    if (!existing) {
+      return { success: false, message: 'Slip gaji tidak ditemukan.' };
+    }
+
+    // Automatically remove linked transaction from cash ledger if present
+    if (existing.transactionId) {
+      deleteTransaction(existing.transactionId);
+    }
+
+    // Automatically remove linked tax obligation from Tax Management if present
+    setTaxObligations((prevTaxes) => {
+      const hasLinkedTax = prevTaxes.some(
+        (t) => t.payrollId === id || (existing.pph21ObligationId && t.id === existing.pph21ObligationId)
+      );
+      if (hasLinkedTax) {
+        const updatedTaxes = prevTaxes.filter(
+          (t) => t.payrollId !== id && t.id !== existing.pph21ObligationId
+        );
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
+        saveSettingsToFirestore('tax_obligations', updatedTaxes);
+        return updatedTaxes;
+      }
+      return prevTaxes;
+    });
+
+    setPayrollRecords((prev) => {
+      const updated = prev.filter((r) => r.id !== id);
+      broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
+      saveSettingsToFirestore('payroll_records', updated);
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Slip gaji ${existing.payrollNumber}, transaksi kas, dan catatan PPh 21 terkait berhasil dihapus.`,
+    };
+  };
+
+  const batchAddPayrollPayments = (
+    records: Array<Omit<PayrollPayment, 'id' | 'payrollNumber' | 'createdAt'>>
+  ): { success: boolean; count: number; message?: string } => {
+    const newPayments: PayrollPayment[] = [];
+    const newTaxObligations: TaxObligation[] = [];
+    const year = new Date().getFullYear();
+    const month = String(new Date().getMonth() + 1).padStart(2, '0');
+    let runningCount = payrollRecords.length;
+
+    for (const data of records) {
+      runningCount++;
+      const id = `pay-${Date.now()}-${runningCount}-${Math.floor(100 + Math.random() * 900)}`;
+      const payrollNumber = `PAY/${year}/${month}/EMP-${String(runningCount).padStart(3, '0')}`;
+
+      let createdTxId: string | undefined = undefined;
+      if (data.status === 'PAID') {
+        const tx = addTransaction({
+          date: data.paymentDate || new Date().toISOString().slice(0, 10),
+          type: 'EXPENSE',
+          category: 'GAJI_KARYAWAN',
+          amountIDR: data.netSalary,
+          description: `Gaji Karyawan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`,
+          clientOrVendorName: data.employeeName,
+          paymentMethod: data.paymentMethod,
+          referenceNumber: payrollNumber,
+          status: 'CLEARED',
+          notes: `Slip: ${payrollNumber} | Bruto: Rp ${data.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${data.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${data.netSalary.toLocaleString('id-ID')}${data.notes ? ' | ' + data.notes : ''}`,
+          recordedBy: data.recordedBy || currentUser.name || currentUser.username || 'Finance Officer',
+        });
+        if (tx?.id) {
+          createdTxId = tx.id;
+        }
+      }
+
+      let createdTaxId: string | undefined = undefined;
+      if (data.pph21Amount && data.pph21Amount > 0) {
+        const taxObj = buildPph21TaxObligationForPayroll({
+          payrollId: id,
+          payrollNumber,
+          period: data.period,
+          paymentDate: data.paymentDate,
+          employeeId: data.employeeId,
+          employeeName: data.employeeName,
+          employeeNik: data.employeeNik,
+          roleTitle: data.roleTitle,
+          totalEarnings: data.totalEarnings,
+          pph21Amount: data.pph21Amount,
+          recordedBy: data.recordedBy,
+        });
+        createdTaxId = taxObj.id;
+        newTaxObligations.push(taxObj);
+      }
+
+      newPayments.push({
+        ...data,
+        id,
+        payrollNumber,
+        transactionId: createdTxId,
+        pph21ObligationId: createdTaxId,
+        createdAt: new Date().toISOString(),
+        paidAt: data.status === 'PAID' ? (data.paidAt || data.paymentDate) : undefined,
+      });
+    }
+
+    if (newTaxObligations.length > 0) {
+      setTaxObligations((prevTaxes) => {
+        const updatedTaxes = [...newTaxObligations, ...prevTaxes.filter((t) => !newTaxObligations.some((nt) => nt.payrollId === t.payrollId))];
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
+        saveSettingsToFirestore('tax_obligations', updatedTaxes);
+        return updatedTaxes;
+      });
+    }
+
+    setPayrollRecords((prev) => {
+      const updated = [...newPayments, ...prev];
+      broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
+      saveSettingsToFirestore('payroll_records', updated);
+      return updated;
+    });
+
+    return {
+      success: true,
+      count: newPayments.length,
+      message: `${newPayments.length} slip gaji berhasil diproses, dibukukan ke Arus Kas, dan kewajiban PPh 21 otomatis tercatat di Menu Pajak!`,
+    };
+  };
+
+  const markPayrollAsPaid = (
+    id: string,
+    paymentDate?: string
+  ): { success: boolean; message?: string } => {
+    return updatePayrollPayment(id, {
+      status: 'PAID',
+      paidAt: paymentDate || new Date().toISOString().slice(0, 10),
+    });
+  };
+
+  const resetPayrollToDefault = (): { success: boolean; message?: string } => {
+    setPayrollRecords(INITIAL_PAYROLL_RECORDS);
+    broadcastLiveDataUpdate('PAYROLL_PAYMENTS', INITIAL_PAYROLL_RECORDS);
+    saveSettingsToFirestore('payroll_records', INITIAL_PAYROLL_RECORDS);
+    return { success: true, message: 'Data payroll berhasil direset ke contoh default.' };
+  };
+
   const toggleMilestoneManualSignoff = (
     projectId: string,
     milestoneId: string,
@@ -5994,6 +6582,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         recordReceivablePayment,
         cancelReceivable,
         resetReceivablesToDefault,
+        payrollRecords,
+        addPayrollPayment,
+        updatePayrollPayment,
+        deletePayrollPayment,
+        batchAddPayrollPayments,
+        markPayrollAsPaid,
+        resetPayrollToDefault,
         updateMilestoneDocRequirements,
         filters,
         setFilters,
