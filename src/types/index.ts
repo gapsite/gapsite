@@ -504,6 +504,7 @@ export type IncomeCategory =
   | 'CLIENT_CONSULTING_FEE'
   | 'TKDN_MILESTONE_PAYMENT'
   | 'GOVERNMENT_PROJECT_INCOME'
+  | 'RETAIL_PROJECT_INCOME'
   | 'SURVEYOR_FACILITATION'
   | 'LEGAL_RETAINER'
   | 'SUCCESS_FEE'
@@ -767,6 +768,7 @@ export interface TaxObligation {
 export type ReceivableCategory =
   | 'TERMIN_KONSULTASI_TKDN'
   | 'PROYEK_PEMERINTAH_BUMN'
+  | 'PROYEK_RETAIL'
   | 'TERMIN_SERTIFIKASI_BMP'
   | 'JASA_PERIZINAN_LEGAL'
   | 'SUCCESS_FEE_TENDER'
@@ -1007,7 +1009,43 @@ export type GovernmentInstitutionType =
   | 'BUMN'
   | 'BUMD'
   | 'BLU'
-  | 'UNIVERSITAS_NEGERI';
+  | 'UNIVERSITAS_NEGERI'
+  | (string & {});
+
+export interface GovernmentInstitutionTypeDefinition {
+  id: string; // e.g. "KEMENTERIAN", "BUMN", etc.
+  name: string; // e.g. "Kementerian RI"
+  code?: string; // Short acronym / code
+  defaultPphType: 'PPH_22' | 'PPH_23' | 'PPH_FINAL' | 'NONE';
+  defaultPphRate: number; // e.g. 1.5, 2.0
+  defaultPpnRate: number; // e.g. 11 or 12
+  defaultFundingSource: GovernmentFundingSource;
+  description?: string;
+  badgeColor?: string; // blue, indigo, emerald, violet, amber, teal, rose, slate
+  status: 'ACTIVE' | 'INACTIVE';
+  isSystemDefault?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TermMilestoneTemplateItem {
+  termNumber: number;
+  title: string;
+  percentage: number; // e.g. 20
+  description?: string;
+}
+
+export interface TermDistributionSchemeDefinition {
+  id: string; // e.g. "SCHEME_3_TERMIN_20_40_40"
+  name: string; // e.g. "Standar 3 Termin (20% - 40% - 40%)"
+  description?: string;
+  termCount: number;
+  terms: TermMilestoneTemplateItem[];
+  isSystemDefault?: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+  updatedAt?: string;
+}
 
 export type GovernmentFundingSource =
   | 'APBN'
@@ -1131,4 +1169,151 @@ export interface GovernmentProjectStats {
   totalWithholdingTaxPaidIDR: number;
   totalVatWapuIDR: number;
   pendingSp2dCount: number;
+}
+
+// ==========================================
+// RETAIL & CORPORATE PROJECTS (PROYEK RETAIL B2B / SWASTA)
+// ==========================================
+
+export type RetailPricingType =
+  | 'INCLUDE_PPN' // Nilai kontrak sudah termasuk PPN 11% (Gross include tax)
+  | 'EXCLUDE_PPN' // Nilai kontrak belum termasuk PPN 11% (Gross exclude tax)
+  | 'NON_PKP'; // Transaksi non-PPN (0%)
+
+export type RetailPphType =
+  | 'PPH_23' // PPh 23 Jasa Konsultansi (2.0%) dipotong pihak ketiga
+  | 'PPH_FINAL_UMKM' // PPh Final PP 55/2022 (0.5%)
+  | 'NONE'; // Tanpa potongan PPh
+
+export type RetailProjectStatus =
+  | 'PROSPEK'
+  | 'AKTIF'
+  | 'SELESAI'
+  | 'BATAL'
+  | 'ON_HOLD';
+
+export type RetailMilestoneStatus =
+  | 'BELUM_DITAGIH' // Not yet billed
+  | 'INVOICE_TERBIT' // Tagihan invoice terbit & tercatat ke Piutang Usaha
+  | 'DIBAYAR_SEBAGIAN' // Pembayaran parsial masuk
+  | 'LUNAS' // Lunas & dana masuk ke Kas & Bank
+  | 'BATAL';
+
+export type RetailPaymentScheme =
+  | 'LUNAS_DIMUKA' // 100% Full Payment
+  | 'TERMIN_2' // 2 Termin (e.g. 50% DP, 50% Pelunasan)
+  | 'TERMIN_3' // 3 Termin (e.g. 30% DP, 40% Progress, 30% BAST)
+  | 'TERMIN_CUSTOM' // Custom termin
+  | 'RETAINER_BULANAN'; // Pembayaran bulanan berkala
+
+export type RetailServiceCategory =
+  | 'KONSULTASI_TKDN' // Pendampingan Sertifikasi TKDN Industri
+  | 'SERTIFIKASI_BMP' // Bobot Manfaat Perusahaan (BMP)
+  | 'PERIZINAN_LEGAL' // OSS-RBA, AMDAL, UKL-UPL, Legalitas
+  | 'AUDIT_INTERNAL' // Pre-audit verifikasi LVI Sucofindo / Surveyor Indonesia
+  | 'PELATIHAN_ISO' // Workshop & Training ISO/TKDN
+  | 'RETAINER_KONSULTASI' // Retainer Bulanan Kepatuhan Regulasi
+  | 'LAINNYA';
+
+export interface RetailMilestone {
+  id: string;
+  projectId: string;
+  termNumber: number; // 1, 2, 3, etc.
+  title: string; // e.g. "Termin 1 (DP 30%)", "Termin 2 (Audit LVI 40%)", "Termin 3 (Pelunasan 30%)"
+  percentage: number; // e.g. 30
+  grossAmountIDR: number; // Nominal Bruto Tagihan Termin
+  pricingType?: RetailPricingType;
+  dppAmountIDR: number; // Dasar Pengenaan Pajak (DPP)
+  ppnRatePercent?: number; // Persentase PPN
+  ppnAmountIDR: number; // PPN Keluaran 11% Faktur Pajak Standar
+  pphType?: RetailPphType; // Jenis PPh (PPH_23 / PPH_FINAL_UMKM / NON_PPH)
+  pphRatePercent?: number; // Persentase PPh
+  pphAmountIDR: number; // Potongan PPh 23 (2%) oleh Klien Swasta
+  netDisbursementIDR: number; // Kas Bersih Masuk Rekening (Gross - PPh 23)
+  targetDate: string; // Target tanggal jatuh tempo (YYYY-MM-DD)
+  status: RetailMilestoneStatus;
+
+  // Invoice & Perpajakan
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  fakturPajakNumber?: string; // No. e-Faktur Pajak PPN (010.xxx)
+  bupotPphNumber?: string; // Nomor Bukti Potong PPh 23 Klien
+
+  // Pembayaran & Arus Kas
+  paidAmountIDR?: number; // Total nominal yang sudah dibayar
+  paymentDate?: string; // Tanggal pembayaran diterima
+  paymentChannelId?: string; // Akun rekening bank / kas perusahaan penerima
+  referenceNumber?: string; // Nomor referensi transfer bank / kwitansi
+
+  // Integrasi Cross-Module
+  receivableId?: string; // Terhubung ke Buku Piutang Usaha
+  transactionId?: string; // Terhubung ke Transaksi Buku Kas & Arus Kas
+  taxObligationPpnId?: string; // Terhubung ke Modul Pajak (PPN Keluaran)
+  taxObligationPphId?: string; // Terhubung ke Modul Pajak (Kredit Pajak PPh 23)
+
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface RetailProject {
+  id: string;
+  projectCode: string; // e.g. "PR-2026-001"
+  projectName: string; // Nama Proyek / Konsultansi Retail
+  clientName: string; // Nama Perusahaan / Klien Retail
+  clientContactPerson?: string; // Kontak PIC Klien
+  clientPicName?: string; // Alternatif PIC
+  clientPicPhone?: string; // Nomor HP PIC
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  clientNpwp?: string; // NPWP Klien untuk e-Faktur Pajak & Bukti Potong PPh 23
+  serviceCategory: RetailServiceCategory;
+
+  // Detail Kontrak & Pricing
+  contractNumber?: string; // No. Kontrak / SPK / Purchase Order
+  contractDate: string; // Tanggal Kontrak / SPK (YYYY-MM-DD)
+  targetCompletionDate: string; // Target Tanggal Selesai (YYYY-MM-DD)
+  invoicePaymentTermDays?: number; // Term of Payment (e.g. 14 or 30 days)
+  status: RetailProjectStatus;
+  pricingType: RetailPricingType;
+
+  // Formulasi Nilai Keuangan & Pajak
+  totalContractValueIDR: number; // Nilai Kontrak Kesepakatan
+  dppAmountIDR: number; // Dasar Pengenaan Pajak (DPP)
+  ppnRatePercent: number; // 11% (atau 0% jika Non-PKP)
+  ppnAmountIDR: number; // PPN Keluaran
+  pphType: RetailPphType; // PPH_23 (2%), PPH_FINAL_UMKM (0.5%), NONE
+  pphRatePercent: number; // 2% / 0.5% / 0%
+  pphAmountIDR: number; // Estimasi Potongan PPh oleh Klien
+  netCashExpectedIDR: number; // Kas Bersih yang Masuk Rekening Perusahaan
+
+  // Skema Pembayaran & Termin
+  paymentScheme: RetailPaymentScheme;
+  milestones: RetailMilestone[];
+
+  // Agregasi Finansial
+  totalBilledAmountIDR: number; // Sudah diterbitkan Invoice / Masuk Piutang
+  totalReceivedAmountIDR: number; // Pembayaran cair ke Kas & Bank
+  totalOutstandingAmountIDR: number; // Sisa piutang yang belum dilunasi
+
+  // Terhubung ke Project CRM Utama (Opsional)
+  linkedCrmProjectId?: string;
+
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+}
+
+export interface RetailProjectStats {
+  totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
+  totalContractValueIDR: number;
+  totalBilledIDR: number;
+  totalReceivedCashIDR: number;
+  totalOutstandingReceivablesIDR: number;
+  totalPpnOutputIDR: number;
+  totalPphWithheldIDR: number;
 }

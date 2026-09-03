@@ -24,6 +24,9 @@ import {
   saveGovernmentProjectToFirestore,
   deleteGovernmentProjectFromFirestore,
   subscribeToGovernmentProjects,
+  saveRetailProjectToFirestore,
+  deleteRetailProjectFromFirestore,
+  subscribeToRetailProjects,
   savePayrollToFirestore,
   deletePayrollFromFirestore,
   saveDeletedPayrollIdToFirestore,
@@ -96,6 +99,17 @@ import {
   GovMilestone,
   GovMilestoneStatus,
   GovernmentProjectStats,
+  GovernmentInstitutionTypeDefinition,
+  TermDistributionSchemeDefinition,
+  RetailProject,
+  RetailMilestone,
+  RetailPricingType,
+  RetailPphType,
+  RetailProjectStatus,
+  RetailMilestoneStatus,
+  RetailPaymentScheme,
+  RetailServiceCategory,
+  RetailProjectStats,
 } from '../types';
 import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
@@ -111,6 +125,9 @@ import {
   DEFAULT_COMPANY_CAPITAL,
 } from '../data/mockData';
 import { INITIAL_GOVERNMENT_PROJECTS } from '../data/governmentProjectsData';
+import { INITIAL_RETAIL_PROJECTS } from '../data/retailProjectsData';
+import { DEFAULT_GOVERNMENT_INSTITUTION_TYPES } from '../data/institutionTypesData';
+import { DEFAULT_TERM_DISTRIBUTION_SCHEMES } from '../data/termDistributionSchemesData';
 import { DEFAULT_COMPANY_LETTERHEAD } from '../data/companyLetterheadData';
 import { INITIAL_PAYROLL_RECORDS } from '../data/payrollData';
 import { DEFAULT_EMPLOYEE_SALARY_CONFIGS, getEffectiveSalaryConfig } from '../data/salaryConfigsData';
@@ -467,6 +484,87 @@ interface ProjectContextType {
   ) => { success: boolean; message?: string };
   resetGovernmentProjectsToDefault: () => { success: boolean; message?: string };
 
+  // Proyek Retail B2B / Korporasi Swasta (Retail Projects, SPK, Invoicing, PPN 11% & PPh 23)
+  retailProjects: RetailProject[];
+  addRetailProject: (
+    data: Omit<RetailProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
+  ) => { success: boolean; project?: RetailProject; message?: string };
+  updateRetailProject: (
+    id: string,
+    updates: Partial<RetailProject>
+  ) => { success: boolean; message?: string };
+  deleteRetailProject: (id: string) => { success: boolean; message?: string };
+  generateRetailInvoiceToReceivables: (
+    projectId: string,
+    milestoneId: string,
+    invoiceData?: {
+      invoiceNumber?: string;
+      issueDate?: string;
+      dueDate?: string;
+      fakturPajakNumber?: string;
+      notes?: string;
+      syncPpnObligation?: boolean;
+    }
+  ) => { success: boolean; receivable?: Receivable; message?: string };
+  recordRetailMilestonePayment: (
+    projectId: string,
+    milestoneId: string,
+    paymentData: {
+      amountReceivedIDR?: number;
+      paymentDate?: string;
+      paymentChannelId: string;
+      referenceNumber?: string;
+      bupotPphNumber?: string;
+      notes?: string;
+      syncToCashLedger?: boolean;
+      syncToTaxObligations?: boolean;
+    }
+  ) => { success: boolean; message?: string; transaction?: FinancialTransaction };
+  addRetailMilestone: (
+    projectId: string,
+    milestone: Omit<RetailMilestone, 'id' | 'projectId' | 'createdAt'>
+  ) => { success: boolean; message?: string };
+  updateRetailMilestone: (
+    projectId: string,
+    milestoneId: string,
+    updates: Partial<RetailMilestone>
+  ) => { success: boolean; message?: string };
+  deleteRetailMilestone: (
+    projectId: string,
+    milestoneId: string
+  ) => { success: boolean; message?: string };
+  resetRetailProjectsToDefault: () => { success: boolean; message?: string };
+
+  // Master Data Tipe Instansi Pemerintah & BUMN (Editable & Real-Time Sync)
+  institutionTypes: GovernmentInstitutionTypeDefinition[];
+  activeInstitutionTypes: GovernmentInstitutionTypeDefinition[];
+  addInstitutionType: (
+    type: Omit<GovernmentInstitutionTypeDefinition, 'createdAt' | 'updatedAt'>
+  ) => { success: boolean; message?: string; institutionType?: GovernmentInstitutionTypeDefinition };
+  updateInstitutionType: (
+    id: string,
+    updates: Partial<GovernmentInstitutionTypeDefinition>
+  ) => { success: boolean; message?: string };
+  deleteInstitutionType: (id: string) => { success: boolean; message?: string };
+  toggleInstitutionTypeStatus: (id: string) => { success: boolean; message?: string };
+  resetInstitutionTypesToDefault: () => { success: boolean; message?: string };
+  getInstitutionTypeDefinition: (idOrName: string) => GovernmentInstitutionTypeDefinition | undefined;
+
+  // Master Data Skema Pembagian Termin (Editable & Real-Time Sync)
+  termDistributionSchemes: TermDistributionSchemeDefinition[];
+  activeTermDistributionSchemes: TermDistributionSchemeDefinition[];
+  addTermDistributionScheme: (
+    scheme: Omit<TermDistributionSchemeDefinition, 'createdAt' | 'updatedAt'>
+  ) => { success: boolean; message?: string; scheme?: TermDistributionSchemeDefinition };
+  updateTermDistributionScheme: (
+    id: string,
+    updates: Partial<TermDistributionSchemeDefinition>
+  ) => { success: boolean; message?: string };
+  deleteTermDistributionScheme: (id: string) => { success: boolean; message?: string };
+  toggleTermDistributionSchemeStatus: (id: string) => { success: boolean; message?: string };
+  resetTermDistributionSchemesToDefault: () => { success: boolean; message?: string };
+  getTermDistributionScheme: (id: string) => TermDistributionSchemeDefinition | undefined;
+
   // Employee Salary & Payroll Management (Pembayaran Gaji Karyawan & Integrasi Arus Kas)
   payrollRecords: PayrollPayment[];
   addPayrollPayment: (
@@ -654,6 +752,10 @@ const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
 const STORAGE_KEY_DELETED_RECEIVABLE_IDS = 'verix_crm_deleted_receivable_ids_v1';
 const STORAGE_KEY_GOVERNMENT_PROJECTS = 'verix_crm_government_projects_v1';
 const STORAGE_KEY_DELETED_GOV_PROJECT_IDS = 'verix_crm_deleted_gov_project_ids_v1';
+const STORAGE_KEY_RETAIL_PROJECTS = 'verix_crm_retail_projects_v1';
+const STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS = 'verix_crm_deleted_retail_project_ids_v1';
+const STORAGE_KEY_INSTITUTION_TYPES = 'verix_crm_institution_types_v1';
+const STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES = 'verix_crm_term_distribution_schemes_v1';
 const STORAGE_KEY_PAYROLL = 'verix_crm_payroll_v1';
 const STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS = 'verix_crm_employee_salary_configs_v1';
 const STORAGE_KEY_DELETED_PAYROLL_IDS = 'verix_crm_deleted_payroll_ids_v1';
@@ -1437,6 +1539,99 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [governmentProjects]);
 
+  // Retail Projects State (Proyek Retail B2B / Korporasi Swasta)
+  const [deletedRetailProjectIds, setDeletedRetailProjectIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const deletedRetailProjectIdsRef = useRef<Set<string>>(new Set(deletedRetailProjectIds));
+  useEffect(() => {
+    deletedRetailProjectIdsRef.current = new Set(deletedRetailProjectIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS, JSON.stringify(deletedRetailProjectIds));
+    } catch (e) {
+      console.error('Failed to save deletedRetailProjectIds to localStorage', e);
+    }
+  }, [deletedRetailProjectIds]);
+
+  const [retailProjects, setRetailProjects] = useState<RetailProject[]>(() => {
+    try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const saved = localStorage.getItem(STORAGE_KEY_RETAIL_PROJECTS);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
+        }
+      }
+      return INITIAL_RETAIL_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id));
+    } catch {
+      return INITIAL_RETAIL_PROJECTS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(retailProjects));
+    } catch (e) {
+      console.error('Failed to save retailProjects to localStorage', e);
+    }
+  }, [retailProjects]);
+
+  // Master Data: Tipe Instansi Pemerintah & BUMN (Editable)
+  const [institutionTypes, setInstitutionTypes] = useState<GovernmentInstitutionTypeDefinition[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_INSTITUTION_TYPES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return DEFAULT_GOVERNMENT_INSTITUTION_TYPES;
+    } catch {
+      return DEFAULT_GOVERNMENT_INSTITUTION_TYPES;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(institutionTypes));
+    } catch (e) {
+      console.error('Failed to save institutionTypes to localStorage', e);
+    }
+  }, [institutionTypes]);
+
+  // Master Data: Skema Pembagian Termin (Editable)
+  const [termDistributionSchemes, setTermDistributionSchemes] = useState<TermDistributionSchemeDefinition[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return DEFAULT_TERM_DISTRIBUTION_SCHEMES;
+    } catch {
+      return DEFAULT_TERM_DISTRIBUTION_SCHEMES;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(termDistributionSchemes));
+    } catch (e) {
+      console.error('Failed to save termDistributionSchemes to localStorage', e);
+    }
+  }, [termDistributionSchemes]);
+
   // Master Data: Assigned By (LVI / Surveyor / Lembaga Pelaksana)
   const [assignedByOptions, setAssignedByOptions] = useState<string[]>(() => {
     try {
@@ -1743,11 +1938,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     | 'RECEIVABLES'
     | 'GOVERNMENT_PROJECTS'
     | 'DELETED_GOV_PROJECT_IDS'
+    | 'RETAIL_PROJECTS'
+    | 'DELETED_RETAIL_PROJECT_IDS'
     | 'PAYROLL_PAYMENTS'
     | 'EMPLOYEE_SALARY_CONFIGS'
     | 'ROLE_DEFINITIONS'
     | 'ROLE_GOVERNANCE_META'
-    | 'COMPANY_LETTERHEAD';
+    | 'COMPANY_LETTERHEAD'
+    | 'INSTITUTION_TYPES'
+    | 'TERM_DISTRIBUTION_SCHEMES';
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
@@ -1884,6 +2083,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           } else if (type === 'DELETED_GOV_PROJECT_IDS' && Array.isArray(payload)) {
             setDeletedGovProjectIds(payload);
             setGovernmentProjects((current) => current.filter((p) => !payload.includes(p.id)));
+          } else if (type === 'RETAIL_PROJECTS' && Array.isArray(payload)) {
+            setRetailProjects(payload);
+          } else if (type === 'DELETED_RETAIL_PROJECT_IDS' && Array.isArray(payload)) {
+            setDeletedRetailProjectIds(payload);
+            setRetailProjects((current) => current.filter((p) => !payload.includes(p.id)));
           } else if (type === 'PAYROLL_PAYMENTS' && Array.isArray(payload)) {
             setPayrollRecords(payload);
           } else if (type === 'EMPLOYEE_SALARY_CONFIGS' && Array.isArray(payload)) {
@@ -1899,6 +2103,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setRoleGovernanceMeta(payload);
           } else if (type === 'COMPANY_LETTERHEAD' && payload) {
             setCompanyLetterhead(payload);
+          } else if (type === 'INSTITUTION_TYPES' && Array.isArray(payload)) {
+            setInstitutionTypes(payload);
+          } else if (type === 'TERM_DISTRIBUTION_SCHEMES' && Array.isArray(payload)) {
+            setTermDistributionSchemes(payload);
           }
         };
       }
@@ -1962,6 +2170,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setDeletedGovProjectIds(parsed);
             setGovernmentProjects((current) => current.filter((p) => !parsed.includes(p.id)));
           }
+        } else if (e.key === STORAGE_KEY_RETAIL_PROJECTS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setRetailProjects(parsed);
+        } else if (e.key === STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setDeletedRetailProjectIds(parsed);
+            setRetailProjects((current) => current.filter((p) => !parsed.includes(p.id)));
+          }
+        } else if (e.key === STORAGE_KEY_INSTITUTION_TYPES) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setInstitutionTypes(parsed);
+        } else if (e.key === STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setTermDistributionSchemes(parsed);
         } else if (e.key === STORAGE_KEY_PAYROLL) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setPayrollRecords(parsed);
@@ -2203,7 +2426,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       INITIAL_RECEIVABLES,
       INITIAL_PAYROLL_RECORDS,
       DEFAULT_COMPANY_LETTERHEAD,
-      DEFAULT_EMPLOYEE_SALARY_CONFIGS
+      DEFAULT_EMPLOYEE_SALARY_CONFIGS,
+      DEFAULT_GOVERNMENT_INSTITUTION_TYPES,
+      DEFAULT_TERM_DISTRIBUTION_SCHEMES
     );
 
     const unsubDeletedProjects = subscribeToDeletedEntityIds('deleted_project_ids', (remoteIds) => {
@@ -2478,6 +2703,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubDeletedRetailProjects = subscribeToDeletedEntityIds('deleted_retail_project_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedRetailProjectIds(remoteIds);
+        setRetailProjects((current) => current.filter((p) => !remoteIds.includes(p.id)));
+      }
+    });
+
+    const unsubRetailProjects = subscribeToRetailProjects((remoteProjects) => {
+      if (Array.isArray(remoteProjects)) {
+        const deletedSet = deletedRetailProjectIdsRef.current;
+        const valid = remoteProjects.filter((p) => p && p.id && !deletedSet.has(p.id));
+        setRetailProjects(valid);
+      }
+    });
+
     const unsubDeletedPayroll = subscribeToDeletedPayrollIds((remoteIds) => {
       if (Array.isArray(remoteIds)) {
         setDeletedPayrollIds(remoteIds);
@@ -2518,6 +2758,28 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubInstitutionTypes = subscribeToSettings('institution_types', (data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setInstitutionTypes(data);
+        try {
+          localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(data));
+        } catch (e) {
+          console.warn('LocalStorage save on institution types update warning:', e);
+        }
+      }
+    });
+
+    const unsubTermSchemes = subscribeToSettings('term_distribution_schemes', (data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setTermDistributionSchemes(data);
+        try {
+          localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(data));
+        } catch (e) {
+          console.warn('LocalStorage save on term schemes update warning:', e);
+        }
+      }
+    });
+
     return () => {
       unsubDeletedProjects();
       unsubProjects();
@@ -2542,10 +2804,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubReceivables();
       unsubDeletedGovProjects();
       unsubGovProjects();
+      unsubDeletedRetailProjects();
+      unsubRetailProjects();
       unsubDeletedPayroll();
       unsubPayroll();
       unsubLetterhead();
       unsubSalaryConfigs();
+      unsubInstitutionTypes();
+      unsubTermSchemes();
     };
   }, []);
 
@@ -2568,7 +2834,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveSettingsToFirestore('company_capital', companyCapital),
         saveSettingsToFirestore('tax_obligations', taxObligations),
         saveSettingsToFirestore('company_letterhead', companyLetterhead),
+        saveSettingsToFirestore('institution_types', institutionTypes),
+        saveSettingsToFirestore('term_distribution_schemes', termDistributionSchemes),
         ...receivables.map((r) => saveReceivableToFirestore(r)),
+        ...governmentProjects.map((gp) => saveGovernmentProjectToFirestore(gp)),
+        ...retailProjects.map((rp) => saveRetailProjectToFirestore(rp)),
         ...payrollRecords.map((p) => savePayrollToFirestore(p)),
       ]);
     } catch (err) {
@@ -2576,7 +2846,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setIsSyncingWithFirestore(false);
     }
-  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories, bankLoans, companyCapital, taxObligations, receivables, payrollRecords, companyLetterhead]);
+  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories, bankLoans, companyCapital, taxObligations, receivables, payrollRecords, companyLetterhead, institutionTypes, termDistributionSchemes]);
 
   // Auth Functions
   const loginWithGoogle = async (): Promise<{ success: boolean; message?: string }> => {
@@ -6444,6 +6714,843 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
+  // =========================================================================
+  // PROYEK RETAIL B2B & SWASTA (SPK, TERMIN, INTEGRASI PIUTANG, PAJAK & KAS)
+  // =========================================================================
+
+  const addRetailProject = (
+    data: Omit<RetailProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
+  ): { success: boolean; project?: RetailProject; message?: string } => {
+    const now = new Date().toISOString();
+    const id = `ret-${Date.now()}`;
+
+    // Calculate milestone financials & totals
+    const milestones: RetailMilestone[] = (data.milestones || []).map((m, idx) => {
+      const gross = Math.round(Number(m.grossAmountIDR) || 0);
+      const pricingType = m.pricingType || data.pricingType || 'INCLUDE_PPN';
+      const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
+      const ppnRate = pricingType === 'NON_PKP' ? 0 : (Number(m.ppnRatePercent) ?? (data.ppnRatePercent || 11));
+      const ppnAmount = pricingType === 'INCLUDE_PPN'
+        ? Math.round(gross - dpp)
+        : pricingType === 'EXCLUDE_PPN'
+        ? Math.round((dpp * ppnRate) / 100)
+        : 0;
+
+      const pphType = m.pphType || data.pphType || 'PPH_23';
+      const defaultPphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+      const pphRate = Number(m.pphRatePercent) ?? (data.pphRatePercent || defaultPphRate);
+      const pphAmount = pphType === 'PPH_23'
+        ? Math.round((dpp * pphRate) / 100)
+        : pphType === 'PPH_FINAL_UMKM'
+        ? Math.round((gross * pphRate) / 100)
+        : 0;
+
+      const net = pricingType === 'EXCLUDE_PPN'
+        ? Math.round(gross + ppnAmount - pphAmount)
+        : Math.round(gross - pphAmount);
+
+      return {
+        ...m,
+        id: m.id || `ret-m-${Date.now()}-${idx + 1}`,
+        projectId: id,
+        termNumber: m.termNumber || idx + 1,
+        grossAmountIDR: gross,
+        pricingType,
+        dppAmountIDR: dpp,
+        ppnRatePercent: ppnRate,
+        ppnAmountIDR: ppnAmount,
+        pphType,
+        pphRatePercent: pphRate,
+        pphAmountIDR: pphAmount,
+        netDisbursementIDR: net,
+        status: m.status || 'BELUM_DITAGIH',
+        createdAt: m.createdAt || now,
+      };
+    });
+
+    const totalBilled = milestones
+      .filter((m) => m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
+      .reduce((acc, m) => {
+        const billing = m.pricingType === 'EXCLUDE_PPN' ? m.grossAmountIDR + m.ppnAmountIDR : m.grossAmountIDR;
+        return acc + billing;
+      }, 0);
+
+    const totalReceived = milestones
+      .filter((m) => m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
+      .reduce((acc, m) => acc + (m.paidAmountIDR || m.netDisbursementIDR || m.grossAmountIDR), 0);
+
+    const totalOutstanding = Math.max(0, data.totalContractValueIDR - totalReceived);
+
+    const newProject: RetailProject = {
+      ...data,
+      id,
+      milestones,
+      totalBilledAmountIDR: totalBilled,
+      totalReceivedAmountIDR: totalReceived,
+      totalOutstandingAmountIDR: totalOutstanding,
+      createdAt: now,
+      createdBy: currentUser.name,
+      updatedAt: now,
+    };
+
+    setRetailProjects((prev) => {
+      const updated = [newProject, ...prev];
+      broadcastLiveDataUpdate('RETAIL_PROJECTS', updated);
+      saveRetailProjectToFirestore(newProject);
+      return updated;
+    });
+
+    addActivity(
+      newProject.linkedCrmProjectId || newProject.id,
+      'Proyek Retail Baru Terdaftar',
+      `Menambahkan Kontrak Retail "${newProject.projectName}" (${newProject.clientName}) senilai Rp ${newProject.totalContractValueIDR.toLocaleString('id-ID')}`,
+      'STATUS_CHANGE'
+    );
+
+    return {
+      success: true,
+      project: newProject,
+      message: `Kontrak Proyek Retail "${newProject.projectName}" berhasil didaftarkan ke sistem!`,
+    };
+  };
+
+  const updateRetailProject = (
+    id: string,
+    updates: Partial<RetailProject>
+  ): { success: boolean; message?: string } => {
+    const target = retailProjects.find((p) => p.id === id);
+    if (!target) {
+      return { success: false, message: 'Proyek retail tidak ditemukan.' };
+    }
+
+    const now = new Date().toISOString();
+    const updatedMilestones = updates.milestones || target.milestones;
+    const contractValue = updates.totalContractValueIDR ?? target.totalContractValueIDR;
+
+    const totalBilled = updatedMilestones
+      .filter((m) => m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
+      .reduce((acc, m) => {
+        const billing = m.pricingType === 'EXCLUDE_PPN' ? m.grossAmountIDR + m.ppnAmountIDR : m.grossAmountIDR;
+        return acc + billing;
+      }, 0);
+
+    const totalReceived = updatedMilestones
+      .filter((m) => m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
+      .reduce((acc, m) => acc + (m.paidAmountIDR || m.netDisbursementIDR || m.grossAmountIDR), 0);
+
+    const totalOutstanding = Math.max(0, contractValue - totalReceived);
+
+    const updatedProject: RetailProject = {
+      ...target,
+      ...updates,
+      milestones: updatedMilestones,
+      totalBilledAmountIDR: totalBilled,
+      totalReceivedAmountIDR: totalReceived,
+      totalOutstandingAmountIDR: totalOutstanding,
+      updatedAt: now,
+    };
+
+    setRetailProjects((prev) => {
+      const updated = prev.map((p) => (p.id === id ? updatedProject : p));
+      broadcastLiveDataUpdate('RETAIL_PROJECTS', updated);
+      saveRetailProjectToFirestore(updatedProject);
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Kontrak Proyek Retail "${updatedProject.projectName}" berhasil diperbarui.`,
+    };
+  };
+
+  const deleteRetailProject = (id: string): { success: boolean; message?: string } => {
+    const target = retailProjects.find((p) => p.id === id);
+    if (!target) {
+      return { success: false, message: 'Proyek retail tidak ditemukan.' };
+    }
+
+    setRetailProjects((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      broadcastLiveDataUpdate('RETAIL_PROJECTS', updated);
+      return updated;
+    });
+
+    setDeletedRetailProjectIds((prev) => {
+      const updated = Array.from(new Set([...prev, id]));
+      broadcastLiveDataUpdate('DELETED_RETAIL_PROJECT_IDS', updated);
+      return updated;
+    });
+
+    saveDeletedEntityIdToFirestore('deleted_retail_project_ids', id);
+    deleteRetailProjectFromFirestore(id);
+
+    return {
+      success: true,
+      message: `Kontrak Proyek Retail "${target.projectName}" berhasil dihapus.`,
+    };
+  };
+
+  const generateRetailInvoiceToReceivables = (
+    projectId: string,
+    milestoneId: string,
+    invoiceData?: {
+      invoiceNumber?: string;
+      issueDate?: string;
+      dueDate?: string;
+      fakturPajakNumber?: string;
+      notes?: string;
+      syncPpnObligation?: boolean;
+    }
+  ): { success: boolean; receivable?: Receivable; message?: string } => {
+    const project = retailProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
+
+    const milestoneIndex = project.milestones.findIndex((m) => m.id === milestoneId);
+    if (milestoneIndex === -1) return { success: false, message: 'Termin retail tidak ditemukan.' };
+
+    const milestone = project.milestones[milestoneIndex];
+    const now = new Date().toISOString();
+    const invYear = new Date().getFullYear();
+    const invNum = invoiceData?.invoiceNumber || milestone.invoiceNumber || `INV/RET/${invYear}/${project.id.slice(-4)}/T${milestone.termNumber}`;
+    const issueDt = invoiceData?.issueDate || now.slice(0, 10);
+    const dueDt = invoiceData?.dueDate || milestone.targetDate || issueDt;
+
+    const billingAmount = milestone.pricingType === 'EXCLUDE_PPN'
+      ? milestone.grossAmountIDR + milestone.ppnAmountIDR
+      : milestone.grossAmountIDR;
+
+    // 1. Create receivable in Piutang Usaha
+    const receivableResult = addReceivable({
+      invoiceNumber: invNum,
+      category: 'PROYEK_RETAIL',
+      title: `Tagihan ${milestone.title} - ${project.projectName}`,
+      clientName: project.clientName,
+      projectId: project.linkedCrmProjectId || project.id,
+      totalAmountIDR: billingAmount,
+      issueDate: issueDt,
+      dueDate: dueDt,
+      taxIncluded: project.pricingType === 'INCLUDE_PPN',
+      taxAmountIDR: milestone.ppnAmountIDR,
+      notes: invoiceData?.notes || `Klien: ${project.clientName} (NPWP: ${project.clientNpwp || '-'}). Kontrak No: ${project.contractNumber || '-'}. Termin ${milestone.termNumber}: ${milestone.title}. DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')}. PPN Keluaran 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')}. Estimasi Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}. Kas Bersih Diharapkan: Rp ${milestone.netDisbursementIDR.toLocaleString('id-ID')}. e-Faktur: ${invoiceData?.fakturPajakNumber || milestone.fakturPajakNumber || '-'}`,
+      syncToCashLedger: false, // will sync when payment is actually received
+    });
+
+    if (!receivableResult.success || !receivableResult.receivable) {
+      return { success: false, message: receivableResult.message || 'Gagal menerbitkan piutang retail.' };
+    }
+
+    // 2. If PPN > 0, record PPN Keluaran Tax Obligation in Tax Management
+    let taxObligationPpnId: string | undefined;
+    if (milestone.ppnAmountIDR > 0 && invoiceData?.syncPpnObligation !== false) {
+      const taxPeriod = `Masa ${issueDt.slice(5, 7)}/${issueDt.slice(0, 4)}`;
+      const taxYear = parseInt(issueDt.slice(0, 4), 10) || invYear;
+      const taxMonth = parseInt(issueDt.slice(5, 7), 10) || 1;
+
+      const taxResult = addTaxObligation({
+        taxType: 'PPN',
+        taxPeriod,
+        taxYear,
+        taxMonth,
+        dueDate: dueDt,
+        title: `PPN Keluaran (Faktur 010) - Inv ${invNum} (${project.clientName})`,
+        ppnOutputAmount: milestone.ppnAmountIDR,
+        taxAmount: milestone.ppnAmountIDR,
+        paidAmount: 0,
+        remainingAmount: milestone.ppnAmountIDR,
+        status: 'TERHUTANG',
+        notes: `PPN Keluaran 11% atas Faktur Komersial No. ${invNum}. e-Faktur: ${invoiceData?.fakturPajakNumber || 'Draf'}. Klien: ${project.clientName}. DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')}.`,
+      });
+
+      if (taxResult?.taxObligation?.id) {
+        taxObligationPpnId = taxResult.taxObligation.id;
+      }
+    }
+
+    // 3. Update milestone state
+    const updatedMilestones = [...project.milestones];
+    updatedMilestones[milestoneIndex] = {
+      ...milestone,
+      status: 'INVOICE_TERBIT',
+      invoiceNumber: invNum,
+      invoiceDate: issueDt,
+      fakturPajakNumber: invoiceData?.fakturPajakNumber || milestone.fakturPajakNumber,
+      receivableId: receivableResult.receivable.id,
+      taxObligationPpnId,
+    };
+
+    updateRetailProject(projectId, { milestones: updatedMilestones });
+
+    return {
+      success: true,
+      receivable: receivableResult.receivable,
+      message: `Invoice ${invNum} untuk Termin ${milestone.termNumber} berhasil diterbitkan dan otomatis tercatat pada Buku Piutang Usaha serta modul Perpajakan (PPN Keluaran)!`,
+    };
+  };
+
+  const recordRetailMilestonePayment = (
+    projectId: string,
+    milestoneId: string,
+    paymentData: {
+      amountReceivedIDR?: number;
+      paymentDate?: string;
+      paymentChannelId: string;
+      referenceNumber?: string;
+      bupotPphNumber?: string;
+      notes?: string;
+      syncToCashLedger?: boolean;
+      syncToTaxObligations?: boolean;
+    }
+  ): { success: boolean; message?: string; transaction?: FinancialTransaction } => {
+    const project = retailProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
+
+    const milestoneIndex = project.milestones.findIndex((m) => m.id === milestoneId);
+    if (milestoneIndex === -1) return { success: false, message: 'Termin retail tidak ditemukan.' };
+
+    const milestone = project.milestones[milestoneIndex];
+    const payDate = paymentData.paymentDate || new Date().toISOString().slice(0, 10);
+    const amountReceived = paymentData.amountReceivedIDR ?? (milestone.netDisbursementIDR || milestone.grossAmountIDR);
+    let linkedTx: FinancialTransaction | undefined;
+
+    // 1. Post to Cash Ledger (Finance & Cashflow) as RETAIL_PROJECT_INCOME
+    if (paymentData.syncToCashLedger !== false) {
+      linkedTx = addTransaction({
+        date: payDate,
+        type: 'INCOME',
+        category: 'RETAIL_PROJECT_INCOME',
+        amountIDR: amountReceived,
+        description: `Penerimaan Pembayaran Termin ${milestone.termNumber}: ${milestone.title} - ${project.projectName} (${project.clientName})`,
+        clientOrVendorName: project.clientName,
+        projectId: project.linkedCrmProjectId || project.id,
+        paymentMethod: paymentData.paymentChannelId as any,
+        referenceNumber: paymentData.referenceNumber,
+        status: 'CLEARED',
+        recordedBy: currentUser.name,
+        notes: `Pembayaran Klien Retail: ${project.clientName} | No. Inv: ${milestone.invoiceNumber || '-'} | Gross DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')} | PPN 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')} | Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')} | Kas Masuk: Rp ${amountReceived.toLocaleString('id-ID')}${paymentData.notes ? ` | Catatan: ${paymentData.notes}` : ''}`,
+      });
+    }
+
+    // 2. Mark Linked Receivable as LUNAS (Piutang Usaha)
+    if (milestone.receivableId) {
+      const billingAmount = milestone.pricingType === 'EXCLUDE_PPN'
+        ? milestone.grossAmountIDR + milestone.ppnAmountIDR
+        : milestone.grossAmountIDR;
+
+      recordReceivablePayment(milestone.receivableId, {
+        amountIDR: billingAmount,
+        paymentDate: payDate,
+        paymentChannelId: paymentData.paymentChannelId,
+        referenceNumber: paymentData.referenceNumber,
+        notes: `Pelunasan Pembayaran Retail via ${paymentData.paymentChannelId}. Kas Diterima: Rp ${amountReceived.toLocaleString('id-ID')}. Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}.`,
+        syncToCashLedger: false, // Already recorded in step 1!
+      });
+    }
+
+    // 3. Record Tax Credit (PPh 23 Withholding by Client) in Tax Management
+    if (milestone.pphAmountIDR > 0 && paymentData.syncToTaxObligations !== false) {
+      const taxYear = parseInt(payDate.slice(0, 4), 10) || new Date().getFullYear();
+      const taxMonth = parseInt(payDate.slice(5, 7), 10) || 1;
+
+      addTaxObligation({
+        taxType: (project.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
+        taxPeriod: `Masa ${payDate.slice(5, 7)}/${taxYear}`,
+        taxYear,
+        taxMonth,
+        title: `Bukti Potong PPh 23 - ${milestone.title} (${project.clientName})`,
+        taxAmount: milestone.pphAmountIDR,
+        paidAmount: milestone.pphAmountIDR,
+        remainingAmount: 0,
+        status: 'PAID',
+        paidByClient: true,
+        clientWithholdingNumber: paymentData.bupotPphNumber || milestone.bupotPphNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`,
+        clientWithholdingDate: payDate,
+        withholdingTaxPayerName: project.clientName,
+        dueDate: payDate,
+        paidAt: payDate,
+        notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${project.clientName} atas jasa konsultasi/teknik. Menjadi kredit pajak pada SPT Tahunan PPh Badan.`,
+      });
+    }
+
+    // 4. Update Milestone State
+    const updatedMilestones = [...project.milestones];
+    updatedMilestones[milestoneIndex] = {
+      ...milestone,
+      status: 'LUNAS',
+      paidAmountIDR: amountReceived,
+      paymentDate: payDate,
+      paymentChannelId: paymentData.paymentChannelId,
+      referenceNumber: paymentData.referenceNumber,
+      bupotPphNumber: paymentData.bupotPphNumber,
+      transactionId: linkedTx?.id,
+    };
+
+    updateRetailProject(projectId, { milestones: updatedMilestones });
+
+    addActivity(
+      project.linkedCrmProjectId || project.id,
+      'Pembayaran Proyek Retail Diterima',
+      `Pembayaran Termin ${milestone.termNumber} Proyek Retail "${project.projectName}" telah masuk kas Rp ${amountReceived.toLocaleString('id-ID')} dan terintegrasi ke Piutang, Pajak, dan Arus Kas!`,
+      'STATUS_CHANGE'
+    );
+
+    return {
+      success: true,
+      transaction: linkedTx,
+      message: `Pembayaran Termin ${milestone.termNumber} berhasil dicatat! Kas bersih Rp ${amountReceived.toLocaleString('id-ID')} telah dibukukan ke Arus Kas, piutang dilunasi, dan kredit PPh 23 telah tercatat di modul Perpajakan.`,
+    };
+  };
+
+  const addRetailMilestone = (
+    projectId: string,
+    milestone: Omit<RetailMilestone, 'id' | 'projectId' | 'createdAt'>
+  ): { success: boolean; message?: string } => {
+    const project = retailProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
+
+    const gross = Math.round(Number(milestone.grossAmountIDR) || 0);
+    const pricingType = milestone.pricingType || project.pricingType || 'INCLUDE_PPN';
+    const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
+    const ppnRate = pricingType === 'NON_PKP' ? 0 : (Number(milestone.ppnRatePercent) ?? (project.ppnRatePercent || 11));
+    const ppnAmount = pricingType === 'INCLUDE_PPN'
+      ? Math.round(gross - dpp)
+      : pricingType === 'EXCLUDE_PPN'
+      ? Math.round((dpp * ppnRate) / 100)
+      : 0;
+
+    const pphType = milestone.pphType || project.pphType || 'PPH_23';
+    const defaultPphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+    const pphRate = Number(milestone.pphRatePercent) ?? (project.pphRatePercent || defaultPphRate);
+    const pphAmount = pphType === 'PPH_23'
+      ? Math.round((dpp * pphRate) / 100)
+      : pphType === 'PPH_FINAL_UMKM'
+      ? Math.round((gross * pphRate) / 100)
+      : 0;
+
+    const net = pricingType === 'EXCLUDE_PPN'
+      ? Math.round(gross + ppnAmount - pphAmount)
+      : Math.round(gross - pphAmount);
+
+    const newMilestone: RetailMilestone = {
+      ...milestone,
+      id: `ret-m-${Date.now()}`,
+      projectId,
+      termNumber: milestone.termNumber || project.milestones.length + 1,
+      grossAmountIDR: gross,
+      pricingType,
+      dppAmountIDR: dpp,
+      ppnRatePercent: ppnRate,
+      ppnAmountIDR: ppnAmount,
+      pphType,
+      pphRatePercent: pphRate,
+      pphAmountIDR: pphAmount,
+      netDisbursementIDR: net,
+      status: milestone.status || 'BELUM_DITAGIH',
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedMilestones = [...project.milestones, newMilestone];
+    return updateRetailProject(projectId, { milestones: updatedMilestones });
+  };
+
+  const updateRetailMilestone = (
+    projectId: string,
+    milestoneId: string,
+    updates: Partial<RetailMilestone>
+  ): { success: boolean; message?: string } => {
+    const project = retailProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
+
+    const updatedMilestones = project.milestones.map((m) => {
+      if (m.id !== milestoneId) return m;
+      const merged = { ...m, ...updates };
+      const gross = Math.round(Number(merged.grossAmountIDR) || 0);
+      const pricingType = merged.pricingType || project.pricingType || 'INCLUDE_PPN';
+      const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
+      const ppnRate = pricingType === 'NON_PKP' ? 0 : (Number(merged.ppnRatePercent) ?? (project.ppnRatePercent || 11));
+      const ppnAmount = pricingType === 'INCLUDE_PPN'
+        ? Math.round(gross - dpp)
+        : pricingType === 'EXCLUDE_PPN'
+        ? Math.round((dpp * ppnRate) / 100)
+        : 0;
+
+      const pphType = merged.pphType || project.pphType || 'PPH_23';
+      const defaultPphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+      const pphRate = Number(merged.pphRatePercent) ?? (project.pphRatePercent || defaultPphRate);
+      const pphAmount = pphType === 'PPH_23'
+        ? Math.round((dpp * pphRate) / 100)
+        : pphType === 'PPH_FINAL_UMKM'
+        ? Math.round((gross * pphRate) / 100)
+        : 0;
+
+      const net = pricingType === 'EXCLUDE_PPN'
+        ? Math.round(gross + ppnAmount - pphAmount)
+        : Math.round(gross - pphAmount);
+
+      return {
+        ...merged,
+        grossAmountIDR: gross,
+        pricingType,
+        dppAmountIDR: dpp,
+        ppnRatePercent: ppnRate,
+        ppnAmountIDR: ppnAmount,
+        pphType,
+        pphRatePercent: pphRate,
+        pphAmountIDR: pphAmount,
+        netDisbursementIDR: net,
+      };
+    });
+
+    return updateRetailProject(projectId, { milestones: updatedMilestones });
+  };
+
+  const deleteRetailMilestone = (
+    projectId: string,
+    milestoneId: string
+  ): { success: boolean; message?: string } => {
+    const project = retailProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
+
+    const updatedMilestones = project.milestones.filter((m) => m.id !== milestoneId);
+    return updateRetailProject(projectId, { milestones: updatedMilestones });
+  };
+
+  const resetRetailProjectsToDefault = (): { success: boolean; message?: string } => {
+    setRetailProjects(INITIAL_RETAIL_PROJECTS);
+    INITIAL_RETAIL_PROJECTS.forEach((p) => saveRetailProjectToFirestore(p));
+    broadcastLiveDataUpdate('RETAIL_PROJECTS', INITIAL_RETAIL_PROJECTS);
+    return {
+      success: true,
+      message: 'Master data Proyek Retail B2B / Swasta berhasil direset ke standar sistem.',
+    };
+  };
+
+  // =========================================================================
+  // Master Data Tipe Instansi Pemerintah & BUMN (Editable & Real-Time Sync)
+  // =========================================================================
+  const activeInstitutionTypes = useMemo(() => {
+    return institutionTypes.filter((t) => t.status !== 'INACTIVE');
+  }, [institutionTypes]);
+
+  const addInstitutionType = (
+    typeData: Omit<GovernmentInstitutionTypeDefinition, 'createdAt' | 'updatedAt'>
+  ): { success: boolean; message?: string; institutionType?: GovernmentInstitutionTypeDefinition } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && !currentUser.permissions?.includes('MANAGE_USERS_ROLES')) {
+      return { success: false, message: 'Hanya Admin/Finance yang berwenang mengelola master tipe instansi.' };
+    }
+
+    const cleanId = (typeData.id || typeData.name)
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, '_');
+
+    if (!cleanId || !typeData.name.trim()) {
+      return { success: false, message: 'Nama instansi dan kode ID tidak boleh kosong.' };
+    }
+
+    if (institutionTypes.some((t) => t.id === cleanId)) {
+      return { success: false, message: `Tipe instansi dengan ID "${cleanId}" sudah terdaftar.` };
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newType: GovernmentInstitutionTypeDefinition = {
+      id: cleanId,
+      name: typeData.name.trim(),
+      code: typeData.code?.trim() || cleanId.slice(0, 8),
+      defaultPphType: typeData.defaultPphType || 'PPH_22',
+      defaultPphRate: Number(typeData.defaultPphRate) ?? (typeData.defaultPphType === 'PPH_22' ? 1.5 : 2),
+      defaultPpnRate: Number(typeData.defaultPpnRate) ?? 11,
+      defaultFundingSource: typeData.defaultFundingSource || 'APBN',
+      description: typeData.description?.trim() || '',
+      badgeColor: typeData.badgeColor || 'blue',
+      status: typeData.status || 'ACTIVE',
+      isSystemDefault: false,
+      createdAt: todayStr,
+      updatedAt: todayStr,
+    };
+
+    setInstitutionTypes((prev) => {
+      const updated = [...prev, newType];
+      broadcastLiveDataUpdate('INSTITUTION_TYPES', updated);
+      saveSettingsToFirestore('institution_types', updated);
+      try {
+        localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save to localStorage', e);
+      }
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Tipe Instansi "${newType.name}" berhasil ditambahkan.`,
+      institutionType: newType,
+    };
+  };
+
+  const updateInstitutionType = (
+    id: string,
+    updates: Partial<GovernmentInstitutionTypeDefinition>
+  ): { success: boolean; message?: string } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && !currentUser.permissions?.includes('MANAGE_USERS_ROLES')) {
+      return { success: false, message: 'Hanya Admin/Finance yang berwenang memperbarui master tipe instansi.' };
+    }
+
+    const existing = institutionTypes.find((t) => t.id === id);
+    if (!existing) {
+      return { success: false, message: 'Tipe instansi tidak ditemukan.' };
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    setInstitutionTypes((prev) => {
+      const updated = prev.map((t) => {
+        if (t.id === id) {
+          return {
+            ...t,
+            ...updates,
+            updatedAt: todayStr,
+          };
+        }
+        return t;
+      });
+      broadcastLiveDataUpdate('INSTITUTION_TYPES', updated);
+      saveSettingsToFirestore('institution_types', updated);
+      try {
+        localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save to localStorage', e);
+      }
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Tipe Instansi "${updates.name || existing.name}" berhasil diperbarui.`,
+    };
+  };
+
+  const deleteInstitutionType = (id: string): { success: boolean; message?: string } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && !currentUser.permissions?.includes('MANAGE_USERS_ROLES')) {
+      return { success: false, message: 'Hanya Admin/Finance yang berwenang menghapus master tipe instansi.' };
+    }
+
+    const existing = institutionTypes.find((t) => t.id === id);
+    if (!existing) {
+      return { success: false, message: 'Tipe instansi tidak ditemukan.' };
+    }
+
+    setInstitutionTypes((prev) => {
+      const updated = prev.filter((t) => t.id !== id);
+      broadcastLiveDataUpdate('INSTITUTION_TYPES', updated);
+      saveSettingsToFirestore('institution_types', updated);
+      try {
+        localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save to localStorage', e);
+      }
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Tipe Instansi "${existing.name}" berhasil dihapus.`,
+    };
+  };
+
+  const toggleInstitutionTypeStatus = (id: string): { success: boolean; message?: string } => {
+    const existing = institutionTypes.find((t) => t.id === id);
+    if (!existing) return { success: false, message: 'Tipe instansi tidak ditemukan.' };
+    const nextStatus = existing.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    return updateInstitutionType(id, { status: nextStatus });
+  };
+
+  const resetInstitutionTypesToDefault = (): { success: boolean; message?: string } => {
+    setInstitutionTypes(DEFAULT_GOVERNMENT_INSTITUTION_TYPES);
+    broadcastLiveDataUpdate('INSTITUTION_TYPES', DEFAULT_GOVERNMENT_INSTITUTION_TYPES);
+    saveSettingsToFirestore('institution_types', DEFAULT_GOVERNMENT_INSTITUTION_TYPES);
+    try {
+      localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(DEFAULT_GOVERNMENT_INSTITUTION_TYPES));
+    } catch (e) {
+      console.error('Failed to save to localStorage', e);
+    }
+    return {
+      success: true,
+      message: 'Master tipe instansi berhasil direset ke standar sistem.',
+    };
+  };
+
+  const getInstitutionTypeDefinition = (idOrName: string): GovernmentInstitutionTypeDefinition | undefined => {
+    const query = idOrName.trim().toLowerCase();
+    return institutionTypes.find(
+      (t) => t.id.toLowerCase() === query || t.name.toLowerCase() === query
+    );
+  };
+
+  // =========================================================================
+  // Master Data Skema Pembagian Termin (Editable & Real-Time Sync)
+  // =========================================================================
+  const activeTermDistributionSchemes = useMemo(() => {
+    return termDistributionSchemes.filter((s) => s.status !== 'INACTIVE');
+  }, [termDistributionSchemes]);
+
+  const addTermDistributionScheme = (
+    schemeData: Omit<TermDistributionSchemeDefinition, 'createdAt' | 'updatedAt'>
+  ): { success: boolean; message?: string; scheme?: TermDistributionSchemeDefinition } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && !currentUser.permissions?.includes('MANAGE_USERS_ROLES')) {
+      return { success: false, message: 'Hanya Admin/Finance yang berwenang mengelola master skema termin.' };
+    }
+
+    const cleanId = (schemeData.id || schemeData.name)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_');
+
+    if (!cleanId || !schemeData.name.trim()) {
+      return { success: false, message: 'Nama skema dan ID tidak boleh kosong.' };
+    }
+
+    if (termDistributionSchemes.some((s) => s.id === cleanId)) {
+      return { success: false, message: `Skema dengan ID "${cleanId}" sudah terdaftar.` };
+    }
+
+    if (!schemeData.terms || schemeData.terms.length === 0) {
+      return { success: false, message: 'Skema harus memiliki minimal 1 tahapan termin.' };
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newScheme: TermDistributionSchemeDefinition = {
+      id: cleanId,
+      name: schemeData.name.trim(),
+      description: schemeData.description?.trim() || '',
+      termCount: schemeData.terms.length,
+      terms: schemeData.terms.map((t, idx) => ({
+        termNumber: t.termNumber || idx + 1,
+        title: t.title?.trim() || `Termin ${idx + 1}`,
+        percentage: Number(t.percentage) || 0,
+        description: t.description?.trim() || '',
+      })),
+      isSystemDefault: false,
+      status: schemeData.status || 'ACTIVE',
+      createdAt: todayStr,
+      updatedAt: todayStr,
+    };
+
+    setTermDistributionSchemes((prev) => {
+      const updated = [...prev, newScheme];
+      broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', updated);
+      saveSettingsToFirestore('term_distribution_schemes', updated);
+      try {
+        localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save to localStorage', e);
+      }
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Skema termin "${newScheme.name}" berhasil ditambahkan.`,
+      scheme: newScheme,
+    };
+  };
+
+  const updateTermDistributionScheme = (
+    id: string,
+    updates: Partial<TermDistributionSchemeDefinition>
+  ): { success: boolean; message?: string } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && !currentUser.permissions?.includes('MANAGE_USERS_ROLES')) {
+      return { success: false, message: 'Hanya Admin/Finance yang berwenang memperbarui master skema termin.' };
+    }
+
+    const existing = termDistributionSchemes.find((s) => s.id === id);
+    if (!existing) {
+      return { success: false, message: 'Skema termin tidak ditemukan.' };
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    setTermDistributionSchemes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id === id) {
+          const mergedTerms = updates.terms || s.terms;
+          return {
+            ...s,
+            ...updates,
+            termCount: mergedTerms.length,
+            terms: mergedTerms,
+            updatedAt: todayStr,
+          };
+        }
+        return s;
+      });
+      broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', updated);
+      saveSettingsToFirestore('term_distribution_schemes', updated);
+      try {
+        localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save to localStorage', e);
+      }
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Skema termin "${updates.name || existing.name}" berhasil diperbarui.`,
+    };
+  };
+
+  const deleteTermDistributionScheme = (id: string): { success: boolean; message?: string } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && !currentUser.permissions?.includes('MANAGE_USERS_ROLES')) {
+      return { success: false, message: 'Hanya Admin/Finance yang berwenang menghapus master skema termin.' };
+    }
+
+    const existing = termDistributionSchemes.find((s) => s.id === id);
+    if (!existing) {
+      return { success: false, message: 'Skema termin tidak ditemukan.' };
+    }
+
+    setTermDistributionSchemes((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', updated);
+      saveSettingsToFirestore('term_distribution_schemes', updated);
+      try {
+        localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save to localStorage', e);
+      }
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Skema termin "${existing.name}" berhasil dihapus.`,
+    };
+  };
+
+  const toggleTermDistributionSchemeStatus = (id: string): { success: boolean; message?: string } => {
+    const existing = termDistributionSchemes.find((s) => s.id === id);
+    if (!existing) return { success: false, message: 'Skema termin tidak ditemukan.' };
+    const nextStatus = existing.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    return updateTermDistributionScheme(id, { status: nextStatus });
+  };
+
+  const resetTermDistributionSchemesToDefault = (): { success: boolean; message?: string } => {
+    setTermDistributionSchemes(DEFAULT_TERM_DISTRIBUTION_SCHEMES);
+    broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', DEFAULT_TERM_DISTRIBUTION_SCHEMES);
+    saveSettingsToFirestore('term_distribution_schemes', DEFAULT_TERM_DISTRIBUTION_SCHEMES);
+    try {
+      localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(DEFAULT_TERM_DISTRIBUTION_SCHEMES));
+    } catch (e) {
+      console.error('Failed to save to localStorage', e);
+    }
+    return {
+      success: true,
+      message: 'Master skema pembagian termin berhasil direset ke standar sistem.',
+    };
+  };
+
+  const getTermDistributionScheme = (id: string): TermDistributionSchemeDefinition | undefined => {
+    return termDistributionSchemes.find((s) => s.id === id);
+  };
+
   const updateMilestoneDocRequirements = (
     projectId: string,
     milestoneId: string,
@@ -8552,6 +9659,32 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateGovMilestone,
         deleteGovMilestone,
         resetGovernmentProjectsToDefault,
+        retailProjects,
+        addRetailProject,
+        updateRetailProject,
+        deleteRetailProject,
+        generateRetailInvoiceToReceivables,
+        recordRetailMilestonePayment,
+        addRetailMilestone,
+        updateRetailMilestone,
+        deleteRetailMilestone,
+        resetRetailProjectsToDefault,
+        institutionTypes,
+        activeInstitutionTypes,
+        addInstitutionType,
+        updateInstitutionType,
+        deleteInstitutionType,
+        toggleInstitutionTypeStatus,
+        resetInstitutionTypesToDefault,
+        getInstitutionTypeDefinition,
+        termDistributionSchemes,
+        activeTermDistributionSchemes,
+        addTermDistributionScheme,
+        updateTermDistributionScheme,
+        deleteTermDistributionScheme,
+        toggleTermDistributionSchemeStatus,
+        resetTermDistributionSchemesToDefault,
+        getTermDistributionScheme,
         payrollRecords,
         addPayrollPayment,
         updatePayrollPayment,

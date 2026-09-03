@@ -28,6 +28,9 @@ import {
   Receipt,
   ArrowUpRight,
   ExternalLink,
+  SlidersHorizontal,
+  Settings,
+  Percent,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import {
@@ -39,6 +42,8 @@ import {
   GovMilestoneStatus,
 } from '../../types';
 import { formatIDR } from '../../utils/formatters';
+import { InstitutionTypeManagerModal } from './InstitutionTypeManagerModal';
+import { TermDistributionSchemeManagerModal } from './TermDistributionSchemeManagerModal';
 
 interface GovernmentProjectManagementProps {
   onSelectProject?: (projectId: string) => void;
@@ -64,6 +69,12 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
     projects,
     receivables,
     taxObligations,
+    institutionTypes,
+    activeInstitutionTypes,
+    termDistributionSchemes,
+    activeTermDistributionSchemes,
+    getInstitutionTypeDefinition,
+    getTermDistributionScheme,
   } = useProjects();
 
   // Search & Filters
@@ -75,6 +86,10 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
     'gov-sample-1': true,
     'gov-sample-2': true,
   });
+
+  // Settings & Configuration Modals state
+  const [isInstitutionTypeModalOpen, setIsInstitutionTypeModalOpen] = useState(false);
+  const [isTermSchemeModalOpen, setIsTermSchemeModalOpen] = useState(false);
 
   // Modals state
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -408,6 +423,24 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
+              onClick={() => setIsInstitutionTypeModalOpen(true)}
+              className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs hover:border-blue-500/50"
+              title="Kelola Master Tipe Instansi (Kementerian, BUMN, Pemda, dll.)"
+            >
+              <Landmark className="w-4 h-4 text-blue-400" />
+              <span>Tipe Instansi ({institutionTypes.length})</span>
+            </button>
+
+            <button
+              onClick={() => setIsTermSchemeModalOpen(true)}
+              className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs hover:border-indigo-500/50"
+              title="Kelola Skema Pembagian Termin (3 Termin, 2 Termin, Custom %)"
+            >
+              <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+              <span>Skema Termin ({termDistributionSchemes.length})</span>
+            </button>
+
+            <button
               onClick={() => {
                 setEditingProject(null);
                 setIsProjectModalOpen(true);
@@ -569,14 +602,12 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
             onChange={(e) => setInstitutionFilter(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-hidden focus:border-blue-500"
           >
-            <option value="ALL">Semua Instansi</option>
-            <option value="KEMENTERIAN">Kementerian RI</option>
-            <option value="LEMBAGA">Lembaga Negara</option>
-            <option value="DINAS_PEMDA">Dinas Pemda</option>
-            <option value="BUMN">BUMN</option>
-            <option value="BUMD">BUMD</option>
-            <option value="BLU">BLU</option>
-            <option value="UNIVERSITAS_NEGERI">PTN / Universitas</option>
+            <option value="ALL">Semua Tipe Instansi ({institutionTypes.length})</option>
+            {institutionTypes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
           </select>
 
           {/* Status */}
@@ -975,6 +1006,28 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
             setIsProjectModalOpen(false);
             setEditingProject(null);
           }}
+          onOpenInstitutionTypeManager={() => setIsInstitutionTypeModalOpen(true)}
+          onOpenTermSchemeManager={() => setIsTermSchemeModalOpen(true)}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: TIPE INSTANSI PEMERINTAH & BUMN (EDITABLE & REAL-TIME SYNC) */}
+      {/* ========================================================================= */}
+      {isInstitutionTypeModalOpen && (
+        <InstitutionTypeManagerModal
+          isOpen={isInstitutionTypeModalOpen}
+          onClose={() => setIsInstitutionTypeModalOpen(false)}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: SKEMA PEMBAGIAN TERMIN (EDITABLE & REAL-TIME SYNC) */}
+      {/* ========================================================================= */}
+      {isTermSchemeModalOpen && (
+        <TermDistributionSchemeManagerModal
+          isOpen={isTermSchemeModalOpen}
+          onClose={() => setIsTermSchemeModalOpen(false)}
         />
       )}
 
@@ -1405,6 +1458,8 @@ interface GovProjectModalProps {
   onClose: () => void;
   initialData?: GovernmentProject | null;
   onSave: (data: Omit<GovernmentProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>) => void;
+  onOpenInstitutionTypeManager?: () => void;
+  onOpenTermSchemeManager?: () => void;
 }
 
 const GovProjectModal: React.FC<GovProjectModalProps> = ({
@@ -1412,31 +1467,93 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
   onClose,
   initialData,
   onSave,
+  onOpenInstitutionTypeManager,
+  onOpenTermSchemeManager,
 }) => {
+  const {
+    activeInstitutionTypes,
+    activeTermDistributionSchemes,
+    getInstitutionTypeDefinition,
+    getTermDistributionScheme,
+  } = useProjects();
+
   const [formData, setFormData] = useState({
     contractNumber: initialData?.contractNumber || '',
     projectName: initialData?.projectName || '',
-    institutionType: (initialData?.institutionType || 'KEMENTERIAN') as GovernmentInstitutionType,
+    institutionType: (initialData?.institutionType || (activeInstitutionTypes[0]?.id || 'KEMENTERIAN')) as GovernmentInstitutionType,
     governmentAgency: initialData?.governmentAgency || '',
     satkerCode: initialData?.satkerCode || '',
     fiscalYear: initialData?.fiscalYear || 2026,
-    sourceOfFunds: (initialData?.sourceOfFunds || 'APBN') as GovernmentFundingSource,
+    sourceOfFunds: (initialData?.sourceOfFunds || (activeInstitutionTypes[0]?.defaultFundingSource || 'APBN')) as GovernmentFundingSource,
     ppkName: initialData?.ppkName || '',
     ppkNip: initialData?.ppkNip || '',
     treasurerName: initialData?.treasurerName || '',
     agencyAddress: initialData?.agencyAddress || '',
     totalContractValueIDR: initialData?.totalContractValueIDR || 0,
     paymentMechanism: (initialData?.paymentMechanism || 'TERMIN') as GovernmentPaymentMechanism,
-    whtRatePph: initialData?.whtRatePph || 1.5,
-    vatWapuRate: initialData?.vatWapuRate || 11,
+    whtRatePph: initialData?.whtRatePph ?? (activeInstitutionTypes[0]?.defaultPphRate ?? 1.5),
+    vatWapuRate: initialData?.vatWapuRate ?? (activeInstitutionTypes[0]?.defaultPpnRate ?? 11),
     startDate: initialData?.startDate || new Date().toISOString().slice(0, 10),
     endDate: initialData?.endDate || new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10),
     status: (initialData?.status || 'AKTIF') as 'AKTIF' | 'SELESAI' | 'BATAL' | 'DRAFT',
     notes: initialData?.notes || '',
   });
 
-  // Simple auto-generate milestones
-  const [termCount, setTermCount] = useState<number>(initialData?.milestones?.length || 3);
+  const [selectedSchemeId, setSelectedSchemeId] = useState<string>(() => {
+    return activeTermDistributionSchemes[0]?.id || 'SCHEME_3_TERMIN_20_40_40';
+  });
+
+  const handleInstitutionTypeChange = (newTypeId: string) => {
+    const def = getInstitutionTypeDefinition(newTypeId);
+    setFormData((prev) => ({
+      ...prev,
+      institutionType: newTypeId as GovernmentInstitutionType,
+      sourceOfFunds: (def?.defaultFundingSource || prev.sourceOfFunds) as GovernmentFundingSource,
+      whtRatePph: def?.defaultPphRate ?? prev.whtRatePph,
+      vatWapuRate: def?.defaultPpnRate ?? prev.vatWapuRate,
+    }));
+  };
+
+  const selectedInstitutionDef = useMemo(() => {
+    return getInstitutionTypeDefinition(formData.institutionType);
+  }, [formData.institutionType, getInstitutionTypeDefinition]);
+
+  const selectedScheme = useMemo(() => {
+    return getTermDistributionScheme(selectedSchemeId) || activeTermDistributionSchemes[0];
+  }, [selectedSchemeId, activeTermDistributionSchemes, getTermDistributionScheme]);
+
+  // Formulated live milestone breakdown calculation
+  const calculatedTermBreakdown = useMemo(() => {
+    if (!selectedScheme || !selectedScheme.terms || formData.totalContractValueIDR <= 0) {
+      return [];
+    }
+
+    const total = formData.totalContractValueIDR;
+    const terms = selectedScheme.terms;
+    let allocatedGross = 0;
+
+    return terms.map((t, idx) => {
+      const isLast = idx === terms.length - 1;
+      const gross = isLast ? Math.max(0, total - allocatedGross) : Math.round((total * t.percentage) / 100);
+      allocatedGross += gross;
+
+      const pphRate = Number(formData.whtRatePph) || 0;
+      const pphAmount = Math.round((gross * pphRate) / 100);
+      const ppnRate = Number(formData.vatWapuRate) || 0;
+      const ppnAmount = Math.round((gross * ppnRate) / 100);
+      const netDisbursement = Math.round(gross - pphAmount);
+
+      return {
+        termNumber: t.termNumber || idx + 1,
+        title: t.title,
+        percentage: t.percentage,
+        gross,
+        pphAmount,
+        ppnAmount,
+        netDisbursement,
+      };
+    });
+  }, [selectedScheme, formData.totalContractValueIDR, formData.whtRatePph, formData.vatWapuRate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1456,119 +1573,61 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
     if (initialData?.milestones && initialData.milestones.length > 0) {
       milestones = initialData.milestones;
     } else {
-      // Auto build standard termin distribution
+      const terms = selectedScheme?.terms || [
+        { termNumber: 1, title: 'Termin I - Uang Muka', percentage: 20 },
+        { termNumber: 2, title: 'Termin II - Pelaksanaan', percentage: 40 },
+        { termNumber: 3, title: 'Termin III - BAST 100%', percentage: 40 },
+      ];
       const total = formData.totalContractValueIDR;
-      const count = Math.max(1, termCount);
+      let allocatedGross = 0;
 
-      if (count === 1) {
-        milestones = [
-          {
-            id: `gov-m-${Date.now()}-1`,
-            projectId: '',
-            termNumber: 1,
-            title: 'Pembayaran 100% Sekaligus (BAST Selesai)',
-            percentage: 100,
-            grossAmountIDR: total,
-            pphType: formData.institutionType === 'BUMN' ? 'PPH_23' : 'PPH_22',
-            pphRatePercent: formData.whtRatePph,
-            pphAmountIDR: Math.round((total * formData.whtRatePph) / 100),
-            ppnRatePercent: formData.vatWapuRate,
-            ppnAmountIDR: Math.round((total * formData.vatWapuRate) / 100),
-            netDisbursementIDR: Math.round(total - (total * formData.whtRatePph) / 100),
-            status: 'BELUM_DITAGIH',
-            targetDate: formData.endDate,
-            createdAt: new Date().toISOString(),
-          },
-        ];
-      } else if (count === 3) {
-        // Standard 20% - 40% - 40%
-        const t1Gross = Math.round(total * 0.2);
-        const t2Gross = Math.round(total * 0.4);
-        const t3Gross = total - t1Gross - t2Gross;
-        const pphRate = formData.whtRatePph;
-        const pphType = formData.institutionType === 'BUMN' ? 'PPH_23' : 'PPH_22';
+      const start = new Date(formData.startDate).getTime();
+      const end = new Date(formData.endDate).getTime();
+      const duration = Math.max(1, end - start);
 
-        milestones = [
-          {
-            id: `gov-m-${Date.now()}-1`,
-            projectId: '',
-            termNumber: 1,
-            title: 'Termin I - Uang Muka / Mobilisasi (20%)',
-            percentage: 20,
-            grossAmountIDR: t1Gross,
-            pphType,
-            pphRatePercent: pphRate,
-            pphAmountIDR: Math.round((t1Gross * pphRate) / 100),
-            ppnRatePercent: formData.vatWapuRate,
-            ppnAmountIDR: Math.round((t1Gross * formData.vatWapuRate) / 100),
-            netDisbursementIDR: Math.round(t1Gross - (t1Gross * pphRate) / 100),
-            status: 'BELUM_DITAGIH',
-            targetDate: formData.startDate,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: `gov-m-${Date.now()}-2`,
-            projectId: '',
-            termNumber: 2,
-            title: 'Termin II - Laporan Antara & Verifikasi 50% (40%)',
-            percentage: 40,
-            grossAmountIDR: t2Gross,
-            pphType,
-            pphRatePercent: pphRate,
-            pphAmountIDR: Math.round((t2Gross * pphRate) / 100),
-            ppnRatePercent: formData.vatWapuRate,
-            ppnAmountIDR: Math.round((t2Gross * formData.vatWapuRate) / 100),
-            netDisbursementIDR: Math.round(t2Gross - (t2Gross * pphRate) / 100),
-            status: 'BELUM_DITAGIH',
-            targetDate: new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10),
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: `gov-m-${Date.now()}-3`,
-            projectId: '',
-            termNumber: 3,
-            title: 'Termin III - BAST & Sertifikat Terbit 100% (40%)',
-            percentage: 40,
-            grossAmountIDR: t3Gross,
-            pphType,
-            pphRatePercent: pphRate,
-            pphAmountIDR: Math.round((t3Gross * pphRate) / 100),
-            ppnRatePercent: formData.vatWapuRate,
-            ppnAmountIDR: Math.round((t3Gross * formData.vatWapuRate) / 100),
-            netDisbursementIDR: Math.round(t3Gross - (t3Gross * pphRate) / 100),
-            status: 'BELUM_DITAGIH',
-            targetDate: formData.endDate,
-            createdAt: new Date().toISOString(),
-          },
-        ];
-      } else {
-        // Evenly split
-        const part = Math.round(total / count);
-        const pphRate = formData.whtRatePph;
-        const pphType = formData.institutionType === 'BUMN' ? 'PPH_23' : 'PPH_22';
+      milestones = terms.map((t, idx) => {
+        const isLast = idx === terms.length - 1;
+        const gross = isLast ? Math.max(0, total - allocatedGross) : Math.round((total * t.percentage) / 100);
+        allocatedGross += gross;
 
-        milestones = Array.from({ length: count }, (_, idx) => {
-          const isLast = idx === count - 1;
-          const gross = isLast ? total - part * (count - 1) : part;
-          return {
-            id: `gov-m-${Date.now()}-${idx + 1}`,
-            projectId: '',
-            termNumber: idx + 1,
-            title: `Termin ${idx + 1} (${Math.round((gross / total) * 100)}%)`,
-            percentage: Math.round((gross / total) * 100),
-            grossAmountIDR: gross,
-            pphType,
-            pphRatePercent: pphRate,
-            pphAmountIDR: Math.round((gross * pphRate) / 100),
-            ppnRatePercent: formData.vatWapuRate,
-            ppnAmountIDR: Math.round((gross * formData.vatWapuRate) / 100),
-            netDisbursementIDR: Math.round(gross - (gross * pphRate) / 100),
-            status: 'BELUM_DITAGIH' as GovMilestoneStatus,
-            targetDate: formData.endDate,
-            createdAt: new Date().toISOString(),
-          };
-        });
-      }
+        const pphRate = Number(formData.whtRatePph) || 0;
+        const pphType = selectedInstitutionDef?.defaultPphType || (formData.institutionType === 'BUMN' ? 'PPH_23' : 'PPH_22');
+        const pphAmount = Math.round((gross * pphRate) / 100);
+        const ppnRate = Number(formData.vatWapuRate) || 0;
+        const ppnAmount = Math.round((gross * ppnRate) / 100);
+        const net = Math.round(gross - pphAmount);
+
+        let targetDate = formData.endDate;
+        if (terms.length === 1) {
+          targetDate = formData.endDate;
+        } else if (idx === 0) {
+          targetDate = formData.startDate;
+        } else if (isLast) {
+          targetDate = formData.endDate;
+        } else {
+          const stepRatio = (idx + 1) / terms.length;
+          targetDate = new Date(start + duration * stepRatio).toISOString().slice(0, 10);
+        }
+
+        return {
+          id: `gov-m-${Date.now()}-${idx + 1}`,
+          projectId: '',
+          termNumber: t.termNumber || idx + 1,
+          title: t.title,
+          percentage: t.percentage,
+          grossAmountIDR: gross,
+          pphType,
+          pphRatePercent: pphRate,
+          pphAmountIDR: pphAmount,
+          ppnRatePercent: ppnRate,
+          ppnAmountIDR: ppnAmount,
+          netDisbursementIDR: net,
+          status: 'BELUM_DITAGIH' as GovMilestoneStatus,
+          targetDate,
+          notes: t.description || '',
+          createdAt: new Date().toISOString(),
+        };
+      });
     }
 
     onSave({
@@ -1642,26 +1701,37 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, sourceOfFunds: e.target.value as any })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
               >
-                <option value="APBN">APBN</option>
-                <option value="APBD">APBD</option>
-                <option value="BUMN">BUMN</option>
+                <option value="APBN">APBN (KPPN)</option>
+                <option value="APBD">APBD (Kasda)</option>
+                <option value="BUMN">BUMN / BUMD</option>
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="font-bold text-slate-700">Tipe Instansi</label>
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-slate-700">Tipe Instansi *</label>
+                {onOpenInstitutionTypeManager && (
+                  <button
+                    type="button"
+                    onClick={onOpenInstitutionTypeManager}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline cursor-pointer"
+                    title="Tambah / Ubah Tipe Instansi"
+                  >
+                    <SlidersHorizontal className="w-3 h-3" />
+                    <span>Kelola ({activeInstitutionTypes.length})</span>
+                  </button>
+                )}
+              </div>
               <select
                 value={formData.institutionType}
-                onChange={(e) => setFormData({ ...formData, institutionType: e.target.value as any })}
+                onChange={(e) => handleInstitutionTypeChange(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
               >
-                <option value="KEMENTERIAN">Kementerian RI</option>
-                <option value="LEMBAGA">Lembaga Negara</option>
-                <option value="DINAS_PEMDA">Dinas Pemda</option>
-                <option value="BUMN">BUMN</option>
-                <option value="BUMD">BUMD</option>
-                <option value="BLU">Badan Layanan Umum (BLU)</option>
-                <option value="UNIVERSITAS_NEGERI">Universitas Negeri</option>
+                {activeInstitutionTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.defaultFundingSource} • {t.defaultPphType.replace('_', ' ')} {t.defaultPphRate}%)
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -1675,6 +1745,18 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
               />
             </div>
           </div>
+
+          {selectedInstitutionDef && (
+            <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 p-2.5 rounded-xl leading-relaxed flex items-start gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0"></span>
+              <div>
+                <span className="font-bold text-slate-800">{selectedInstitutionDef.name}</span>: {selectedInstitutionDef.description || 'Instansi pengadaan pemerintah terdaftar.'}
+                <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                  Default: {selectedInstitutionDef.defaultFundingSource} • {selectedInstitutionDef.defaultPphType.replace('_', ' ')} ({selectedInstitutionDef.defaultPphRate}%) • PPN WAPU ({selectedInstitutionDef.defaultPpnRate}%)
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
@@ -1697,7 +1779,7 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
                 step="0.1"
                 value={formData.whtRatePph}
                 onChange={(e) => setFormData({ ...formData, whtRatePph: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-semibold text-slate-800"
               />
             </div>
 
@@ -1708,7 +1790,7 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
                 step="0.1"
                 value={formData.vatWapuRate}
                 onChange={(e) => setFormData({ ...formData, vatWapuRate: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-semibold text-slate-800"
               />
             </div>
           </div>
@@ -1760,37 +1842,76 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
           </div>
 
           {!initialData && (
-            <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1.5">
-              <label className="font-bold text-blue-950">Skema Pembagian Termin Otomatis</label>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="termCount"
-                    checked={termCount === 3}
-                    onChange={() => setTermCount(3)}
-                  />
-                  <span>Standar 3 Termin (20% - 40% - 40%)</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="termCount"
-                    checked={termCount === 2}
-                    onChange={() => setTermCount(2)}
-                  />
-                  <span>2 Termin (50% - 50%)</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="termCount"
-                    checked={termCount === 1}
-                    onChange={() => setTermCount(1)}
-                  />
-                  <span>1 Kali (100% Sekaligus)</span>
-                </label>
+            <div className="p-4 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 border border-blue-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-blue-700" />
+                  <span className="font-bold text-blue-950 text-xs">Skema Pembagian Termin Otomatis</span>
+                </div>
+                {onOpenTermSchemeManager && (
+                  <button
+                    type="button"
+                    onClick={onOpenTermSchemeManager}
+                    className="text-[10px] font-bold text-blue-700 hover:text-blue-900 flex items-center gap-1 hover:underline cursor-pointer"
+                    title="Tambah / Ubah Skema Pembagian Termin"
+                  >
+                    <SlidersHorizontal className="w-3 h-3" />
+                    <span>Kelola Skema ({activeTermDistributionSchemes.length})</span>
+                  </button>
+                )}
               </div>
+
+              <select
+                value={selectedSchemeId}
+                onChange={(e) => setSelectedSchemeId(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-blue-200 rounded-xl text-xs font-semibold text-slate-800 shadow-xs focus:outline-hidden focus:border-blue-500"
+              >
+                {activeTermDistributionSchemes.map((scheme) => (
+                  <option key={scheme.id} value={scheme.id}>
+                    {scheme.name} — {scheme.termCount} Termin ({scheme.terms.map((t) => `${t.percentage}%`).join(' • ')})
+                  </option>
+                ))}
+              </select>
+
+              {/* Real-time Calculation Breakdown Preview */}
+              {calculatedTermBreakdown.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center justify-between">
+                    <span>Simulasi Formulasi Termin Kontrak</span>
+                    <span className="text-blue-700 font-mono">
+                      Total: {formatIDR(formData.totalContractValueIDR)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {calculatedTermBreakdown.map((item) => (
+                      <div
+                        key={item.termNumber}
+                        className="bg-white/95 border border-blue-100 rounded-xl p-2.5 text-[11px] shadow-2xs space-y-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 truncate">{item.title}</span>
+                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-md font-bold text-[10px]">
+                            {item.percentage}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Bruto:</span>
+                          <span className="font-mono font-semibold text-slate-800">{formatIDR(item.gross)}</span>
+                        </div>
+                        <div className="flex justify-between text-amber-700">
+                          <span>Pot. PPh ({formData.whtRatePph}%):</span>
+                          <span className="font-mono font-medium">-{formatIDR(item.pphAmount)}</span>
+                        </div>
+                        <div className="flex justify-between text-emerald-700 font-bold border-t border-slate-100 pt-1">
+                          <span>Kas Bersih SP2D:</span>
+                          <span className="font-mono">{formatIDR(item.netDisbursement)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

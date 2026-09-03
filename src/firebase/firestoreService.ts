@@ -24,7 +24,8 @@ import {
   TaxObligation,
   PayrollPayment,
   CompanyLetterhead,
-  GovernmentProject
+  GovernmentProject,
+  RetailProject
 } from '../types';
 
 export const FirestoreCollections = {
@@ -40,6 +41,7 @@ export const FirestoreCollections = {
   TAX_OBLIGATIONS: 'tax_obligations',
   PAYROLL: 'payroll_records',
   GOVERNMENT_PROJECTS: 'government_projects',
+  RETAIL_PROJECTS: 'retail_projects',
 };
 
 // Deeply sanitize objects so no `undefined` values are ever sent to Firestore (which causes setDoc to fail)
@@ -637,6 +639,84 @@ export const subscribeToGovernmentProjects = (onUpdate: (projects: GovernmentPro
   );
 };
 
+// ==========================================
+// RETAIL PROJECTS (PROYEK RETAIL & KORPORASI SWASTA) FIRESTORE SYNC
+// ==========================================
+
+export const saveRetailProjectToFirestore = async (project: RetailProject): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.RETAIL_PROJECTS, project.id);
+    const sanitized = sanitizeForFirestore({
+      ...project,
+      clientContactPerson: project.clientContactPerson || '',
+      clientPhone: project.clientPhone || '',
+      clientEmail: project.clientEmail || '',
+      clientAddress: project.clientAddress || '',
+      clientNpwp: project.clientNpwp || '',
+      contractNumber: project.contractNumber || '',
+      linkedCrmProjectId: project.linkedCrmProjectId || '',
+      notes: project.notes || '',
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+
+    // Also update settings backup document for atomic fallback
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'retail_projects');
+    const snap = await getDoc(settingsRef);
+    let list: RetailProject[] = [];
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      list = snap.data().data;
+    }
+    const filtered = list.filter((p) => p.id !== project.id);
+    await setDoc(
+      settingsRef,
+      sanitizeForFirestore({ data: [project, ...filtered], updatedAt: new Date().toISOString() }),
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Firestore save retail project error:', error);
+  }
+};
+
+export const deleteRetailProjectFromFirestore = async (projectId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.RETAIL_PROJECTS, projectId);
+    await deleteDoc(docRef);
+
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'retail_projects');
+    const snap = await getDoc(settingsRef);
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      const filtered = snap.data().data.filter((p: RetailProject) => p.id !== projectId);
+      await setDoc(
+        settingsRef,
+        sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
+        { merge: true }
+      );
+    }
+  } catch (error) {
+    console.error('Firestore delete retail project error:', error);
+    throw error;
+  }
+};
+
+export const subscribeToRetailProjects = (onUpdate: (projects: RetailProject[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.RETAIL_PROJECTS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: RetailProject[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as RetailProject;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore retail projects listener warning:', err)
+  );
+};
+
 export const subscribeToDeletedPayrollIds = (onUpdate: (ids: string[]) => void) => {
   const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_payroll_ids');
   return onSnapshot(
@@ -755,7 +835,9 @@ export const ensureInitialFirestoreSeed = async (
   defaultReceivables?: Receivable[],
   defaultPayrollRecords?: PayrollPayment[],
   defaultCompanyLetterhead?: CompanyLetterhead,
-  defaultEmployeeSalaryConfigs?: any[]
+  defaultEmployeeSalaryConfigs?: any[],
+  defaultInstitutionTypes?: any[],
+  defaultTermSchemes?: any[]
 ): Promise<void> => {
   try {
     // 1. Ensure master admin root user exists in Firestore
@@ -1000,6 +1082,24 @@ export const ensureInitialFirestoreSeed = async (
       const salaryConfigSnap = await getDoc(salaryConfigRef);
       if (!salaryConfigSnap.exists()) {
         await setDoc(salaryConfigRef, sanitizeForFirestore({ data: defaultEmployeeSalaryConfigs, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 19. Ensure master institution types exist in settings if not present
+    if (defaultInstitutionTypes !== undefined && defaultInstitutionTypes.length > 0) {
+      const instRef = doc(db, FirestoreCollections.SETTINGS, 'institution_types');
+      const instSnap = await getDoc(instRef);
+      if (!instSnap.exists()) {
+        await setDoc(instRef, sanitizeForFirestore({ data: defaultInstitutionTypes, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 20. Ensure master term distribution schemes exist in settings if not present
+    if (defaultTermSchemes !== undefined && defaultTermSchemes.length > 0) {
+      const termRef = doc(db, FirestoreCollections.SETTINGS, 'term_distribution_schemes');
+      const termSnap = await getDoc(termRef);
+      if (!termSnap.exists()) {
+        await setDoc(termRef, sanitizeForFirestore({ data: defaultTermSchemes, updatedAt: new Date().toISOString() }));
       }
     }
   } catch (err) {

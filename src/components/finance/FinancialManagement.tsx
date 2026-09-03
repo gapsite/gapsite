@@ -18,6 +18,7 @@ import {
   BarChart3,
   CreditCard,
   Users,
+  Briefcase,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { FinancialStatsCards } from './FinancialStatsCards';
@@ -28,6 +29,7 @@ import { TaxManagement } from './TaxManagement';
 import { ReceivableManagement } from './ReceivableManagement';
 import { PayrollManagement } from './PayrollManagement';
 import { GovernmentProjectManagement } from './GovernmentProjectManagement';
+import { RetailProjectManagement } from './RetailProjectManagement';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
 import {
@@ -38,7 +40,7 @@ import {
 import { formatIDR } from '../../utils/formatters';
 
 interface FinancialManagementProps {
-  initialTab?: 'LEDGER' | 'GOVERNMENT_PROJECTS' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS';
+  initialTab?: 'LEDGER' | 'GOVERNMENT_PROJECTS' | 'RETAIL_PROJECTS' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS';
   onSelectProject?: (projectId: string) => void;
   onOpenReports?: () => void;
 }
@@ -56,11 +58,12 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
     receivables,
     payrollRecords,
     governmentProjects,
+    retailProjects,
     updateTransaction,
     deleteTransaction,
   } = useProjects();
 
-  const [activeTab, setActiveTab] = useState<'LEDGER' | 'GOVERNMENT_PROJECTS' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'LEDGER' | 'GOVERNMENT_PROJECTS' | 'RETAIL_PROJECTS' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS'>(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -193,6 +196,26 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('RETAIL_PROJECTS')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'RETAIL_PROJECTS'
+              ? 'bg-teal-700 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+          }`}
+          id="tab-retail-projects"
+        >
+          <Briefcase className="w-4 h-4 text-teal-400" />
+          <span>Proyek Retail (B2B/Swasta)</span>
+          {retailProjects && retailProjects.length > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+              activeTab === 'RETAIL_PROJECTS' ? 'bg-teal-800 text-white' : 'bg-teal-100 text-teal-800'
+            }`}>
+              {retailProjects.length} Kontrak
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab('RECEIVABLES')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'RECEIVABLES'
@@ -306,6 +329,14 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
       {/* Tab: Proyek Pemerintah & SP2D Income */}
       {activeTab === 'GOVERNMENT_PROJECTS' && (
         <GovernmentProjectManagement
+          onSelectProject={onSelectProject}
+          onOpenReports={onOpenReports}
+        />
+      )}
+
+      {/* Tab: Proyek Retail & B2B Swasta */}
+      {activeTab === 'RETAIL_PROJECTS' && (
+        <RetailProjectManagement
           onSelectProject={onSelectProject}
           onOpenReports={onOpenReports}
         />

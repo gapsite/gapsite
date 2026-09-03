@@ -7,6 +7,16 @@ export const RECEIVABLE_CATEGORIES: { id: ReceivableCategory; label: string; des
     description: 'Tagihan termin milestone pendampingan sertifikasi TKDN Barang/Jasa Kemenperin',
   },
   {
+    id: 'PROYEK_PEMERINTAH_BUMN',
+    label: 'Proyek Pemerintah (APBN/BUMN)',
+    description: 'Tagihan termin kontrak pengadaan instansi kementerian, pemda, dan BUMN (SP2D)',
+  },
+  {
+    id: 'PROYEK_RETAIL',
+    label: 'Proyek Retail & Korporasi Swasta',
+    description: 'Tagihan termin atau DP kontrak proyek klien retail dan perusahaan swasta',
+  },
+  {
     id: 'TERMIN_SERTIFIKASI_BMP',
     label: 'Termin Sertifikasi BMP',
     description: 'Tagihan termin pendampingan Bobot Manfaat Perusahaan (BMP)',

@@ -491,6 +491,8 @@ export const getTransactionCategoryLabel = (
       return 'TRAINING & WORKSHOP FEE';
     case 'GOVERNMENT_PROJECT_INCOME':
       return 'PENDAPATAN PROYEK PEMERINTAH & BUMN (SP2D)';
+    case 'RETAIL_PROJECT_INCOME':
+      return 'PENDAPATAN PROYEK RETAIL & KORPORASI SWASTA';
     case 'BANK_LOAN_DISBURSEMENT':
       return 'PENCAIRAN PINJAMAN / HUTANG (LOAN INFLOW)';
     case 'OTHER_INCOME':
