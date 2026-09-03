@@ -254,6 +254,45 @@ const DashboardContent: React.FC = () => {
             </div>
           )}
 
+          {/* TAB 3-OVERHEAD: OPERATIONAL OVERHEAD EXPENSES */}
+          {activeTab === 'overhead' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="OVERHEAD"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
+          {/* TAB 3-OFFICE-RENT: ANNUAL OFFICE RENT & 12-MONTH BREAKDOWN */}
+          {activeTab === 'office-rent' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="OFFICE_RENT"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
+          {/* TAB 3-RETAIL: RETAIL & PRIVATE B2B PROJECTS */}
+          {activeTab === 'retail-projects' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="RETAIL_PROJECTS"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
           {/* TAB 3-GOV: GOVERNMENT PROJECT INCOME & SP2D DISBURSEMENT */}
           {activeTab === 'government-projects' && (
             <div className="animate-in fade-in duration-150">

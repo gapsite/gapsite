@@ -27,6 +27,12 @@ import {
   saveRetailProjectToFirestore,
   deleteRetailProjectFromFirestore,
   subscribeToRetailProjects,
+  saveOverheadExpenseToFirestore,
+  deleteOverheadExpenseFromFirestore,
+  subscribeToOverheadExpenses,
+  saveOfficeRentContractToFirestore,
+  deleteOfficeRentContractFromFirestore,
+  subscribeToOfficeRentContracts,
   savePayrollToFirestore,
   deletePayrollFromFirestore,
   saveDeletedPayrollIdToFirestore,
@@ -110,6 +116,10 @@ import {
   RetailPaymentScheme,
   RetailServiceCategory,
   RetailProjectStats,
+  OverheadExpense,
+  OverheadCategory,
+  OfficeRentContract,
+  OfficeRentMonthlyScheduleItem,
 } from '../types';
 import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
@@ -126,6 +136,8 @@ import {
 } from '../data/mockData';
 import { INITIAL_GOVERNMENT_PROJECTS } from '../data/governmentProjectsData';
 import { INITIAL_RETAIL_PROJECTS } from '../data/retailProjectsData';
+import { INITIAL_OVERHEAD_EXPENSES } from '../data/overheadData';
+import { INITIAL_OFFICE_RENTS, generateOfficeRentSchedule } from '../data/officeRentData';
 import { DEFAULT_GOVERNMENT_INSTITUTION_TYPES } from '../data/institutionTypesData';
 import { DEFAULT_TERM_DISTRIBUTION_SCHEMES } from '../data/termDistributionSchemesData';
 import { DEFAULT_COMPANY_LETTERHEAD } from '../data/companyLetterheadData';
@@ -533,7 +545,48 @@ interface ProjectContextType {
     projectId: string,
     milestoneId: string
   ) => { success: boolean; message?: string };
+  syncAllRetailToFinance: () => { success: boolean; message: string; syncedCount: number; createdCount: number; totalAmountIDR: number };
   resetRetailProjectsToDefault: () => { success: boolean; message?: string };
+
+  // Overhead Operasional Kantor (Listrik, Iuran, Konsumsi, Transportasi, Akomodasi, ATK, Lain-lain)
+  overheadExpenses: OverheadExpense[];
+  addOverheadExpense: (
+    data: Omit<OverheadExpense, 'id' | 'createdAt' | 'createdBy'>
+  ) => { success: boolean; expense?: OverheadExpense; message?: string };
+  updateOverheadExpense: (
+    id: string,
+    updates: Partial<OverheadExpense>
+  ) => { success: boolean; message?: string };
+  deleteOverheadExpense: (id: string) => { success: boolean; message?: string };
+  syncAllOverheadToFinance: () => { success: boolean; message: string; syncedCount: number; createdCount: number; totalAmountIDR: number };
+  resetOverheadExpensesToDefault: () => { success: boolean; message?: string };
+
+  // Sewa Kantor Tahunan & Breakdown 12 Bulan (Amortisasi, PPh 4(2) 10%, PPN 11%)
+  officeRentContracts: OfficeRentContract[];
+  addOfficeRentContract: (
+    data: Omit<OfficeRentContract, 'id' | 'createdAt' | 'createdBy' | 'schedules'> & {
+      customSchedules?: OfficeRentMonthlyScheduleItem[];
+    }
+  ) => { success: boolean; contract?: OfficeRentContract; message?: string };
+  updateOfficeRentContract: (
+    id: string,
+    updates: Partial<OfficeRentContract>
+  ) => { success: boolean; message?: string };
+  deleteOfficeRentContract: (id: string) => { success: boolean; message?: string };
+  payOfficeRentScheduleItem: (
+    contractId: string,
+    scheduleId: string,
+    paymentData: {
+      paidDate?: string;
+      paymentChannelId: string;
+      referenceNumber?: string;
+      notes?: string;
+      syncToLedger?: boolean;
+      syncToTax?: boolean;
+    }
+  ) => { success: boolean; message?: string; transaction?: FinancialTransaction };
+  syncAllOfficeRentToFinance: () => { success: boolean; message: string; syncedCount: number; totalAmountIDR: number };
+  resetOfficeRentContractsToDefault: () => { success: boolean; message?: string };
 
   // Master Data Tipe Instansi Pemerintah & BUMN (Editable & Real-Time Sync)
   institutionTypes: GovernmentInstitutionTypeDefinition[];
@@ -584,6 +637,12 @@ interface ProjectContextType {
     id: string,
     paymentDate?: string
   ) => { success: boolean; message?: string };
+  syncAllPayrollToFinance: () => {
+    syncedCount: number;
+    createdCount: number;
+    updatedCount: number;
+    totalAmountIDR: number;
+  };
   resetPayrollToDefault: () => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
 
   // Penetapan Gaji Tahunan Karyawan (Annual Salary Configuration per Employee & Year)
@@ -757,6 +816,10 @@ const STORAGE_KEY_GOVERNMENT_PROJECTS = 'verix_crm_government_projects_v1';
 const STORAGE_KEY_DELETED_GOV_PROJECT_IDS = 'verix_crm_deleted_gov_project_ids_v1';
 const STORAGE_KEY_RETAIL_PROJECTS = 'verix_crm_retail_projects_v1';
 const STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS = 'verix_crm_deleted_retail_project_ids_v1';
+const STORAGE_KEY_OVERHEAD_EXPENSES = 'verix_crm_overhead_expenses_v1';
+const STORAGE_KEY_DELETED_OVERHEAD_IDS = 'verix_crm_deleted_overhead_ids_v1';
+const STORAGE_KEY_OFFICE_RENTS = 'verix_crm_office_rents_v1';
+const STORAGE_KEY_DELETED_OFFICE_RENT_IDS = 'verix_crm_deleted_office_rent_ids_v1';
 const STORAGE_KEY_INSTITUTION_TYPES = 'verix_crm_institution_types_v1';
 const STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES = 'verix_crm_term_distribution_schemes_v1';
 const STORAGE_KEY_PAYROLL = 'verix_crm_payroll_v1';
@@ -1180,6 +1243,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
+  const transactionsRef = useRef<FinancialTransaction[]>(transactions);
+  useEffect(() => {
+    transactionsRef.current = transactions;
+  }, [transactions]);
+
   const [roleDefinitions, setRoleDefinitions] = useState<RoleDefinitionsMap>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_ROLE_DEFINITIONS);
@@ -1587,6 +1655,96 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [retailProjects]);
 
+  // Overhead Operational Expenses State (Kebutuhan Operasional: Listrik, Iuran, Konsumsi, Transportasi, Akomodasi, ATK)
+  const [deletedOverheadIds, setDeletedOverheadIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_OVERHEAD_IDS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const deletedOverheadIdsRef = useRef<Set<string>>(new Set(deletedOverheadIds));
+  useEffect(() => {
+    deletedOverheadIdsRef.current = new Set(deletedOverheadIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_OVERHEAD_IDS, JSON.stringify(deletedOverheadIds));
+    } catch (e) {
+      console.error('Failed to save deletedOverheadIds to localStorage', e);
+    }
+  }, [deletedOverheadIds]);
+
+  const [overheadExpenses, setOverheadExpenses] = useState<OverheadExpense[]>(() => {
+    try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_OVERHEAD_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const saved = localStorage.getItem(STORAGE_KEY_OVERHEAD_EXPENSES);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((e) => e && e.id && !deletedIds.has(e.id));
+        }
+      }
+      return INITIAL_OVERHEAD_EXPENSES.filter((e) => e && e.id && !deletedIds.has(e.id));
+    } catch {
+      return INITIAL_OVERHEAD_EXPENSES;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(overheadExpenses));
+    } catch (e) {
+      console.error('Failed to save overheadExpenses to localStorage', e);
+    }
+  }, [overheadExpenses]);
+
+  // Sewa Kantor Tahunan & Breakdown 12 Bulan (Amortisasi, PPh 4(2) 10%, PPN 11%)
+  const [deletedOfficeRentIds, setDeletedOfficeRentIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_OFFICE_RENT_IDS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const deletedOfficeRentIdsRef = useRef<Set<string>>(new Set(deletedOfficeRentIds));
+  useEffect(() => {
+    deletedOfficeRentIdsRef.current = new Set(deletedOfficeRentIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_OFFICE_RENT_IDS, JSON.stringify(deletedOfficeRentIds));
+    } catch (e) {
+      console.error('Failed to save deletedOfficeRentIds to localStorage', e);
+    }
+  }, [deletedOfficeRentIds]);
+
+  const [officeRentContracts, setOfficeRentContracts] = useState<OfficeRentContract[]>(() => {
+    try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_OFFICE_RENT_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const saved = localStorage.getItem(STORAGE_KEY_OFFICE_RENTS);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((c) => c && c.id && !deletedIds.has(c.id));
+        }
+      }
+      return INITIAL_OFFICE_RENTS.filter((c) => c && c.id && !deletedIds.has(c.id));
+    } catch {
+      return INITIAL_OFFICE_RENTS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(officeRentContracts));
+    } catch (e) {
+      console.error('Failed to save officeRentContracts to localStorage', e);
+    }
+  }, [officeRentContracts]);
+
   // Master Data: Tipe Instansi Pemerintah & BUMN (Editable)
   const [institutionTypes, setInstitutionTypes] = useState<GovernmentInstitutionTypeDefinition[]>(() => {
     try {
@@ -1710,6 +1868,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [payrollRecords]);
 
+  const payrollRecordsRef = useRef<PayrollPayment[]>(payrollRecords);
+  useEffect(() => {
+    payrollRecordsRef.current = payrollRecords;
+  }, [payrollRecords]);
+
   // Employee Annual Salary Configurations State (Penetapan Standar Gaji Karyawan Tahunan)
   const [employeeSalaryConfigs, setEmployeeSalaryConfigs] = useState<EmployeeAnnualSalaryConfig[]>(() => {
     try {
@@ -1794,6 +1957,128 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return [...missingTaxes, ...currentTaxes];
       }
       return currentTaxes;
+    });
+  }, [payrollRecords]);
+
+  // Auto-sync any existing payroll records with Finance & Cash Flow (Transactions) (anti-discrepancy & auto-healing safeguard)
+  useEffect(() => {
+    if (!payrollRecords || payrollRecords.length === 0) return;
+
+    setTransactions((currentTransactions) => {
+      let hasTxChanges = false;
+      const missingTransactions: FinancialTransaction[] = [];
+      const claimedTxIds = new Set<string>();
+
+      // Active paid payroll records
+      const paidRecords = payrollRecords.filter((p) => p && p.id && p.status === 'PAID');
+      if (paidRecords.length === 0) return currentTransactions;
+
+      paidRecords.forEach((record) => {
+        // Match existing transaction in currentTransactions or missingTransactions
+        let matchingTx = currentTransactions.find((t) => {
+          if (claimedTxIds.has(t.id)) return false;
+          if (record.transactionId && t.id === record.transactionId) return true;
+          if (record.payrollNumber && t.referenceNumber === record.payrollNumber) return true;
+          if (record.payrollNumber && t.notes && t.notes.includes(record.payrollNumber)) return true;
+          if (record.id && t.notes && t.notes.includes(record.id)) return true;
+          if (record.payrollNumber && t.description && t.description.includes(record.payrollNumber)) return true;
+          if (
+            t.category === 'GAJI_KARYAWAN' &&
+            record.employeeName &&
+            t.clientOrVendorName &&
+            t.clientOrVendorName.toLowerCase().trim() === record.employeeName.toLowerCase().trim() &&
+            record.period &&
+            t.description &&
+            t.description.toLowerCase().includes(record.period.toLowerCase())
+          ) {
+            return true;
+          }
+          return false;
+        });
+
+        if (!matchingTx) {
+          matchingTx = missingTransactions.find((t) => {
+            if (claimedTxIds.has(t.id)) return false;
+            if (record.transactionId && t.id === record.transactionId) return true;
+            if (record.payrollNumber && t.referenceNumber === record.payrollNumber) return true;
+            if (record.payrollNumber && t.notes && t.notes.includes(record.payrollNumber)) return true;
+            return false;
+          });
+        }
+
+        if (matchingTx) {
+          claimedTxIds.add(matchingTx.id);
+
+          // Update transaction if out of sync
+          if (
+            matchingTx.amountIDR !== record.netSalary ||
+            matchingTx.status !== 'CLEARED' ||
+            matchingTx.category !== 'GAJI_KARYAWAN' ||
+            matchingTx.type !== 'EXPENSE' ||
+            (!matchingTx.referenceNumber && record.payrollNumber)
+          ) {
+            hasTxChanges = true;
+            matchingTx.amountIDR = record.netSalary;
+            matchingTx.status = 'CLEARED';
+            matchingTx.category = 'GAJI_KARYAWAN';
+            matchingTx.type = 'EXPENSE';
+            if (!matchingTx.referenceNumber && record.payrollNumber) {
+              matchingTx.referenceNumber = record.payrollNumber;
+            }
+            saveTransactionToFirestore(matchingTx);
+          }
+        } else {
+          // Missing transaction: automatically create it!
+          hasTxChanges = true;
+          const txId = record.transactionId || `trx-pay-${record.id}`;
+          const payDate = record.paymentDate || record.paidAt || (record.createdAt ? record.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+          const dateObj = new Date(payDate);
+          const yyyymm = !isNaN(dateObj.getFullYear())
+            ? `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+            : new Date().toISOString().slice(0, 7).replace('-', '');
+          const numPart = (record.payrollNumber && record.payrollNumber.split('/').pop()) || Math.floor(100 + Math.random() * 900);
+          const txNum = `TRX-${yyyymm}-${numPart}`;
+
+          const newTx: FinancialTransaction = {
+            id: txId,
+            transactionNumber: txNum,
+            date: payDate,
+            type: 'EXPENSE',
+            category: 'GAJI_KARYAWAN',
+            amountIDR: record.netSalary,
+            description: `Gaji Karyawan: ${record.employeeName} (${record.roleTitle || 'Pegawai'}) - Periode ${record.period}`,
+            clientOrVendorName: record.employeeName,
+            paymentMethod: record.paymentMethod || 'BANK_TRANSFER_MANDIRI',
+            referenceNumber: record.payrollNumber,
+            status: 'CLEARED',
+            notes: `Slip: ${record.payrollNumber} | Bruto: Rp ${record.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${record.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${record.netSalary.toLocaleString('id-ID')}${record.notes ? ' | ' + record.notes : ''}`,
+            recordedBy: record.recordedBy || 'System Payroll Sync',
+            createdAt: record.createdAt || new Date().toISOString(),
+          };
+
+          claimedTxIds.add(txId);
+          missingTransactions.push(newTx);
+          saveTransactionToFirestore(newTx);
+        }
+      });
+
+      if (hasTxChanges && missingTransactions.length > 0) {
+        const updated = [...missingTransactions, ...currentTransactions];
+        try {
+          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      } else if (hasTxChanges) {
+        const updated = [...currentTransactions];
+        try {
+          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      }
+
+      return currentTransactions;
     });
   }, [payrollRecords]);
 
@@ -2616,7 +2901,71 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(remoteTrxs)) {
         const deletedSet = deletedTransactionIdsRef.current;
         const valid = remoteTrxs.filter((t) => t && t.id && !deletedSet.has(t.id));
-        setTransactions(valid);
+
+        // Preserve and reconcile any transactions linked to active payroll records so payroll is never lost
+        const txMap = new Map<string, FinancialTransaction>();
+        valid.forEach((t) => txMap.set(t.id, t));
+
+        const activePayrolls = (payrollRecordsRef.current || []).filter((p) => p && p.id && p.status === 'PAID');
+        activePayrolls.forEach((p) => {
+          let hasTx = false;
+          if (p.transactionId && txMap.has(p.transactionId)) {
+            hasTx = true;
+          } else {
+            for (const t of txMap.values()) {
+              if (
+                (p.payrollNumber && t.referenceNumber === p.payrollNumber) ||
+                (p.payrollNumber && t.notes?.includes(p.payrollNumber)) ||
+                (p.id && t.notes?.includes(p.id)) ||
+                (t.category === 'GAJI_KARYAWAN' &&
+                  p.employeeName &&
+                  t.clientOrVendorName?.toLowerCase().trim() === p.employeeName.toLowerCase().trim() &&
+                  p.period &&
+                  t.description?.toLowerCase().includes(p.period.toLowerCase()))
+              ) {
+                hasTx = true;
+                break;
+              }
+            }
+          }
+
+          if (!hasTx) {
+            const txId = p.transactionId || `trx-pay-${p.id}`;
+            const payDate = p.paymentDate || p.paidAt || (p.createdAt ? p.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+            const dateObj = new Date(payDate);
+            const yyyymm = !isNaN(dateObj.getFullYear())
+              ? `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+              : new Date().toISOString().slice(0, 7).replace('-', '');
+            const numPart = (p.payrollNumber && p.payrollNumber.split('/').pop()) || Math.floor(100 + Math.random() * 900);
+            const txNum = `TRX-${yyyymm}-${numPart}`;
+
+            const payrollTx: FinancialTransaction = {
+              id: txId,
+              transactionNumber: txNum,
+              date: payDate,
+              type: 'EXPENSE',
+              category: 'GAJI_KARYAWAN',
+              amountIDR: p.netSalary,
+              description: `Gaji Karyawan: ${p.employeeName} (${p.roleTitle || 'Pegawai'}) - Periode ${p.period}`,
+              clientOrVendorName: p.employeeName,
+              paymentMethod: p.paymentMethod || 'BANK_TRANSFER_MANDIRI',
+              referenceNumber: p.payrollNumber,
+              status: 'CLEARED',
+              notes: `Slip: ${p.payrollNumber} | Bruto: Rp ${p.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${p.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${p.netSalary.toLocaleString('id-ID')}${p.notes ? ' | ' + p.notes : ''}`,
+              recordedBy: p.recordedBy || 'System Payroll Sync',
+              createdAt: p.createdAt || new Date().toISOString(),
+            };
+
+            txMap.set(txId, payrollTx);
+            saveTransactionToFirestore(payrollTx);
+          }
+        });
+
+        const merged = Array.from(txMap.values());
+        setTransactions(merged);
+        try {
+          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(merged));
+        } catch {}
       }
     });
 
@@ -2724,6 +3073,36 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubDeletedOverhead = subscribeToDeletedEntityIds('deleted_overhead_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedOverheadIds(remoteIds);
+        setOverheadExpenses((current) => current.filter((e) => !remoteIds.includes(e.id)));
+      }
+    });
+
+    const unsubOverhead = subscribeToOverheadExpenses((remoteOverhead) => {
+      if (Array.isArray(remoteOverhead)) {
+        const deletedSet = deletedOverheadIdsRef.current;
+        const valid = remoteOverhead.filter((e) => e && e.id && !deletedSet.has(e.id));
+        setOverheadExpenses(valid);
+      }
+    });
+
+    const unsubDeletedOfficeRents = subscribeToDeletedEntityIds('deleted_office_rent_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedOfficeRentIds(remoteIds);
+        setOfficeRentContracts((current) => current.filter((c) => !remoteIds.includes(c.id)));
+      }
+    });
+
+    const unsubOfficeRents = subscribeToOfficeRentContracts((remoteContracts) => {
+      if (Array.isArray(remoteContracts)) {
+        const deletedSet = deletedOfficeRentIdsRef.current;
+        const valid = remoteContracts.filter((c) => c && c.id && !deletedSet.has(c.id));
+        setOfficeRentContracts(valid);
+      }
+    });
+
     const unsubDeletedPayroll = subscribeToDeletedPayrollIds((remoteIds) => {
       if (Array.isArray(remoteIds)) {
         setDeletedPayrollIds(remoteIds);
@@ -2813,6 +3192,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubGovProjects();
       unsubDeletedRetailProjects();
       unsubRetailProjects();
+      unsubDeletedOverhead();
+      unsubOverhead();
+      unsubDeletedOfficeRents();
+      unsubOfficeRents();
       unsubDeletedPayroll();
       unsubPayroll();
       unsubLetterhead();
@@ -2847,6 +3230,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...receivables.map((r) => saveReceivableToFirestore(r)),
         ...governmentProjects.map((gp) => saveGovernmentProjectToFirestore(gp)),
         ...retailProjects.map((rp) => saveRetailProjectToFirestore(rp)),
+        ...overheadExpenses.map((oe) => saveOverheadExpenseToFirestore(oe)),
+        ...officeRentContracts.map((rc) => saveOfficeRentContractToFirestore(rc)),
         ...payrollRecords.map((p) => savePayrollToFirestore(p)),
       ]);
     } catch (err) {
@@ -7222,6 +7607,121 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return updateRetailProject(projectId, { milestones: updatedMilestones });
   };
 
+  const syncAllRetailToFinance = (): {
+    success: boolean;
+    message: string;
+    syncedCount: number;
+    createdCount: number;
+    totalAmountIDR: number;
+  } => {
+    let syncedCount = 0;
+    let createdCount = 0;
+    let totalAmountIDR = 0;
+
+    const currentTrxs = [...transactions];
+    const newTrxs: FinancialTransaction[] = [];
+    const currentTaxes = [...taxObligations];
+    const newTaxes: TaxObligation[] = [];
+
+    retailProjects.forEach((proj) => {
+      proj.milestones.forEach((m) => {
+        if (m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN') {
+          const paymentAmount = m.paidAmountIDR || m.netDisbursementIDR || m.grossAmountIDR;
+          totalAmountIDR += paymentAmount;
+          syncedCount++;
+
+          const existingTx = currentTrxs.find(
+            (t) =>
+              (m.transactionId && t.id === m.transactionId) ||
+              (t.referenceNumber && t.referenceNumber === m.invoiceNumber) ||
+              (t.description && t.description.includes(m.name) && t.clientOrVendorName === proj.clientName)
+          );
+
+          if (!existingTx) {
+            const dateObj = new Date(m.paidDate || m.invoiceDate || new Date());
+            const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+            const seq = Math.floor(100 + Math.random() * 900);
+            const createdTx: FinancialTransaction = {
+              id: `trx-retail-${proj.id}-${m.id}`,
+              transactionNumber: `TRX-RTL-${yyyymm}-${seq}`,
+              type: 'INCOME',
+              category: 'CONSULTING_FEE',
+              amountIDR: paymentAmount,
+              date: m.paidDate || m.invoiceDate || new Date().toISOString().split('T')[0],
+              description: `Pendapatan Termin Retail: ${m.name} - ${proj.projectName} (${proj.clientName})`,
+              clientOrVendorName: proj.clientName,
+              paymentMethod: m.paymentChannelId || 'BANK_TRANSFER_BCA',
+              referenceNumber: m.invoiceNumber || m.paymentReferenceNumber || `SPK-${proj.contractNumber}`,
+              status: 'CLEARED',
+              notes: `Sinkronisasi otomatis pendapatan termin proyek retail sektor swasta. SPK: ${proj.contractNumber}`,
+              projectId: proj.linkedCrmProjectId || proj.id,
+              recordedBy: currentUser.name || 'Finance Officer',
+              createdAt: new Date().toISOString(),
+            };
+            newTrxs.push(createdTx);
+            createdCount++;
+            m.transactionId = createdTx.id;
+          }
+        }
+
+        if ((m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN') && m.ppnAmountIDR > 0) {
+          const existingTax = currentTaxes.find(
+            (t) =>
+              (m.fakturPajakNumber && t.taxInvoiceNumber === m.fakturPajakNumber) ||
+              (t.description && t.description.includes(m.invoiceNumber || ''))
+          );
+          if (!existingTax) {
+            const taxObj: TaxObligation = {
+              id: `tax-ppn-rtl-${proj.id}-${m.id}`,
+              taxType: 'PPN',
+              taxPeriod: m.invoiceDate?.slice(0, 7) || new Date().toISOString().slice(0, 7),
+              taxYear: new Date(m.invoiceDate || new Date()).getFullYear(),
+              title: `PPN Keluaran 11% - Inv ${m.invoiceNumber || m.name} (${proj.clientName})`,
+              description: `PPN Keluaran 11% - Inv ${m.invoiceNumber || m.name} (${proj.clientName})`,
+              taxAmount: m.ppnAmountIDR,
+              paidAmount: m.status === 'LUNAS' ? m.ppnAmountIDR : 0,
+              remainingAmount: m.status === 'LUNAS' ? 0 : m.ppnAmountIDR,
+              dueDate: m.invoiceDueDate || new Date().toISOString().split('T')[0],
+              status: m.status === 'LUNAS' ? 'PAID' : 'TERHUTANG',
+              taxInvoiceNumber: m.fakturPajakNumber,
+              createdAt: new Date().toISOString(),
+              createdBy: currentUser.name || 'Finance Officer',
+            };
+            newTaxes.push(taxObj);
+          }
+        }
+      });
+    });
+
+    if (newTrxs.length > 0) {
+      setTransactions((prev) => {
+        const updated = [...newTrxs, ...prev];
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        newTrxs.forEach((t) => saveTransactionToFirestore(t));
+        return updated;
+      });
+    }
+
+    if (newTaxes.length > 0) {
+      setTaxObligations((prev) => {
+        const updated = [...newTaxes, ...prev];
+        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        saveSettingsToFirestore('tax_obligations', updated);
+        return updated;
+      });
+    }
+
+    return {
+      success: true,
+      message: `Berhasil menyinkronkan ${syncedCount} termin retail swasta senilai Rp ${totalAmountIDR.toLocaleString('id-ID')}. (${createdCount} transaksi baru dicatat ke Buku Kas & Arus Kas)`,
+      syncedCount,
+      createdCount,
+      totalAmountIDR,
+    };
+  };
+
   const resetRetailProjectsToDefault = (): { success: boolean; message?: string } => {
     setRetailProjects(INITIAL_RETAIL_PROJECTS);
     INITIAL_RETAIL_PROJECTS.forEach((p) => saveRetailProjectToFirestore(p));
@@ -7230,6 +7730,589 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       success: true,
       message: 'Master data Proyek Retail B2B / Swasta berhasil direset ke standar sistem.',
     };
+  };
+
+  // =========================================================================
+  // OVERHEAD OPERASIONAL KANTOR (Listrik, Iuran, Konsumsi, Transportasi, Akomodasi, ATK)
+  // =========================================================================
+  const addOverheadExpense = (
+    data: Omit<OverheadExpense, 'id' | 'createdAt' | 'createdBy'>
+  ): { success: boolean; expense?: OverheadExpense; message?: string } => {
+    const now = new Date().toISOString();
+    const dateObj = new Date(data.date || new Date());
+    const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+    const seq = Math.floor(100 + Math.random() * 900);
+    const newId = `ovh-${Date.now()}-${seq}`;
+    const autoNumber = data.overheadNumber || `OVH/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${seq}`;
+
+    let taxAmount = data.taxAmountIDR || 0;
+    if (data.hasTax && data.taxRatePercent && data.taxRatePercent > 0 && !data.taxAmountIDR) {
+      taxAmount = Math.round((data.amountIDR * data.taxRatePercent) / 100);
+    }
+    const netPayment = data.amountIDR - (data.taxType === 'PPH_23' || data.taxType === 'PPH_4_2' ? taxAmount : 0);
+
+    let linkedTxId = data.transactionId;
+    let linkedTaxId = data.taxObligationId;
+
+    if (data.status === 'PAID') {
+      const newTx: FinancialTransaction = {
+        id: `trx-${newId}`,
+        transactionNumber: `TRX-${yyyymm}-${seq}`,
+        type: 'EXPENSE',
+        category: 'OPERATIONAL_OFFICE',
+        amountIDR: data.amountIDR,
+        date: data.paidDate || data.date,
+        description: `[Overhead - ${data.category}] ${data.title} (${data.vendorOrMerchant})`,
+        clientOrVendorName: data.vendorOrMerchant,
+        paymentMethod: data.paymentChannelId || 'BANK_TRANSFER_BCA',
+        referenceNumber: data.referenceNumber || autoNumber,
+        status: 'CLEARED',
+        notes: `Pengeluaran kebutuhan operasional kantor: ${data.notes || '-'}`,
+        recordedBy: currentUser.name || 'Admin Officer',
+        createdAt: now,
+      };
+      setTransactions((prev) => {
+        const updated = [newTx, ...prev];
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        saveTransactionToFirestore(newTx);
+        return updated;
+      });
+      linkedTxId = newTx.id;
+
+      if (data.hasTax && taxAmount > 0) {
+        const newTax: TaxObligation = {
+          id: `tax-${newId}`,
+          taxType: data.taxType === 'PPH_23' ? 'PPH_23' : data.taxType === 'PPH_4_2' ? 'PPH_4_2' : 'PPN',
+          taxPeriod: data.date.slice(0, 7),
+          taxYear: dateObj.getFullYear(),
+          title: `PPh Potongan Overhead ${data.title} - ${data.vendorOrMerchant}`,
+          description: `PPh Potongan Overhead ${data.title} - ${data.vendorOrMerchant}`,
+          taxAmount: taxAmount,
+          paidAmount: 0,
+          remainingAmount: taxAmount,
+          dueDate: `${data.date.slice(0, 7)}-15`,
+          status: 'TERHUTANG',
+          createdAt: now,
+          createdBy: currentUser.name || 'Finance Officer',
+        };
+        setTaxObligations((prev) => {
+          const updated = [newTax, ...prev];
+          localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+          broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+          saveSettingsToFirestore('tax_obligations', updated);
+          return updated;
+        });
+        linkedTaxId = newTax.id;
+      }
+    }
+
+    const newExpense: OverheadExpense = {
+      ...data,
+      id: newId,
+      overheadNumber: autoNumber,
+      taxAmountIDR: taxAmount,
+      netPaymentIDR: netPayment,
+      transactionId: linkedTxId,
+      taxObligationId: linkedTaxId,
+      createdAt: now,
+      createdBy: currentUser.name || 'Admin Officer',
+      updatedAt: now,
+    };
+
+    setOverheadExpenses((prev) => {
+      const updated = [newExpense, ...prev];
+      broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
+      saveOverheadExpenseToFirestore(newExpense);
+      return updated;
+    });
+
+    return {
+      success: true,
+      expense: newExpense,
+      message: `Kebutuhan operasional "${newExpense.title}" berhasil diinput dan terintegrasi ke sistem!`,
+    };
+  };
+
+  const updateOverheadExpense = (
+    id: string,
+    updates: Partial<OverheadExpense>
+  ): { success: boolean; message?: string } => {
+    const target = overheadExpenses.find((e) => e.id === id);
+    if (!target) return { success: false, message: 'Data overhead tidak ditemukan.' };
+
+    const now = new Date().toISOString();
+    const updated: OverheadExpense = {
+      ...target,
+      ...updates,
+      updatedAt: now,
+    };
+
+    setOverheadExpenses((prev) => {
+      const list = prev.map((e) => (e.id === id ? updated : e));
+      broadcastLiveDataUpdate('OVERHEAD_EXPENSES', list);
+      saveOverheadExpenseToFirestore(updated);
+      return list;
+    });
+
+    return { success: true, message: `Data operasional "${updated.title}" berhasil diperbarui.` };
+  };
+
+  const deleteOverheadExpense = (id: string): { success: boolean; message?: string } => {
+    const target = overheadExpenses.find((e) => e.id === id);
+    if (!target) return { success: false, message: 'Data overhead tidak ditemukan.' };
+
+    setOverheadExpenses((prev) => {
+      const updated = prev.filter((e) => e.id !== id);
+      broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
+      return updated;
+    });
+
+    setDeletedOverheadIds((prev) => {
+      const updated = Array.from(new Set([...prev, id]));
+      broadcastLiveDataUpdate('DELETED_OVERHEAD_IDS', updated);
+      return updated;
+    });
+
+    saveDeletedEntityIdToFirestore('deleted_overhead_ids', id);
+    deleteOverheadExpenseFromFirestore(id);
+
+    return { success: true, message: `Kebutuhan operasional "${target.title}" telah dihapus secara permanen.` };
+  };
+
+  const syncAllOverheadToFinance = (): {
+    success: boolean;
+    message: string;
+    syncedCount: number;
+    createdCount: number;
+    totalAmountIDR: number;
+  } => {
+    let syncedCount = 0;
+    let createdCount = 0;
+    let totalAmountIDR = 0;
+
+    const currentTrxs = [...transactions];
+    const newTrxs: FinancialTransaction[] = [];
+    const currentTaxes = [...taxObligations];
+    const newTaxes: TaxObligation[] = [];
+
+    overheadExpenses.forEach((exp) => {
+      if (exp.status === 'PAID') {
+        totalAmountIDR += exp.amountIDR;
+        syncedCount++;
+
+        const existingTx = currentTrxs.find(
+          (t) =>
+            (exp.transactionId && t.id === exp.transactionId) ||
+            (t.referenceNumber && t.referenceNumber === exp.referenceNumber) ||
+            (t.description && t.description.includes(exp.overheadNumber))
+        );
+
+        if (!existingTx) {
+          const dateObj = new Date(exp.paidDate || exp.date || new Date());
+          const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+          const seq = Math.floor(100 + Math.random() * 900);
+          const newTx: FinancialTransaction = {
+            id: `trx-${exp.id}`,
+            transactionNumber: `TRX-${yyyymm}-${seq}`,
+            type: 'EXPENSE',
+            category: 'OPERATIONAL_OFFICE',
+            amountIDR: exp.amountIDR,
+            date: exp.paidDate || exp.date,
+            description: `[Overhead - ${exp.category}] ${exp.title} (${exp.vendorOrMerchant})`,
+            clientOrVendorName: exp.vendorOrMerchant,
+            paymentMethod: exp.paymentChannelId || 'BANK_TRANSFER_BCA',
+            referenceNumber: exp.referenceNumber || exp.overheadNumber,
+            status: 'CLEARED',
+            notes: `Sinkronisasi otomatis operasional kantor overhead: ${exp.title}`,
+            recordedBy: currentUser.name || 'Finance Officer',
+            createdAt: new Date().toISOString(),
+          };
+          newTrxs.push(newTx);
+          createdCount++;
+          exp.transactionId = newTx.id;
+        }
+
+        if (exp.hasTax && exp.taxAmountIDR && exp.taxAmountIDR > 0) {
+          const existingTax = currentTaxes.find(
+            (t) => (exp.taxObligationId && t.id === exp.taxObligationId) || (t.description && t.description.includes(exp.overheadNumber))
+          );
+          if (!existingTax) {
+            const dateObj = new Date(exp.paidDate || exp.date);
+            const newTax: TaxObligation = {
+              id: `tax-${exp.id}`,
+              taxType: exp.taxType === 'PPH_23' ? 'PPH_23' : exp.taxType === 'PPH_4_2' ? 'PPH_4_2' : 'PPN',
+              taxPeriod: exp.date.slice(0, 7),
+              taxYear: dateObj.getFullYear(),
+              title: `PPh Potongan Overhead ${exp.title} - ${exp.vendorOrMerchant} (${exp.overheadNumber})`,
+              description: `PPh Potongan Overhead ${exp.title} - ${exp.vendorOrMerchant} (${exp.overheadNumber})`,
+              taxAmount: exp.taxAmountIDR,
+              paidAmount: 0,
+              remainingAmount: exp.taxAmountIDR,
+              dueDate: `${exp.date.slice(0, 7)}-15`,
+              status: 'TERHUTANG',
+              createdAt: new Date().toISOString(),
+              createdBy: currentUser.name || 'Finance Officer',
+            };
+            newTaxes.push(newTax);
+            exp.taxObligationId = newTax.id;
+          }
+        }
+      }
+    });
+
+    if (newTrxs.length > 0) {
+      setTransactions((prev) => {
+        const updated = [...newTrxs, ...prev];
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        newTrxs.forEach((t) => saveTransactionToFirestore(t));
+        return updated;
+      });
+    }
+
+    if (newTaxes.length > 0) {
+      setTaxObligations((prev) => {
+        const updated = [...newTaxes, ...prev];
+        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        saveSettingsToFirestore('tax_obligations', updated);
+        return updated;
+      });
+    }
+
+    return {
+      success: true,
+      message: `Berhasil menyinkronkan ${syncedCount} biaya operasional overhead senilai Rp ${totalAmountIDR.toLocaleString('id-ID')}. (${createdCount} transaksi baru tercatat ke Arus Kas)`,
+      syncedCount,
+      createdCount,
+      totalAmountIDR,
+    };
+  };
+
+  const resetOverheadExpensesToDefault = (): { success: boolean; message?: string } => {
+    setOverheadExpenses(INITIAL_OVERHEAD_EXPENSES);
+    INITIAL_OVERHEAD_EXPENSES.forEach((e) => saveOverheadExpenseToFirestore(e));
+    broadcastLiveDataUpdate('OVERHEAD_EXPENSES', INITIAL_OVERHEAD_EXPENSES);
+    return { success: true, message: 'Data kebutuhan operasional kantor berhasil direset ke standar sistem.' };
+  };
+
+  // =========================================================================
+  // SEWA KANTOR TAHUNAN & BREAKDOWN 12 BULAN (Amortisasi, PPh 4(2) 10%, PPN 11%)
+  // =========================================================================
+  const addOfficeRentContract = (
+    data: Omit<OfficeRentContract, 'id' | 'createdAt' | 'createdBy' | 'schedules'> & {
+      customSchedules?: OfficeRentMonthlyScheduleItem[];
+    }
+  ): { success: boolean; contract?: OfficeRentContract; message?: string } => {
+    const now = new Date().toISOString();
+    const newId = `rent-${data.year}-${Date.now()}`;
+    const contractNum = data.contractNumber || `SPK-SEWA/JKT/${data.year}/${Math.floor(100 + Math.random() * 900)}`;
+
+    const schedules = data.customSchedules && data.customSchedules.length > 0
+      ? data.customSchedules
+      : generateOfficeRentSchedule({
+          contractId: newId,
+          year: data.year,
+          startDate: data.startDate,
+          tenureMonths: data.tenureMonths || 12,
+          annualRentAmountIDR: data.annualRentAmountIDR,
+          monthlyServiceChargeIDR: data.monthlyServiceChargeIDR || 0,
+          pph42RatePercent: data.pph42RatePercent || 10,
+          isSubjectToPpn: data.isSubjectToPpn || false,
+          ppnRatePercent: data.ppnRatePercent || 11,
+          dueDayOfMonth: 5,
+        });
+
+    const newContract: OfficeRentContract = {
+      ...data,
+      id: newId,
+      contractNumber: contractNum,
+      monthlyRentAmountIDR: Math.round(data.annualRentAmountIDR / (data.tenureMonths || 12)),
+      schedules,
+      createdAt: now,
+      createdBy: currentUser.name || 'Master Admin',
+    };
+
+    setOfficeRentContracts((prev) => {
+      const updated = [newContract, ...prev];
+      broadcastLiveDataUpdate('OFFICE_RENTS', updated);
+      saveOfficeRentContractToFirestore(newContract);
+      return updated;
+    });
+
+    return {
+      success: true,
+      contract: newContract,
+      message: `Kontrak sewa kantor tahunan "${newContract.officeName}" (${newContract.year}) berhasil didaftarkan dan di-breakdown ke 12 bulan!`,
+    };
+  };
+
+  const updateOfficeRentContract = (
+    id: string,
+    updates: Partial<OfficeRentContract>
+  ): { success: boolean; message?: string } => {
+    const target = officeRentContracts.find((c) => c.id === id);
+    if (!target) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
+
+    const updated: OfficeRentContract = {
+      ...target,
+      ...updates,
+    };
+
+    setOfficeRentContracts((prev) => {
+      const list = prev.map((c) => (c.id === id ? updated : c));
+      broadcastLiveDataUpdate('OFFICE_RENTS', list);
+      saveOfficeRentContractToFirestore(updated);
+      return list;
+    });
+
+    return { success: true, message: `Kontrak sewa "${updated.officeName}" berhasil diperbarui.` };
+  };
+
+  const deleteOfficeRentContract = (id: string): { success: boolean; message?: string } => {
+    const target = officeRentContracts.find((c) => c.id === id);
+    if (!target) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
+
+    setOfficeRentContracts((prev) => {
+      const updated = prev.filter((c) => c.id !== id);
+      broadcastLiveDataUpdate('OFFICE_RENTS', updated);
+      return updated;
+    });
+
+    setDeletedOfficeRentIds((prev) => {
+      const updated = Array.from(new Set([...prev, id]));
+      broadcastLiveDataUpdate('DELETED_OFFICE_RENT_IDS', updated);
+      return updated;
+    });
+
+    saveDeletedEntityIdToFirestore('deleted_office_rent_ids', id);
+    deleteOfficeRentContractFromFirestore(id);
+
+    return { success: true, message: `Kontrak sewa kantor "${target.officeName}" telah dihapus secara permanen.` };
+  };
+
+  const payOfficeRentScheduleItem = (
+    contractId: string,
+    scheduleId: string,
+    paymentData: {
+      paidDate?: string;
+      paymentChannelId: string;
+      referenceNumber?: string;
+      notes?: string;
+      syncToLedger?: boolean;
+      syncToTax?: boolean;
+    }
+  ): { success: boolean; message?: string; transaction?: FinancialTransaction } => {
+    const contract = officeRentContracts.find((c) => c.id === contractId);
+    if (!contract) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
+
+    const schedIndex = contract.schedules.findIndex((s) => s.id === scheduleId);
+    if (schedIndex === -1) return { success: false, message: 'Jadwal termin sewa kantor tidak ditemukan.' };
+
+    const sched = contract.schedules[schedIndex];
+    const paidDate = paymentData.paidDate || new Date().toISOString().split('T')[0];
+    const dateObj = new Date(paidDate);
+    const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+    const seq = Math.floor(100 + Math.random() * 900);
+
+    let newTx: FinancialTransaction | undefined;
+    let txId = sched.transactionId;
+    let taxId = sched.taxObligationId;
+
+    if (paymentData.syncToLedger !== false) {
+      newTx = {
+        id: `trx-sewa-${sched.id}`,
+        transactionNumber: `TRX-SEWA-${yyyymm}-${seq}`,
+        type: 'EXPENSE',
+        category: 'OPERATIONAL_OFFICE',
+        amountIDR: sched.grossTotalIDR,
+        date: paidDate,
+        description: `Beban Sewa Kantor: Bulan ${sched.monthName} ${contract.year} - ${contract.officeName}`,
+        clientOrVendorName: contract.landlordName,
+        paymentMethod: paymentData.paymentChannelId,
+        referenceNumber: paymentData.referenceNumber || `SEWA-${sched.periodMonthYear}`,
+        status: 'CLEARED',
+        notes: `Pembayaran sewa kantor bulanan ke landlord: ${paymentData.notes || '-'}`,
+        recordedBy: currentUser.name || 'Finance Officer',
+        createdAt: new Date().toISOString(),
+      };
+
+      setTransactions((prev) => {
+        const updated = [newTx!, ...prev];
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        saveTransactionToFirestore(newTx!);
+        return updated;
+      });
+      txId = newTx.id;
+    }
+
+    if (paymentData.syncToTax !== false && sched.pph42AmountIDR > 0) {
+      const newTax: TaxObligation = {
+        id: `tax-pph42-${sched.id}`,
+        taxType: 'PPH_4_2',
+        taxPeriod: sched.periodMonthYear,
+        taxYear: contract.year,
+        title: `PPh Final Pasal 4(2) 10% Sewa Gedung Kantor - ${sched.monthName} ${contract.year}`,
+        description: `PPh Final Pasal 4(2) 10% Sewa Gedung Kantor - ${sched.monthName} ${contract.year}`,
+        taxAmount: sched.pph42AmountIDR,
+        paidAmount: 0,
+        remainingAmount: sched.pph42AmountIDR,
+        dueDate: `${sched.periodMonthYear}-15`,
+        status: 'TERHUTANG',
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser.name || 'Finance Officer',
+      };
+
+      setTaxObligations((prev) => {
+        const updated = [newTax, ...prev];
+        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        saveSettingsToFirestore('tax_obligations', updated);
+        return updated;
+      });
+      taxId = newTax.id;
+    }
+
+    const updatedSchedules = [...contract.schedules];
+    updatedSchedules[schedIndex] = {
+      ...sched,
+      status: 'PAID',
+      paidDate,
+      paymentChannelId: paymentData.paymentChannelId,
+      paymentMethod: paymentData.paymentChannelId,
+      referenceNumber: paymentData.referenceNumber,
+      transactionId: txId,
+      taxObligationId: taxId,
+      notes: paymentData.notes || `Pembayaran sewa kantor bulan ${sched.monthName} ${contract.year} telah disetor.`,
+    };
+
+    updateOfficeRentContract(contractId, { schedules: updatedSchedules });
+
+    return {
+      success: true,
+      message: `Termin sewa kantor bulan ${sched.monthName} berhasil dibayar & tercatat ke Buku Kas dan Pajak PPh 4(2)!`,
+      transaction: newTx,
+    };
+  };
+
+  const syncAllOfficeRentToFinance = (): {
+    success: boolean;
+    message: string;
+    syncedCount: number;
+    totalAmountIDR: number;
+  } => {
+    let syncedCount = 0;
+    let createdCount = 0;
+    let totalAmountIDR = 0;
+
+    const currentTrxs = [...transactions];
+    const newTrxs: FinancialTransaction[] = [];
+    const currentTaxes = [...taxObligations];
+    const newTaxes: TaxObligation[] = [];
+
+    officeRentContracts.forEach((contract) => {
+      contract.schedules.forEach((sched) => {
+        if (sched.status === 'PAID') {
+          totalAmountIDR += sched.grossTotalIDR;
+          syncedCount++;
+
+          const existingTx = currentTrxs.find(
+            (t) =>
+              (sched.transactionId && t.id === sched.transactionId) ||
+              (t.referenceNumber && t.referenceNumber === sched.referenceNumber) ||
+              (t.description && t.description.includes(sched.periodMonthYear) && t.clientOrVendorName === contract.landlordName)
+          );
+
+          if (!existingTx) {
+            const dateObj = new Date(sched.paidDate || sched.dueDate);
+            const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+            const seq = Math.floor(100 + Math.random() * 900);
+            const newTx: FinancialTransaction = {
+              id: `trx-sewa-${sched.id}`,
+              transactionNumber: `TRX-SEWA-${yyyymm}-${seq}`,
+              type: 'EXPENSE',
+              category: 'OPERATIONAL_OFFICE',
+              amountIDR: sched.grossTotalIDR,
+              date: sched.paidDate || sched.dueDate,
+              description: `Beban Sewa Kantor: Bulan ${sched.monthName} ${contract.year} - ${contract.officeName}`,
+              clientOrVendorName: contract.landlordName,
+              paymentMethod: sched.paymentChannelId || 'BANK_TRANSFER_BCA',
+              referenceNumber: sched.referenceNumber || `SEWA-${sched.periodMonthYear}`,
+              status: 'CLEARED',
+              notes: `Sinkronisasi otomatis sewa kantor bulanan ${sched.monthName} ${contract.year}`,
+              recordedBy: currentUser.name || 'Finance Officer',
+              createdAt: new Date().toISOString(),
+            };
+            newTrxs.push(newTx);
+            createdCount++;
+            sched.transactionId = newTx.id;
+          }
+
+          if (sched.pph42AmountIDR > 0) {
+            const existingTax = currentTaxes.find(
+              (t) =>
+                (sched.taxObligationId && t.id === sched.taxObligationId) ||
+                (t.description && t.description.includes(`PPh Final Pasal 4(2) 10% Sewa Gedung Kantor - ${sched.monthName} ${contract.year}`))
+            );
+            if (!existingTax) {
+              const newTax: TaxObligation = {
+                id: `tax-pph42-${sched.id}`,
+                taxType: 'PPH_4_2',
+                taxPeriod: sched.periodMonthYear,
+                taxYear: contract.year,
+                title: `PPh Final Pasal 4(2) 10% Sewa Gedung Kantor - ${sched.monthName} ${contract.year}`,
+                description: `PPh Final Pasal 4(2) 10% Sewa Gedung Kantor - ${sched.monthName} ${contract.year}`,
+                taxAmount: sched.pph42AmountIDR,
+                paidAmount: 0,
+                remainingAmount: sched.pph42AmountIDR,
+                dueDate: `${sched.periodMonthYear}-15`,
+                status: 'TERHUTANG',
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser.name || 'Finance Officer',
+              };
+              newTaxes.push(newTax);
+              sched.taxObligationId = newTax.id;
+            }
+          }
+        }
+      });
+    });
+
+    if (newTrxs.length > 0) {
+      setTransactions((prev) => {
+        const updated = [...newTrxs, ...prev];
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        newTrxs.forEach((t) => saveTransactionToFirestore(t));
+        return updated;
+      });
+    }
+
+    if (newTaxes.length > 0) {
+      setTaxObligations((prev) => {
+        const updated = [...newTaxes, ...prev];
+        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        saveSettingsToFirestore('tax_obligations', updated);
+        return updated;
+      });
+    }
+
+    return {
+      success: true,
+      message: `Berhasil menyinkronkan ${syncedCount} bulan sewa kantor senilai Rp ${totalAmountIDR.toLocaleString('id-ID')}. (${createdCount} transaksi baru tercatat ke Arus Kas)`,
+      syncedCount,
+      totalAmountIDR,
+    };
+  };
+
+  const resetOfficeRentContractsToDefault = (): { success: boolean; message?: string } => {
+    setOfficeRentContracts(INITIAL_OFFICE_RENTS);
+    INITIAL_OFFICE_RENTS.forEach((c) => saveOfficeRentContractToFirestore(c));
+    broadcastLiveDataUpdate('OFFICE_RENTS', INITIAL_OFFICE_RENTS);
+    return { success: true, message: 'Data kontrak sewa kantor berhasil direset ke standar sistem.' };
   };
 
   // =========================================================================
@@ -8466,13 +9549,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const seq = Math.floor(100 + Math.random() * 900);
     const newTx: FinancialTransaction = {
       ...tx,
-      id: `trx-${Date.now()}`,
+      id: `trx-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
       transactionNumber: `TRX-${yyyymm}-${seq}`,
       createdAt: new Date().toISOString(),
     };
 
     setTransactions((prev) => {
       const updated = [newTx, ...prev];
+      try {
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+      } catch {}
       broadcastLiveDataUpdate('TRANSACTIONS', updated);
       return updated;
     });
@@ -8699,43 +9785,62 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Slip gaji tidak ditemukan.' };
     }
 
-    // 1. Update linked cash ledger transaction if present
-    if (existing.transactionId) {
-      updateTransaction(existing.transactionId, {
-        amountIDR: updates.netSalary !== undefined ? updates.netSalary : existing.netSalary,
-        date: updates.paymentDate || existing.paymentDate,
-        paymentMethod: updates.paymentMethod || existing.paymentMethod,
-        description: `Gaji Karyawan: ${updates.employeeName || existing.employeeName} (${updates.roleTitle || existing.roleTitle}) - Periode ${updates.period || existing.period}`,
-        status: (updates.status === 'PAID' || (updates.status === undefined && existing.status === 'PAID')) ? 'CLEARED' : 'PENDING',
+    // 1. Update or create linked cash ledger transaction in Finance & Cash Flow
+    const isPaid = updates.status === 'PAID' || (updates.status === undefined && existing.status === 'PAID');
+    const netSalaryVal = updates.netSalary !== undefined ? updates.netSalary : existing.netSalary;
+    const payDate = updates.paymentDate || existing.paymentDate || new Date().toISOString().slice(0, 10);
+    const empName = updates.employeeName || existing.employeeName;
+    const roleTitle = updates.roleTitle || existing.roleTitle;
+    const period = updates.period || existing.period;
+    const payMethod = updates.paymentMethod || existing.paymentMethod;
+
+    // Find linked transaction by transactionId, referenceNumber, or notes
+    let linkedTx = transactions.find((t) =>
+      (existing.transactionId && t.id === existing.transactionId) ||
+      (existing.payrollNumber && t.referenceNumber === existing.payrollNumber) ||
+      (existing.payrollNumber && t.notes?.includes(existing.payrollNumber)) ||
+      (t.notes?.includes(existing.id))
+    );
+
+    if (linkedTx) {
+      updateTransaction(linkedTx.id, {
+        amountIDR: netSalaryVal,
+        date: payDate,
+        paymentMethod: payMethod,
+        description: `Gaji Karyawan: ${empName} (${roleTitle}) - Periode ${period}`,
+        status: isPaid ? 'CLEARED' : 'PENDING',
+        category: 'GAJI_KARYAWAN',
+        type: 'EXPENSE',
       });
-    } else if (updates.status === 'PAID' && existing.status !== 'PAID') {
-      // If it wasn't paid previously but is now marked PAID, create transaction!
+      if (!updates.transactionId) {
+        updates.transactionId = linkedTx.id;
+      }
+    } else if (isPaid) {
+      // If no transaction exists and status is PAID, automatically create it!
       const tx = addTransaction({
-        date: updates.paymentDate || existing.paymentDate || new Date().toISOString().slice(0, 10),
+        date: payDate,
         type: 'EXPENSE',
         category: 'GAJI_KARYAWAN',
-        amountIDR: updates.netSalary !== undefined ? updates.netSalary : existing.netSalary,
-        description: `Gaji Karyawan: ${updates.employeeName || existing.employeeName} (${updates.roleTitle || existing.roleTitle}) - Periode ${updates.period || existing.period}`,
-        clientOrVendorName: updates.employeeName || existing.employeeName,
-        paymentMethod: updates.paymentMethod || existing.paymentMethod,
+        amountIDR: netSalaryVal,
+        description: `Gaji Karyawan: ${empName} (${roleTitle}) - Periode ${period}`,
+        clientOrVendorName: empName,
+        paymentMethod: payMethod,
         referenceNumber: existing.payrollNumber,
         status: 'CLEARED',
-        notes: `Slip: ${existing.payrollNumber} | THP: Rp ${(updates.netSalary !== undefined ? updates.netSalary : existing.netSalary).toLocaleString('id-ID')}`,
+        notes: `Slip: ${existing.payrollNumber} | Bruto: Rp ${(updates.totalEarnings !== undefined ? updates.totalEarnings : existing.totalEarnings).toLocaleString('id-ID')} | Net THP: Rp ${netSalaryVal.toLocaleString('id-ID')}`,
         recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
       });
       if (tx?.id) {
         updates.transactionId = tx.id;
-        updates.paidAt = updates.paymentDate || new Date().toISOString().slice(0, 10);
+        updates.paidAt = payDate;
       }
     }
 
     // 2. Synchronize linked PPh 21 Tax Obligation in Tax Management
     const pphAmount = updates.pph21Amount !== undefined ? updates.pph21Amount : existing.pph21Amount;
-    const employee = updates.employeeName || existing.employeeName;
-    const period = updates.period || existing.period;
-    const role = updates.roleTitle || existing.roleTitle;
+    const employee = empName;
+    const role = roleTitle;
     const gross = updates.totalEarnings !== undefined ? updates.totalEarnings : existing.totalEarnings;
-    const payDate = updates.paymentDate || existing.paymentDate;
 
     setTaxObligations((prevTaxes) => {
       const existingTaxIndex = prevTaxes.findIndex(
@@ -8938,6 +10043,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   ): { success: boolean; count: number; message?: string } => {
     const newPayments: PayrollPayment[] = [];
     const newTaxObligations: TaxObligation[] = [];
+    const newTransactions: FinancialTransaction[] = [];
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
     let runningCount = payrollRecords.length;
@@ -8949,8 +10055,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       let createdTxId: string | undefined = undefined;
       if (data.status === 'PAID') {
-        const tx = addTransaction({
-          date: data.paymentDate || new Date().toISOString().slice(0, 10),
+        const txId = `trx-pay-${id}`;
+        createdTxId = txId;
+        const payDate = data.paymentDate || new Date().toISOString().slice(0, 10);
+        const dateObj = new Date(payDate);
+        const yyyymm = !isNaN(dateObj.getFullYear())
+          ? `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+          : `${year}${month}`;
+        const seq = String(runningCount).padStart(3, '0');
+
+        const newTx: FinancialTransaction = {
+          id: txId,
+          transactionNumber: `TRX-${yyyymm}-${seq}`,
+          date: payDate,
           type: 'EXPENSE',
           category: 'GAJI_KARYAWAN',
           amountIDR: data.netSalary,
@@ -8961,10 +10078,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           status: 'CLEARED',
           notes: `Slip: ${payrollNumber} | Bruto: Rp ${data.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${data.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${data.netSalary.toLocaleString('id-ID')}${data.notes ? ' | ' + data.notes : ''}`,
           recordedBy: data.recordedBy || currentUser.name || currentUser.username || 'Finance Officer',
-        });
-        if (tx?.id) {
-          createdTxId = tx.id;
-        }
+          createdAt: new Date().toISOString(),
+        };
+
+        newTransactions.push(newTx);
       }
 
       let createdTaxId: string | undefined = undefined;
@@ -8995,6 +10112,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createdAt: new Date().toISOString(),
         paidAt: data.status === 'PAID' ? (data.paidAt || data.paymentDate) : undefined,
       });
+    }
+
+    if (newTransactions.length > 0) {
+      setTransactions((prev) => {
+        const updated = [...newTransactions, ...prev];
+        try {
+          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+      newTransactions.forEach((tx) => saveTransactionToFirestore(tx));
     }
 
     if (newTaxObligations.length > 0) {
@@ -9030,6 +10159,180 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'PAID',
       paidAt: paymentDate || new Date().toISOString().slice(0, 10),
     });
+  };
+
+  // Synchronize all existing and new Payroll records with Finance & Cash Flow (Transactions)
+  const syncAllPayrollToFinance = (): {
+    syncedCount: number;
+    createdCount: number;
+    updatedCount: number;
+    totalAmountIDR: number;
+  } => {
+    if (!payrollRecords || payrollRecords.length === 0) {
+      return { syncedCount: 0, createdCount: 0, updatedCount: 0, totalAmountIDR: 0 };
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let totalAmountIDR = 0;
+
+    const currentTrxs = [...transactions];
+    const claimedTxIds = new Set<string>();
+    const newTrxsToAdd: FinancialTransaction[] = [];
+    const updatedPayrollList: PayrollPayment[] = [];
+    let hasPayrollChanges = false;
+    let hasTxChanges = false;
+
+    // Filter paid records
+    const paidRecords = payrollRecords.filter(
+      (p) => p && p.id && (p.status === 'PAID' || String(p.status).toUpperCase() === 'PAID')
+    );
+
+    paidRecords.forEach((record) => {
+      totalAmountIDR += record.netSalary;
+
+      // Find matching transaction
+      let matchingTx = currentTrxs.find((t) => {
+        if (claimedTxIds.has(t.id)) return false;
+        if (record.transactionId && t.id === record.transactionId) return true;
+        if (record.payrollNumber && t.referenceNumber === record.payrollNumber) return true;
+        if (record.payrollNumber && t.notes && t.notes.includes(record.payrollNumber)) return true;
+        if (record.id && t.notes && t.notes.includes(record.id)) return true;
+        if (record.payrollNumber && t.description && t.description.includes(record.payrollNumber)) return true;
+        if (
+          t.category === 'GAJI_KARYAWAN' &&
+          record.employeeName &&
+          t.clientOrVendorName &&
+          t.clientOrVendorName.toLowerCase().trim() === record.employeeName.toLowerCase().trim() &&
+          record.period &&
+          t.description &&
+          t.description.toLowerCase().includes(record.period.toLowerCase())
+        ) {
+          return true;
+        }
+        return false;
+      });
+
+      if (!matchingTx) {
+        matchingTx = newTrxsToAdd.find((t) => {
+          if (claimedTxIds.has(t.id)) return false;
+          if (record.transactionId && t.id === record.transactionId) return true;
+          if (record.payrollNumber && t.referenceNumber === record.payrollNumber) return true;
+          if (record.payrollNumber && t.notes && t.notes.includes(record.payrollNumber)) return true;
+          return false;
+        });
+      }
+
+      if (matchingTx) {
+        claimedTxIds.add(matchingTx.id);
+
+        let txNeedsUpdate = false;
+        if (matchingTx.amountIDR !== record.netSalary) {
+          matchingTx.amountIDR = record.netSalary;
+          txNeedsUpdate = true;
+        }
+        if (matchingTx.status !== 'CLEARED') {
+          matchingTx.status = 'CLEARED';
+          txNeedsUpdate = true;
+        }
+        if (matchingTx.category !== 'GAJI_KARYAWAN') {
+          matchingTx.category = 'GAJI_KARYAWAN';
+          txNeedsUpdate = true;
+        }
+        if (matchingTx.type !== 'EXPENSE') {
+          matchingTx.type = 'EXPENSE';
+          txNeedsUpdate = true;
+        }
+        if (!matchingTx.referenceNumber && record.payrollNumber) {
+          matchingTx.referenceNumber = record.payrollNumber;
+          txNeedsUpdate = true;
+        }
+
+        if (txNeedsUpdate) {
+          updatedCount++;
+          hasTxChanges = true;
+          saveTransactionToFirestore(matchingTx);
+        }
+
+        if (record.transactionId !== matchingTx.id) {
+          updatedPayrollList.push({ ...record, transactionId: matchingTx.id });
+          hasPayrollChanges = true;
+        } else {
+          updatedPayrollList.push(record);
+        }
+      } else {
+        // Missing transaction: automatically create it!
+        createdCount++;
+        hasTxChanges = true;
+        const txId = record.transactionId || `trx-pay-${record.id}`;
+        const payDate = record.paymentDate || record.paidAt || (record.createdAt ? record.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+        const dateObj = new Date(payDate);
+        const yyyymm = !isNaN(dateObj.getFullYear())
+          ? `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+          : new Date().toISOString().slice(0, 7).replace('-', '');
+        const numPart = (record.payrollNumber && record.payrollNumber.split('/').pop()) || Math.floor(100 + Math.random() * 900);
+        const txNum = `TRX-${yyyymm}-${numPart}`;
+
+        const createdTx: FinancialTransaction = {
+          id: txId,
+          transactionNumber: txNum,
+          date: payDate,
+          type: 'EXPENSE',
+          category: 'GAJI_KARYAWAN',
+          amountIDR: record.netSalary,
+          description: `Gaji Karyawan: ${record.employeeName} (${record.roleTitle || 'Pegawai'}) - Periode ${record.period}`,
+          clientOrVendorName: record.employeeName,
+          paymentMethod: record.paymentMethod || 'BANK_TRANSFER_MANDIRI',
+          referenceNumber: record.payrollNumber,
+          status: 'CLEARED',
+          notes: `Slip: ${record.payrollNumber} | Bruto: Rp ${record.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${record.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${record.netSalary.toLocaleString('id-ID')}${record.notes ? ' | ' + record.notes : ''}`,
+          recordedBy: record.recordedBy || 'System Payroll Sync',
+          createdAt: record.createdAt || new Date().toISOString(),
+        };
+
+        claimedTxIds.add(txId);
+        newTrxsToAdd.push(createdTx);
+        saveTransactionToFirestore(createdTx);
+
+        // Ensure this txId is not in deletedTransactionIds
+        if (deletedTransactionIdsRef.current.has(txId)) {
+          deletedTransactionIdsRef.current.delete(txId);
+          setDeletedTransactionIds((prev) => prev.filter((id) => id !== txId));
+        }
+
+        updatedPayrollList.push({ ...record, transactionId: txId });
+        hasPayrollChanges = true;
+      }
+    });
+
+    if (newTrxsToAdd.length > 0 || hasTxChanges) {
+      const mergedTrxs = [...newTrxsToAdd, ...currentTrxs];
+      setTransactions(mergedTrxs);
+      try {
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(mergedTrxs));
+      } catch {}
+      broadcastLiveDataUpdate('TRANSACTIONS', mergedTrxs);
+    }
+
+    if (hasPayrollChanges) {
+      const finalPayrollRecords = payrollRecords.map((p) => {
+        const found = updatedPayrollList.find((up) => up.id === p.id);
+        return found || p;
+      });
+      setPayrollRecords(finalPayrollRecords);
+      try {
+        localStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(finalPayrollRecords));
+      } catch {}
+      saveSettingsToFirestore('payroll_records', finalPayrollRecords);
+      broadcastLiveDataUpdate('PAYROLL_PAYMENTS', finalPayrollRecords);
+    }
+
+    return {
+      syncedCount: paidRecords.length,
+      createdCount,
+      updatedCount,
+      totalAmountIDR,
+    };
   };
 
   const resetPayrollToDefault = async (): Promise<{ success: boolean; message?: string }> => {
@@ -9753,7 +11056,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addRetailMilestone,
         updateRetailMilestone,
         deleteRetailMilestone,
+        syncAllRetailToFinance,
         resetRetailProjectsToDefault,
+        overheadExpenses,
+        addOverheadExpense,
+        updateOverheadExpense,
+        deleteOverheadExpense,
+        syncAllOverheadToFinance,
+        resetOverheadExpensesToDefault,
+        officeRentContracts,
+        addOfficeRentContract,
+        updateOfficeRentContract,
+        deleteOfficeRentContract,
+        payOfficeRentScheduleItem,
+        syncAllOfficeRentToFinance,
+        resetOfficeRentContractsToDefault,
         institutionTypes,
         activeInstitutionTypes,
         addInstitutionType,
@@ -9776,6 +11093,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deletePayrollPayment,
         batchAddPayrollPayments,
         markPayrollAsPaid,
+        syncAllPayrollToFinance,
         resetPayrollToDefault,
         employeeSalaryConfigs,
         addOrUpdateEmployeeSalaryConfig,

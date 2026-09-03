@@ -19,6 +19,8 @@ import {
   CreditCard,
   Users,
   Briefcase,
+  Zap,
+  Building,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { FinancialStatsCards } from './FinancialStatsCards';
@@ -30,6 +32,8 @@ import { ReceivableManagement } from './ReceivableManagement';
 import { PayrollManagement } from './PayrollManagement';
 import { GovernmentProjectManagement } from './GovernmentProjectManagement';
 import { RetailProjectManagement } from './RetailProjectManagement';
+import { OverheadManagement } from './OverheadManagement';
+import { OfficeRentManagement } from './OfficeRentManagement';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
 import {
@@ -40,7 +44,17 @@ import {
 import { formatIDR } from '../../utils/formatters';
 
 interface FinancialManagementProps {
-  initialTab?: 'LEDGER' | 'GOVERNMENT_PROJECTS' | 'RETAIL_PROJECTS' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS';
+  initialTab?:
+    | 'LEDGER'
+    | 'OVERHEAD'
+    | 'OFFICE_RENT'
+    | 'RETAIL_PROJECTS'
+    | 'GOVERNMENT_PROJECTS'
+    | 'RECEIVABLES'
+    | 'BANK_LOANS'
+    | 'TAX_MANAGEMENT'
+    | 'PAYROLL'
+    | 'ANALYTICS';
   onSelectProject?: (projectId: string) => void;
   onOpenReports?: () => void;
 }
@@ -59,11 +73,24 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
     payrollRecords,
     governmentProjects,
     retailProjects,
+    overheadExpenses,
+    officeRentContracts,
     updateTransaction,
     deleteTransaction,
   } = useProjects();
 
-  const [activeTab, setActiveTab] = useState<'LEDGER' | 'GOVERNMENT_PROJECTS' | 'RETAIL_PROJECTS' | 'RECEIVABLES' | 'BANK_LOANS' | 'TAX_MANAGEMENT' | 'PAYROLL' | 'ANALYTICS'>(initialTab);
+  const [activeTab, setActiveTab] = useState<
+    | 'LEDGER'
+    | 'OVERHEAD'
+    | 'OFFICE_RENT'
+    | 'RETAIL_PROJECTS'
+    | 'GOVERNMENT_PROJECTS'
+    | 'RECEIVABLES'
+    | 'BANK_LOANS'
+    | 'TAX_MANAGEMENT'
+    | 'PAYROLL'
+    | 'ANALYTICS'
+  >(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -171,26 +198,52 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
               ? 'bg-slate-900 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
           }`}
+          id="tab-ledger"
         >
           <Receipt className="w-4 h-4" />
           <span>Buku Kas & Jurnal Harian</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('GOVERNMENT_PROJECTS')}
+          onClick={() => setActiveTab('OVERHEAD')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'GOVERNMENT_PROJECTS'
-              ? 'bg-blue-600 text-white shadow-sm'
+            activeTab === 'OVERHEAD'
+              ? 'bg-amber-700 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
           }`}
+          id="tab-overhead"
         >
-          <Landmark className="w-4 h-4 text-blue-400" />
-          <span>Proyek Pemerintah (APBN/BUMN)</span>
-          {governmentProjects && governmentProjects.length > 0 && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
-              activeTab === 'GOVERNMENT_PROJECTS' ? 'bg-blue-700 text-white' : 'bg-blue-100 text-blue-800'
-            }`}>
-              {governmentProjects.length} Kontrak
+          <Zap className="w-4 h-4 text-amber-400" />
+          <span>Overhead Operasional</span>
+          {overheadExpenses && overheadExpenses.length > 0 && (
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                activeTab === 'OVERHEAD' ? 'bg-amber-800 text-white' : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              {overheadExpenses.length} Biaya
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('OFFICE_RENT')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'OFFICE_RENT'
+              ? 'bg-blue-700 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+          }`}
+          id="tab-office-rent"
+        >
+          <Building2 className="w-4 h-4 text-blue-400" />
+          <span>Sewa Kantor (12 Bln)</span>
+          {officeRentContracts && officeRentContracts.length > 0 && (
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                activeTab === 'OFFICE_RENT' ? 'bg-blue-800 text-white' : 'bg-blue-100 text-blue-800'
+              }`}
+            >
+              {officeRentContracts.length} Gedung
             </span>
           )}
         </button>
@@ -205,12 +258,32 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
           id="tab-retail-projects"
         >
           <Briefcase className="w-4 h-4 text-teal-400" />
-          <span>Proyek Retail (B2B/Swasta)</span>
+          <span>Proyek Retail (Swasta)</span>
           {retailProjects && retailProjects.length > 0 && (
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
               activeTab === 'RETAIL_PROJECTS' ? 'bg-teal-800 text-white' : 'bg-teal-100 text-teal-800'
             }`}>
               {retailProjects.length} Kontrak
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('GOVERNMENT_PROJECTS')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'GOVERNMENT_PROJECTS'
+              ? 'bg-cyan-700 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+          }`}
+          id="tab-government-projects"
+        >
+          <Landmark className="w-4 h-4 text-cyan-400" />
+          <span>Proyek Pemerintah (APBN/BUMN)</span>
+          {governmentProjects && governmentProjects.length > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+              activeTab === 'GOVERNMENT_PROJECTS' ? 'bg-cyan-800 text-white' : 'bg-cyan-100 text-cyan-800'
+            }`}>
+              {governmentProjects.length} Kontrak
             </span>
           )}
         </button>
@@ -326,17 +399,27 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
         </div>
       )}
 
-      {/* Tab: Proyek Pemerintah & SP2D Income */}
-      {activeTab === 'GOVERNMENT_PROJECTS' && (
-        <GovernmentProjectManagement
-          onSelectProject={onSelectProject}
-          onOpenReports={onOpenReports}
-        />
+      {/* Tab: Overhead & Operasional Kantor */}
+      {activeTab === 'OVERHEAD' && (
+        <OverheadManagement onOpenReports={onOpenReports} />
+      )}
+
+      {/* Tab: Sewa Kantor Tahunan & Amortisasi 12 Bulan */}
+      {activeTab === 'OFFICE_RENT' && (
+        <OfficeRentManagement onOpenReports={onOpenReports} />
       )}
 
       {/* Tab: Proyek Retail & B2B Swasta */}
       {activeTab === 'RETAIL_PROJECTS' && (
         <RetailProjectManagement
+          onSelectProject={onSelectProject}
+          onOpenReports={onOpenReports}
+        />
+      )}
+
+      {/* Tab: Proyek Pemerintah & SP2D Income */}
+      {activeTab === 'GOVERNMENT_PROJECTS' && (
+        <GovernmentProjectManagement
           onSelectProject={onSelectProject}
           onOpenReports={onOpenReports}
         />

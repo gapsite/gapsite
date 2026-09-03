@@ -46,6 +46,7 @@ export const PayrollManagement: React.FC = () => {
     deletePayrollPayment,
     batchAddPayrollPayments,
     markPayrollAsPaid,
+    syncAllPayrollToFinance,
     resetPayrollToDefault,
     transactions,
     currentUser,
@@ -80,6 +81,73 @@ export const PayrollManagement: React.FC = () => {
   const [editingPayroll, setEditingPayroll] = useState<PayrollPayment | null>(null);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isSyncingLedger, setIsSyncingLedger] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{
+    show: boolean;
+    syncedCount: number;
+    createdCount: number;
+    updatedCount: number;
+    totalAmountIDR: number;
+  } | null>(null);
+
+  // Reconciliation statistics between Payroll module and Finance & Cash Flow ledger
+  const financeIntegrationStats = useMemo(() => {
+    const paidRecords = payrollRecords.filter(
+      (p) => p && (p.status === 'PAID' || String(p.status).toUpperCase() === 'PAID')
+    );
+    const totalPaidPayrollIDR = paidRecords.reduce((sum, p) => sum + (p.netSalary || 0), 0);
+
+    const payrollTransactions = transactions.filter((t) => t.category === 'GAJI_KARYAWAN');
+    const totalLedgerPayrollIDR = payrollTransactions.reduce((sum, t) => sum + (t.amountIDR || 0), 0);
+
+    // Count how many paid records are not yet linked to any ledger transaction
+    const unlinkedRecords = paidRecords.filter((p) => {
+      return !transactions.some(
+        (t) =>
+          (p.transactionId && t.id === p.transactionId) ||
+          (p.payrollNumber && t.referenceNumber === p.payrollNumber) ||
+          (p.payrollNumber && t.notes?.includes(p.payrollNumber)) ||
+          (p.id && t.notes?.includes(p.id)) ||
+          (t.category === 'GAJI_KARYAWAN' &&
+            p.employeeName &&
+            t.clientOrVendorName?.toLowerCase().trim() === p.employeeName.toLowerCase().trim() &&
+            p.period &&
+            t.description?.toLowerCase().includes(p.period.toLowerCase()))
+      );
+    });
+
+    const difference = totalPaidPayrollIDR - totalLedgerPayrollIDR;
+    const isMatched = unlinkedRecords.length === 0 && (paidRecords.length === 0 || payrollTransactions.length >= paidRecords.length);
+
+    return {
+      paidCount: paidRecords.length,
+      totalPaidPayrollIDR,
+      ledgerCount: payrollTransactions.length,
+      totalLedgerPayrollIDR,
+      unlinkedCount: unlinkedRecords.length,
+      difference,
+      isMatched,
+    };
+  }, [payrollRecords, transactions]);
+
+  const handleSyncToFinance = () => {
+    setIsSyncingLedger(true);
+    try {
+      const res = syncAllPayrollToFinance();
+      setSyncFeedback({
+        show: true,
+        syncedCount: res.syncedCount,
+        createdCount: res.createdCount,
+        updatedCount: res.updatedCount,
+        totalAmountIDR: res.totalAmountIDR,
+      });
+      setTimeout(() => {
+        setSyncFeedback((prev) => (prev ? { ...prev, show: false } : null));
+      }, 7000);
+    } finally {
+      setIsSyncingLedger(false);
+    }
+  };
 
   // Count user's own payslips
   const myRecordsCount = useMemo(() => {
@@ -322,6 +390,20 @@ export const PayrollManagement: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={handleSyncToFinance}
+                disabled={isSyncingLedger}
+                className="px-3.5 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                title="Sinkronkan seluruh slip gaji ke Buku Kas, Arus Kas & Laporan Keuangan"
+              >
+                {isSyncingLedger ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-950" />
+                )}
+                <span>Sinkron ke Keuangan</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsBatchModalOpen(true)}
                 className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
               >
@@ -348,6 +430,105 @@ export const PayrollManagement: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Reconciliation & Integration Status Banner */}
+      <div
+        className={`p-4 rounded-2xl border transition-all ${
+          financeIntegrationStats.isMatched
+            ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/70 border-emerald-200 text-emerald-950'
+            : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-300 text-amber-950'
+        }`}
+      >
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                financeIntegrationStats.isMatched
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-amber-500 text-slate-950'
+              }`}
+            >
+              {financeIntegrationStats.isMatched ? (
+                <ShieldCheck className="w-6 h-6" />
+              ) : (
+                <RefreshCw className={`w-5 h-5 ${isSyncingLedger ? 'animate-spin' : ''}`} />
+              )}
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold tracking-tight">
+                  Integrasi Gaji Karyawan &rarr; Arus Kas &amp; Laporan Keuangan
+                </h3>
+                <span
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider ${
+                    financeIntegrationStats.isMatched
+                      ? 'bg-emerald-200/80 text-emerald-900 border border-emerald-300'
+                      : 'bg-amber-200 text-amber-900 border border-amber-400'
+                  }`}
+                >
+                  {financeIntegrationStats.isMatched ? '100% SINKRON & TERINTEGRASI' : 'PERLU SINKRONISASI'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                {financeIntegrationStats.isMatched
+                  ? `Semua ${financeIntegrationStats.paidCount} data slip gaji lunas (${formatIDR(
+                      financeIntegrationStats.totalPaidPayrollIDR
+                    )}) telah tercatat otomatis dan terkonfirmasi masuk ke Buku Kas, Arus Kas Harian, dan Laporan Laba Rugi.`
+                  : `Terdeteksi selisih data: Total Gaji Lunas ${formatIDR(
+                      financeIntegrationStats.totalPaidPayrollIDR
+                    )} (${financeIntegrationStats.paidCount} slip) vs tercatat di Buku Kas ${formatIDR(
+                      financeIntegrationStats.totalLedgerPayrollIDR
+                    )}. Tekan tombol sinkronisasi untuk memasukkan data yang tertinggal.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 self-stretch md:self-auto justify-between md:justify-end border-t md:border-t-0 pt-2.5 md:pt-0 border-slate-200">
+            <div className="text-right">
+              <span className="text-[10px] uppercase font-mono text-slate-500 block">Tercatat di Arus Kas</span>
+              <span className="text-sm font-black font-mono text-emerald-800">
+                {formatIDR(financeIntegrationStats.totalLedgerPayrollIDR)}
+              </span>
+            </div>
+            {canManagePayroll && (
+              <button
+                type="button"
+                onClick={handleSyncToFinance}
+                disabled={isSyncingLedger}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {isSyncingLedger ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                <span>{financeIntegrationStats.isMatched ? 'Cek Ulang Integrasi' : 'Sinkronkan Sekarang'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {syncFeedback && syncFeedback.show && (
+          <div className="mt-3.5 p-3 bg-white rounded-xl border border-emerald-300 shadow-xs flex items-center justify-between gap-3 text-xs text-emerald-950">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>Sinkronisasi Berhasil:</strong> {syncFeedback.syncedCount} slip gaji lunas ({formatIDR(syncFeedback.totalAmountIDR)}) diperiksa.
+                {syncFeedback.createdCount > 0 ? ` Menambahkan ${syncFeedback.createdCount} transaksi baru ke Buku Kas & Arus Kas.` : ''}
+                {syncFeedback.updatedCount > 0 ? ` Menyesuaikan ${syncFeedback.updatedCount} transaksi agar nominal dan statusnya akurat.` : ''}
+                {syncFeedback.createdCount === 0 && syncFeedback.updatedCount === 0 ? ' Seluruh transaksi telah 100% cocok dan terhubung.' : ''}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSyncFeedback(null)}
+              className="text-slate-400 hover:text-slate-700 font-bold px-2 py-1 text-xs cursor-pointer"
+            >
+              &times;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tab Switcher: Pembayaran & Slip Gaji vs Penetapan Gaji Karyawan Tahunan */}
@@ -492,9 +673,9 @@ export const PayrollManagement: React.FC = () => {
       </div>
 
       {/* Filter, Search & Export Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3 overflow-hidden">
         {/* Row 1: Kolom Semua Pegawai (Kiri) & Filter Pencarian (Kanan) */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 min-w-0">
           {/* Kolom Semua Pegawai vs Slip Saya */}
           <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0 self-start">
             <button
@@ -522,11 +703,11 @@ export const PayrollManagement: React.FC = () => {
             </button>
           </div>
 
-          {/* Search & Filter Controls: Rapi dan Sejajar */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1 lg:justify-end">
+          {/* Search & Filter Controls: Rapi, Responsif, dan Sejajar Tanpa Melebihi Batas */}
+          <div className="flex flex-wrap items-center gap-2 flex-1 xl:justify-end min-w-0">
             {/* Search Input */}
-            <div className="relative flex-1 min-w-[170px] max-w-sm">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="relative flex-1 sm:flex-initial sm:w-56 min-w-[160px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchTerm}
@@ -570,7 +751,7 @@ export const PayrollManagement: React.FC = () => {
               <select
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-emerald-600 shrink-0 cursor-pointer"
+                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-emerald-600 shrink-0 cursor-pointer max-w-[160px] truncate"
               >
                 <option value="ALL">Semua Divisi</option>
                 {availableDepartments.map((d) => (

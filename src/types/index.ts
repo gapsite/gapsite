@@ -705,6 +705,46 @@ export interface OfficeRentContract {
   updatedAt?: string;
 }
 
+export type OverheadCategory =
+  | 'LISTRIK'
+  | 'IURAN'
+  | 'KONSUMSI'
+  | 'TRANSPORTASI'
+  | 'AKOMODASI'
+  | 'ATK_OFFICE'
+  | 'LAIN_LAIN';
+
+export interface OverheadExpense {
+  id: string;
+  overheadNumber: string; // e.g. "OVH-2026-001"
+  date: string; // YYYY-MM-DD
+  category: OverheadCategory;
+  title: string; // Deskripsi kebutuhan operasional kantor
+  vendorOrMerchant: string; // PLN, Pengelola Gedung, Catering, Pertamina, dsb
+  amountIDR: number; // Nilai kotor / tagihan
+  paymentChannelId: string; // e.g. BANK_TRANSFER_BCA, PETTY_CASH, dsb
+  paymentMethod: string;
+  referenceNumber?: string; // No. Struk / Kwitansi / Ref Transfer
+  status: 'PAID' | 'PENDING' | 'SCHEDULED';
+  paidDate?: string;
+  hasTax: boolean; // Apakah ada potongan/pungutan pajak
+  taxType?: 'PPH_23' | 'PPH_4_2' | 'PPN_11' | 'NONE';
+  taxRatePercent?: number; // 2% for PPh 23, 10% for PPh 4(2), 11% for PPN
+  taxAmountIDR?: number;
+  netPaymentIDR: number; // Nilai bersih yang dibayar
+  taxObligationId?: string; // Link ke Tax Management / TaxObligation
+  transactionId?: string; // Link ke FinancialTransaction di Buku Kas
+  department?: string; // Divisi pemohon
+  requestedBy?: string;
+  approvedBy?: string;
+  receiptName?: string;
+  receiptUrl?: string;
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+}
+
 export interface TransactionCategoryDefinition {
   id: string;
   name: string;

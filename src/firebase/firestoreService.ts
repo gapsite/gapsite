@@ -25,7 +25,9 @@ import {
   PayrollPayment,
   CompanyLetterhead,
   GovernmentProject,
-  RetailProject
+  RetailProject,
+  OverheadExpense,
+  OfficeRentContract
 } from '../types';
 
 export const FirestoreCollections = {
@@ -42,6 +44,8 @@ export const FirestoreCollections = {
   PAYROLL: 'payroll_records',
   GOVERNMENT_PROJECTS: 'government_projects',
   RETAIL_PROJECTS: 'retail_projects',
+  OVERHEAD: 'overhead_expenses',
+  OFFICE_RENTS: 'office_rent_contracts',
 };
 
 // Deeply sanitize objects so no `undefined` values are ever sent to Firestore (which causes setDoc to fail)
@@ -714,6 +718,144 @@ export const subscribeToRetailProjects = (onUpdate: (projects: RetailProject[]) 
       onUpdate(loaded);
     },
     (err) => console.warn('Firestore retail projects listener warning:', err)
+  );
+};
+
+// ==========================================
+// OVERHEAD OPERATIONAL EXPENSES FIRESTORE API
+// ==========================================
+export const saveOverheadExpenseToFirestore = async (expense: OverheadExpense): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.OVERHEAD, expense.id);
+    const sanitized = sanitizeForFirestore({
+      ...expense,
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+
+    // Also update settings backup document for atomic fallback
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'overhead_expenses');
+    const snap = await getDoc(settingsRef);
+    let list: OverheadExpense[] = [];
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      list = snap.data().data;
+    }
+    const filtered = list.filter((e) => e.id !== expense.id);
+    await setDoc(
+      settingsRef,
+      sanitizeForFirestore({ data: [expense, ...filtered], updatedAt: new Date().toISOString() }),
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Firestore save overhead expense error:', error);
+  }
+};
+
+export const deleteOverheadExpenseFromFirestore = async (expenseId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.OVERHEAD, expenseId);
+    await deleteDoc(docRef);
+
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'overhead_expenses');
+    const snap = await getDoc(settingsRef);
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      const filtered = snap.data().data.filter((e: OverheadExpense) => e.id !== expenseId);
+      await setDoc(
+        settingsRef,
+        sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
+        { merge: true }
+      );
+    }
+  } catch (error) {
+    console.error('Firestore delete overhead expense error:', error);
+    throw error;
+  }
+};
+
+export const subscribeToOverheadExpenses = (onUpdate: (expenses: OverheadExpense[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.OVERHEAD);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: OverheadExpense[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as OverheadExpense;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore overhead expenses listener warning:', err)
+  );
+};
+
+// ==========================================
+// OFFICE RENT CONTRACTS & 12-MONTH SCHEDULE FIRESTORE API
+// ==========================================
+export const saveOfficeRentContractToFirestore = async (contract: OfficeRentContract): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.OFFICE_RENTS, contract.id);
+    const sanitized = sanitizeForFirestore({
+      ...contract,
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+
+    // Also update settings backup document for atomic fallback
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'office_rent_contracts');
+    const snap = await getDoc(settingsRef);
+    let list: OfficeRentContract[] = [];
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      list = snap.data().data;
+    }
+    const filtered = list.filter((c) => c.id !== contract.id);
+    await setDoc(
+      settingsRef,
+      sanitizeForFirestore({ data: [contract, ...filtered], updatedAt: new Date().toISOString() }),
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Firestore save office rent contract error:', error);
+  }
+};
+
+export const deleteOfficeRentContractFromFirestore = async (contractId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.OFFICE_RENTS, contractId);
+    await deleteDoc(docRef);
+
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'office_rent_contracts');
+    const snap = await getDoc(settingsRef);
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      const filtered = snap.data().data.filter((c: OfficeRentContract) => c.id !== contractId);
+      await setDoc(
+        settingsRef,
+        sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
+        { merge: true }
+      );
+    }
+  } catch (error) {
+    console.error('Firestore delete office rent contract error:', error);
+    throw error;
+  }
+};
+
+export const subscribeToOfficeRentContracts = (onUpdate: (contracts: OfficeRentContract[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.OFFICE_RENTS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: OfficeRentContract[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as OfficeRentContract;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore office rent contracts listener warning:', err)
   );
 };
 

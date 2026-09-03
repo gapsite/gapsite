@@ -30,10 +30,27 @@ import {
   Landmark,
   Printer,
   Tag,
+  Zap,
+  Building2,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 
-export type MainTabType = 'projects' | 'dispositions' | 'finance' | 'government-projects' | 'receivables' | 'bank-loans' | 'tax' | 'payroll' | 'financial-reports' | 'documents' | 'calculator' | 'team';
+export type MainTabType =
+  | 'projects'
+  | 'dispositions'
+  | 'finance'
+  | 'overhead'
+  | 'office-rent'
+  | 'retail-projects'
+  | 'government-projects'
+  | 'receivables'
+  | 'bank-loans'
+  | 'tax'
+  | 'payroll'
+  | 'financial-reports'
+  | 'documents'
+  | 'calculator'
+  | 'team';
 
 interface SidebarProps {
   activeTab: MainTabType;
@@ -82,6 +99,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     receivables,
     payrollRecords,
     governmentProjects,
+    retailProjects,
+    overheadExpenses,
+    officeRentContracts,
     teamMembers,
     currentUser,
     logout,
@@ -346,6 +366,96 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }`}
                     >
                       {transactions.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Overhead & Beban Operasional Kantor Tab */}
+                <button
+                  id="nav-overhead-management"
+                  onClick={() => handleNavClick('overhead')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'overhead'
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Overhead Operasional Kantor: Listrik, Iuran, Konsumsi, Transportasi, Akomodasi"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Zap className={`w-4 h-4 shrink-0 ${activeTab === 'overhead' ? 'text-slate-950' : 'text-amber-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Overhead Kantor</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'overhead'
+                          ? 'bg-slate-950 text-amber-300'
+                          : overheadExpenses && overheadExpenses.length > 0
+                          ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      {overheadExpenses ? overheadExpenses.length : 0}
+                    </span>
+                  )}
+                </button>
+
+                {/* Sewa Kantor Tahunan & Amortisasi 12 Bulan Tab */}
+                <button
+                  id="nav-office-rent-management"
+                  onClick={() => handleNavClick('office-rent')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'office-rent'
+                      ? 'bg-blue-500 text-slate-950 shadow-md shadow-blue-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Sewa Kantor Tahunan, Breakdown 12 Bulan & PPh Final 4(2)"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Building2 className={`w-4 h-4 shrink-0 ${activeTab === 'office-rent' ? 'text-slate-950' : 'text-blue-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Sewa Kantor (12 Bln)</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'office-rent'
+                          ? 'bg-slate-950 text-blue-300'
+                          : officeRentContracts && officeRentContracts.length > 0
+                          ? 'bg-blue-950 text-blue-300 border border-blue-800'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      {officeRentContracts ? officeRentContracts.length : 0} Gedung
+                    </span>
+                  )}
+                </button>
+
+                {/* Proyek Retail (B2B Swasta) Tab */}
+                <button
+                  id="nav-retail-projects"
+                  onClick={() => handleNavClick('retail-projects')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'retail-projects'
+                      ? 'bg-teal-500 text-slate-950 shadow-md shadow-teal-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Proyek Retail Sektor Swasta, Kontrak, Kebutuhan & Termin"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Briefcase className={`w-4 h-4 shrink-0 ${activeTab === 'retail-projects' ? 'text-slate-950' : 'text-teal-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Proyek Retail (Swasta)</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'retail-projects'
+                          ? 'bg-slate-950 text-teal-300'
+                          : retailProjects && retailProjects.length > 0
+                          ? 'bg-teal-950 text-teal-300 border border-teal-800'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      {retailProjects ? retailProjects.length : 0}
                     </span>
                   )}
                 </button>

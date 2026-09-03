@@ -83,12 +83,15 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
     addRetailMilestone,
     updateRetailMilestone,
     deleteRetailMilestone,
+    syncAllRetailToFinance,
     resetRetailProjectsToDefault,
     paymentChannels,
     projects,
     receivables,
     taxObligations,
   } = useProjects();
+
+  const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -352,8 +355,32 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
     document.body.removeChild(link);
   };
 
+  const handleSyncToFinance = () => {
+    const result = syncAllRetailToFinance();
+    const msg =
+      result.createdTransactionsCount > 0 || result.createdTaxObligationsCount > 0
+        ? `Berhasil disinkronkan! ${result.createdTransactionsCount} pendapatan termin masuk ke Buku Kas & ${result.createdTaxObligationsCount} PPN Keluaran dicatat ke Modul Pajak.`
+        : 'Semua termin proyek retail yang telah diterbitkan invoice / lunas sudah tersinkronisasi penuh dengan Buku Kas & Pajak.';
+
+    setSyncToast({ message: msg, type: 'success' });
+    setTimeout(() => setSyncToast(null), 5000);
+  };
+
   return (
     <div className="space-y-6" id="retail-project-management-root">
+      {/* Toast Notification */}
+      {syncToast && (
+        <div className="bg-emerald-900/90 text-white px-4 py-3 rounded-xl border border-emerald-500/50 shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5 text-xs font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+            <span>{syncToast.message}</span>
+          </div>
+          <button onClick={() => setSyncToast(null)} className="text-emerald-300 hover:text-white cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-indigo-950 rounded-2xl p-6 text-white border border-teal-800/40 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -403,6 +430,16 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
             >
               <Download className="w-4 h-4" />
               <span>Export CSV</span>
+            </button>
+
+            <button
+              onClick={handleSyncToFinance}
+              className="px-3.5 py-2 bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+              title="Sinkronkan seluruh termin invoice/lunas ke Buku Kas & Pajak"
+              id="btn-sync-retail-to-finance"
+            >
+              <RefreshCw className="w-4 h-4 text-emerald-400" />
+              <span>Sinkron ke Arus Kas</span>
             </button>
 
             {onOpenReports && (
