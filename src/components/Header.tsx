@@ -27,6 +27,8 @@ import {
   Sparkles,
   KeyRound,
   Printer,
+  Tag,
+  CreditCard,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { MainTabType } from './Sidebar';
@@ -43,6 +45,8 @@ interface HeaderProps {
   onOpenServiceManager?: () => void;
   onOpenDocTypeManager?: () => void;
   onOpenLetterheadManager?: () => void;
+  onOpenTransactionCategoryManager?: () => void;
+  onOpenPaymentChannelManager?: () => void;
   onOpenUserProfile?: () => void;
 }
 
@@ -58,6 +62,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenServiceManager,
   onOpenDocTypeManager,
   onOpenLetterheadManager,
+  onOpenTransactionCategoryManager,
+  onOpenPaymentChannelManager,
   onOpenUserProfile,
 }) => {
   const {
@@ -67,6 +73,9 @@ export const Header: React.FC<HeaderProps> = ({
     payrollRecords,
     receivables,
     bankLoans,
+    taxObligations,
+    transactionCategories,
+    paymentChannels,
     teamMembers,
     currentUser,
     logout,
@@ -78,6 +87,17 @@ export const Header: React.FC<HeaderProps> = ({
     consultingServices,
     documentTypes,
   } = useProjects();
+
+  const isAdminMaster = Boolean(
+    currentUser && (
+      currentUser.username === 'admin.master' ||
+      currentUser.username === 'admin_master' ||
+      currentUser.role === 'MASTER_ADMIN' ||
+      currentUser.role === 'ADMIN_MASTER' ||
+      currentUser.id === 'usr-0' ||
+      isMasterAdmin
+    )
+  );
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -129,6 +149,13 @@ export const Header: React.FC<HeaderProps> = ({
           subtitle: 'Kredit Modal Kerja, Pinjaman Bank, & Jadwal Cicilan',
           icon: Landmark,
           badge: `${bankLoans.length} Fasilitas Pinjaman`,
+        };
+      case 'tax':
+        return {
+          title: 'Pajak & Kewajiban Perpajakan (PPN & PPh)',
+          subtitle: 'Monitoring PPN Keluaran/Masukan, PPh 21 TER, PPh 23, PPh Final 4(2), & Status Pembayaran NTPN',
+          icon: Receipt,
+          badge: `${taxObligations.filter((t) => t.status !== 'PAID').length} Terhutang`,
         };
       case 'financial-reports':
         return {
@@ -487,7 +514,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  {isMasterAdmin && onOpenRoleManager && (
+                  {isAdminMaster && onOpenRoleManager && (
                     <button
                       type="button"
                       onClick={() => {
@@ -512,7 +539,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  {isMasterAdmin && onOpenServiceManager && (
+                  {isAdminMaster && onOpenServiceManager && (
                     <button
                       type="button"
                       onClick={() => {
@@ -531,14 +558,14 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  {isMasterAdmin && onOpenDocTypeManager && (
+                  {isAdminMaster && onOpenDocTypeManager && (
                     <button
                       type="button"
                       onClick={() => {
                         setShowUserMenu(false);
                         onOpenDocTypeManager();
                       }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-2 border cursor-pointer text-blue-900 bg-blue-50 hover:bg-blue-100 border-blue-300"
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-1.5 border cursor-pointer text-blue-900 bg-blue-50 hover:bg-blue-100 border-blue-300"
                     >
                       <span className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-blue-600" />
@@ -550,7 +577,45 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  {isMasterAdmin && onOpenLetterheadManager && (
+                  {isAdminMaster && onOpenTransactionCategoryManager && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenTransactionCategoryManager();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-1.5 border cursor-pointer text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border-indigo-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-indigo-600" />
+                        <span>Kategori Transaksi</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-indigo-200 text-indigo-950">
+                        {transactionCategories ? transactionCategories.length : 0} Kat
+                      </span>
+                    </button>
+                  )}
+
+                  {isAdminMaster && onOpenPaymentChannelManager && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenPaymentChannelManager();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-1.5 border cursor-pointer text-sky-900 bg-sky-50 hover:bg-sky-100 border-sky-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-sky-600" />
+                        <span>Saluran Bank & Rek</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-sky-200 text-sky-950">
+                        {paymentChannels ? paymentChannels.length : 0} Rek
+                      </span>
+                    </button>
+                  )}
+
+                  {isAdminMaster && onOpenLetterheadManager && (
                     <button
                       id="btn-header-letterhead-manager"
                       type="button"

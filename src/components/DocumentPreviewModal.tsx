@@ -90,6 +90,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     isGoogleDriveConnected,
     connectGoogleDrive,
     isDriveSyncing,
+    companyLetterhead,
   } = useProjects();
 
   // Active view tab
@@ -857,17 +858,35 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                         {/* Executive Invoice Header */}
                         <div className="flex flex-wrap items-start justify-between gap-4 pb-6 border-b-2 border-slate-900">
                           <div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold">
-                                VX
+                            <div className="flex items-center gap-3">
+                              {companyLetterhead?.logoUrl ? (
+                                <img
+                                  src={companyLetterhead.logoUrl}
+                                  alt={companyLetterhead.companyName}
+                                  className="h-10 max-w-[170px] object-contain"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-sm">
+                                  {companyLetterhead?.shortName?.slice(0, 2) || 'GAP'}
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-base font-black tracking-tight text-slate-900 block">
+                                  {companyLetterhead?.companyName || 'PT GAP Consulting Indonesia'}
+                                </span>
+                                {companyLetterhead?.tagline && (
+                                  <span className="text-[10px] text-slate-500 font-medium block">
+                                    {companyLetterhead.tagline}
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-base font-black tracking-tight text-slate-900">
-                                PT VERIX KONSULTAN INDONESIA
-                              </span>
                             </div>
-                            <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                              Gedung Bursa Efek Indonesia Tower 2, SCBD Jakarta Selatan 12190
-                              <br />NPWP: 01.892.441.9-012.000 • Email: billing@verixconsulting.id
+                            <p className="text-xs text-slate-500 mt-1.5 max-w-md leading-relaxed">
+                              {companyLetterhead?.address || 'Gedung Bursa Efek Indonesia Tower 2, SCBD Jakarta Selatan 12190'}
+                              <br />
+                              {companyLetterhead?.taxId && <span>NPWP: {companyLetterhead.taxId} • </span>}
+                              {companyLetterhead?.email && <span>Email: {companyLetterhead.email} • </span>}
+                              {companyLetterhead?.phone && <span>Telp: {companyLetterhead.phone}</span>}
                             </p>
                           </div>
 
@@ -1013,8 +1032,12 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
                           <div className="text-right">
                             <p className="text-xs text-slate-500 font-medium">Hormat Kami,</p>
-                            <p className="text-xs font-bold text-slate-900 mt-4">Direktur Keuangan & Operasional</p>
-                            <p className="text-[10px] text-slate-500">PT Verix Konsultan Indonesia</p>
+                            <p className="text-xs font-bold text-slate-900 mt-4">
+                              {companyLetterhead?.authorizedSignatoryName || 'Direktur Keuangan & Operasional'}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {companyLetterhead?.companyName || 'PT GAP Consulting Indonesia'}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1088,8 +1111,12 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                         <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-6 text-xs">
                           <div>
                             <p className="text-slate-500 font-medium">Disiapkan & Diajukan Oleh:</p>
-                            <p className="font-bold text-slate-900 mt-4">PT Verix Konsultan Indonesia</p>
-                            <p className="text-[10px] text-slate-400">{currentUser.name} (Lead Consultant)</p>
+                            <p className="font-bold text-slate-900 mt-4">
+                              {companyLetterhead?.companyName || 'PT GAP Consulting Indonesia'}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {companyLetterhead?.authorizedSignatoryName || currentUser.name} ({companyLetterhead?.authorizedSignatoryTitle || 'Lead Consultant'})
+                            </p>
                           </div>
                           <div className="text-right">
                             <p className="text-slate-500 font-medium">Disetujui Oleh (Client):</p>

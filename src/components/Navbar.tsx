@@ -49,7 +49,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     logout,
     filters,
     setFilters,
+    isMasterAdmin,
   } = useProjects();
+
+  const isAdminMaster = Boolean(
+    currentUser && (
+      currentUser.username === 'admin.master' ||
+      currentUser.username === 'admin_master' ||
+      currentUser.role === 'MASTER_ADMIN' ||
+      currentUser.role === 'ADMIN_MASTER' ||
+      currentUser.id === 'usr-0' ||
+      isMasterAdmin
+    )
+  );
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -109,25 +121,29 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Header Action Buttons & User Switcher */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Quick Export Button */}
-            <button
-              onClick={onOpenExport}
-              className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors hidden xl:flex items-center gap-1.5 text-xs font-medium border border-slate-700/80"
-              title="Export Report & Ledger"
-            >
-              <Download className="w-4 h-4 text-slate-400" />
-              <span>Export</span>
-            </button>
+            {isAdminMaster && (
+              <>
+                {/* Quick Export Button */}
+                <button
+                  onClick={onOpenExport}
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors hidden xl:flex items-center gap-1.5 text-xs font-medium border border-slate-700/80"
+                  title="Export Report & Ledger"
+                >
+                  <Download className="w-4 h-4 text-slate-400" />
+                  <span>Export</span>
+                </button>
 
-            {/* Quick TKDN Estimator Button */}
-            <button
-              onClick={onOpenTkdnCalculator}
-              className="p-2 text-emerald-300 hover:text-white hover:bg-emerald-950/60 rounded-lg transition-colors hidden lg:flex items-center gap-1.5 text-xs font-medium border border-emerald-800/60"
-              title="Quick TKDN Permenperin Formula Estimator"
-            >
-              <Calculator className="w-4 h-4 text-emerald-400" />
-              <span>TKDN Calc</span>
-            </button>
+                {/* Quick TKDN Estimator Button */}
+                <button
+                  onClick={onOpenTkdnCalculator}
+                  className="p-2 text-emerald-300 hover:text-white hover:bg-emerald-950/60 rounded-lg transition-colors hidden lg:flex items-center gap-1.5 text-xs font-medium border border-emerald-800/60"
+                  title="Quick TKDN Permenperin Formula Estimator"
+                >
+                  <Calculator className="w-4 h-4 text-emerald-400" />
+                  <span>TKDN Calc</span>
+                </button>
+              </>
+            )}
 
             {/* Quick Job Disposition Dispatch */}
             <button
@@ -354,20 +370,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
 
-          <button
-            onClick={() => setActiveTab('calculator')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'calculator'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Calculator className="w-3.5 h-3.5" />
-            <span>TKDN Formula Estimator</span>
-            <span className="text-[9px] bg-teal-900/80 text-teal-300 px-1 rounded uppercase font-mono">
-              Permenperin
-            </span>
-          </button>
+          {isAdminMaster && (
+            <button
+              onClick={() => setActiveTab('calculator')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === 'calculator'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>TKDN Formula Estimator</span>
+              <span className="text-[9px] bg-teal-900/80 text-teal-300 px-1 rounded uppercase font-mono">
+                Permenperin
+              </span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('team')}

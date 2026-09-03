@@ -329,8 +329,8 @@ interface ProjectContextType {
   companyLetterhead: CompanyLetterhead;
   updateCompanyLetterhead: (
     settings: Partial<CompanyLetterhead>
-  ) => { success: boolean; message?: string };
-  resetCompanyLetterheadToDefault: () => { success: boolean; message?: string };
+  ) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
+  resetCompanyLetterheadToDefault: () => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
 
   // Tax & Tax Liabilities Management (PPN, PPh 21, PPh 23, PPh 4(2), PPh Final/Badan Terhutang)
   taxObligations: TaxObligation[];
@@ -1545,6 +1545,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_ROLE_GOVERNANCE_META) {
           const parsed = JSON.parse(e.newValue);
           if (parsed) setRoleGovernanceMeta(parsed);
+        } else if (e.key === STORAGE_KEY_COMPANY_LETTERHEAD) {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed) setCompanyLetterhead(parsed);
         }
       } catch (err) {
         console.warn('Storage sync error:', err);
@@ -1760,7 +1763,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       [],
       DEFAULT_COMPANY_CAPITAL,
       INITIAL_RECEIVABLES,
-      INITIAL_PAYROLL_RECORDS
+      INITIAL_PAYROLL_RECORDS,
+      DEFAULT_COMPANY_LETTERHEAD
     );
 
     const unsubProjects = subscribeToProjects((remoteProjects) => {
@@ -1981,7 +1985,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const unsubLetterhead = subscribeToSettings('company_letterhead', (data) => {
       if (data && typeof data === 'object') {
-        setCompanyLetterhead((prev) => ({ ...prev, ...data }));
+        setCompanyLetterhead((prev) => {
+          const merged = { ...prev, ...data };
+          try {
+            localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(merged));
+          } catch (e) {
+            console.warn('LocalStorage save on remote update warning:', e);
+          }
+          return merged;
+        });
       }
     });
 
@@ -2232,7 +2244,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Master Admin Authority Check
+  // Master Admin Authority Check (Strictly admin.master / MASTER_ADMIN)
   const isMasterAdmin = useMemo(() => {
     if (!currentUser) return false;
     const role = String(currentUser.role || '').toUpperCase();
@@ -2245,23 +2257,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       role === 'MASTER_ADMIN' ||
       role === 'ADMIN_MASTER' ||
       role === 'SUPERADMIN' ||
-      role.includes('MASTER') ||
-      role.includes('ADMIN') ||
-      role.includes('DIRECTOR') ||
       username === 'admin.master' ||
       username === 'admin_master' ||
-      username === 'admin' ||
-      username.startsWith('admin.') ||
-      username.startsWith('admin_') ||
-      username.includes('admin') ||
-      email === 'admin@gapsite.com' ||
-      email.startsWith('admin@') ||
-      email.includes('admin') ||
-      (Array.isArray(currentUser.permissions) && (
-        currentUser.permissions.includes('MANAGE_USERS_ROLES') ||
-        currentUser.permissions.includes('DELETE_PROJECTS') ||
-        currentUser.permissions.includes('MANAGE_FINANCE')
-      ))
+      email === 'admin@gapsite.com'
     );
   }, [currentUser]);
 
@@ -4589,40 +4587,72 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
-  // Company Letterhead & Document Printing Customization (Hanya admin.master)
-  const updateCompanyLetterhead = (
+  // Company Letterhead & Document Printing Customization (Disinkronkan secara realtime ke seluruh role)
+  const updateCompanyLetterhead = async (
     updates: Partial<CompanyLetterhead>
-  ): { success: boolean; message?: string } => {
-    if (!isMasterAdmin) {
+  ): Promise<{ success: boolean; message?: string }> => {
+    const canManage =
+      isMasterAdmin ||
+      currentUser.role === 'ADMIN_MASTER' ||
+      currentUser.role === 'DIRECTOR' ||
+      currentUser.role === 'FINANCE_ADMIN' ||
+      (Array.isArray(currentUser.permissions) && currentUser.permissions.includes('MANAGE_SETTINGS'));
+
+    if (!canManage) {
       return {
         success: false,
-        message: 'Akses Ditolak: Hanya akun dengan role Master Admin (admin.master) yang memiliki wewenang untuk merubah logo, nama perusahaan, dan kop surat cetak dokumen.',
+        message: 'Akses Ditolak: Hanya akun dengan wewenang manajemen (Master Admin, Direktur, Finance Admin) yang memiliki hak merubah kop surat dan logo perusahaan.',
       };
     }
 
-    setCompanyLetterhead((prev) => {
-      const updated: CompanyLetterhead = {
-        ...prev,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-        updatedBy: currentUser.username || currentUser.name || 'admin.master',
+    const updated: CompanyLetterhead = {
+      ...companyLetterhead,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentUser.username || currentUser.name || 'admin.master',
+    };
+
+    // 1. Update React state immediately
+    setCompanyLetterhead(updated);
+
+    // 2. Broadcast via BroadcastChannel for instant cross-tab sync across roles
+    broadcastLiveDataUpdate('COMPANY_LETTERHEAD', updated);
+
+    // 3. Save to localStorage with storage event fallback
+    try {
+      localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('LocalStorage save letterhead warning:', e);
+    }
+
+    // 4. Save to Firestore for permanent cross-device & cross-role real-time sync
+    try {
+      await saveSettingsToFirestore('company_letterhead', updated);
+    } catch (err: any) {
+      console.error('Firestore save company_letterhead error:', err);
+      return {
+        success: true,
+        message: 'Kop surat tersimpan secara lokal dan tersinkron ke seluruh tab, namun terjadi kendala saat menyimpan ke cloud Firestore: ' + (err?.message || ''),
       };
-      broadcastLiveDataUpdate('COMPANY_LETTERHEAD', updated);
-      saveSettingsToFirestore('company_letterhead', updated);
-      return updated;
-    });
+    }
 
     return {
       success: true,
-      message: 'Kop surat dan logo perusahaan berhasil diperbarui dan disinkronkan ke seluruh dokumen cetak!',
+      message: 'Kop surat dan logo perusahaan berhasil diperbarui dan disinkronkan ke seluruh dokumen cetak dan semua role secara realtime!',
     };
   };
 
-  const resetCompanyLetterheadToDefault = (): { success: boolean; message?: string } => {
-    if (!isMasterAdmin) {
+  const resetCompanyLetterheadToDefault = async (): Promise<{ success: boolean; message?: string }> => {
+    const canManage =
+      isMasterAdmin ||
+      currentUser.role === 'ADMIN_MASTER' ||
+      currentUser.role === 'DIRECTOR' ||
+      (Array.isArray(currentUser.permissions) && currentUser.permissions.includes('MANAGE_SETTINGS'));
+
+    if (!canManage) {
       return {
         success: false,
-        message: 'Akses Ditolak: Hanya Master Admin (admin.master) yang dapat mereset kop surat ke pengaturan default.',
+        message: 'Akses Ditolak: Hanya Master Admin atau Direktur yang dapat mereset kop surat ke pengaturan default.',
       };
     }
 
@@ -4634,7 +4664,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setCompanyLetterhead(reset);
     broadcastLiveDataUpdate('COMPANY_LETTERHEAD', reset);
-    saveSettingsToFirestore('company_letterhead', reset);
+    try {
+      localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(reset));
+    } catch (e) {
+      console.warn('LocalStorage reset letterhead warning:', e);
+    }
+    await saveSettingsToFirestore('company_letterhead', reset);
     return {
       success: true,
       message: 'Kop surat dan identitas perusahaan berhasil dikembalikan ke standar awal sistem.',

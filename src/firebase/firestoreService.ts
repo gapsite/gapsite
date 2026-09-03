@@ -22,7 +22,8 @@ import {
   DeletedUserRecord,
   Receivable,
   TaxObligation,
-  PayrollPayment
+  PayrollPayment,
+  CompanyLetterhead
 } from '../types';
 
 export const FirestoreCollections = {
@@ -589,7 +590,8 @@ export const ensureInitialFirestoreSeed = async (
   defaultBankLoans?: any[],
   defaultCompanyCapital?: any,
   defaultReceivables?: Receivable[],
-  defaultPayrollRecords?: PayrollPayment[]
+  defaultPayrollRecords?: PayrollPayment[],
+  defaultCompanyLetterhead?: CompanyLetterhead
 ): Promise<void> => {
   try {
     // 1. Ensure master admin root user exists in Firestore
@@ -769,6 +771,15 @@ export const ensureInitialFirestoreSeed = async (
       const payrollSnap = await getDoc(payrollRef);
       if (!payrollSnap.exists()) {
         await setDoc(payrollRef, sanitizeForFirestore({ data: defaultPayrollRecords, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 17. Ensure company letterhead exists in settings if not present
+    if (defaultCompanyLetterhead !== undefined && defaultCompanyLetterhead !== null) {
+      const letterheadRef = doc(db, FirestoreCollections.SETTINGS, 'company_letterhead');
+      const letterheadSnap = await getDoc(letterheadRef);
+      if (!letterheadSnap.exists()) {
+        await setDoc(letterheadRef, sanitizeForFirestore({ data: defaultCompanyLetterhead, updatedAt: new Date().toISOString() }));
       }
     }
   } catch (err) {

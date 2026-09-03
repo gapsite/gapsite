@@ -2581,7 +2581,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-10 max-w-5xl mx-auto print:border-none print:shadow-none print:p-0 print:m-0 print:max-w-none">
         {/* Official Header / Letterhead */}
         {showLetterhead && (
-          <div className="border-b-2 border-slate-800 pb-6 mb-8">
+          <div className="border-b-2 border-slate-800 pb-6 mb-8 print:pb-3 print:mb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
                 {renderReportLetterheadLogo()}
@@ -2618,7 +2618,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* Document Title Banner */}
-            <div className="mt-6 pt-4 border-t border-slate-200 text-center">
+            <div className="mt-6 pt-4 border-t border-slate-200 text-center print:mt-3 print:pt-2">
               <h3 className="text-lg font-extrabold uppercase tracking-wide text-slate-900">
                 {reportType === 'COMPREHENSIVE' && 'LAPORAN KEUANGAN EKSEKUTIF KOMPREHENSIF (COMPREHENSIVE FINANCIAL DOSSIER)'}
                 {reportType === 'ASSETS' && 'LAPORAN POSISI ASET & AKTIVA USAHA (ASSETS STATEMENT)'}
@@ -2650,9 +2650,9 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
         {/* VIEW 0: LAPORAN KEUANGAN KOMPREHENSIF (COMPREHENSIVE MASTER REPORT)      */}
         {/* ========================================================================= */}
         {reportType === 'COMPREHENSIVE' && (
-          <div className="space-y-8">
+          <div className="space-y-8 print:space-y-4">
             {/* 0. EXECUTIVE DASHBOARD DIAGNOSTIC SUMMARY */}
-            <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-md">
+            <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-md print:p-3.5 print:rounded-lg print:break-inside-avoid print:mb-3">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -2673,7 +2673,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
               </div>
 
               {/* 6 Core Accounting KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4 print:grid-cols-6 print:gap-1.5 print:mt-2.5">
                 <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                     <Building2 className="w-3 h-3 text-emerald-400" />
@@ -2767,7 +2767,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
               </div>
 
               {/* Diagnostic Ratios */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-800 text-[11px] text-slate-300">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-800 text-[11px] text-slate-300 print:grid-cols-4 print:gap-1.5 print:pt-2 print:mt-2">
                 <div>
                   Gross Profit Margin: <strong className="text-white font-mono">{metrics.grossMargin.toFixed(1)}%</strong>
                 </div>
@@ -2784,8 +2784,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SUBMENU 1: LAPORAN POSISI ASET & HARTA */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between">
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs print:rounded-lg print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-emerald-400" />
                   <span>1. POSISI ASET &amp; HARTA USAHA (ASSETS STATEMENT)</span>
@@ -2793,23 +2793,23 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 <span className="font-mono text-emerald-400 text-sm">{formatIDR(metrics.totalAssets)}</span>
               </div>
 
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:p-2.5 print:gap-2 print:break-inside-avoid">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Harta / Aset</div>
                   <div className="text-base font-bold font-mono text-emerald-700 mt-1">{formatIDR(metrics.totalAssets)}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Aktiva Lancar + Tetap</div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Kas &amp; Setara Kas</div>
                   <div className="text-base font-bold font-mono text-slate-900 mt-1">{formatIDR(metrics.cashAndBankAsset)}</div>
                   <div className="text-[10px] text-emerald-600 mt-0.5">Likuiditas Riil di Rekening</div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Piutang Usaha Konsultasi</div>
                   <div className="text-base font-bold font-mono text-amber-600 mt-1">{formatIDR(metrics.receivablesAsset)}</div>
                   <div className="text-[10px] text-amber-700 mt-0.5">Pending Invoice Klien</div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Aset Tetap &amp; Peralatan</div>
                   <div className="text-base font-bold font-mono text-slate-700 mt-1">{formatIDR(metrics.fixedAssets)}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Nilai Buku Inventaris &amp; Alat Uji</div>
@@ -2964,8 +2964,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SUBMENU 2: LAPORAN LIABILITAS & KEWAJIBAN */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between">
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs print:rounded-lg print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-rose-400" />
                   <span>2. LIABILITAS &amp; KEWAJIBAN USAHA (LIABILITIES STATEMENT)</span>
@@ -2973,23 +2973,23 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 <span className="font-mono text-rose-400 text-sm">{formatIDR(metrics.totalLiabilities)}</span>
               </div>
 
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:p-2.5 print:gap-2 print:break-inside-avoid">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Liabilitas</div>
                   <div className="text-base font-bold font-mono text-rose-600 mt-1">{formatIDR(metrics.totalLiabilities)}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Kewajiban Pendek + Panjang</div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Utang Usaha &amp; Surveyor</div>
                   <div className="text-base font-bold font-mono text-amber-600 mt-1">{formatIDR(metrics.payablesLiability)}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Pending Biaya Surveyor LVI</div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Estimasi Utang Pajak</div>
                   <div className="text-base font-bold font-mono text-rose-600 mt-1">{formatIDR(metrics.taxLiability)}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">PPh 23 &amp; PPN 11% Terutang</div>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs print:p-2 print:break-inside-avoid">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pokok Pinjaman Bank</div>
                   <div className="text-base font-bold font-mono text-rose-700 mt-1">{formatIDR(metrics.longTermBankLoans)}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">{metrics.activeLoans.length} Fasilitas Kredit Aktif</div>
@@ -3107,8 +3107,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SUBMENU 3: LAPORAN EKUITAS & MODAL */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between">
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs print:rounded-lg print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <Coins className="w-4 h-4 text-cyan-400" />
                   <span>3. EKUITAS &amp; STRUKTUR PERMODALAN USAHA (EQUITY STATEMENT)</span>
@@ -3117,7 +3117,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                   <button
                     type="button"
                     onClick={() => setIsCapitalModalOpen(true)}
-                    className="text-[11px] font-normal lowercase text-emerald-400 hover:text-emerald-300 underline flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-normal lowercase text-emerald-400 hover:text-emerald-300 underline flex items-center gap-1 cursor-pointer print:hidden"
                   >
                     <span>[atur modal]</span>
                   </button>
@@ -3125,7 +3125,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:p-2.5 print:gap-2 print:break-inside-avoid">
                 <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Ekuitas / Modal Bersih</div>
                   <div className="text-base font-bold font-mono text-emerald-600 mt-1">{formatIDR(metrics.totalEquity)}</div>
@@ -3281,8 +3281,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SUBMENU 4: LAPORAN PENDAPATAN OPERASIONAL */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between">
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs print:rounded-lg print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                   <span>4. PENDAPATAN OPERASIONAL &amp; KONSULTASI (INCOME STATEMENT)</span>
@@ -3290,7 +3290,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 <span className="font-mono text-emerald-400 text-sm">{formatIDR(metrics.totalIncome)}</span>
               </div>
 
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:p-2.5 print:gap-2 print:break-inside-avoid">
                 <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Pendapatan Kotor</div>
                   <div className="text-base font-bold font-mono text-emerald-700 mt-1">{formatIDR(metrics.totalIncome)}</div>
@@ -3363,8 +3363,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SUBMENU 5: LAPORAN RINCIAN BEBAN & BIAYA */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between">
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs print:rounded-lg print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <TrendingDown className="w-4 h-4 text-rose-400" />
                   <span>5. RINCIAN BEBAN &amp; BIAYA PENGELUARAN (EXPENSES STATEMENT)</span>
@@ -3372,7 +3372,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 <span className="font-mono text-rose-400 text-sm">({formatIDR(metrics.totalExpense)})</span>
               </div>
 
-              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 print:grid-cols-4 print:p-2.5 print:gap-2 print:break-inside-avoid">
                 <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Seluruh Beban</div>
                   <div className="text-base font-bold font-mono text-rose-600 mt-1">{formatIDR(metrics.totalExpense)}</div>
@@ -3443,8 +3443,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SEKSI 6: KONSOLIDASI LABA RUGI KOMPREHENSIF */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between">
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs print:rounded-lg print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-3 font-bold text-xs uppercase tracking-wider flex items-center justify-between print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <BadgePercent className="w-4 h-4 text-cyan-400" />
                   <span>6. KONSOLIDASI LABA RUGI KOMPREHENSIF (CONSOLIDATED P&amp;L)</span>
@@ -3492,8 +3492,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SEKSI 7: MANAJEMEN PINJAMAN BANK */}
-            <div>
-              <div className="bg-slate-900 text-white px-4 py-2.5 rounded-t-lg flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+            <div className="print:rounded-lg print:border print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-2.5 rounded-t-lg flex items-center justify-between text-xs font-bold uppercase tracking-wider print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <Landmark className="w-4 h-4 text-emerald-400" />
                   <span>7. FASILITAS PINJAMAN BANK, BEBAN BUNGA &amp; SISA POKOK</span>
@@ -3597,8 +3597,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
             </div>
 
             {/* SEKSI 8: MATRIKS KINERJA FINANSIAL PORTOFOLIO PROYEK */}
-            <div>
-              <div className="bg-slate-900 text-white px-4 py-2.5 rounded-t-lg flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+            <div className="print:rounded-lg print:border print:border-slate-300 print:shadow-none print:overflow-visible print:mb-4 print:break-inside-auto">
+              <div className="bg-slate-900 text-white px-4 py-2.5 rounded-t-lg flex items-center justify-between text-xs font-bold uppercase tracking-wider print:py-2 print:px-3 print:break-after-avoid">
                 <div className="flex items-center gap-2">
                   <FolderKanban className="w-4 h-4 text-emerald-400" />
                   <span>8. MATRIKS KINERJA FINANSIAL PORTOFOLIO PROYEK KONSULTASI</span>
@@ -5878,7 +5878,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
 
         {/* 7. FORMAL SIGNATURE APPROVAL BLOCK (For PDF / Print Verification) */}
         {showSignatures && (
-          <div className="mt-12 pt-8 border-t-2 border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-8 text-xs">
+          <div className="mt-12 pt-8 border-t-2 border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-8 text-xs print:grid-cols-2 print:mt-6 print:pt-4 print:gap-6 print:break-inside-avoid print-signature-block">
             {/* 1. Preparer (Role: Finance Only) */}
             <div className="text-center p-3.5 rounded-xl border border-transparent hover:border-emerald-200 transition-all bg-emerald-50/20 print:bg-transparent print:border-none print:p-0">
               <div className="flex items-center justify-center gap-1.5 mb-1">

@@ -18,6 +18,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { Receivable } from '../../types';
+import { useProjects } from '../../context/ProjectContext';
 import {
   getReceivableCategoryLabel,
   getReceivableStatusBadge,
@@ -43,6 +44,7 @@ export const ReceivableDetailModal: React.FC<ReceivableDetailModalProps> = ({
   onRecordPayment,
   onEdit,
 }) => {
+  const { companyLetterhead } = useProjects();
   if (!isOpen || !receivable) return null;
 
   const statusBadge = getReceivableStatusBadge(receivable.status);
@@ -106,6 +108,41 @@ export const ReceivableDetailModal: React.FC<ReceivableDetailModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+          {/* Printable Official Letterhead Header */}
+          <div className="p-4 bg-slate-50 dark:bg-slate-850/80 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {companyLetterhead?.logoUrl ? (
+                <img
+                  src={companyLetterhead.logoUrl}
+                  alt={companyLetterhead.companyName}
+                  className="h-10 max-w-[150px] object-contain"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow">
+                  {companyLetterhead?.shortName?.slice(0, 3) || 'GAP'}
+                </div>
+              )}
+              <div>
+                <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {companyLetterhead?.companyName || 'PT GAP Consulting Indonesia'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                  {companyLetterhead?.address || 'Jakarta, Indonesia'}
+                </p>
+                <div className="text-[10px] text-slate-400 flex flex-wrap gap-x-2 mt-0.5 font-mono">
+                  {companyLetterhead?.taxId && <span>NPWP: {companyLetterhead.taxId}</span>}
+                  {companyLetterhead?.phone && <span>Telp: {companyLetterhead.phone}</span>}
+                  {companyLetterhead?.email && <span>Email: {companyLetterhead.email}</span>}
+                </div>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-mono">
+                Faktur Tagihan Piutang
+              </span>
+            </div>
+          </div>
+
           {/* Progress & Financial KPI Banner */}
           <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between">

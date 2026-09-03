@@ -52,8 +52,16 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
   const [previewMode, setPreviewMode] = useState<'FINANCIAL' | 'PAYSLIP'>('FINANCIAL');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isOptimizingLogo, setIsOptimizingLogo] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const printAreaRef = useRef<HTMLDivElement>(null);
+
+  const canManageLetterhead =
+    isMasterAdmin ||
+    currentUser.role === 'ADMIN_MASTER' ||
+    currentUser.role === 'DIRECTOR' ||
+    currentUser.role === 'FINANCE_ADMIN' ||
+    (Array.isArray(currentUser.permissions) && currentUser.permissions.includes('MANAGE_SETTINGS'));
 
   // Sync state whenever modal opens or companyLetterhead changes
   React.useEffect(() => {
@@ -72,8 +80,56 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
     }, 4000);
   };
 
+  // Compress and resize logo image using Canvas to ensure fast sync, lightweight Firestore storage (<50KB), and crisp rendering
+  const compressLogoImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (file.type === 'image/svg+xml') {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        const maxW = 500;
+        const maxH = 200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxW || height > maxH) {
+          const ratio = Math.min(maxW / width, maxH / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(objectUrl);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compressed PNG to maintain transparency
+        const compressed = canvas.toDataURL('image/png', 0.92);
+        resolve(compressed);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Gagal memproses file gambar logo.'));
+      };
+      img.src = objectUrl;
+    });
+  };
+
   // Handle Logo File Upload (PNG/JPG/SVG/WebP) and convert to base64 Data URL
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -84,23 +140,26 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
       return;
     }
 
-    // Validate size (max 2MB for storage performance)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran file logo terlalu besar. Maksimal 2 MB agar dokumen cetak dapat dimuat cepat.');
+    // Validate size (max 5MB initial)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran file logo terlalu besar. Maksimal 5 MB agar dapat diproses secara optimal.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
+    setIsOptimizingLogo(true);
+    try {
+      const optimizedBase64 = await compressLogoImage(file);
       setFormData((prev) => ({
         ...prev,
-        logoUrl: base64,
+        logoUrl: optimizedBase64,
         logoType: 'IMAGE',
       }));
-      showToast('Logo berhasil diunggah! Lihat pratinjau langsung di sebelah kanan.');
-    };
-    reader.readAsDataURL(file);
+      showToast('Logo berhasil dioptimalkan dan diunggah! Terlihat langsung pada pratinjau dokumen.');
+    } catch (err: any) {
+      alert(err.message || 'Gagal memproses gambar logo.');
+    } finally {
+      setIsOptimizingLogo(false);
+    }
   };
 
   const handleRemoveLogo = () => {
@@ -115,9 +174,9 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
     showToast('Logo kustom dihapus. Menggunakan ikon standar dokumen.');
   };
 
-  const handleSave = () => {
-    if (!isMasterAdmin) {
-      alert('Akses Ditolak: Hanya role admin.master (Master Admin) yang memiliki wewenang menyimpan perubahan kop surat.');
+  const handleSave = async () => {
+    if (!canManageLetterhead) {
+      alert('Akses Ditolak: Hanya akun dengan wewenang manajemen (Master Admin, Direktur, atau Finance Admin) yang memiliki wewenang menyimpan perubahan kop surat.');
       return;
     }
 
@@ -127,30 +186,41 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
     }
 
     setIsSaving(true);
-    const result = updateCompanyLetterhead(formData);
-    setIsSaving(false);
-
-    if (result.success) {
-      showToast(result.message || 'Kop surat berhasil diperbarui!');
-    } else {
-      alert(result.message || 'Gagal memperbarui kop surat.');
+    try {
+      const result = await updateCompanyLetterhead(formData);
+      if (result.success) {
+        showToast(result.message || 'Kop surat berhasil diperbarui dan disinkronkan ke semua role!');
+      } else {
+        alert(result.message || 'Gagal memperbarui kop surat.');
+      }
+    } catch (err: any) {
+      alert('Terjadi kesalahan saat menyimpan: ' + (err?.message || ''));
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleReset = () => {
-    if (!isMasterAdmin) {
-      alert('Hanya Master Admin yang berhak mereset kop surat.');
+  const handleReset = async () => {
+    if (!canManageLetterhead) {
+      alert('Hanya Master Admin atau Direktur yang berhak mereset kop surat ke standar awal.');
       return;
     }
 
     if (
       window.confirm(
-        'Apakah Anda yakin ingin mengembalikan seluruh identitas kop surat dan logo ke standar default (PT GAP Consulting Indonesia)?'
+        'Apakah Anda yakin ingin mengembalikan seluruh identitas kop surat dan logo ke standar default? Perubahan akan langsung disinkronkan ke seluruh dokumen dan semua role.'
       )
     ) {
-      const result = resetCompanyLetterheadToDefault();
-      if (result.success) {
-        showToast(result.message || 'Kop surat dikembalikan ke default.');
+      setIsSaving(true);
+      try {
+        const result = await resetCompanyLetterheadToDefault();
+        if (result.success) {
+          showToast(result.message || 'Kop surat dikembalikan ke default.');
+        }
+      } catch (err: any) {
+        alert('Gagal mereset: ' + (err?.message || ''));
+      } finally {
+        setIsSaving(false);
       }
     }
   };
@@ -323,15 +393,28 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
           </button>
         </div>
 
-        {/* Access Warning if not Master Admin */}
-        {!isMasterAdmin && (
-          <div className="bg-rose-50 border-b border-rose-200 p-4 text-rose-800 flex items-center gap-3 text-xs">
-            <Lock className="w-5 h-5 text-rose-600 shrink-0" />
+        {/* Real-time Status / Role Banner */}
+        {!canManageLetterhead ? (
+          <div className="bg-amber-50 border-b border-amber-200 p-3.5 text-amber-900 flex items-center gap-3 text-xs">
+            <Lock className="w-5 h-5 text-amber-600 shrink-0" />
             <div>
-              <span className="font-bold">Akses Dibatasi: </span>
-              Anda sedang login sebagai <strong>{currentUser.role}</strong>. Hanya akun dengan wewenang{' '}
-              <strong>Master Admin (admin.master)</strong> yang diizinkan untuk menyimpan dan memperbarui kop surat serta logo resmi perusahaan.
+              <span className="font-bold">Mode Pratinjau Resmi (Read-Only): </span>
+              Anda sedang login sebagai <strong>{currentUser.name} ({currentUser.roleTitle || currentUser.role})</strong>. Anda dapat melihat pratinjau kop surat & logo dokumen resmi yang disinkronkan secara realtime dari manajemen.
             </div>
+          </div>
+        ) : (
+          <div className="bg-emerald-50 border-b border-emerald-200 px-5 py-2 text-emerald-900 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+              </span>
+              <span className="font-semibold">Sinkronisasi Cloud Realtime Aktif:</span>
+              <span className="text-emerald-800">Setiap perubahan logo & teks kop surat tersimpan ke Firestore dan tersinkron ke semua role seketika.</span>
+            </div>
+            <span className="font-mono text-[10px] font-bold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded border border-emerald-300/80">
+              Live Broadcast Channel: Ready
+            </span>
           </div>
         )}
 
@@ -954,9 +1037,9 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
           <button
             type="button"
             onClick={handleReset}
-            disabled={!isMasterAdmin}
+            disabled={!canManageLetterhead || isSaving}
             className="px-3 py-2 text-xs font-bold text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-200 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-            title="Kembalikan ke Nama & Logo Awal (PT GAP Consulting)"
+            title="Kembalikan ke Nama & Logo Awal"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset ke Standar Default
@@ -968,16 +1051,16 @@ export const CompanyLetterheadModal: React.FC<CompanyLetterheadModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
             >
-              Batal
+              Tutup
             </button>
             <button
               type="button"
               onClick={handleSave}
-              disabled={!isMasterAdmin || isSaving}
+              disabled={!canManageLetterhead || isSaving || isOptimizingLogo}
               className="px-5 py-2 text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
-              {isSaving ? 'Menyimpan...' : 'Simpan Perubahan Kop Surat'}
+              {isSaving ? 'Menyimpan & Menyelaraskan...' : isOptimizingLogo ? 'Mengompres Logo...' : 'Simpan Perubahan Kop Surat (Sync Realtime)'}
             </button>
           </div>
         </div>

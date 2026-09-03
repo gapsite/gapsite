@@ -29,10 +29,11 @@ import {
   User,
   Landmark,
   Printer,
+  Tag,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 
-export type MainTabType = 'projects' | 'dispositions' | 'finance' | 'receivables' | 'bank-loans' | 'payroll' | 'financial-reports' | 'documents' | 'calculator' | 'team';
+export type MainTabType = 'projects' | 'dispositions' | 'finance' | 'receivables' | 'bank-loans' | 'tax' | 'payroll' | 'financial-reports' | 'documents' | 'calculator' | 'team';
 
 interface SidebarProps {
   activeTab: MainTabType;
@@ -50,6 +51,7 @@ interface SidebarProps {
   onOpenDocTypeManager?: () => void;
   onOpenLetterheadManager?: () => void;
   onOpenTransactionCategoryManager?: () => void;
+  onOpenPaymentChannelManager?: () => void;
   onOpenUserProfile?: () => void;
 }
 
@@ -68,6 +70,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenServiceManager,
   onOpenDocTypeManager,
   onOpenLetterheadManager,
+  onOpenTransactionCategoryManager,
+  onOpenPaymentChannelManager,
   onOpenUserProfile,
 }) => {
   const {
@@ -85,7 +89,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     documentTypes,
     isMasterAdmin,
     hasPermission,
+    taxObligations,
+    transactionCategories,
+    paymentChannels,
   } = useProjects();
+
+  const isAdminMaster = Boolean(
+    currentUser && (
+      currentUser.username === 'admin.master' ||
+      currentUser.username === 'admin_master' ||
+      currentUser.role === 'MASTER_ADMIN' ||
+      currentUser.role === 'ADMIN_MASTER' ||
+      currentUser.id === 'usr-0' ||
+      isMasterAdmin
+    )
+  );
 
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -389,6 +407,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   )}
                 </button>
 
+                {/* Pajak & Hutang PPN/PPh Tab */}
+                <button
+                  id="nav-tax-management"
+                  onClick={() => handleNavClick('tax')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'tax'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Pajak & Kewajiban Perpajakan (PPN, PPh 21, PPh 23, PPh 4(2))"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Receipt className={`w-4 h-4 shrink-0 ${activeTab === 'tax' ? 'text-slate-950' : 'text-rose-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Pajak & PPN/PPh</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'tax'
+                          ? 'bg-slate-950 text-emerald-300'
+                          : taxObligations && taxObligations.filter((t) => t.status !== 'PAID').length > 0
+                          ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      {taxObligations ? taxObligations.filter((t) => t.status !== 'PAID').length : 0} Pajak
+                    </span>
+                  )}
+                </button>
+
                 {/* Pembayaran Gaji Karyawan & Payroll Tab */}
                 <button
                   onClick={() => handleNavClick('payroll')}
@@ -523,42 +571,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* SECTION 4: TOOLS & MASTER DATA */}
-          {(hasPermission('CALCULATE_TKDN') ||
-            hasPermission('EXPORT_AUDIT_REPORTS') ||
-            isMasterAdmin) && (
+          {/* SECTION 4: TOOLS & MASTER DATA (HANYA DITAMPILKAN KE admin.master) */}
+          {isAdminMaster && (
             <div>
               {(!isCollapsed || isMobileOpen) && (
-                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Tools & Master Data
-                </p>
+                <div className="px-3 flex items-center justify-between mb-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">
+                    Tools & Master Data
+                  </p>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                    admin.master
+                  </span>
+                </div>
               )}
               <div className="space-y-1">
                 {/* TKDN Estimator */}
-                {hasPermission('CALCULATE_TKDN') && (
-                  <button
-                    onClick={() => handleNavClick('calculator')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                      activeTab === 'calculator'
-                        ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                    } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
-                    title="TKDN Formula Estimator"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Calculator className={`w-4 h-4 shrink-0 ${activeTab === 'calculator' ? 'text-slate-950' : 'text-teal-400'}`} />
-                      {(!isCollapsed || isMobileOpen) && <span className="truncate">TKDN Estimator</span>}
-                    </div>
-                    {(!isCollapsed || isMobileOpen) && (
-                      <span className="text-[9px] bg-teal-950 text-teal-300 px-1.5 py-0.5 rounded font-mono font-semibold uppercase border border-teal-800">
-                        Formula
-                      </span>
-                    )}
-                  </button>
-                )}
+                <button
+                  onClick={() => handleNavClick('calculator')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'calculator'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="TKDN Formula Estimator"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Calculator className={`w-4 h-4 shrink-0 ${activeTab === 'calculator' ? 'text-slate-950' : 'text-teal-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">TKDN Estimator</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span className="text-[9px] bg-teal-950 text-teal-300 px-1.5 py-0.5 rounded font-mono font-semibold uppercase border border-teal-800">
+                      Formula
+                    </span>
+                  )}
+                </button>
 
                 {/* File & Report Export */}
-                {hasPermission('EXPORT_AUDIT_REPORTS') && (
+                {onOpenExport && (
                   <button
                     onClick={onOpenExport}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer ${
@@ -572,7 +621,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {/* Roles & Access Control (Master Admin Only) */}
-                {isMasterAdmin && onOpenRoleManager && (
+                {onOpenRoleManager && (
                   <button
                     onClick={onOpenRoleManager}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
@@ -606,7 +655,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {/* Statutory Consulting Services Catalog (Master Admin Only) */}
-                {isMasterAdmin && onOpenServiceManager && (
+                {onOpenServiceManager && (
                   <button
                     onClick={onOpenServiceManager}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-amber-300 hover:text-amber-100 hover:bg-amber-950/40 border border-amber-500/30 ${
@@ -627,7 +676,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {/* Required Document Types Master Repository (Master Admin Only) */}
-                {isMasterAdmin && onOpenDocTypeManager && (
+                {onOpenDocTypeManager && (
                   <button
                     onClick={onOpenDocTypeManager}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-blue-300 hover:text-blue-100 hover:bg-blue-950/40 border border-blue-500/30 ${
@@ -647,15 +696,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 )}
 
-                {/* Kop Surat & Logo Perusahaan (Master Admin Only) */}
-                {isMasterAdmin && onOpenLetterheadManager && (
+                {/* Kategori Transaksi Master (admin.master Only) */}
+                {onOpenTransactionCategoryManager && (
+                  <button
+                    id="btn-sidebar-transaction-categories"
+                    onClick={onOpenTransactionCategoryManager}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-indigo-300 hover:text-indigo-100 hover:bg-indigo-950/40 border border-indigo-500/30 ${
+                      isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'
+                    }`}
+                    title="Master Kategori Pemasukan & Pengeluaran Keuangan (admin.master)"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Tag className="w-4 h-4 shrink-0 text-indigo-400" />
+                      {(!isCollapsed || isMobileOpen) && <span className="truncate">Kategori Transaksi</span>}
+                    </div>
+                    {(!isCollapsed || isMobileOpen) && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">
+                        {transactionCategories ? transactionCategories.length : 0} Kat
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* Saluran Pembayaran & Bank Master (admin.master Only) */}
+                {onOpenPaymentChannelManager && (
+                  <button
+                    id="btn-sidebar-payment-channels"
+                    onClick={onOpenPaymentChannelManager}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-sky-300 hover:text-sky-100 hover:bg-sky-950/40 border border-sky-500/30 ${
+                      isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'
+                    }`}
+                    title="Master Rekening Bank, Petty Cash & Saluran Pembayaran (admin.master)"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <CreditCard className="w-4 h-4 shrink-0 text-sky-400" />
+                      {(!isCollapsed || isMobileOpen) && <span className="truncate">Saluran Bank</span>}
+                    </div>
+                    {(!isCollapsed || isMobileOpen) && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800">
+                        {paymentChannels ? paymentChannels.length : 0} Rek
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* Kop Surat & Logo Perusahaan (admin.master Only) */}
+                {onOpenLetterheadManager && (
                   <button
                     id="btn-sidebar-letterhead-manager"
                     onClick={onOpenLetterheadManager}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-emerald-300 hover:text-emerald-100 hover:bg-emerald-950/40 border border-emerald-500/30 ${
                       isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'
                     }`}
-                    title="Kop Surat & Logo Dokumen Cetak (Hanya Master Admin)"
+                    title="Kop Surat & Logo Dokumen Cetak (Hanya admin.master)"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Printer className="w-4 h-4 shrink-0 text-emerald-400" />
@@ -769,6 +862,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span>Personalize My Profile</span>
                     </button>
                   )}
+
+                  {isAdminMaster && onOpenRoleManager && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenRoleManager();
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold text-purple-300 hover:text-purple-200 hover:bg-purple-950/50 rounded-lg transition-colors cursor-pointer border border-purple-800/60"
+                    >
+                      <span className="flex items-center gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Role & Access Manager</span>
+                      </span>
+                      <span className="text-[9px] bg-purple-950 text-purple-300 border border-purple-800 px-1.5 py-0.2 rounded font-mono">
+                        RBAC
+                      </span>
+                    </button>
+                  )}
+
+                  {isAdminMaster && onOpenLetterheadManager && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenLetterheadManager();
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold text-emerald-300 hover:text-emerald-200 hover:bg-emerald-950/50 rounded-lg transition-colors cursor-pointer border border-emerald-800/60"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Kop Surat & Logo</span>
+                      </span>
+                      <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.2 rounded font-mono">
+                        KOP
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {

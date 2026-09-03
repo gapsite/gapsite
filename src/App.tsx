@@ -1,34 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { ProjectProvider, useProjects } from './context/ProjectContext';
 import { Sidebar, MainTabType } from './components/Sidebar';
 import { Header } from './components/Header';
 import { KpiMetrics } from './components/KpiMetrics';
 import { FilterBar } from './components/FilterBar';
 import { ProjectTable } from './components/ProjectTable';
-import { ProjectKanban } from './components/ProjectKanban';
-import { ProjectGanttChart } from './components/ProjectGanttChart';
-import { ProjectDetailModal } from './components/ProjectDetailModal';
-import { JobDispositionModal } from './components/JobDispositionModal';
-import { JobDispositionBoard } from './components/JobDispositionBoard';
-import { DocumentManager } from './components/DocumentManager';
-import { TkdnCalculatorModal } from './components/TkdnCalculatorModal';
-import { NewProjectModal } from './components/NewProjectModal';
-import { TeamWorkloadView } from './components/TeamWorkloadView';
-import { ExportReportModal } from './components/ExportReportModal';
-import { FinancialManagement } from './components/finance/FinancialManagement';
-import { FinancialReportGenerator } from './components/finance/FinancialReportGenerator';
 import { LoginView } from './components/LoginView';
-import { RoleManagerModal } from './components/RoleManagerModal';
-import { ServiceTypeManagerModal } from './components/ServiceTypeManagerModal';
-import { DocumentTypeManagerModal } from './components/DocumentTypeManagerModal';
-import { UserProfileModal } from './components/UserProfileModal';
-import { CompanyLetterheadModal } from './components/CompanyLetterheadModal';
 import { RealtimeRoleToast } from './components/RealtimeRoleToast';
 import {
   ConsultingProject,
   JobDisposition,
   TeamMember,
 } from './types';
+
+// Dynamic imports (React.lazy) for heavy modules and views to optimize bundle chunking
+const ProjectKanban = React.lazy(() =>
+  import('./components/ProjectKanban').then((m) => ({ default: m.ProjectKanban }))
+);
+const ProjectGanttChart = React.lazy(() =>
+  import('./components/ProjectGanttChart').then((m) => ({ default: m.ProjectGanttChart }))
+);
+const ProjectDetailModal = React.lazy(() =>
+  import('./components/ProjectDetailModal').then((m) => ({ default: m.ProjectDetailModal }))
+);
+const JobDispositionModal = React.lazy(() =>
+  import('./components/JobDispositionModal').then((m) => ({ default: m.JobDispositionModal }))
+);
+const JobDispositionBoard = React.lazy(() =>
+  import('./components/JobDispositionBoard').then((m) => ({ default: m.JobDispositionBoard }))
+);
+const DocumentManager = React.lazy(() =>
+  import('./components/DocumentManager').then((m) => ({ default: m.DocumentManager }))
+);
+const TkdnCalculatorModal = React.lazy(() =>
+  import('./components/TkdnCalculatorModal').then((m) => ({ default: m.TkdnCalculatorModal }))
+);
+const NewProjectModal = React.lazy(() =>
+  import('./components/NewProjectModal').then((m) => ({ default: m.NewProjectModal }))
+);
+const TeamWorkloadView = React.lazy(() =>
+  import('./components/TeamWorkloadView').then((m) => ({ default: m.TeamWorkloadView }))
+);
+const ExportReportModal = React.lazy(() =>
+  import('./components/ExportReportModal').then((m) => ({ default: m.ExportReportModal }))
+);
+const FinancialManagement = React.lazy(() =>
+  import('./components/finance/FinancialManagement').then((m) => ({ default: m.FinancialManagement }))
+);
+const FinancialReportGenerator = React.lazy(() =>
+  import('./components/finance/FinancialReportGenerator').then((m) => ({ default: m.FinancialReportGenerator }))
+);
+const RoleManagerModal = React.lazy(() =>
+  import('./components/RoleManagerModal').then((m) => ({ default: m.RoleManagerModal }))
+);
+const ServiceTypeManagerModal = React.lazy(() =>
+  import('./components/ServiceTypeManagerModal').then((m) => ({ default: m.ServiceTypeManagerModal }))
+);
+const DocumentTypeManagerModal = React.lazy(() =>
+  import('./components/DocumentTypeManagerModal').then((m) => ({ default: m.DocumentTypeManagerModal }))
+);
+const UserProfileModal = React.lazy(() =>
+  import('./components/UserProfileModal').then((m) => ({ default: m.UserProfileModal }))
+);
+const CompanyLetterheadModal = React.lazy(() =>
+  import('./components/CompanyLetterheadModal').then((m) => ({ default: m.CompanyLetterheadModal }))
+);
+const TransactionCategoryManagerModal = React.lazy(() =>
+  import('./components/finance/TransactionCategoryManagerModal').then((m) => ({
+    default: m.TransactionCategoryManagerModal,
+  }))
+);
+const PaymentChannelManagerModal = React.lazy(() =>
+  import('./components/finance/PaymentChannelManagerModal').then((m) => ({
+    default: m.PaymentChannelManagerModal,
+  }))
+);
+
+const ModuleLoadingFallback: React.FC = () => (
+  <div className="flex flex-col items-center justify-center p-12 text-slate-500 min-h-[300px] animate-in fade-in duration-200">
+    <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mb-3" />
+    <span className="text-xs font-medium text-slate-500">Memuat modul antarmuka...</span>
+  </div>
+);
 
 const DashboardContent: React.FC = () => {
   const { selectedProject, setSelectedProjectId, isAuthenticated, hasPermission } = useProjects();
@@ -53,6 +106,8 @@ const DashboardContent: React.FC = () => {
   const [isDocTypeManagerOpen, setIsDocTypeManagerOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isCompanyLetterheadOpen, setIsCompanyLetterheadOpen] = useState(false);
+  const [isTransactionCategoryManagerOpen, setIsTransactionCategoryManagerOpen] = useState(false);
+  const [isPaymentChannelManagerOpen, setIsPaymentChannelManagerOpen] = useState(false);
 
   // Selected state for disposition modal
   const [dispositionTargetProject, setDispositionTargetProject] = useState<ConsultingProject | null>(null);
@@ -105,6 +160,8 @@ const DashboardContent: React.FC = () => {
         onOpenServiceManager={() => setIsServiceTypeManagerOpen(true)}
         onOpenDocTypeManager={() => setIsDocTypeManagerOpen(true)}
         onOpenLetterheadManager={() => setIsCompanyLetterheadOpen(true)}
+        onOpenTransactionCategoryManager={() => setIsTransactionCategoryManagerOpen(true)}
+        onOpenPaymentChannelManager={() => setIsPaymentChannelManagerOpen(true)}
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
       />
 
@@ -131,12 +188,15 @@ const DashboardContent: React.FC = () => {
           onOpenServiceManager={() => setIsServiceTypeManagerOpen(true)}
           onOpenDocTypeManager={() => setIsDocTypeManagerOpen(true)}
           onOpenLetterheadManager={() => setIsCompanyLetterheadOpen(true)}
+          onOpenTransactionCategoryManager={() => setIsTransactionCategoryManagerOpen(true)}
+          onOpenPaymentChannelManager={() => setIsPaymentChannelManagerOpen(true)}
           onOpenUserProfile={() => setIsUserProfileOpen(true)}
         />
 
         {/* Main Workspace Body */}
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0 print:m-0 print:max-w-none">
-          {/* TAB 1: PROJECTS CRM DASHBOARD */}
+          <Suspense fallback={<ModuleLoadingFallback />}>
+            {/* TAB 1: PROJECTS CRM DASHBOARD */}
           {activeTab === 'projects' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               {/* Executive Summary Metrics Ribbon */}
@@ -220,6 +280,19 @@ const DashboardContent: React.FC = () => {
             </div>
           )}
 
+          {/* TAB 3E: TAX & STATUTORY OBLIGATIONS (PPN & PPh) */}
+          {activeTab === 'tax' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="TAX_MANAGEMENT"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
           {/* TAB 3C: EMPLOYEE SALARY & PAYROLL MANAGEMENT */}
           {activeTab === 'payroll' && (
             <div className="animate-in fade-in duration-150">
@@ -266,6 +339,7 @@ const DashboardContent: React.FC = () => {
               <TeamWorkloadView onAssignToMember={handleAssignToTeamMember} />
             </div>
           )}
+          </Suspense>
         </main>
 
         {/* Admin Footer */}
@@ -277,76 +351,90 @@ const DashboardContent: React.FC = () => {
       </div>
 
       {/* MODALS */}
-      {/* 1. Project Detail Workspace Modal */}
-      {selectedProject && (
-        <ProjectDetailModal
-          project={selectedProject}
-          onClose={() => setSelectedProjectId(null)}
-          onOpenNewDispositionForProject={handleOpenDispositionForProject}
+      <Suspense fallback={null}>
+        {/* 1. Project Detail Workspace Modal */}
+        {selectedProject && (
+          <ProjectDetailModal
+            project={selectedProject}
+            onClose={() => setSelectedProjectId(null)}
+            onOpenNewDispositionForProject={handleOpenDispositionForProject}
+          />
+        )}
+
+        {/* 2. Job Disposition / Task Assignment Modal */}
+        <JobDispositionModal
+          isOpen={isNewDispositionOpen}
+          onClose={() => setIsNewDispositionOpen(false)}
+          initialProject={dispositionTargetProject}
+          editingDisposition={editingDisposition}
         />
-      )}
 
-      {/* 2. Job Disposition / Task Assignment Modal */}
-      <JobDispositionModal
-        isOpen={isNewDispositionOpen}
-        onClose={() => setIsNewDispositionOpen(false)}
-        initialProject={dispositionTargetProject}
-        editingDisposition={editingDisposition}
-      />
-
-      {/* 3. New Project Registration Modal */}
-      <NewProjectModal
-        isOpen={isNewProjectOpen}
-        onClose={() => setIsNewProjectOpen(false)}
-      />
-
-      {/* 4. Quick TKDN Formula Calculator Modal (when triggered via header) */}
-      {isTkdnCalcOpen && (
-        <TkdnCalculatorModal
-          isOpen={isTkdnCalcOpen}
-          onClose={() => setIsTkdnCalcOpen(false)}
+        {/* 3. New Project Registration Modal */}
+        <NewProjectModal
+          isOpen={isNewProjectOpen}
+          onClose={() => setIsNewProjectOpen(false)}
         />
-      )}
 
-      {/* 5. Export File & Report Modal */}
-      <ExportReportModal
-        isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
-        onOpenFinancialReports={() => {
-          setIsExportOpen(false);
-          setActiveTab('financial-reports');
-        }}
-      />
+        {/* 4. Quick TKDN Formula Calculator Modal (when triggered via header) */}
+        {isTkdnCalcOpen && (
+          <TkdnCalculatorModal
+            isOpen={isTkdnCalcOpen}
+            onClose={() => setIsTkdnCalcOpen(false)}
+          />
+        )}
 
-      {/* 6. Role & Access Control Manager Modal */}
-      <RoleManagerModal
-        isOpen={isRoleManagerOpen}
-        onClose={() => setIsRoleManagerOpen(false)}
-      />
+        {/* 5. Export File & Report Modal */}
+        <ExportReportModal
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
+          onOpenFinancialReports={() => {
+            setIsExportOpen(false);
+            setActiveTab('financial-reports');
+          }}
+        />
 
-      {/* 7. Statutory Consulting Services Catalog Manager Modal (admin.master exclusive) */}
-      <ServiceTypeManagerModal
-        isOpen={isServiceTypeManagerOpen}
-        onClose={() => setIsServiceTypeManagerOpen(false)}
-      />
+        {/* 6. Role & Access Control Manager Modal */}
+        <RoleManagerModal
+          isOpen={isRoleManagerOpen}
+          onClose={() => setIsRoleManagerOpen(false)}
+        />
 
-      {/* 8. Required Document Types Master Catalog Modal (admin.master exclusive) */}
-      <DocumentTypeManagerModal
-        isOpen={isDocTypeManagerOpen}
-        onClose={() => setIsDocTypeManagerOpen(false)}
-      />
+        {/* 7. Statutory Consulting Services Catalog Manager Modal (admin.master exclusive) */}
+        <ServiceTypeManagerModal
+          isOpen={isServiceTypeManagerOpen}
+          onClose={() => setIsServiceTypeManagerOpen(false)}
+        />
 
-      {/* 9. Self-Service User Personalization & Profile Modal (Accessible for EVERY role) */}
-      <UserProfileModal
-        isOpen={isUserProfileOpen}
-        onClose={() => setIsUserProfileOpen(false)}
-      />
+        {/* 8. Required Document Types Master Catalog Modal (admin.master exclusive) */}
+        <DocumentTypeManagerModal
+          isOpen={isDocTypeManagerOpen}
+          onClose={() => setIsDocTypeManagerOpen(false)}
+        />
 
-      {/* 10. Company Letterhead & Printable Document Identity Modal (admin.master exclusive) */}
-      <CompanyLetterheadModal
-        isOpen={isCompanyLetterheadOpen}
-        onClose={() => setIsCompanyLetterheadOpen(false)}
-      />
+        {/* 9. Self-Service User Personalization & Profile Modal (Accessible for EVERY role) */}
+        <UserProfileModal
+          isOpen={isUserProfileOpen}
+          onClose={() => setIsUserProfileOpen(false)}
+        />
+
+        {/* 10. Company Letterhead & Printable Document Identity Modal (admin.master exclusive) */}
+        <CompanyLetterheadModal
+          isOpen={isCompanyLetterheadOpen}
+          onClose={() => setIsCompanyLetterheadOpen(false)}
+        />
+
+        {/* 11. Transaction Category Master Manager Modal */}
+        <TransactionCategoryManagerModal
+          isOpen={isTransactionCategoryManagerOpen}
+          onClose={() => setIsTransactionCategoryManagerOpen(false)}
+        />
+
+        {/* 12. Payment Channel & Bank Accounts Manager Modal */}
+        <PaymentChannelManagerModal
+          isOpen={isPaymentChannelManagerOpen}
+          onClose={() => setIsPaymentChannelManagerOpen(false)}
+        />
+      </Suspense>
     </div>
   );
 };

@@ -31,22 +31,69 @@
   background: rgba(100, 116, 139, 0.6);
 }
 
-/* Print Optimization Rules */
+/* Print Optimization Rules for Pristine A4 Layout */
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm 12mm 12mm;
+}
+
 @media print {
+  /* 1. Global Reset & Hide Interactive Elements */
   header,
   aside,
   nav,
-  .print\:hidden {
+  footer,
+  .print\:hidden,
+  [data-print-hidden="true"],
+  .no-print {
     display: none !important;
   }
 
+  /* 2. Base Page Geometry for Standard A4 */
+  html,
   body {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
     background: #ffffff !important;
     color: #0f172a !important;
     padding: 0 !important;
     margin: 0 !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* 3. Browser Print Engine Overflow Bug Fix:
+     When any parent element has overflow:hidden/auto, browser pagination engines
+     slice child divs and cards right across text instead of paginating cleanly. */
+  html,
+  body,
+  #root,
+  main,
+  div,
+  section,
+  article,
+  .overflow-hidden,
+  .overflow-x-auto,
+  .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Modal Containers Reset for Clean Printing */
+  div.fixed.inset-0 {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
   }
 
   main {
@@ -56,8 +103,134 @@
     width: 100% !important;
   }
 
-  @page {
-    margin: 12mm 15mm;
-    size: auto;
+  /* 4. Remove UI Screen Shadows */
+  .shadow-2xs,
+  .shadow-xs,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: none !important;
+  }
+
+  /* 5. ATOMIC CONTAINERS: PREVENT SPLITTING MID-ELEMENT (Fixes cards cut in half) */
+  .print-avoid-break,
+  .break-inside-avoid,
+  .print\:break-inside-avoid,
+  .grid > div,
+  [class*="grid-cols"] > div,
+  .rounded-xl,
+  .rounded-2xl,
+  figure,
+  blockquote {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Compact spacing for printed cards */
+  .grid > div,
+  [class*="grid-cols"] > div {
+    margin-bottom: 0 !important;
+  }
+
+  /* Force 4-column metric and summary strips to stay 4-column on A4 width */
+  .grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4,
+  .grid-cols-2.sm\:grid-cols-4,
+  .print-grid-cols-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* 6-column KPI grid in Executive Dashboard Summary */
+  .grid-cols-2.md\:grid-cols-3.lg\:grid-cols-6 {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* 6. HEADINGS & SECTION BANNERS (Orphan Prevention) */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .report-section-header,
+  .print-avoid-break-after,
+  .bg-slate-900.text-white {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* 7. MULTI-PAGE TABLE FORMATTING */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    margin-bottom: 6px !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  tbody {
+    break-inside: auto !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  th,
+  td {
+    padding-top: 3.5px !important;
+    padding-bottom: 3.5px !important;
+    word-break: normal !important;
+  }
+
+  /* 8. SIGNATURE & APPROVAL BLOCK */
+  .print-signature-block,
+  .signature-block,
+  .print-signatures {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-top: 18px !important;
+    padding-top: 10px !important;
+  }
+
+  /* 9. PAGE-BREAK CONTROL UTILITIES */
+  .page-break-before,
+  .print\:break-before-page {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  .page-break-after,
+  .print\:break-after-page {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .page-break-avoid,
+  .print\:break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 }
