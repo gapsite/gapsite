@@ -359,6 +359,10 @@ interface ProjectContextType {
       ntpnNumber?: string;
       billingCode?: string;
       notes?: string;
+      paidByClient?: boolean;
+      clientWithholdingNumber?: string;
+      clientWithholdingDate?: string;
+      withholdingTaxPayerName?: string;
     }
   ) => { success: boolean; message?: string; transactionId?: string };
   resetTaxObligationsToDefault: () => { success: boolean; message?: string };
@@ -893,6 +897,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               completedTaskCount: m.completedTaskCount ?? 0,
               permissions: m.permissions && m.permissions.length > 0 ? m.permissions : INITIAL_TEAM_MEMBERS[0].permissions,
               avatar: m.avatar || INITIAL_TEAM_MEMBERS[0].avatar,
+              nik: m.nik || '3171012304950001',
+              idType: m.idType || 'NIK',
+              bankName: m.bankName || 'Bank Mandiri',
+              bankAccountNumber: m.bankAccountNumber || '122-00-983100-2',
+              bankAccountHolder: m.bankAccountHolder || 'Adryan kelvianto',
             };
           }
           return m;
@@ -2688,8 +2697,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       lastLoginAt: 'Never',
       registeredAt: userData.registeredAt || 'Just now',
     };
-    setTeamMembers((prev) => [...prev, newUser]);
+
+    setTeamMembers((prev) => {
+      const next = [...prev.filter((m) => m.id !== newId), newUser];
+      try {
+        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+
     saveUserToFirestore(newUser);
+    broadcastLiveUserUpdate(newUser);
+    broadcastLiveDataUpdate('MEMBERS', [...teamMembers.filter((m) => m.id !== newId), newUser]);
     return newUser;
   };
 
@@ -2701,6 +2722,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       department?: string;
       permissions?: import('../types').UserPermission[];
       notes?: string;
+      nik?: string;
+      idType?: 'NIK' | 'KTP' | 'PASPOR';
+      bankName?: string;
+      bankAccountNumber?: string;
+      bankAccountHolder?: string;
     }
   ) => {
     // Statutory Security Gate: ONLY admin.master / MASTER_ADMIN can verify & accept new registrations
@@ -2709,33 +2735,41 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    let verifiedMember: TeamMember | null = null;
-    setTeamMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== userId) return m;
-        const updated: TeamMember = {
-          ...m,
-          status: 'ACTIVE',
-          role: options?.role || m.role,
-          roleTitle: options?.roleTitle || m.roleTitle,
-          department: options?.department || m.department,
-          permissions: options?.permissions || m.permissions,
-          verifiedBy: currentUser.name || 'Adryan kelvianto (Master Admin)',
-          verifiedAt: 'Just now',
-          verificationNotes: options?.notes || 'Statutory verification authorized & accepted by Master Admin (admin.master)',
-        };
-        verifiedMember = updated;
-        if (currentUser.id === userId) {
-          setCurrentUser(updated);
-        }
-        return updated;
-      })
-    );
+    const target = teamMembers.find((m) => m.id === userId);
+    if (!target) return;
 
-    if (verifiedMember) {
-      saveUserToFirestore(verifiedMember);
-      broadcastLiveUserUpdate(verifiedMember);
+    const verifiedMember: TeamMember = {
+      ...target,
+      status: 'ACTIVE',
+      role: options?.role || target.role,
+      roleTitle: options?.roleTitle || target.roleTitle,
+      department: options?.department || target.department,
+      permissions: options?.permissions || target.permissions,
+      nik: options?.nik !== undefined ? options.nik : target.nik,
+      idType: options?.idType !== undefined ? options.idType : target.idType,
+      bankName: options?.bankName !== undefined ? options.bankName : target.bankName,
+      bankAccountNumber: options?.bankAccountNumber !== undefined ? options.bankAccountNumber : target.bankAccountNumber,
+      bankAccountHolder: options?.bankAccountHolder !== undefined ? options.bankAccountHolder : target.bankAccountHolder,
+      verifiedBy: currentUser.name || 'Adryan kelvianto (Master Admin)',
+      verifiedAt: 'Just now',
+      verificationNotes: options?.notes || 'Statutory verification authorized & accepted by Master Admin (admin.master)',
+    };
+
+    const nextMembers = teamMembers.map((m) => (m.id === userId ? verifiedMember : m));
+    setTeamMembers(nextMembers);
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+    } catch (e) {
+      console.error(e);
     }
+
+    if (currentUser.id === userId) {
+      setCurrentUser(verifiedMember);
+    }
+
+    saveUserToFirestore(verifiedMember);
+    broadcastLiveUserUpdate(verifiedMember);
+    broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
 
   const rejectUser = (userId: string, _reason?: string) => {
@@ -2744,8 +2778,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('Unauthorized: Only Master Admin (admin.master / Adryan kelvianto) can decline or reject new registered members.');
       return;
     }
-    setTeamMembers((prev) => prev.filter((m) => m.id !== userId));
+    const nextMembers = teamMembers.filter((m) => m.id !== userId);
+    setTeamMembers(nextMembers);
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+    } catch (e) {
+      console.error(e);
+    }
     deleteUserFromFirestore(userId);
+    broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
 
   const changeMemberRole = (
@@ -2837,58 +2878,69 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ],
     };
 
-    let updatedMember: TeamMember | null = null;
-    setTeamMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== userId) return m;
-        const updated: TeamMember = {
-          ...m,
-          role: newRole,
-          roleTitle: options?.roleTitle || DEFAULT_TITLES[newRole] || m.roleTitle,
-          department: options?.department || m.department,
-          permissions: options?.permissions || DEFAULT_PERMISSIONS[newRole] || m.permissions,
-          verificationNotes: options?.notes || `Role reassigned to ${newRole} by Master Admin (${currentUser.name})`,
-        };
-        updatedMember = updated;
-        const isCurrentActive =
-          currentUser.id === userId ||
-          (currentUser.email && m.email && currentUser.email.toLowerCase() === m.email.toLowerCase()) ||
-          (currentUser.username && m.username && currentUser.username.toLowerCase() === m.username.toLowerCase());
-        if (isCurrentActive) {
-          setCurrentUser(updated);
-        }
-        return updated;
-      })
-    );
+    const target = teamMembers.find((m) => m.id === userId);
+    if (!target) return;
 
-    if (updatedMember) {
-      saveUserToFirestore(updatedMember);
-      broadcastLiveUserUpdate(updatedMember);
+    const roleDef = roleDefinitions[newRole] || DEFAULT_ROLE_DEFINITIONS[newRole];
+    const chosenTitle = options?.roleTitle || roleDef?.title || DEFAULT_TITLES[newRole] || target.roleTitle;
+    const chosenDept = options?.department || roleDef?.department || target.department;
+    const chosenPermissions = options?.permissions || roleDef?.defaultPermissions || target.permissions;
+
+    const updatedMember: TeamMember = {
+      ...target,
+      role: newRole,
+      roleTitle: chosenTitle,
+      department: chosenDept,
+      permissions: chosenPermissions,
+      verificationNotes: options?.notes || `Role reassigned to ${newRole} by Master Admin (${currentUser.name})`,
+    };
+
+    const nextMembers = teamMembers.map((m) => (m.id === userId ? updatedMember : m));
+    setTeamMembers(nextMembers);
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+    } catch (e) {
+      console.error(e);
     }
+
+    const isCurrentActive =
+      currentUser.id === userId ||
+      (currentUser.email && target.email && currentUser.email.toLowerCase() === target.email.toLowerCase()) ||
+      (currentUser.username && target.username && currentUser.username.toLowerCase() === target.username.toLowerCase());
+    if (isCurrentActive) {
+      setCurrentUser(updatedMember);
+    }
+
+    saveUserToFirestore(updatedMember);
+    broadcastLiveUserUpdate(updatedMember);
+    broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
 
   const updateUser = (id: string, updates: Partial<TeamMember>) => {
-    let updatedMember: TeamMember | null = null;
-    setTeamMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== id) return m;
-        const updated = { ...m, ...updates };
-        updatedMember = updated;
-        const isCurrentActive =
-          currentUser.id === id ||
-          (currentUser.email && m.email && currentUser.email.toLowerCase() === m.email.toLowerCase()) ||
-          (currentUser.username && m.username && currentUser.username.toLowerCase() === m.username.toLowerCase());
-        if (isCurrentActive) {
-          setCurrentUser(updated);
-        }
-        return updated;
-      })
-    );
+    const target = teamMembers.find((m) => m.id === id);
+    const updatedMember: TeamMember = target
+      ? { ...target, ...updates }
+      : ({ ...updates, id } as TeamMember);
 
-    if (updatedMember) {
-      saveUserToFirestore(updatedMember);
-      broadcastLiveUserUpdate(updatedMember);
+    const nextMembers = teamMembers.map((m) => (m.id === id ? { ...m, ...updates } : m));
+    setTeamMembers(nextMembers);
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+    } catch (e) {
+      console.error(e);
     }
+
+    const isCurrentActive =
+      currentUser.id === id ||
+      (currentUser.email && target?.email && currentUser.email.toLowerCase() === target.email.toLowerCase()) ||
+      (currentUser.username && target?.username && currentUser.username.toLowerCase() === target.username.toLowerCase());
+    if (isCurrentActive) {
+      setCurrentUser((curr) => ({ ...curr, ...updates }));
+    }
+
+    saveUserToFirestore(updatedMember);
+    broadcastLiveUserUpdate(updatedMember);
+    broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
 
   const deleteUser = (id: string): { success: boolean; message?: string } => {
@@ -2972,44 +3024,47 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const toggleUserStatus = (id: string) => {
-    let toggledMember: TeamMember | null = null;
-    setTeamMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== id) return m;
-        let newStatus: TeamMember['status'] = 'ACTIVE';
-        if (m.status === 'ACTIVE') newStatus = 'INACTIVE';
-        else if (m.status === 'INACTIVE') newStatus = 'ACTIVE';
-        else if (m.status === 'PENDING_VERIFICATION') {
-          if (!isMasterAdmin) {
-            console.warn('Unauthorized: Only Master Admin can verify and activate pending members.');
-            return m;
-          }
-          newStatus = 'ACTIVE';
-        }
+    const target = teamMembers.find((m) => m.id === id);
+    if (!target) return;
 
-        const updated: TeamMember = {
-          ...m,
-          status: newStatus,
-          ...(m.status === 'PENDING_VERIFICATION' && newStatus === 'ACTIVE'
-            ? {
-                verifiedBy: currentUser.name || 'Adryan kelvianto (Master Admin)',
-                verifiedAt: 'Just now',
-                verificationNotes: 'Activated via Status Toggle by Master Admin (admin.master)',
-              }
-            : {}),
-        };
-        toggledMember = updated;
-        if (currentUser.id === id) {
-          setCurrentUser(updated);
-        }
-        return updated;
-      })
-    );
-
-    if (toggledMember) {
-      saveUserToFirestore(toggledMember);
-      broadcastLiveUserUpdate(toggledMember);
+    let newStatus: TeamMember['status'] = 'ACTIVE';
+    if (target.status === 'ACTIVE') newStatus = 'INACTIVE';
+    else if (target.status === 'INACTIVE') newStatus = 'ACTIVE';
+    else if (target.status === 'PENDING_VERIFICATION') {
+      if (!isMasterAdmin) {
+        console.warn('Unauthorized: Only Master Admin can verify and activate pending members.');
+        return;
+      }
+      newStatus = 'ACTIVE';
     }
+
+    const toggledMember: TeamMember = {
+      ...target,
+      status: newStatus,
+      ...(target.status === 'PENDING_VERIFICATION' && newStatus === 'ACTIVE'
+        ? {
+            verifiedBy: currentUser.name || 'Adryan kelvianto (Master Admin)',
+            verifiedAt: 'Just now',
+            verificationNotes: 'Activated via Status Toggle by Master Admin (admin.master)',
+          }
+        : {}),
+    };
+
+    const nextMembers = teamMembers.map((m) => (m.id === id ? toggledMember : m));
+    setTeamMembers(nextMembers);
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (currentUser.id === id) {
+      setCurrentUser(toggledMember);
+    }
+
+    saveUserToFirestore(toggledMember);
+    broadcastLiveUserUpdate(toggledMember);
+    broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
 
   // Master Admin function to rename/update Role Position Metadata
@@ -3027,56 +3082,53 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const trimmedDept = updates.department?.trim();
     const trimmedDesc = updates.desc?.trim();
 
-    let updatedDefinitions: RoleDefinitionsMap;
+    const existing = roleDefinitions[role] || DEFAULT_ROLE_DEFINITIONS[role];
+    const updatedRole: RoleDefinition = {
+      ...existing,
+      ...(trimmedTitle ? { title: trimmedTitle } : {}),
+      ...(trimmedDept !== undefined ? { department: trimmedDept } : {}),
+      ...(trimmedDesc !== undefined ? { desc: trimmedDesc } : {}),
+    };
+    const updatedDefinitions: RoleDefinitionsMap = {
+      ...roleDefinitions,
+      [role]: updatedRole,
+    };
 
-    setRoleDefinitions((prev) => {
-      const existing = prev[role] || DEFAULT_ROLE_DEFINITIONS[role];
-      const updatedRole: RoleDefinition = {
-        ...existing,
-        ...(trimmedTitle ? { title: trimmedTitle } : {}),
-        ...(trimmedDept !== undefined ? { department: trimmedDept } : {}),
-        ...(trimmedDesc !== undefined ? { desc: trimmedDesc } : {}),
-      };
-      updatedDefinitions = {
-        ...prev,
-        [role]: updatedRole,
-      };
-      try {
-        localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(updatedDefinitions));
-      } catch (err) {
-        console.error('Failed to save role definitions to localStorage:', err);
-      }
-      return updatedDefinitions;
-    });
+    setRoleDefinitions(updatedDefinitions);
+    try {
+      localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(updatedDefinitions));
+    } catch (err) {
+      console.error('Failed to save role definitions to localStorage:', err);
+    }
 
-    saveSettingsToFirestore('role_definitions', updatedDefinitions!);
+    saveSettingsToFirestore('role_definitions', updatedDefinitions);
+    broadcastLiveDataUpdate('ROLE_DEFINITIONS', updatedDefinitions);
 
     if (updateExistingMembers) {
-      setTeamMembers((prev) => {
-        const updatedMembers = prev.map((member) => {
-          if (member.role === role) {
-            const updated: TeamMember = {
-              ...member,
-              ...(trimmedTitle ? { roleTitle: trimmedTitle } : {}),
-              ...(trimmedDept !== undefined ? { department: trimmedDept } : {}),
-            };
-            if (currentUser.id === member.id) {
-              setCurrentUser(updated);
-            }
-            saveUserToFirestore(updated);
-            broadcastLiveUserUpdate(updated);
-            return updated;
+      const updatedMembers = teamMembers.map((member) => {
+        if (member.role === role) {
+          const updated: TeamMember = {
+            ...member,
+            ...(trimmedTitle ? { roleTitle: trimmedTitle } : {}),
+            ...(trimmedDept !== undefined ? { department: trimmedDept } : {}),
+          };
+          if (currentUser.id === member.id) {
+            setCurrentUser(updated);
           }
-          return member;
-        });
-
-        try {
-          localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
-        } catch (err) {
-          console.error('Failed to save members to localStorage:', err);
+          saveUserToFirestore(updated);
+          broadcastLiveUserUpdate(updated);
+          return updated;
         }
-        return updatedMembers;
+        return member;
       });
+
+      setTeamMembers(updatedMembers);
+      try {
+        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
+      } catch (err) {
+        console.error('Failed to save members to localStorage:', err);
+      }
+      broadcastLiveDataUpdate('MEMBERS', updatedMembers);
     }
   };
 
@@ -3092,6 +3144,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error(err);
     }
     saveSettingsToFirestore('role_definitions', DEFAULT_ROLE_DEFINITIONS);
+    broadcastLiveDataUpdate('ROLE_DEFINITIONS', DEFAULT_ROLE_DEFINITIONS);
   };
 
   // Master Admin function to edit capabilities / permissions on each role
@@ -3107,34 +3160,50 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
     }
 
-    setRoleDefinitions((prev) => {
-      const existing = prev[role] || DEFAULT_ROLE_DEFINITIONS[role];
-      const updatedRole: RoleDefinition = {
-        ...existing,
-        defaultPermissions: permissions,
-      };
-      return {
-        ...prev,
-        [role]: updatedRole,
-      };
-    });
+    const existing = roleDefinitions[role] || DEFAULT_ROLE_DEFINITIONS[role];
+    const updatedRole: RoleDefinition = {
+      ...existing,
+      defaultPermissions: permissions,
+    };
+    const updatedDefinitions: RoleDefinitionsMap = {
+      ...roleDefinitions,
+      [role]: updatedRole,
+    };
+
+    setRoleDefinitions(updatedDefinitions);
+    try {
+      localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(updatedDefinitions));
+    } catch (err) {
+      console.error('Failed to save role definitions to localStorage:', err);
+    }
+
+    saveSettingsToFirestore('role_definitions', updatedDefinitions);
+    broadcastLiveDataUpdate('ROLE_DEFINITIONS', updatedDefinitions);
 
     if (updateExistingMembers) {
-      setTeamMembers((prev) =>
-        prev.map((member) => {
-          if (member.role === role) {
-            const updated: TeamMember = {
-              ...member,
-              permissions: permissions,
-            };
-            if (currentUser.id === member.id) {
-              setCurrentUser(updated);
-            }
-            return updated;
+      const updatedMembers = teamMembers.map((member) => {
+        if (member.role === role) {
+          const updated: TeamMember = {
+            ...member,
+            permissions: permissions,
+          };
+          if (currentUser.id === member.id) {
+            setCurrentUser(updated);
           }
-          return member;
-        })
-      );
+          saveUserToFirestore(updated);
+          broadcastLiveUserUpdate(updated);
+          return updated;
+        }
+        return member;
+      });
+
+      setTeamMembers(updatedMembers);
+      try {
+        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
+      } catch (err) {
+        console.error('Failed to save members to localStorage:', err);
+      }
+      broadcastLiveDataUpdate('MEMBERS', updatedMembers);
     }
 
     return {
@@ -3155,22 +3224,38 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     } else {
       setRoleDefinitions(DEFAULT_ROLE_DEFINITIONS);
-      setTeamMembers((prev) =>
-        prev.map((member) => {
-          const defaultRole = DEFAULT_ROLE_DEFINITIONS[member.role];
-          if (defaultRole) {
-            const updated = {
-              ...member,
-              permissions: defaultRole.defaultPermissions,
-            };
-            if (currentUser.id === member.id) {
-              setCurrentUser(updated);
-            }
-            return updated;
+      try {
+        localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(DEFAULT_ROLE_DEFINITIONS));
+      } catch (err) {
+        console.error(err);
+      }
+      saveSettingsToFirestore('role_definitions', DEFAULT_ROLE_DEFINITIONS);
+      broadcastLiveDataUpdate('ROLE_DEFINITIONS', DEFAULT_ROLE_DEFINITIONS);
+
+      const updatedMembers = teamMembers.map((member) => {
+        const defaultRole = DEFAULT_ROLE_DEFINITIONS[member.role];
+        if (defaultRole) {
+          const updated = {
+            ...member,
+            permissions: defaultRole.defaultPermissions,
+          };
+          if (currentUser.id === member.id) {
+            setCurrentUser(updated);
           }
-          return member;
-        })
-      );
+          saveUserToFirestore(updated);
+          broadcastLiveUserUpdate(updated);
+          return updated;
+        }
+        return member;
+      });
+
+      setTeamMembers(updatedMembers);
+      try {
+        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
+      } catch (err) {
+        console.error(err);
+      }
+      broadcastLiveDataUpdate('MEMBERS', updatedMembers);
     }
   };
 
@@ -3179,11 +3264,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       alert('Only Master Admin (admin.master) has authority to edit Role & Position Governance name and description.');
       return;
     }
-    setRoleGovernanceMeta((prev) => ({
-      ...prev,
+    const nextMeta = {
+      ...roleGovernanceMeta,
       ...(updates.title?.trim() ? { title: updates.title.trim() } : {}),
       ...(updates.desc?.trim() ? { desc: updates.desc.trim() } : {}),
-    }));
+    };
+    setRoleGovernanceMeta(nextMeta);
+    try {
+      localStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(nextMeta));
+    } catch (e) {
+      console.error(e);
+    }
+    saveSettingsToFirestore('role_governance_meta', nextMeta);
+    broadcastLiveDataUpdate('ROLE_GOVERNANCE_META', nextMeta);
   };
 
   const resetRoleGovernanceMeta = () => {
@@ -3192,6 +3285,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
     setRoleGovernanceMeta(DEFAULT_ROLE_GOVERNANCE_META);
+    try {
+      localStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(DEFAULT_ROLE_GOVERNANCE_META));
+    } catch (e) {
+      console.error(e);
+    }
+    saveSettingsToFirestore('role_governance_meta', DEFAULT_ROLE_GOVERNANCE_META);
+    broadcastLiveDataUpdate('ROLE_GOVERNANCE_META', DEFAULT_ROLE_GOVERNANCE_META);
   };
 
   // Consulting Services Master Data Management (admin.master exclusive)
@@ -5153,6 +5253,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ntpnNumber?: string;
       billingCode?: string;
       notes?: string;
+      paidByClient?: boolean;
+      clientWithholdingNumber?: string;
+      clientWithholdingDate?: string;
+      withholdingTaxPayerName?: string;
     }
   ): { success: boolean; message?: string; transactionId?: string } => {
     if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
@@ -5169,38 +5273,52 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const paymentAmount = target.remainingAmount > 0 ? target.remainingAmount : target.taxAmount;
+    const isPaidByClient = Boolean(options?.paidByClient);
     const paymentMethod = options?.channelId || target.paymentChannelId || 'BANK_TRANSFER_BRI';
     const payDate = options?.date || new Date().toISOString().slice(0, 10);
     const ntpn = options?.ntpnNumber?.trim();
     const billing = options?.billingCode?.trim() || target.billingCode;
     const customNotes = options?.notes?.trim();
+    const clientWithholdingNum = options?.clientWithholdingNumber?.trim() || ntpn;
+    const clientName = options?.withholdingTaxPayerName?.trim() || target.counterpartyName || 'Klien';
 
-    // 1. Create Cleared Expense Transaction in Cash Ledger under category based on taxType
-    const tx = addTransaction({
-      date: payDate,
-      type: 'EXPENSE',
-      category: target.taxType === 'PPN' ? 'PAJAK__PPN_11__' : 'TAX_PPH_PPN',
-      amountIDR: paymentAmount,
-      description: `Setoran Pajak ${target.taxType === 'PPN' ? 'PPN' : target.taxType} (${target.taxPeriod}) - ${target.title}`,
-      clientOrVendorName: target.counterpartyName || 'Kas Negara / KPP Pratama (DJP)',
-      paymentMethod: paymentMethod as any,
-      referenceNumber: ntpn ? `NTPN-${ntpn}` : billing ? `BILL-${billing}` : `TAX-${target.id.slice(-4).toUpperCase()}`,
-      status: 'CLEARED',
-      notes: `${customNotes ? customNotes + ' | ' : ''}NTPN: ${ntpn || '-'} | Kode Billing: ${billing || '-'} | Pelunasan Kewajiban Pajak ${target.title}`,
-      recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
-    });
+    let txId: string | undefined = undefined;
 
-    // 2. Update Tax Obligation to PAID with NTPN & transaction linkage
+    // 1. If paid by company, create Cleared Expense Transaction in Cash Ledger under category based on taxType.
+    // If paid by client, DO NOT deduct company's cash/bank accounts!
+    if (!isPaidByClient) {
+      const tx = addTransaction({
+        date: payDate,
+        type: 'EXPENSE',
+        category: target.taxType === 'PPN' ? 'PAJAK__PPN_11__' : 'TAX_PPH_PPN',
+        amountIDR: paymentAmount,
+        description: `Setoran Pajak ${target.taxType === 'PPN' ? 'PPN' : target.taxType} (${target.taxPeriod}) - ${target.title}`,
+        clientOrVendorName: target.counterpartyName || 'Kas Negara / KPP Pratama (DJP)',
+        paymentMethod: paymentMethod as any,
+        referenceNumber: ntpn ? `NTPN-${ntpn}` : billing ? `BILL-${billing}` : `TAX-${target.id.slice(-4).toUpperCase()}`,
+        status: 'CLEARED',
+        notes: `${customNotes ? customNotes + ' | ' : ''}NTPN: ${ntpn || '-'} | Kode Billing: ${billing || '-'} | Pelunasan Kewajiban Pajak ${target.title}`,
+        recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
+      });
+      txId = tx?.id;
+    }
+
+    // 2. Update Tax Obligation to PAID with NTPN & transaction linkage / client withholding info
     const updatedTaxObj: TaxObligation = {
       ...target,
       paidAmount: (target.paidAmount || 0) + paymentAmount,
       remainingAmount: 0,
       status: 'PAID',
       paidAt: payDate,
+      paidByClient: isPaidByClient,
+      clientWithholdingNumber: isPaidByClient ? (clientWithholdingNum || target.clientWithholdingNumber) : target.clientWithholdingNumber,
+      clientWithholdingDate: isPaidByClient ? payDate : target.clientWithholdingDate,
+      withholdingTaxPayerName: isPaidByClient ? clientName : target.withholdingTaxPayerName,
       ntpnNumber: ntpn || target.ntpnNumber,
       billingCode: billing,
-      paymentChannelId: paymentMethod,
-      transactionId: tx?.id,
+      paymentChannelId: !isPaidByClient ? paymentMethod : undefined,
+      transactionId: txId,
+      notes: customNotes || (isPaidByClient ? `PPh dipotong & disetor oleh klien (${clientName}) - Bukti Potong: ${clientWithholdingNum || 'Tercatat'}` : target.notes),
       updatedAt: new Date().toISOString(),
     };
 
@@ -5213,8 +5331,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return {
       success: true,
-      transactionId: tx?.id,
-      message: `Setoran Pajak ${target.taxType} sebesar Rp ${paymentAmount.toLocaleString('id-ID')} berhasil dicatat & dibukukan ke jurnal kas! NTPN: ${ntpn || 'Tercatat'}.`,
+      transactionId: txId,
+      message: isPaidByClient
+        ? `PPh ${target.taxType} sebesar Rp ${paymentAmount.toLocaleString('id-ID')} berhasil dicatat lunas via pemotongan & setoran oleh Klien (${clientName})! Bukti Potong: ${clientWithholdingNum || 'Tercatat'}. Saldo kas/bank perusahaan tidak berkurang.`
+        : `Setoran Pajak ${target.taxType} sebesar Rp ${paymentAmount.toLocaleString('id-ID')} berhasil dicatat & dibukukan ke jurnal kas! NTPN: ${ntpn || 'Tercatat'}.`,
     };
   };
 

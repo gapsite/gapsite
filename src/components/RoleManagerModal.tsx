@@ -29,10 +29,32 @@ import {
   FileCheck2,
   AlertCircle,
   ArrowRight,
+  CreditCard,
+  Landmark,
+  Copy,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { TeamMember, UserRole, UserPermission, RoleDefinition } from '../types';
 import { DEFAULT_ROLE_GOVERNANCE_META } from '../data/mockData';
+
+export const POPULAR_BANKS = [
+  'Bank Mandiri',
+  'Bank BCA',
+  'Bank BRI',
+  'Bank BNI',
+  'Bank BSI (Syariah)',
+  'Bank CIMB Niaga',
+  'Bank Danamon',
+  'Bank Permata',
+  'Bank BTN',
+  'Bank BTPN / Jenius',
+  'Bank Jago',
+  'Bank SeaBank',
+  'Bank OCBC NISP',
+  'Bank Panin',
+  'Bank Sinarmas',
+  'Bank Lainnya',
+];
 
 const ALL_PERMISSIONS: { id: UserPermission; label: string; description: string; category: string }[] = [
   {
@@ -316,6 +338,22 @@ export const RoleManagerModal: React.FC<{
   // Master Admin: Delete User Confirmation Modal
   const [userToDelete, setUserToDelete] = useState<TeamMember | null>(null);
 
+  // Quick Copy Feedback State
+  const [copiedInfo, setCopiedInfo] = useState<string | null>(null);
+  const handleCopyInfo = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedInfo(label);
+    setTimeout(() => setCopiedInfo(null), 2000);
+  };
+
+  // Verification Modal Extended States (Bank & NIK)
+  const [verifyNik, setVerifyNik] = useState('');
+  const [verifyIdType, setVerifyIdType] = useState<'NIK' | 'KTP' | 'PASPOR'>('NIK');
+  const [verifyBankName, setVerifyBankName] = useState('Bank Mandiri');
+  const [verifyBankAccountNumber, setVerifyBankAccountNumber] = useState('');
+  const [verifyBankAccountHolder, setVerifyBankAccountHolder] = useState('');
+
   // Form State
   const [formData, setFormData] = useState<{
     name: string;
@@ -330,6 +368,11 @@ export const RoleManagerModal: React.FC<{
     avatar: string;
     specialization: string;
     permissions: UserPermission[];
+    nik: string;
+    idType: 'NIK' | 'KTP' | 'PASPOR';
+    bankName: string;
+    bankAccountNumber: string;
+    bankAccountHolder: string;
   }>({
     name: '',
     username: '',
@@ -343,6 +386,11 @@ export const RoleManagerModal: React.FC<{
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     specialization: 'BOM Costing, SIINas',
     permissions: ROLE_DEFAULT_PERMISSIONS['TECHNICAL_CONSULTANT'],
+    nik: '',
+    idType: 'NIK',
+    bankName: 'Bank Mandiri',
+    bankAccountNumber: '',
+    bankAccountHolder: '',
   });
 
   if (!isOpen) return null;
@@ -366,6 +414,11 @@ export const RoleManagerModal: React.FC<{
       avatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 1000)}?w=150&auto=format&fit=crop&q=80`,
       specialization: '',
       permissions: ROLE_DEFAULT_PERMISSIONS['TECHNICAL_CONSULTANT'],
+      nik: '',
+      idType: 'NIK',
+      bankName: 'Bank Mandiri',
+      bankAccountNumber: '',
+      bankAccountHolder: '',
     });
     setIsEditUserOpen(true);
   };
@@ -385,6 +438,11 @@ export const RoleManagerModal: React.FC<{
       avatar: user.avatar,
       specialization: (user.specialization || []).join(', '),
       permissions: user.permissions || ROLE_DEFAULT_PERMISSIONS[user.role],
+      nik: user.nik || '',
+      idType: user.idType || 'NIK',
+      bankName: user.bankName || 'Bank Mandiri',
+      bankAccountNumber: user.bankAccountNumber || '',
+      bankAccountHolder: user.bankAccountHolder || user.name,
     });
     setIsEditUserOpen(true);
   };
@@ -396,6 +454,11 @@ export const RoleManagerModal: React.FC<{
     setVerifyDepartment(user.department || 'Technical & TKDN Calculations');
     setVerifyPermissions(user.permissions || ROLE_DEFAULT_PERMISSIONS[user.role]);
     setVerifyNotes(`Statutory verification approved by ${currentUser.name} (${currentUser.roleTitle || currentUser.role})`);
+    setVerifyNik(user.nik || '');
+    setVerifyIdType(user.idType || 'NIK');
+    setVerifyBankName(user.bankName || 'Bank Mandiri');
+    setVerifyBankAccountNumber(user.bankAccountNumber || '');
+    setVerifyBankAccountHolder(user.bankAccountHolder || user.name);
   };
 
   const handleConfirmCustomVerify = (e: React.FormEvent) => {
@@ -411,6 +474,11 @@ export const RoleManagerModal: React.FC<{
       department: verifyDepartment,
       permissions: verifyPermissions,
       notes: verifyNotes,
+      nik: verifyNik.trim(),
+      idType: verifyIdType,
+      bankName: verifyBankName.trim(),
+      bankAccountNumber: verifyBankAccountNumber.trim(),
+      bankAccountHolder: verifyBankAccountHolder.trim() || verifyingUserModal.name,
     });
     setVerifyingUserModal(null);
   };
@@ -567,7 +635,16 @@ export const RoleManagerModal: React.FC<{
         avatar: formData.avatar,
         specialization: specArray,
         permissions: formData.permissions,
+        nik: formData.nik?.trim() || '',
+        idType: formData.idType || 'NIK',
+        bankName: formData.bankName?.trim() || 'Bank Mandiri',
+        bankAccountNumber: formData.bankAccountNumber?.trim() || '',
+        bankAccountHolder: formData.bankAccountHolder?.trim() || formData.name.trim(),
       });
+      setReassignFeedback(
+        `Perubahan profil & role "${formData.name}" (@${cleanUsername}) berhasil disimpan & terupdate secara real-time!`
+      );
+      setTimeout(() => setReassignFeedback(null), 4000);
     } else {
       // Check if username is already registered and cannot be reused
       const usernameTaken = teamMembers.some(
@@ -593,10 +670,19 @@ export const RoleManagerModal: React.FC<{
           status: 'ACTIVE',
           specialization: specArray,
           permissions: formData.permissions,
+          nik: formData.nik?.trim() || '',
+          idType: formData.idType || 'NIK',
+          bankName: formData.bankName?.trim() || 'Bank Mandiri',
+          bankAccountNumber: formData.bankAccountNumber?.trim() || '',
+          bankAccountHolder: formData.bankAccountHolder?.trim() || formData.name.trim(),
           activeTaskCount: 0,
           completedTaskCount: 0,
           capacityPercentage: 50,
         });
+        setReassignFeedback(
+          `Anggota baru "${formData.name}" (@${cleanUsername}) berhasil didaftarkan dan tersinkronisasi real-time!`
+        );
+        setTimeout(() => setReassignFeedback(null), 4000);
       } catch (err: any) {
         alert(err?.message || 'Failed to create user. Username may already be taken.');
         return;
@@ -648,6 +734,10 @@ export const RoleManagerModal: React.FC<{
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 px-2.5 py-1.5 rounded-xl border border-emerald-800/60 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Sync Real-Time Aktif</span>
+            </div>
             <button
               type="button"
               onClick={handleOpenAddUser}
@@ -1357,6 +1447,85 @@ export const RoleManagerModal: React.FC<{
                             {(user.permissions || []).length} / {ALL_PERMISSIONS.length}
                           </span>
                         </div>
+
+                        {/* Integrated Payroll & Identity Fields */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 space-y-1.5 bg-slate-50/80 -mx-4 -mb-4 p-3 rounded-b-2xl">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 flex items-center gap-1 text-[11px]">
+                              <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                              <span>{user.idType || 'NIK'} / Identitas:</span>
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {user.nik ? (
+                                <>
+                                  <span className="font-mono font-bold text-slate-800 text-[11px] bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                                    {user.nik}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyInfo(user.nik!, `nik-${user.id}`)}
+                                    title="Salin NIK"
+                                    className="text-slate-400 hover:text-blue-600 p-0.5 rounded cursor-pointer"
+                                  >
+                                    {copiedInfo === `nik-${user.id}` ? (
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                                  Belum diatur
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 flex items-center gap-1 text-[11px]">
+                              <Landmark className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Rekening & Bank:</span>
+                            </span>
+                            <div className="flex items-center gap-1.5 text-right">
+                              {user.bankAccountNumber ? (
+                                <>
+                                  <span className="font-mono font-bold text-emerald-800 text-[11px] bg-white px-1.5 py-0.5 rounded border border-emerald-200 truncate max-w-[160px]" title={`${user.bankName || 'Bank'}: ${user.bankAccountNumber}`}>
+                                    <span className="text-[10px] text-slate-500 font-sans mr-1">{user.bankName || 'Bank'}:</span>
+                                    {user.bankAccountNumber}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyInfo(user.bankAccountNumber!, `bank-${user.id}`)}
+                                    title="Salin Nomor Rekening"
+                                    className="text-slate-400 hover:text-emerald-700 p-0.5 rounded cursor-pointer"
+                                  >
+                                    {copiedInfo === `bank-${user.id}` ? (
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                                  Belum diatur
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {(!user.nik || !user.bankAccountNumber) && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditUser(user)}
+                              className="w-full mt-1 py-1 px-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200/80 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-2.5 h-2.5" />
+                              <span>Lengkapi Data Gaji (Rekening & NIK)</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1907,6 +2076,77 @@ export const RoleManagerModal: React.FC<{
                 />
               </div>
 
+              {/* Verification Modal: Bank & NIK Data */}
+              <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                    <CreditCard className="w-4 h-4 text-amber-600" />
+                    <span>Data Payroll: NIK/KTP/Paspor & Nomor Rekening</span>
+                  </div>
+                  <span className="text-[10px] bg-amber-200/70 text-amber-900 font-semibold px-2 py-0.5 rounded-full">
+                    Integrasi Penggajian
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                      NIK / No. KTP / Paspor
+                    </label>
+                    <input
+                      type="text"
+                      value={verifyNik}
+                      onChange={(e) => setVerifyNik(e.target.value)}
+                      placeholder="e.g. 3171012304950001"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-mono focus:outline-hidden focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                      Bank Penerima Gaji
+                    </label>
+                    <input
+                      type="text"
+                      list="popular-banks-verify"
+                      value={verifyBankName}
+                      onChange={(e) => setVerifyBankName(e.target.value)}
+                      placeholder="e.g. Bank Mandiri"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-amber-500"
+                    />
+                    <datalist id="popular-banks-verify">
+                      {POPULAR_BANKS.map((b) => (
+                        <option key={b} value={b} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                      Nomor Rekening Bank
+                    </label>
+                    <input
+                      type="text"
+                      value={verifyBankAccountNumber}
+                      onChange={(e) => setVerifyBankAccountNumber(e.target.value)}
+                      placeholder="Nomor Rekening Pegawai"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-mono focus:outline-hidden focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                      Atas Nama Rekening
+                    </label>
+                    <input
+                      type="text"
+                      value={verifyBankAccountHolder}
+                      onChange={(e) => setVerifyBankAccountHolder(e.target.value)}
+                      placeholder={verifyingUserModal.name}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Permissions Checklist */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -2078,6 +2318,100 @@ export const RoleManagerModal: React.FC<{
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Payroll & Statutory Identity Section */}
+              <div className="p-3.5 bg-gradient-to-br from-emerald-50/70 via-white to-slate-50 border border-emerald-200/90 rounded-2xl shadow-2xs space-y-3">
+                <div className="flex items-center justify-between border-b border-emerald-100 pb-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 font-mono">
+                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                    <span>Data Tambahan: NIK/KTP/Paspor & Rekening Bank</span>
+                  </div>
+                  <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                    Integrasi Otomatis Menu Gaji
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Jenis Identitas
+                    </label>
+                    <select
+                      value={formData.idType || 'NIK'}
+                      onChange={(e) => setFormData({ ...formData, idType: e.target.value as 'NIK' | 'KTP' | 'PASPOR' })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:outline-hidden focus:border-emerald-500"
+                    >
+                      <option value="NIK">NIK (KTP WNI 16 Digit)</option>
+                      <option value="KTP">KTP Elektronik</option>
+                      <option value="PASPOR">Paspor (Tenaga Asing / Expat)</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nomor NIK / KTP / Paspor
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.nik}
+                      onChange={(e) => setFormData({ ...formData, nik: e.target.value })}
+                      placeholder="Contoh: 3171012304950001 / A 1234567"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-mono font-medium focus:outline-hidden focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nama Bank Tujuan
+                    </label>
+                    <input
+                      type="text"
+                      list="popular-banks-edit-list"
+                      value={formData.bankName}
+                      onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                      placeholder="Pilih / ketik nama bank"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:outline-hidden focus:border-emerald-500"
+                    />
+                    <datalist id="popular-banks-edit-list">
+                      {POPULAR_BANKS.map((b) => (
+                        <option key={b} value={b} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nomor Rekening Bank
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bankAccountNumber}
+                      onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
+                      placeholder="Contoh: 122009831002"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-mono font-medium focus:outline-hidden focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Atas Nama Rekening (Holder)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bankAccountHolder}
+                      onChange={(e) => setFormData({ ...formData, bankAccountHolder: e.target.value })}
+                      placeholder={formData.name || 'Nama pemilik rekening'}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-medium focus:outline-hidden focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 italic">
+                  💡 Nomor rekening dan NIK ini akan otomatis terisi saat membuat slip gaji karyawan di menu Payroll Finance.
+                </p>
               </div>
 
               <div>

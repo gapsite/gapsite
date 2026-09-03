@@ -214,6 +214,10 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
       setEmployeePhone('');
       setRoleTitle('Konsultan / Staf Ahli');
       setDepartment('Operasional Konsultasi');
+      setEmployeeNik('');
+      setBankName('Bank Mandiri');
+      setBankAccountNumber('');
+      setBankAccountHolder('');
       return;
     }
 
@@ -224,7 +228,10 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
       setEmployeePhone(member.phone || '');
       setRoleTitle(member.roleTitle || member.role);
       setDepartment(member.department || 'Konsultansi TKDN');
-      setBankAccountHolder(member.name);
+      setEmployeeNik(member.nik || '');
+      setBankName(member.bankName || 'Bank Mandiri');
+      setBankAccountNumber(member.bankAccountNumber || '');
+      setBankAccountHolder(member.bankAccountHolder || member.name);
 
       // Apply default compensation benchmark if available
       const benchmark = DEFAULT_ROLE_COMPENSATION[member.role] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
@@ -455,9 +462,16 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  NIK / No. Identitas KTP
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    NIK / No. Identitas KTP / Paspor
+                  </label>
+                  {selectedEmployeeId !== 'custom' && employeeNik ? (
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                      Sinkron Data Profil Role
+                    </span>
+                  ) : null}
+                </div>
                 <input
                   type="text"
                   value={employeeNik}
@@ -912,32 +926,58 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
               </div>
 
               <div className="flex flex-col">
-                <div className="h-6 flex items-center mb-1">
+                <div className="h-6 flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-slate-700 whitespace-nowrap overflow-hidden text-ellipsis">
                     Bank Tujuan Karyawan
                   </label>
+                  {selectedEmployeeId !== 'custom' && bankName ? (
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                      Sinkron Data Profil
+                    </span>
+                  ) : null}
                 </div>
                 <input
                   type="text"
+                  list="payroll-employee-banks"
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  placeholder="Contoh: Bank BCA / Mandiri / BRI"
+                  placeholder="Pilih / ketik Bank (BCA, Mandiri, BRI, BNI)"
                   className="w-full h-10 text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600"
                 />
+                <datalist id="payroll-employee-banks">
+                  <option value="Bank Mandiri" />
+                  <option value="Bank BCA" />
+                  <option value="Bank BRI" />
+                  <option value="Bank BNI" />
+                  <option value="Bank BSI (Syariah)" />
+                  <option value="Bank CIMB Niaga" />
+                  <option value="Bank Danamon" />
+                  <option value="Bank Permata" />
+                  <option value="Bank BTN" />
+                  <option value="Bank BTPN / Jenius" />
+                  <option value="Bank Jago" />
+                  <option value="Bank SeaBank" />
+                  <option value="Bank OCBC NISP" />
+                </datalist>
               </div>
 
               <div className="flex flex-col">
-                <div className="h-6 flex items-center mb-1">
+                <div className="h-6 flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-slate-700 whitespace-nowrap overflow-hidden text-ellipsis">
                     Nomor Rekening Tujuan
                   </label>
+                  {selectedEmployeeId !== 'custom' && bankAccountNumber ? (
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                      Terhubung
+                    </span>
+                  ) : null}
                 </div>
                 <input
                   type="text"
                   value={bankAccountNumber}
                   onChange={(e) => setBankAccountNumber(e.target.value)}
                   placeholder="Nomor rekening pegawai"
-                  className="w-full h-10 text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-mono"
+                  className="w-full h-10 text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-mono font-medium"
                 />
               </div>
             </div>

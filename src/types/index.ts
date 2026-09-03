@@ -471,6 +471,12 @@ export interface AppUser {
     inAppDispatches: boolean;
     weeklySummary: boolean;
   };
+  // Payroll & Statutory Identity Integration
+  nik?: string; // Nomor NIK / KTP / Paspor
+  idType?: 'NIK' | 'KTP' | 'PASPOR'; // Tipe identitas
+  bankName?: string; // Nama Bank
+  bankAccountNumber?: string; // Nomor Rekening Bank
+  bankAccountHolder?: string; // Nama Pemilik Rekening
 }
 
 export interface TeamMember extends AppUser {}
@@ -720,6 +726,12 @@ export interface TaxObligation {
   taxInvoiceNumber?: string; // Nomor Seri Faktur Pajak (NSFP) / Bukti Potong (Bupot)
   paymentChannelId?: string; // Rekening Kas Pengeluaran Pembayar Pajak
   transactionId?: string; // ID Transaksi Pengeluaran di Buku Kas
+  
+  // Paid by client / Withholding fields
+  paidByClient?: boolean; // PPh dipotong / disetor oleh klien (Bukti Potong)
+  clientWithholdingNumber?: string; // Nomor Bukti Potong (e-Bupot) dari Klien
+  clientWithholdingDate?: string; // Tanggal Bukti Potong Klien
+  withholdingTaxPayerName?: string; // Nama Klien / Perusahaan Pemotong Pajak
   
   // Project / Counterparty Association
   projectId?: string;

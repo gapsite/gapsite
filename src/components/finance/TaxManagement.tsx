@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Info,
   Users,
+  FileCheck,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { TaxObligation, TaxType, TaxObligationStatus } from '../../types';
@@ -153,19 +154,25 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     notes: '',
   });
 
-  // Payment Form State
+  // Payment Form State (Setor Sendiri atau PPh Dibayar oleh Klien)
   const [payFormData, setPayFormData] = useState<{
+    isPaidByClient: boolean;
     ntpnNumber: string;
     billingCode: string;
     paymentChannelId: string;
     date: string;
     notes: string;
+    clientWithholdingNumber: string;
+    withholdingTaxPayerName: string;
   }>({
+    isPaidByClient: false,
     ntpnNumber: '',
     billingCode: '',
     paymentChannelId: paymentChannels[0]?.id || 'BANK_TRANSFER_BRI',
     date: new Date().toISOString().slice(0, 10),
     notes: '',
+    clientWithholdingNumber: '',
+    withholdingTaxPayerName: '',
   });
 
   // Calculate Metrics
@@ -224,6 +231,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
         if (t.status === 'PAID' && t.remainingAmount <= 0) return false;
       } else if (selectedStatus === 'PAID') {
         if (t.status !== 'PAID') return false;
+      } else if (selectedStatus === 'CLIENT_PAID') {
+        if (t.status !== 'PAID' || !t.paidByClient) return false;
       } else if (selectedStatus === 'OVERDUE') {
         if (t.status === 'PAID' || !t.dueDate || t.dueDate >= todayStr) return false;
       }
@@ -241,7 +250,9 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
         const matchNtpn = t.ntpnNumber?.toLowerCase().includes(q);
         const matchBilling = t.billingCode?.toLowerCase().includes(q);
         const matchInvoice = t.taxInvoiceNumber?.toLowerCase().includes(q);
-        if (!matchTitle && !matchPeriod && !matchCounterparty && !matchProject && !matchNtpn && !matchBilling && !matchInvoice) {
+        const matchBupot = t.clientWithholdingNumber?.toLowerCase().includes(q);
+        const matchWithholder = t.withholdingTaxPayerName?.toLowerCase().includes(q);
+        if (!matchTitle && !matchPeriod && !matchCounterparty && !matchProject && !matchNtpn && !matchBilling && !matchInvoice && !matchBupot && !matchWithholder) {
           return false;
         }
       }
@@ -529,12 +540,16 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
   // Open Pay Modal
   const handleOpenPay = (t: TaxObligation) => {
     setPayingTax(t);
+    const clientName = t.counterpartyName || t.title || '';
     setPayFormData({
+      isPaidByClient: false,
       ntpnNumber: t.ntpnNumber || '',
       billingCode: t.billingCode || '',
       paymentChannelId: t.paymentChannelId || paymentChannels[0]?.id || 'BANK_TRANSFER_BRI',
       date: new Date().toISOString().slice(0, 10),
       notes: `Setoran ${t.taxType} ${t.taxPeriod} ke Kas Negara`,
+      clientWithholdingNumber: t.clientWithholdingNumber || t.taxInvoiceNumber || '',
+      withholdingTaxPayerName: t.withholdingTaxPayerName || clientName,
     });
     setIsPayModalOpen(true);
   };
@@ -544,21 +559,38 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     e.preventDefault();
     if (!payingTax) return;
 
-    if (!payFormData.ntpnNumber.trim() && !payFormData.billingCode.trim()) {
-      showToast('error', 'Mohon lengkapi Nomor NTPN atau Kode Billing DJP sebagai bukti setoran sah.');
-      return;
+    if (payFormData.isPaidByClient) {
+      if (!payFormData.clientWithholdingNumber.trim() && !payFormData.ntpnNumber.trim() && !payFormData.billingCode.trim()) {
+        showToast('error', 'Mohon lengkapi Nomor Bukti Potong (e-Bupot) atau NTPN Klien sebagai bukti pemotongan.');
+        return;
+      }
+    } else {
+      if (!payFormData.ntpnNumber.trim() && !payFormData.billingCode.trim()) {
+        showToast('error', 'Mohon lengkapi Nomor NTPN atau Kode Billing DJP sebagai bukti setoran sah.');
+        return;
+      }
     }
 
     const res = payTaxObligation(payingTax.id, {
-      channelId: payFormData.paymentChannelId,
+      channelId: payFormData.isPaidByClient ? undefined : payFormData.paymentChannelId,
       date: payFormData.date,
       ntpnNumber: payFormData.ntpnNumber,
       billingCode: payFormData.billingCode,
       notes: payFormData.notes,
+      paidByClient: payFormData.isPaidByClient,
+      clientWithholdingNumber: payFormData.clientWithholdingNumber,
+      clientWithholdingDate: payFormData.date,
+      withholdingTaxPayerName: payFormData.withholdingTaxPayerName,
     });
 
     if (res.success) {
-      showToast('success', res.message || 'Pajak berhasil disetor dan dicatat ke jurnal kas!');
+      showToast(
+        'success',
+        res.message ||
+          (payFormData.isPaidByClient
+            ? 'PPh berhasil dicatat lunas via pemotongan oleh Klien!'
+            : 'Pajak berhasil disetor dan dicatat ke jurnal kas!')
+      );
       setIsPayModalOpen(false);
       setPayingTax(null);
     } else {
@@ -603,11 +635,14 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       'Sudah Disetor (IDR)',
       'Sisa Hutang Pajak (IDR)',
       'Status',
+      'Metode Pelunasan',
       'Jatuh Tempo',
-      'Tanggal Setor',
+      'Tanggal Setor / Bupot',
       'NTPN',
       'Kode Billing',
       'No Faktur/Bupot',
+      'No Bukti Potong Klien',
+      'Klien Pemotong',
       'Klien/Vendor/Instansi',
       'Proyek',
       'Catatan',
@@ -627,11 +662,14 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       t.paidAmount || 0,
       t.remainingAmount || 0,
       `"${t.status}"`,
+      `"${t.paidByClient ? 'Dipotong & Disetor Klien' : t.status === 'PAID' ? 'Setor Sendiri Perusahaan' : 'Belum Disetor'}"`,
       `"${t.dueDate || '-'}"`,
       `"${t.paidAt || '-'}"`,
       `"${t.ntpnNumber || '-'}"`,
       `"${t.billingCode || '-'}"`,
       `"${t.taxInvoiceNumber || '-'}"`,
+      `"${t.clientWithholdingNumber || '-'}"`,
+      `"${(t.withholdingTaxPayerName || '').replace(/"/g, '""')}"`,
       `"${(t.counterpartyName || '').replace(/"/g, '""')}"`,
       `"${t.projectCode || '-'}"`,
       `"${(t.notes || '').replace(/"/g, '""')}"`,
@@ -914,6 +952,16 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
             >
               Disetor Lunas ({taxObligations.filter((t) => t.status === 'PAID').length})
             </button>
+            <button
+              onClick={() => setSelectedStatus('CLIENT_PAID')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedStatus === 'CLIENT_PAID'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 hover:bg-sky-100'
+              }`}
+            >
+              Dibayar Klien ({taxObligations.filter((t) => t.status === 'PAID' && t.paidByClient).length})
+            </button>
           </div>
         </div>
 
@@ -1032,10 +1080,17 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       <td className="py-4 px-4 align-top">
                         <div className="space-y-1.5">
                           {isPaid ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                              <CheckCircle className="w-3 h-3" />
-                              Disetor Sah
-                            </span>
+                            t.paidByClient ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-900 dark:bg-sky-950/70 dark:text-sky-300 border border-sky-300 dark:border-sky-700">
+                                <FileCheck className="w-3 h-3" />
+                                Dipotong Klien
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                <CheckCircle className="w-3 h-3" />
+                                Disetor Sah
+                              </span>
+                            )
                           ) : isOverdue ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-900 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-300 dark:border-rose-700 animate-pulse">
                               <AlertTriangle className="w-3 h-3" />
@@ -1164,20 +1219,32 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                             <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                             <span>Jatuh Tempo: {t.dueDate || '-'}</span>
                           </div>
+                          {t.paidByClient && (
+                            <div className="text-[11px] font-medium text-sky-600 dark:text-sky-400 flex items-center gap-1">
+                              <Building2 className="w-3 h-3 shrink-0" />
+                              <span className="truncate">Klien: {t.withholdingTaxPayerName || t.counterpartyName || 'Klien'}</span>
+                            </div>
+                          )}
+                          {t.clientWithholdingNumber && (
+                            <div className="text-[11px] font-mono text-sky-600 dark:text-sky-400 flex items-center gap-1 font-bold">
+                              <FileText className="w-3 h-3 shrink-0" />
+                              Bupot: {t.clientWithholdingNumber}
+                            </div>
+                          )}
                           {t.billingCode && (
                             <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300">
                               ID Billing: <span className="font-bold text-indigo-600 dark:text-indigo-400">{t.billingCode}</span>
                             </div>
                           )}
-                          {t.ntpnNumber && (
+                          {t.ntpnNumber && !t.clientWithholdingNumber && (
                             <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold">
-                              <ShieldCheck className="w-3 h-3" />
+                              <ShieldCheck className="w-3 h-3 shrink-0" />
                               NTPN: {t.ntpnNumber}
                             </div>
                           )}
                           {t.paidAt && (
                             <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                              Tgl Setor: {t.paidAt}
+                              {t.paidByClient ? 'Tgl Bupot: ' : 'Tgl Setor: '} {t.paidAt}
                             </div>
                           )}
                         </div>
@@ -1191,15 +1258,30 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                               id={`tax-btn-pay-${t.id}`}
                               onClick={() => handleOpenPay(t)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition-all"
-                              title="Setor Pajak ke Kas Negara & Catat Pengeluaran Kas"
+                              title="Setor Pajak / Catat PPh Dibayar Klien"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
                               Setor Pajak
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
-                              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                              Lunas
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium ${
+                                t.paidByClient
+                                  ? 'bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                              }`}
+                            >
+                              {t.paidByClient ? (
+                                <>
+                                  <FileCheck className="w-3.5 h-3.5 text-sky-500" />
+                                  Lunas (Klien)
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                  Lunas
+                                </>
+                              )}
                             </span>
                           )}
 
@@ -1604,21 +1686,35 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
         </div>
       )}
 
-      {/* MODAL 2: SETOR PAJAK KE KAS NEGARA (PAY TAX) */}
+      {/* MODAL 2: SETOR PAJAK KE KAS NEGARA (PAY TAX) & PPH DIBAYAR CLIENT */}
       {isPayModalOpen && payingTax && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 text-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-700/80">
+          <div className="bg-slate-900 text-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-700/80 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400">
-                  <CreditCard className="w-5 h-5" />
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
+                    payFormData.isPaidByClient
+                      ? 'bg-sky-950/60 border-sky-800/60 text-sky-400'
+                      : 'bg-emerald-950/60 border-emerald-800/60 text-emerald-400'
+                  }`}
+                >
+                  {payFormData.isPaidByClient ? (
+                    <FileCheck className="w-5 h-5" />
+                  ) : (
+                    <CreditCard className="w-5 h-5" />
+                  )}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">
-                    Setor Pajak ke Kas Negara
+                    {payFormData.isPaidByClient
+                      ? 'Pelunasan PPh Dibayar oleh Client'
+                      : 'Setor Pajak ke Kas Negara'}
                   </h3>
                   <p className="text-xs text-slate-300 mt-0.5">
-                    Otomatis menerbitkan transaksi pengeluaran kas & menghapus hutang pajak di neraca.
+                    {payFormData.isPaidByClient
+                      ? 'Dipotong & disetor pihak klien (Bukti Potong e-Bupot). Saldo kas perusahaan tetap utuh.'
+                      : 'Otomatis menerbitkan transaksi pengeluaran kas & menghapus hutang pajak di neraca.'}
                   </p>
                 </div>
               </div>
@@ -1633,8 +1729,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
             {/* Tax Info Card */}
             <div className="mt-4 p-4 rounded-xl bg-slate-800/90 border border-slate-700 space-y-2 text-sm">
               <div className="flex justify-between items-center font-bold text-white">
-                <span>{payingTax.title}</span>
-                <span className="text-emerald-400 font-mono">
+                <span className="truncate pr-2">{payingTax.title}</span>
+                <span className="text-emerald-400 font-mono shrink-0">
                   {formatRupiah(payingTax.remainingAmount || payingTax.taxAmount)}
                 </span>
               </div>
@@ -1642,89 +1738,290 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                 <span>Jenis: {payingTax.taxType} ({payingTax.taxPeriod})</span>
                 <span>DPP: {formatRupiah(payingTax.taxableBaseAmount || 0)}</span>
               </div>
+              {payingTax.counterpartyName && (
+                <div className="text-xs text-slate-400 flex items-center gap-1.5 pt-1 border-t border-slate-700/60">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>Klien / Instansi: <strong className="text-slate-200">{payingTax.counterpartyName}</strong></span>
+                </div>
+              )}
               {payingTax.payrollNumber && (
                 <div className="mt-2 pt-2 border-t border-slate-700/80 flex items-center gap-2 text-xs text-emerald-300 bg-emerald-950/40 px-2.5 py-1.5 rounded-lg border border-emerald-800/60">
                   <Users className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>
-                    Pemotongan otomatis dari Slip Gaji: <strong>{payingTax.payrollNumber}</strong> {payingTax.employeeName ? `(${payingTax.employeeName})` : ''}
+                    Pemotongan otomatis Slip Gaji: <strong>{payingTax.payrollNumber}</strong> {payingTax.employeeName ? `(${payingTax.employeeName})` : ''}
                   </span>
                 </div>
               )}
             </div>
 
-            <form onSubmit={handlePaySubmit} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-200 mb-1">
-                  Nomor Transaksi Penerimaan Negara (NTPN) <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: 8392019485720194 (16 Digit Bukti BPN)"
-                  value={payFormData.ntpnNumber}
-                  onChange={(e) => setPayFormData({ ...payFormData, ntpnNumber: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-200 mb-1">
-                    Kode ID Billing (DJP)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: 918273645019283"
-                    value={payFormData.billingCode}
-                    onChange={(e) => setPayFormData({ ...payFormData, billingCode: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-200 mb-1">
-                    Tanggal Penyetoran <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={payFormData.date}
-                    onChange={(e) => setPayFormData({ ...payFormData, date: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-200 mb-1">
-                  Rekening Sumber Dana (Kas / Bank Pengeluaran) <span className="text-rose-400">*</span>
-                </label>
-                <select
-                  required
-                  value={payFormData.paymentChannelId}
-                  onChange={(e) => setPayFormData({ ...payFormData, paymentChannelId: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+            {/* OPSI METODE PEMBAYARAN: SETOR SENDIRI VS PPH DIBAYAR CLIENT */}
+            <div className="mt-4 space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-200">
+                Pilih Opsi Pembayaran / Penyetoran Pajak <span className="text-rose-400">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  id="tax-pay-opt-company"
+                  onClick={() => {
+                    setPayFormData((prev) => ({
+                      ...prev,
+                      isPaidByClient: false,
+                      notes: `Setoran ${payingTax.taxType} ${payingTax.taxPeriod} ke Kas Negara`,
+                    }));
+                  }}
+                  className={`flex items-start gap-2.5 p-3 rounded-xl border text-left text-xs transition-all ${
+                    !payFormData.isPaidByClient
+                      ? 'bg-emerald-950/60 border-emerald-500 text-white ring-1 ring-emerald-500/50 shadow-sm'
+                      : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  }`}
                 >
-                  {paymentChannels.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-slate-800 text-white">
-                      {c.name} {c.accountNumber ? `(${c.accountNumber})` : ''} - {c.category}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div
+                    className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center shrink-0 ${
+                      !payFormData.isPaidByClient
+                        ? 'border-emerald-400 bg-emerald-500'
+                        : 'border-slate-500'
+                    }`}
+                  >
+                    {!payFormData.isPaidByClient && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                    )}
+                  </div>
+                  <div>
+                    <div
+                      className={`font-bold ${
+                        !payFormData.isPaidByClient ? 'text-emerald-300' : 'text-slate-300'
+                      }`}
+                    >
+                      Setor Sendiri Perusahaan
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                      Dipotong dari kas/bank perusahaan & diterbitkan mutasi pengeluaran.
+                    </div>
+                  </div>
+                </button>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-200 mb-1">
-                  Catatan Penyetoran Pajak
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Disetor melalui Internet Banking Corporate BCA"
-                  value={payFormData.notes}
-                  onChange={(e) => setPayFormData({ ...payFormData, notes: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                />
+                <button
+                  type="button"
+                  id="tax-pay-opt-client"
+                  onClick={() => {
+                    const clientName =
+                      payingTax.counterpartyName || payingTax.title || 'Client';
+                    setPayFormData((prev) => ({
+                      ...prev,
+                      isPaidByClient: true,
+                      withholdingTaxPayerName: prev.withholdingTaxPayerName || clientName,
+                      notes: `PPh dipotong & disetor oleh klien (${clientName}) - Bukti Potong e-Bupot`,
+                    }));
+                  }}
+                  className={`flex items-start gap-2.5 p-3 rounded-xl border text-left text-xs transition-all ${
+                    payFormData.isPaidByClient
+                      ? 'bg-sky-950/60 border-sky-500 text-white ring-1 ring-sky-500/50 shadow-sm'
+                      : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center shrink-0 ${
+                      payFormData.isPaidByClient
+                        ? 'border-sky-400 bg-sky-500'
+                        : 'border-slate-500'
+                    }`}
+                  >
+                    {payFormData.isPaidByClient && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                    )}
+                  </div>
+                  <div>
+                    <div
+                      className={`font-bold ${
+                        payFormData.isPaidByClient ? 'text-sky-300' : 'text-slate-300'
+                      }`}
+                    >
+                      PPh Dibayar oleh Client
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                      Dipotong oleh pihak klien (Bukti Potong e-Bupot). Kas utuh.
+                    </div>
+                  </div>
+                </button>
               </div>
+            </div>
+
+            <form onSubmit={handlePaySubmit} className="space-y-4 mt-4">
+              {payFormData.isPaidByClient ? (
+                /* SECTION FORM: PPH DIBAYAR OLEH CLIENT */
+                <>
+                  <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-800/60 text-xs text-sky-200 flex items-start gap-2.5 leading-relaxed">
+                    <FileCheck className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-sky-300">PPh Dipotong & Disetor Klien:</strong> Pembayaran PPh ini ditanggung/dipotong langsung oleh pihak klien dari termin penagihan invoice. <strong>Saldo kas / bank perusahaan TIDAK akan berkurang</strong>. Kewajiban pajak dicatat lunas sebagai Kredit Pajak (Bukti Potong PPh / e-Bupot).
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      Nama Klien / Perusahaan Pemotong Pajak <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: PT. AGRINAS JALADRI NUSANTARA"
+                      value={payFormData.withholdingTaxPayerName}
+                      onChange={(e) =>
+                        setPayFormData({ ...payFormData, withholdingTaxPayerName: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-200 mb-1">
+                        Nomor Bukti Potong (e-Bupot) / NTPN Klien <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Contoh: BUPOT-2024-XXXX atau 16 Digit NTPN"
+                        value={payFormData.clientWithholdingNumber}
+                        onChange={(e) =>
+                          setPayFormData({
+                            ...payFormData,
+                            clientWithholdingNumber: e.target.value,
+                            ntpnNumber: e.target.value,
+                          })
+                        }
+                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-200 mb-1">
+                        Tanggal Bukti Potong / Pemotongan <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={payFormData.date}
+                        onChange={(e) => setPayFormData({ ...payFormData, date: e.target.value })}
+                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      Kode ID Billing / Ref DJP Klien (Opsional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: 918273645019283 (Bila tercantum pada bupot)"
+                      value={payFormData.billingCode}
+                      onChange={(e) =>
+                        setPayFormData({ ...payFormData, billingCode: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                    />
+                  </div>
+
+                  {/* Informational Cash Notice */}
+                  <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700 text-xs text-slate-300 flex items-center justify-between">
+                    <span className="text-slate-400">Pengaruh ke Kas / Bank Perusahaan:</span>
+                    <span className="font-semibold text-sky-300 bg-sky-950/60 px-2.5 py-1 rounded-lg border border-sky-800/50">
+                      Saldo Utuh (Kredit Pajak PPh)
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      Catatan Pelunasan Pajak oleh Klien
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Dipotong PPh 23 oleh PT. Agrinas Jaladri Nusantara"
+                      value={payFormData.notes}
+                      onChange={(e) => setPayFormData({ ...payFormData, notes: e.target.value })}
+                      className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                    />
+                  </div>
+                </>
+              ) : (
+                /* SECTION FORM: SETOR SENDIRI PERUSAHAAN */
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      Nomor Transaksi Penerimaan Negara (NTPN) <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: 8392019485720194 (16 Digit Bukti BPN)"
+                      value={payFormData.ntpnNumber}
+                      onChange={(e) => setPayFormData({ ...payFormData, ntpnNumber: e.target.value })}
+                      className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-200 mb-1">
+                        Kode ID Billing (DJP)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: 918273645019283"
+                        value={payFormData.billingCode}
+                        onChange={(e) => setPayFormData({ ...payFormData, billingCode: e.target.value })}
+                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-200 mb-1">
+                        Tanggal Penyetoran <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={payFormData.date}
+                        onChange={(e) => setPayFormData({ ...payFormData, date: e.target.value })}
+                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      Rekening Sumber Dana (Kas / Bank Pengeluaran) <span className="text-rose-400">*</span>
+                    </label>
+                    <select
+                      required
+                      value={payFormData.paymentChannelId}
+                      onChange={(e) => setPayFormData({ ...payFormData, paymentChannelId: e.target.value })}
+                      className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                    >
+                      {paymentChannels.map((c) => (
+                        <option key={c.id} value={c.id} className="bg-slate-800 text-white">
+                          {c.name} {c.accountNumber ? `(${c.accountNumber})` : ''} - {c.category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-200 mb-1">
+                      Catatan Penyetoran Pajak
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Disetor melalui Internet Banking Corporate BCA"
+                      value={payFormData.notes}
+                      onChange={(e) => setPayFormData({ ...payFormData, notes: e.target.value })}
+                      className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
@@ -1736,9 +2033,23 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-900/30 transition-all"
+                  className={`px-6 py-2.5 rounded-xl text-white text-sm font-semibold shadow-lg transition-all flex items-center gap-1.5 ${
+                    payFormData.isPaidByClient
+                      ? 'bg-sky-600 hover:bg-sky-500 shadow-sky-900/30'
+                      : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30'
+                  }`}
                 >
-                  Konfirmasi Setor Pajak
+                  {payFormData.isPaidByClient ? (
+                    <>
+                      <FileCheck className="w-4 h-4" />
+                      Konfirmasi PPh Dibayar Klien
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      Konfirmasi Setor Pajak
+                    </>
+                  )}
                 </button>
               </div>
             </form>

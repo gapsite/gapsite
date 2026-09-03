@@ -30,6 +30,7 @@ interface BatchPayrollModalProps {
 interface BatchEmployeeRow {
   employeeId: string;
   employeeName: string;
+  employeeNik?: string;
   roleTitle: string;
   department: string;
   basicSalary: number;
@@ -39,6 +40,7 @@ interface BatchEmployeeRow {
   netSalary: number;
   bankName: string;
   bankAccountNumber: string;
+  bankAccountHolder?: string;
   selected: boolean;
 }
 
@@ -103,6 +105,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
       return {
         employeeId: m.id,
         employeeName: m.name,
+        employeeNik: m.nik || '',
         roleTitle: m.roleTitle || m.role,
         department: m.department || 'Konsultansi',
         basicSalary: base,
@@ -110,8 +113,9 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
         bonus: 0,
         deductions,
         netSalary: net,
-        bankName: 'Bank Mandiri',
-        bankAccountNumber: '122-00-' + Math.floor(100000 + Math.random() * 900000),
+        bankName: m.bankName || 'Bank Mandiri',
+        bankAccountNumber: m.bankAccountNumber || '',
+        bankAccountHolder: m.bankAccountHolder || m.name,
         selected: true,
       };
     });
@@ -134,6 +138,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
           return {
             employeeId: m.id,
             employeeName: m.name,
+            employeeNik: m.nik || '',
             roleTitle: m.roleTitle || m.role,
             department: m.department || 'Konsultansi',
             basicSalary: base,
@@ -141,8 +146,9 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
             bonus: 0,
             deductions,
             netSalary: net,
-            bankName: 'Bank Mandiri',
-            bankAccountNumber: '122-00-' + Math.floor(100000 + Math.random() * 900000),
+            bankName: m.bankName || 'Bank Mandiri',
+            bankAccountNumber: m.bankAccountNumber || '',
+            bankAccountHolder: m.bankAccountHolder || m.name,
             selected: true,
           };
         })
@@ -189,11 +195,12 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
       return {
         employeeId: r.employeeId,
         employeeName: r.employeeName,
+        employeeNik: r.employeeNik || '',
         roleTitle: r.roleTitle,
         department: r.department,
         bankName: r.bankName,
         bankAccountNumber: r.bankAccountNumber,
-        bankAccountHolder: r.employeeName,
+        bankAccountHolder: r.bankAccountHolder || r.employeeName,
         period,
         paymentDate,
         basicSalary: r.basicSalary,
@@ -361,6 +368,22 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
                     <td className="py-2.5 px-3">
                       <p className="font-bold text-slate-900">{row.employeeName}</p>
                       <p className="text-[11px] text-slate-500">{row.roleTitle}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]">
+                        {row.bankAccountNumber ? (
+                          <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-mono">
+                            {row.bankName}: {row.bankAccountNumber}
+                          </span>
+                        ) : (
+                          <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                            Rekening belum diatur
+                          </span>
+                        )}
+                        {row.employeeNik && (
+                          <span className="text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                            NIK: {row.employeeNik}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 text-right">
                       <input

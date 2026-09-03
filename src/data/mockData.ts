@@ -178,6 +178,11 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     completedTaskCount: 0,
     capacityPercentage: 0,
     lastLoginAt: 'Just now',
+    nik: '3171012304950001',
+    idType: 'NIK',
+    bankName: 'Bank Mandiri',
+    bankAccountNumber: '122-00-983100-2',
+    bankAccountHolder: 'Adryan kelvianto',
   },
 ];
 
