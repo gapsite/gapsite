@@ -21,6 +21,9 @@ import {
   saveReceivableToFirestore,
   deleteReceivableFromFirestore,
   subscribeToReceivables,
+  savePayrollToFirestore,
+  deletePayrollFromFirestore,
+  subscribeToPayroll,
   saveTaxObligationToFirestore,
   deleteTaxObligationFromFirestore,
   subscribeToTaxObligations,
@@ -281,6 +284,13 @@ interface ProjectContextType {
   ) => { success: boolean; message?: string };
   deleteBankLoan: (
     id: string
+  ) => { success: boolean; message?: string };
+  cancelLoanDisbursement: (
+    loanId: string
+  ) => { success: boolean; message?: string };
+  cancelLoanInstallmentPayment: (
+    loanId: string,
+    monthNumber: number
   ) => { success: boolean; message?: string };
   recordLoanDisbursementToLedger: (
     loanId: string,
@@ -1289,7 +1299,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     | 'TRANSACTION_CATEGORIES'
     | 'PAYMENT_CHANNELS'
     | 'BANK_LOANS'
+    | 'COMPANY_CAPITAL'
     | 'TAX_OBLIGATIONS'
+    | 'RECEIVABLES'
+    | 'PAYROLL_PAYMENTS'
     | 'ROLE_DEFINITIONS'
     | 'ROLE_GOVERNANCE_META';
 
@@ -1710,7 +1723,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       DEFAULT_PAYMENT_CHANNELS,
       INITIAL_TAX_OBLIGATIONS,
       [],
-      DEFAULT_COMPANY_CAPITAL
+      DEFAULT_COMPANY_CAPITAL,
+      INITIAL_RECEIVABLES,
+      INITIAL_PAYROLL_RECORDS
     );
 
     const unsubProjects = subscribeToProjects((remoteProjects) => {
@@ -1923,6 +1938,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubPayroll = subscribeToPayroll((remotePayrolls) => {
+      if (Array.isArray(remotePayrolls)) {
+        setPayrollRecords(remotePayrolls);
+      }
+    });
+
     return () => {
       unsubProjects();
       unsubDeletedUsers();
@@ -1940,6 +1961,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubCompanyCapital();
       unsubTaxObligations();
       unsubReceivables();
+      unsubPayroll();
     };
   }, []);
 
@@ -1961,13 +1983,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveSettingsToFirestore('bank_loans', bankLoans),
         saveSettingsToFirestore('company_capital', companyCapital),
         saveSettingsToFirestore('tax_obligations', taxObligations),
+        ...receivables.map((r) => saveReceivableToFirestore(r)),
+        ...payrollRecords.map((p) => savePayrollToFirestore(p)),
       ]);
     } catch (err) {
       console.error('Firestore bulk sync error:', err);
     } finally {
       setIsSyncingWithFirestore(false);
     }
-  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories, bankLoans, companyCapital, taxObligations]);
+  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories, bankLoans, companyCapital, taxObligations, receivables, payrollRecords]);
 
   // Auth Functions
   const loginWithGoogle = async (): Promise<{ success: boolean; message?: string }> => {
@@ -3973,13 +3997,65 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteBankLoan = (id: string): { success: boolean; message?: string } => {
-    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && currentUser.role !== 'DIRECTOR') {
       return { success: false, message: 'Akses Ditolak: Hanya Master Admin / Tim Finance yang dapat menghapus fasilitas pinjaman.' };
     }
 
     const target = bankLoans.find((l) => l.id === id);
     if (!target) {
       return { success: false, message: 'Pinjaman bank tidak ditemukan.' };
+    }
+
+    // 1. Identify and automatically delete ALL linked transactions from Finance, Cashflow, and Laporan Keuangan:
+    // - Disbursement transaction
+    // - Installment payment transactions (principal & interest)
+    // - Provision / administration fee transactions
+    const txIdsToDelete = new Set<string>();
+    if (target.disbursementTransactionId) {
+      txIdsToDelete.add(target.disbursementTransactionId);
+    }
+
+    // From schedule
+    (target.schedule || []).forEach((s) => {
+      if (Array.isArray(s.transactionIds)) {
+        s.transactionIds.forEach((txId) => txIdsToDelete.add(txId));
+      }
+    });
+
+    // Also match transactions by reference codes or loan names
+    const loanSuffix6 = target.id.slice(-6).toUpperCase();
+    const loanSuffix4 = target.id.slice(-4).toUpperCase();
+    transactions.forEach((t) => {
+      const matchDisbRef = t.referenceNumber?.includes(`LOAN-DISB-${loanSuffix6}`);
+      const matchPrinRef = t.referenceNumber?.includes(`LOAN-PRIN-`) && t.referenceNumber?.includes(loanSuffix4);
+      const matchIntRef = t.referenceNumber?.includes(`LOAN-INT-`) && t.referenceNumber?.includes(loanSuffix4);
+      const matchAngsRef = t.referenceNumber?.includes(`ANGS-`) && t.notes?.includes(target.loanName);
+      const matchIdInNotes = t.notes?.includes(target.id);
+      const matchLoanCategoryAndBank =
+        (t.category === 'BANK_LOAN_DISBURSEMENT' ||
+          t.category === 'BANK_LOAN_PRINCIPAL' ||
+          t.category === 'BANK_LOAN_INTEREST' ||
+          t.category === 'BANK_LOAN_ADMIN_FEE' ||
+          t.category === 'PINJAMAN_BANK' ||
+          t.category === 'CICILAN_PINJAMAN') &&
+        (t.description?.toLowerCase().includes(target.loanName.toLowerCase()) ||
+          t.notes?.toLowerCase().includes(target.loanName.toLowerCase()) ||
+          (target.bankName && t.clientOrVendorName?.toLowerCase().includes(target.bankName.toLowerCase())));
+
+      if (matchDisbRef || matchPrinRef || matchIntRef || matchAngsRef || matchIdInNotes || matchLoanCategoryAndBank) {
+        txIdsToDelete.add(t.id);
+      }
+    });
+
+    if (txIdsToDelete.size > 0) {
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+      txIdsToDelete.forEach((txId) => {
+        deleteTransactionFromFirestore(txId);
+      });
     }
 
     setBankLoans((prev) => {
@@ -3989,7 +4065,134 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
 
-    return { success: true, message: `Fasilitas pinjaman "${target.loanName}" berhasil dihapus.` };
+    return {
+      success: true,
+      message: `Fasilitas pinjaman "${target.loanName}" beserta mutasi kas terkait (${txIdsToDelete.size} transaksi) berhasil dihapus dari Finance, Arus Kas, dan Laporan Keuangan.`,
+    };
+  };
+
+  const cancelLoanDisbursement = (
+    loanId: string
+  ): { success: boolean; message?: string } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && currentUser.role !== 'DIRECTOR') {
+      return { success: false, message: 'Akses Ditolak: Anda tidak memiliki wewenang untuk membatalkan pencairan pinjaman.' };
+    }
+
+    const loan = bankLoans.find((l) => l.id === loanId);
+    if (!loan) {
+      return { success: false, message: 'Pinjaman bank tidak ditemukan.' };
+    }
+
+    const txIdsToDelete = new Set<string>();
+    if (loan.disbursementTransactionId) {
+      txIdsToDelete.add(loan.disbursementTransactionId);
+    }
+    const loanSuffix6 = loan.id.slice(-6).toUpperCase();
+    transactions.forEach((t) => {
+      if (
+        t.category === 'BANK_LOAN_DISBURSEMENT' &&
+        (t.referenceNumber?.includes(`LOAN-DISB-${loanSuffix6}`) ||
+          t.description?.includes(loan.loanName) ||
+          t.notes?.includes(loan.id))
+      ) {
+        txIdsToDelete.add(t.id);
+      }
+    });
+
+    if (txIdsToDelete.size > 0) {
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+      txIdsToDelete.forEach((txId) => {
+        deleteTransactionFromFirestore(txId);
+      });
+    }
+
+    updateBankLoan(loanId, {
+      isDisbursed: false,
+      disbursedAt: undefined,
+      disbursementTransactionId: undefined,
+    });
+
+    return {
+      success: true,
+      message: `Pencairan pinjaman "${loan.loanName}" berhasil dibatalkan dan jurnal kas terkait telah otomatis dihapus dari Finance, Arus Kas, dan Laporan Keuangan.`,
+    };
+  };
+
+  const cancelLoanInstallmentPayment = (
+    loanId: string,
+    monthNumber: number
+  ): { success: boolean; message?: string } => {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && currentUser.role !== 'DIRECTOR') {
+      return { success: false, message: 'Akses Ditolak: Anda tidak memiliki wewenang untuk membatalkan pembayaran angsuran.' };
+    }
+
+    const loan = bankLoans.find((l) => l.id === loanId);
+    if (!loan || !loan.schedule) {
+      return { success: false, message: 'Pinjaman atau jadwal angsuran tidak ditemukan.' };
+    }
+
+    const item = loan.schedule.find((s) => s.monthNumber === monthNumber);
+    if (!item || !item.isPaid) {
+      return { success: false, message: `Angsuran bulan ke-${monthNumber} belum tercatat lunas.` };
+    }
+
+    const txIdsToDelete = new Set<string>();
+    if (Array.isArray(item.transactionIds)) {
+      item.transactionIds.forEach((id) => txIdsToDelete.add(id));
+    }
+    const loanSuffix4 = loan.id.slice(-4).toUpperCase();
+    transactions.forEach((t) => {
+      const matchPrin = t.referenceNumber?.includes(`LOAN-PRIN-M${monthNumber}-${loanSuffix4}`);
+      const matchInt = t.referenceNumber?.includes(`LOAN-INT-M${monthNumber}-${loanSuffix4}`);
+      const matchAngs = t.referenceNumber?.includes(`ANGS-M${monthNumber}`) && t.description?.includes(loan.loanName);
+      if (matchPrin || matchInt || matchAngs) {
+        txIdsToDelete.add(t.id);
+      }
+    });
+
+    if (txIdsToDelete.size > 0) {
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+      txIdsToDelete.forEach((txId) => {
+        deleteTransactionFromFirestore(txId);
+      });
+    }
+
+    const updatedSchedule = loan.schedule.map((s) => {
+      if (s.monthNumber === monthNumber) {
+        return {
+          ...s,
+          isPaid: false,
+          paidAt: undefined,
+          transactionIds: undefined,
+        };
+      }
+      return s;
+    });
+
+    const newPaidPrincipal = Math.max(0, (loan.paidPrincipal || 0) - item.principalPayment);
+    const newPaidInterest = Math.max(0, (loan.paidInterest || 0) - item.interestPayment);
+    const newRemainingPrincipal = (loan.remainingPrincipal ?? loan.principalAmount) + item.principalPayment;
+
+    updateBankLoan(loanId, {
+      schedule: updatedSchedule,
+      paidPrincipal: newPaidPrincipal,
+      paidInterest: newPaidInterest,
+      remainingPrincipal: newRemainingPrincipal,
+      status: 'ACTIVE',
+    });
+
+    return {
+      success: true,
+      message: `Pembayaran angsuran bulan ke-${monthNumber} (${loan.loanName}) berhasil dibatalkan dan jurnal kas telah dihapus dari Finance, Arus Kas, dan Laporan Keuangan.`,
+    };
   };
 
   const recordLoanDisbursementToLedger = (
@@ -4424,7 +4627,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteTaxObligation = (id: string): { success: boolean; message?: string } => {
-    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
+    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && currentUser.role !== 'DIRECTOR') {
       return { success: false, message: 'Akses Ditolak: Hanya Tim Finance / Master Admin yang dapat menghapus data pajak.' };
     }
 
@@ -4433,6 +4636,60 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Data pajak tidak ditemukan.' };
     }
 
+    // 1. Identify and automatically delete ALL linked transactions in Finance, Cashflow, and Laporan Keuangan
+    const txIdsToDelete = new Set<string>();
+    if (target.transactionId) {
+      txIdsToDelete.add(target.transactionId);
+    }
+
+    const targetIdSuffix = target.id.slice(-4).toUpperCase();
+    transactions.forEach((t) => {
+      const matchNtpn = target.ntpnNumber && t.referenceNumber?.includes(target.ntpnNumber);
+      const matchBilling = target.billingCode && t.referenceNumber?.includes(target.billingCode);
+      const matchTaxRef = t.referenceNumber?.includes(`TAX-${targetIdSuffix}`);
+      const matchIdInNote = t.notes?.includes(target.id);
+      const matchTitle =
+        target.title &&
+        (t.category === 'TAX_PPH_PPN' ||
+          t.category === 'PAJAK__PPN_11__' ||
+          t.category === 'PPH_21' ||
+          t.category === 'PPH_23' ||
+          t.category === 'PPH_4_2' ||
+          t.category === 'PPH_BADAN_FINAL') &&
+        (t.description?.toLowerCase().includes(target.title.toLowerCase()) ||
+          t.notes?.toLowerCase().includes(target.title.toLowerCase()));
+
+      if (matchNtpn || matchBilling || matchTaxRef || matchIdInNote || matchTitle) {
+        txIdsToDelete.add(t.id);
+      }
+    });
+
+    if (txIdsToDelete.size > 0) {
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+      txIdsToDelete.forEach((txId) => {
+        deleteTransactionFromFirestore(txId);
+      });
+    }
+
+    // 2. If this tax obligation was generated from a payroll record, detach linkage
+    if (target.payrollId) {
+      setPayrollRecords((prev) => {
+        const updated = prev.map((r) =>
+          r.id === target.payrollId || r.pph21ObligationId === id
+            ? { ...r, pph21ObligationId: undefined }
+            : r
+        );
+        broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
+        saveSettingsToFirestore('payroll_records', updated);
+        return updated;
+      });
+    }
+
+    // 3. Delete from taxObligations state and Firestore
     setTaxObligations((prev) => {
       const updated = prev.filter((t) => t.id !== id);
       broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
@@ -4440,7 +4697,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
 
-    return { success: true, message: `Kewajiban pajak "${target.title}" berhasil dihapus.` };
+    deleteTaxObligationFromFirestore(id);
+
+    return {
+      success: true,
+      message: `Kewajiban pajak "${target.title}" beserta seluruh mutasi kas terkait (${txIdsToDelete.size} transaksi) berhasil dihapus dari Finance, Arus Kas (Cashflow), dan Laporan Keuangan.`,
+    };
   };
 
   const payTaxObligation = (
@@ -5862,6 +6124,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
 
+    savePayrollToFirestore(newRecord);
+
     return {
       success: true,
       payroll: newRecord,
@@ -5972,12 +6236,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return prevTaxes;
     });
 
+    const updatedRecord = { ...existing, ...updates };
     setPayrollRecords((prev) => {
-      const updated = prev.map((r) => (r.id === id ? { ...r, ...updates } : r));
+      const updated = prev.map((r) => (r.id === id ? updatedRecord : r));
       broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
       saveSettingsToFirestore('payroll_records', updated);
       return updated;
     });
+
+    savePayrollToFirestore(updatedRecord);
 
     return { success: true, message: 'Data slip gaji dan sinkronisasi pajak berhasil diperbarui.' };
   };
@@ -5988,27 +6255,73 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Slip gaji tidak ditemukan.' };
     }
 
-    // Automatically remove linked transaction from cash ledger if present
+    // 1. Identify and automatically delete ALL linked transactions in Finance & Cashflow
+    const txIdsToDelete = new Set<string>();
     if (existing.transactionId) {
-      deleteTransaction(existing.transactionId);
+      txIdsToDelete.add(existing.transactionId);
     }
 
-    // Automatically remove linked tax obligation from Tax Management if present
-    setTaxObligations((prevTaxes) => {
-      const hasLinkedTax = prevTaxes.some(
-        (t) => t.payrollId === id || (existing.pph21ObligationId && t.id === existing.pph21ObligationId)
-      );
-      if (hasLinkedTax) {
-        const updatedTaxes = prevTaxes.filter(
-          (t) => t.payrollId !== id && t.id !== existing.pph21ObligationId
-        );
+    transactions.forEach((t) => {
+      const matchRef = existing.payrollNumber && t.referenceNumber === existing.payrollNumber;
+      const matchNote = existing.payrollNumber && t.notes?.includes(existing.payrollNumber);
+      const matchIdInNote = t.notes?.includes(existing.id);
+      const matchDesc = existing.payrollNumber && t.description?.includes(existing.payrollNumber);
+      const matchEmployeeAndPeriod =
+        t.category === 'GAJI_KARYAWAN' &&
+        existing.employeeName &&
+        t.clientOrVendorName?.toLowerCase().trim() === existing.employeeName.toLowerCase().trim() &&
+        existing.period &&
+        t.description?.toLowerCase().includes(existing.period.toLowerCase());
+
+      if (matchRef || matchNote || matchIdInNote || matchDesc || matchEmployeeAndPeriod) {
+        txIdsToDelete.add(t.id);
+      }
+    });
+
+    // 2. Identify linked tax obligations (PPh 21) AND any payment transactions linked to them
+    const taxIdsToDelete = new Set<string>();
+    taxObligations.forEach((t) => {
+      if (t.payrollId === id || (existing.pph21ObligationId && t.id === existing.pph21ObligationId)) {
+        taxIdsToDelete.add(t.id);
+        if (t.transactionId) {
+          txIdsToDelete.add(t.transactionId);
+        }
+        if (t.ntpnNumber) {
+          transactions.forEach((tx) => {
+            if (tx.referenceNumber?.includes(t.ntpnNumber!)) {
+              txIdsToDelete.add(tx.id);
+            }
+          });
+        }
+      }
+    });
+
+    // 3. Purge all collected transactions from cash ledger and Firestore
+    if (txIdsToDelete.size > 0) {
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+      txIdsToDelete.forEach((txId) => {
+        deleteTransactionFromFirestore(txId);
+      });
+    }
+
+    // 4. Purge linked tax obligations (PPh 21) from Tax Management and Firestore
+    if (taxIdsToDelete.size > 0) {
+      setTaxObligations((prevTaxes) => {
+        const updatedTaxes = prevTaxes.filter((t) => !taxIdsToDelete.has(t.id));
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
         saveSettingsToFirestore('tax_obligations', updatedTaxes);
         return updatedTaxes;
-      }
-      return prevTaxes;
-    });
+      });
+      taxIdsToDelete.forEach((taxId) => {
+        deleteTaxObligationFromFirestore(taxId);
+      });
+    }
 
+    // 5. Purge payroll record
     setPayrollRecords((prev) => {
       const updated = prev.filter((r) => r.id !== id);
       broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
@@ -6016,9 +6329,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
 
+    deletePayrollFromFirestore(id);
+
     return {
       success: true,
-      message: `Slip gaji ${existing.payrollNumber}, transaksi kas, dan catatan PPh 21 terkait berhasil dihapus.`,
+      message: `Slip gaji ${existing.payrollNumber}, seluruh transaksi kas terkait (${txIdsToDelete.size} transaksi), dan kewajiban PPh 21 berhasil dihapus dari Finance, Arus Kas, dan Laporan Keuangan.`,
     };
   };
 
@@ -6102,6 +6417,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
 
+    newPayments.forEach((p) => savePayrollToFirestore(p));
+
     return {
       success: true,
       count: newPayments.length,
@@ -6123,7 +6440,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setPayrollRecords(INITIAL_PAYROLL_RECORDS);
     broadcastLiveDataUpdate('PAYROLL_PAYMENTS', INITIAL_PAYROLL_RECORDS);
     saveSettingsToFirestore('payroll_records', INITIAL_PAYROLL_RECORDS);
-    return { success: true, message: 'Data payroll berhasil direset ke contoh default.' };
+    INITIAL_PAYROLL_RECORDS.forEach((p) => savePayrollToFirestore(p));
+    return { success: true, message: 'Data payroll berhasil direset ke contoh default dan tersimpan di Cloud Firestore.' };
   };
 
   const toggleMilestoneManualSignoff = (
@@ -6563,6 +6881,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addBankLoan,
         updateBankLoan,
         deleteBankLoan,
+        cancelLoanDisbursement,
+        cancelLoanInstallmentPayment,
         recordLoanDisbursementToLedger,
         recordLoanInstallmentToLedger,
         renewBankLoan,

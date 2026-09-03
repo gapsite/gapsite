@@ -21,7 +21,8 @@ import {
   DocumentCategoryDefinition,
   DeletedUserRecord,
   Receivable,
-  TaxObligation
+  TaxObligation,
+  PayrollPayment
 } from '../types';
 
 export const FirestoreCollections = {
@@ -35,6 +36,7 @@ export const FirestoreCollections = {
   DOCUMENT_CATEGORIES: 'document_categories',
   RECEIVABLES: 'receivables',
   TAX_OBLIGATIONS: 'tax_obligations',
+  PAYROLL: 'payroll_records',
 };
 
 // Deeply sanitize objects so no `undefined` values are ever sent to Firestore (which causes setDoc to fail)
@@ -456,6 +458,104 @@ export const subscribeToTaxObligations = (onUpdate: (taxes: TaxObligation[]) => 
   );
 };
 
+// Sync Payroll Payment (Slip Gaji & Kompensasi Karyawan) to Firestore
+export const savePayrollToFirestore = async (payroll: PayrollPayment): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.PAYROLL, payroll.id);
+    const sanitized = sanitizeForFirestore({
+      ...payroll,
+      employeeEmail: payroll.employeeEmail || '',
+      employeePhone: payroll.employeePhone || '',
+      employeeNik: payroll.employeeNik || '',
+      bankName: payroll.bankName || '',
+      bankAccountNumber: payroll.bankAccountNumber || '',
+      bankAccountHolder: payroll.bankAccountHolder || '',
+      paymentChannelId: payroll.paymentChannelId || '',
+      transactionId: payroll.transactionId || '',
+      pph21ObligationId: payroll.pph21ObligationId || '',
+      notes: payroll.notes || '',
+      paidAt: payroll.paidAt || '',
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+
+    // Also update settings backup document
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
+    const snap = await getDoc(settingsRef);
+    let list: PayrollPayment[] = [];
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      list = snap.data().data;
+    }
+    const filtered = list.filter((p) => p.id !== payroll.id);
+    await setDoc(
+      settingsRef,
+      sanitizeForFirestore({ data: [payroll, ...filtered], updatedAt: new Date().toISOString() }),
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Firestore save payroll error:', error);
+  }
+};
+
+export const deletePayrollFromFirestore = async (payrollId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.PAYROLL, payrollId);
+    await deleteDoc(docRef);
+
+    // Also update settings backup document
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
+    const snap = await getDoc(settingsRef);
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      const filtered = snap.data().data.filter((p: PayrollPayment) => p.id !== payrollId);
+      await setDoc(
+        settingsRef,
+        sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
+        { merge: true }
+      );
+    }
+  } catch (error) {
+    console.error('Firestore delete payroll error:', error);
+  }
+};
+
+export const subscribeToPayroll = (onUpdate: (payrolls: PayrollPayment[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.PAYROLL);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: PayrollPayment[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as PayrollPayment;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      if (loaded.length > 0) {
+        onUpdate(loaded);
+      } else {
+        // Check settings fallback
+        const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
+        getDoc(settingsRef)
+          .then((snap) => {
+            if (snap.exists() && Array.isArray(snap.data()?.data) && snap.data().data.length > 0) {
+              onUpdate(snap.data().data);
+            }
+          })
+          .catch(() => {});
+      }
+    },
+    (err) => {
+      console.warn('Firestore payroll listener warning:', err);
+      // Fallback to settings listener
+      subscribeToSettings('payroll_records', (data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          onUpdate(data);
+        }
+      });
+    }
+  );
+};
+
 export const subscribeToSettings = (key: string, onUpdate: (data: any) => void) => {
   const docRef = doc(db, FirestoreCollections.SETTINGS, key);
   return onSnapshot(
@@ -654,8 +754,17 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 16. Ensure payroll records exist in settings if not present
+    // 16. Ensure payroll records exist in Firestore collection & settings if not present
     if (defaultPayrollRecords && defaultPayrollRecords.length > 0) {
+      const payrollColSnap = await getDocs(collection(db, FirestoreCollections.PAYROLL));
+      if (payrollColSnap.empty) {
+        await Promise.all(
+          defaultPayrollRecords.map((p) => {
+            const pRef = doc(db, FirestoreCollections.PAYROLL, p.id);
+            return setDoc(pRef, sanitizeForFirestore(p));
+          })
+        );
+      }
       const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
       const payrollSnap = await getDoc(payrollRef);
       if (!payrollSnap.exists()) {

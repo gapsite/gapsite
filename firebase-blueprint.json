@@ -113,6 +113,26 @@
         "createdBy": { "type": "string" }
       },
       "required": ["id", "name", "category", "status"]
+    },
+    "PayrollPayment": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "payrollNumber": { "type": "string" },
+        "period": { "type": "string" },
+        "paymentDate": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "roleTitle": { "type": "string" },
+        "department": { "type": "string" },
+        "basicSalary": { "type": "number" },
+        "totalEarnings": { "type": "number" },
+        "totalDeductions": { "type": "number" },
+        "netSalary": { "type": "number" },
+        "status": { "type": "string", "enum": ["PAID", "PENDING", "DRAFT"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "payrollNumber", "employeeName", "period", "netSalary", "status"]
     }
   },
   "firestore": {
@@ -139,6 +159,10 @@
     "/app_settings/{settingId}": {
       "schema": "object",
       "description": "System service types and role configurations."
+    },
+    "/payroll_records/{recordId}": {
+      "schema": "PayrollPayment",
+      "description": "Employee salary payments, payslips, and compensation records."
     }
   }
 }

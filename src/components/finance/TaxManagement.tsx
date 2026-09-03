@@ -410,10 +410,14 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
 
   // Delete Handler
   const handleDeleteTax = (id: string, title: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus kewajiban pajak "${title}"?`)) {
+    if (
+      window.confirm(
+        `Apakah Anda yakin ingin menghapus kewajiban pajak "${title}"? Seluruh transaksi pembayaran kas terkait di Finance (Buku Kas), Arus Kas (Cashflow), dan Laporan Keuangan akan otomatis ikut terhapus.`
+      )
+    ) {
       const res = deleteTaxObligation(id);
       if (res.success) {
-        showToast('success', res.message || 'Kewajiban pajak berhasil dihapus.');
+        showToast('success', res.message || 'Kewajiban pajak dan mutasi kas terkait berhasil dihapus.');
       } else {
         showToast('error', res.message || 'Gagal menghapus data.');
       }

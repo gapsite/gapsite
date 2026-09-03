@@ -41,6 +41,8 @@ export const BankLoanManagement: React.FC = () => {
     addBankLoan,
     updateBankLoan,
     deleteBankLoan,
+    cancelLoanDisbursement,
+    cancelLoanInstallmentPayment,
     recordLoanDisbursementToLedger,
     recordLoanInstallmentToLedger,
     renewBankLoan,
@@ -344,6 +346,43 @@ export const BankLoanManagement: React.FC = () => {
     }
 
     setInstallmentToPay(null);
+  };
+
+  const handleCancelDisbursement = (loan: BankLoan) => {
+    if (
+      window.confirm(
+        `Apakah Anda yakin ingin membatalkan pencairan pinjaman "${loan.loanName}"? Transaksi penerimaan pokok di Finance (Buku Kas), Arus Kas (Cashflow), dan Laporan Keuangan akan otomatis terhapus.`
+      )
+    ) {
+      const res = cancelLoanDisbursement(loan.id);
+      setToastMessage({
+        type: res.success ? 'success' : 'error',
+        title: res.success ? 'Pencairan Dibatalkan' : 'Gagal Membatalkan',
+        text: res.message || 'Pencairan pokok berhasil dibatalkan dan transaksi kas telah dihapus.',
+      });
+    }
+  };
+
+  const handleCancelInstallmentPayment = (loan: BankLoan, item: LoanInstallmentScheduleItem) => {
+    if (
+      window.confirm(
+        `Apakah Anda yakin ingin menghapus mutasi pembayaran angsuran bulan ke-${item.monthNumber} (${loan.loanName})? Transaksi pengeluaran kas di Finance, Arus Kas (Cashflow), dan Laporan Keuangan akan otomatis terhapus.`
+      )
+    ) {
+      const res = cancelLoanInstallmentPayment(loan.id, item.monthNumber);
+      setToastMessage({
+        type: res.success ? 'success' : 'error',
+        title: res.success ? 'Angsuran Dibatalkan' : 'Gagal Membatalkan',
+        text: res.message || 'Pembayaran angsuran berhasil dibatalkan dan mutasi kas telah dihapus.',
+      });
+      // Refresh schedule drawer with updated loan state
+      setTimeout(() => {
+        const updatedLoan = bankLoans.find((l) => l.id === loan.id);
+        if (updatedLoan) {
+          setSelectedLoanForSchedule(updatedLoan);
+        }
+      }, 50);
+    }
   };
 
   const handleOpenRenewModal = (loan: BankLoan) => {
@@ -916,6 +955,19 @@ export const BankLoanManagement: React.FC = () => {
                         >
                           <ArrowDownRight className="w-4 h-4" />
                           <span>Cairkan ke Buku Kas</span>
+                        </button>
+                      )}
+
+                      {/* Cancel Disbursement Button if already disbursed */}
+                      {loan.isDisbursed && canManage && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelDisbursement(loan)}
+                          className="px-2.5 py-2 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                          title="Batalkan pencairan dan hapus mutasi penerimaan kas dari Finance / Laporan Keuangan"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Batal Cair Kas</span>
                         </button>
                       )}
 
@@ -1649,7 +1701,21 @@ export const BankLoanManagement: React.FC = () => {
                         </td>
                         <td className="py-2.5 px-3 text-center font-sans">
                           {item.isPaid ? (
-                            <span className="text-[11px] text-slate-400 italic">Tercatat di kas</span>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="text-[11px] text-emerald-700 font-medium">Tercatat</span>
+                              {canManage && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleCancelInstallmentPayment(activeSelectedLoan, item)
+                                  }
+                                  className="px-2 py-0.5 text-[10px] font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded transition-colors cursor-pointer"
+                                  title="Hapus mutasi kas pembayaran angsuran ini dari Finance & Laporan Keuangan"
+                                >
+                                  Hapus Kas
+                                </button>
+                              )}
+                            </div>
                           ) : canManage ? (
                             <button
                               type="button"
@@ -2309,8 +2375,8 @@ export const BankLoanManagement: React.FC = () => {
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 space-y-1">
               <div><strong>Nama Fasilitas:</strong> {loanToDelete.loanName} ({loanToDelete.bankName})</div>
               <div><strong>Plafon:</strong> Rp {loanToDelete.principalAmount.toLocaleString('id-ID')}</div>
-              <div className="text-[11px] text-slate-500 pt-1">
-                Catatan: Mutasi dan jurnal kas yang sebelumnya sudah tercatat ke buku kas tidak akan terhapus otomatis.
+              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 pt-1.5">
+                <strong>Otomatis Sinkronisasi:</strong> Seluruh mutasi pencairan pokok dan jurnal angsuran terkait pinjaman ini di <strong>Finance (Buku Kas)</strong>, <strong>Arus Kas (Cashflow)</strong>, dan <strong>Laporan Keuangan</strong> akan otomatis terhapus bersih.
               </div>
             </div>
 

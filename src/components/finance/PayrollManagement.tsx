@@ -25,6 +25,8 @@ import {
   Sparkles,
   ExternalLink,
   Eye,
+  RefreshCw,
+  UserCheck,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { PayrollPayment, PayrollStatus } from '../../types';
@@ -42,17 +44,24 @@ export const PayrollManagement: React.FC = () => {
     deletePayrollPayment,
     batchAddPayrollPayments,
     markPayrollAsPaid,
+    resetPayrollToDefault,
     transactions,
     currentUser,
     isMasterAdmin,
+    hasPermission,
     paymentChannels,
+    isSyncingWithFirestore,
   } = useProjects();
+
+  const canManagePayroll =
+    isMasterAdmin || hasPermission('MANAGE_FINANCE') || currentUser.role === 'DIRECTOR_PARTNER';
 
   // Search & Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [periodFilter, setPeriodFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
+  const [viewOnlyMine, setViewOnlyMine] = useState(false);
 
   // Modals state
   const [selectedForView, setSelectedForView] = useState<PayrollPayment | null>(null);
@@ -60,6 +69,24 @@ export const PayrollManagement: React.FC = () => {
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
   const [editingPayroll, setEditingPayroll] = useState<PayrollPayment | null>(null);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+
+  // Count user's own payslips
+  const myRecordsCount = useMemo(() => {
+    const uName = (currentUser.name || '').toLowerCase();
+    const uEmail = (currentUser.email || '').toLowerCase();
+    const uNik = (currentUser.username || '').toLowerCase();
+    return payrollRecords.filter((r) => {
+      const rName = (r.employeeName || '').toLowerCase();
+      const rEmail = (r.employeeEmail || '').toLowerCase();
+      const rNik = (r.employeeNik || '').toLowerCase();
+      return (
+        r.employeeId === currentUser.id ||
+        (uName && rName.includes(uName)) ||
+        (uEmail && rEmail === uEmail) ||
+        (uNik && rNik.includes(uNik))
+      );
+    }).length;
+  }, [payrollRecords, currentUser]);
 
   // Distinct periods available
   const availablePeriods = useMemo(() => {
@@ -86,6 +113,21 @@ export const PayrollManagement: React.FC = () => {
   // Filtered payroll records
   const filteredRecords = useMemo(() => {
     return payrollRecords.filter((record) => {
+      // My records filter
+      if (viewOnlyMine) {
+        const uName = (currentUser.name || '').toLowerCase();
+        const uEmail = (currentUser.email || '').toLowerCase();
+        const uNik = (currentUser.username || '').toLowerCase();
+        const rName = (record.employeeName || '').toLowerCase();
+        const rEmail = (record.employeeEmail || '').toLowerCase();
+        const rNik = (record.employeeNik || '').toLowerCase();
+        const isMine =
+          record.employeeId === currentUser.id ||
+          (uName && rName.includes(uName)) ||
+          (uEmail && rEmail === uEmail) ||
+          (uNik && rNik.includes(uNik));
+        if (!isMine) return false;
+      }
       // Period filter
       if (periodFilter !== 'ALL' && record.period !== periodFilter) {
         return false;
@@ -112,7 +154,7 @@ export const PayrollManagement: React.FC = () => {
       }
       return true;
     });
-  }, [payrollRecords, periodFilter, statusFilter, departmentFilter, searchTerm]);
+  }, [payrollRecords, periodFilter, statusFilter, departmentFilter, searchTerm, viewOnlyMine, currentUser]);
 
   // Summary Metrics
   const summary = useMemo(() => {
@@ -135,7 +177,7 @@ export const PayrollManagement: React.FC = () => {
   const handleDelete = (id: string, name: string) => {
     if (
       window.confirm(
-        `Apakah Anda yakin ingin menghapus slip gaji ${name}? Transaksi pengeluaran kas yang terkait juga akan otomatis dihapus dari Buku Kas.`
+        `Apakah Anda yakin ingin menghapus slip gaji ${name}? Transaksi pengeluaran kas yang terkait akan otomatis terhapus dari Finance, Arus Kas (Cashflow), dan Laporan Keuangan.`
       )
     ) {
       deletePayrollPayment(id);
@@ -222,43 +264,73 @@ export const PayrollManagement: React.FC = () => {
     <div className="space-y-6">
       {/* Top Banner Notice: Full Realtime Integration */}
       <div className="bg-emerald-900/90 text-white rounded-2xl p-5 shadow-lg border border-emerald-700/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="p-1 rounded-md bg-emerald-500/20 text-emerald-300">
               <ShieldCheck className="w-5 h-5" />
             </span>
             <h2 className="text-base font-bold tracking-wide uppercase font-mono">
-              Sistem Pembayaran Gaji Karyawan & Payroll Konsultan
+              Sistem Pembayaran Gaji Karyawan &amp; Payroll Konsultan
             </h2>
-            <span className="bg-emerald-500/30 text-emerald-200 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
-              Integrasi Arus Kas &amp; Pajak PPh 21
+            <div className="flex items-center gap-1.5 bg-emerald-950/80 border border-emerald-400/40 text-emerald-300 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full shadow-xs">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Firestore Realtime Sync Terhubung</span>
+            </div>
+            <span className="bg-slate-900/80 text-amber-300 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-amber-500/30">
+              Role: {currentUser.roleTitle || currentUser.role}
             </span>
           </div>
           <p className="text-xs text-emerald-100 max-w-3xl leading-relaxed">
-            Setiap pembayaran gaji yang diproses otomatis tercatat ke <strong>Buku Kas Umum</strong>, mengurangi saldo kas di <strong>Arus Kas Harian</strong> (<code className="bg-emerald-950/60 px-1 py-0.5 rounded font-mono text-emerald-300">GAJI_KARYAWAN</code>), dan pemotongan <strong>PPh Pasal 21</strong> langsung otomatis masuk ke <strong>Menu Pajak &amp; Hutang Pajak (Tax Management)</strong> serta <strong>Laporan Keuangan (Neraca Liabilitas Pajak)</strong> tanpa risiko input ganda (anti double-input).
+            Data tersimpan aman di <strong>Cloud Firestore</strong> dan terupdate secara realtime ke seluruh peran/role. Setiap pembayaran gaji yang diproses otomatis mengurangi saldo kas di <strong>Arus Kas Harian</strong> (<code className="bg-emerald-950/60 px-1 py-0.5 rounded font-mono text-emerald-300">GAJI_KARYAWAN</code>), dan pemotongan <strong>PPh 21 (Skema TER)</strong> langsung tersinkronisasi otomatis ke <strong>Menu Pajak (Tax Management)</strong> serta <strong>Laporan Keuangan</strong>.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsBatchModalOpen(true)}
-            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-          >
-            <Zap className="w-4 h-4 text-slate-950" />
-            <span>Gaji Masal (Batch)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingPayroll(null);
-              setIsInputModalOpen(true);
-            }}
-            className="px-4 py-2 bg-white hover:bg-slate-100 text-emerald-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-emerald-800" />
-            <span>+ Input Gaji Karyawan</span>
-          </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {canManagePayroll && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Reset data payroll ke contoh default baseline dan simpan ke Cloud Firestore?')) {
+                    resetPayrollToDefault();
+                  }
+                }}
+                className="px-3 py-2 bg-emerald-950/80 hover:bg-emerald-950 text-emerald-200 border border-emerald-600/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Reset data contoh default payroll"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset Default</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsBatchModalOpen(true)}
+                className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              >
+                <Zap className="w-4 h-4 text-slate-950" />
+                <span>Gaji Masal (Batch)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPayroll(null);
+                  setIsInputModalOpen(true);
+                }}
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-emerald-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              >
+                <Plus className="w-4 h-4 text-emerald-800" />
+                <span>+ Input Gaji</span>
+              </button>
+            </>
+          )}
+          {!canManagePayroll && (
+            <div className="px-3.5 py-2 bg-emerald-950/80 text-emerald-200 border border-emerald-500/40 rounded-xl text-xs font-medium flex items-center gap-2">
+              <Eye className="w-4 h-4 text-emerald-300" />
+              <span>Mode Akses Pegawai (Slip Gaji Realtime)</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -348,8 +420,35 @@ export const PayrollManagement: React.FC = () => {
       {/* Filter, Search & Export Bar */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 flex-1">
+          {/* Quick Filter: All vs My Payslips */}
+          <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setViewOnlyMine(false)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                !viewOnlyMine
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Semua Pegawai ({payrollRecords.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewOnlyMine(true)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewOnlyMine
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-emerald-700'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Slip Saya ({myRecordsCount})</span>
+            </button>
+          </div>
+
           {/* Search Input */}
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="relative flex-1 min-w-[180px] max-w-sm">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -418,17 +517,19 @@ export const PayrollManagement: React.FC = () => {
             <span>Ekspor CSV</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setEditingPayroll(null);
-              setIsInputModalOpen(true);
-            }}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Input Gaji</span>
-          </button>
+          {canManagePayroll && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingPayroll(null);
+                setIsInputModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Input Gaji</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -581,30 +682,45 @@ export const PayrollManagement: React.FC = () => {
                     {/* Column 7: Actions */}
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        {payroll.status === 'PENDING' && canManagePayroll && (
+                          <button
+                            type="button"
+                            onClick={() => markPayrollAsPaid(payroll.id)}
+                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+                            title="Tandai Lunas & Bukukan ke Buku Kas Umum"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Cairkan</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleOpenPayslip(payroll)}
                           className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                          title="Cetak Slip Gaji Karyawan"
+                          title="Lihat / Cetak Slip Gaji"
                         >
                           <Printer className="w-4 h-4" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(payroll)}
-                          className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Rincian Slip Gaji"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(payroll.id, payroll.employeeName)}
-                          className="p-1.5 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                          title="Hapus Slip Gaji & Transaksi Kas"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canManagePayroll && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(payroll)}
+                              className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Rincian Slip Gaji"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(payroll.id, payroll.employeeName)}
+                              className="p-1.5 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title="Hapus Slip Gaji & Transaksi Kas"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

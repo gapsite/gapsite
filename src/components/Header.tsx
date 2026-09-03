@@ -10,6 +10,8 @@ import {
   Wallet,
   FileCheck,
   FileSpreadsheet,
+  Receipt,
+  Landmark,
   Users,
   ChevronDown,
   CheckCircle2,
@@ -59,6 +61,9 @@ export const Header: React.FC<HeaderProps> = ({
     projects,
     dispositions,
     transactions,
+    payrollRecords,
+    receivables,
+    bankLoans,
     teamMembers,
     currentUser,
     logout,
@@ -100,6 +105,27 @@ export const Header: React.FC<HeaderProps> = ({
           subtitle: '',
           icon: Wallet,
           badge: `${transactions.length} Ledger Records`,
+        };
+      case 'payroll':
+        return {
+          title: 'Gaji Karyawan & Payroll Konsultan',
+          subtitle: 'Penggajian, Slip Gaji Resmi, Tunjangan, PPh 21 TER, & Pencatatan Kas Realtime',
+          icon: Users,
+          badge: `${payrollRecords.length} Slip Gaji`,
+        };
+      case 'receivables':
+        return {
+          title: 'Piutang Usaha & Invoice Termin',
+          subtitle: 'Monitoring Tagihan Klien, Aging Schedule, & Pembayaran Invoice',
+          icon: Receipt,
+          badge: `${receivables.filter((r) => r.status !== 'LUNAS' && r.status !== 'BATAL').length} Tagihan Aktif`,
+        };
+      case 'bank-loans':
+        return {
+          title: 'Debt & Bank Loan Management',
+          subtitle: 'Kredit Modal Kerja, Pinjaman Bank, & Jadwal Cicilan',
+          icon: Landmark,
+          badge: `${bankLoans.length} Fasilitas Pinjaman`,
         };
       case 'financial-reports':
         return {

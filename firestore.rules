@@ -47,6 +47,24 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Receivables & Invoices
+    match /receivables/{receivableId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Tax Obligations
+    match /tax_obligations/{taxId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Payroll Records & Employee Compensation
+    match /payroll_records/{recordId} {
+      allow read: if true;
+      allow write: if true;
+    }
     
     // Catch-all
     match /{document=**} {
