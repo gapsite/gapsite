@@ -26,6 +26,7 @@ import {
   User,
   Sparkles,
   KeyRound,
+  Printer,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { MainTabType } from './Sidebar';
@@ -41,6 +42,7 @@ interface HeaderProps {
   onOpenRoleManager?: () => void;
   onOpenServiceManager?: () => void;
   onOpenDocTypeManager?: () => void;
+  onOpenLetterheadManager?: () => void;
   onOpenUserProfile?: () => void;
 }
 
@@ -55,6 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenRoleManager,
   onOpenServiceManager,
   onOpenDocTypeManager,
+  onOpenLetterheadManager,
   onOpenUserProfile,
 }) => {
   const {
@@ -543,6 +546,26 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                       <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-blue-200 text-blue-950">
                         {documentTypes.length} Types
+                      </span>
+                    </button>
+                  )}
+
+                  {isMasterAdmin && onOpenLetterheadManager && (
+                    <button
+                      id="btn-header-letterhead-manager"
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenLetterheadManager();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-2 border cursor-pointer text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border-emerald-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Printer className="w-4 h-4 text-emerald-600" />
+                        <span>Kop Surat & Logo</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-emerald-200 text-emerald-950">
+                        admin.master
                       </span>
                     </button>
                   )}

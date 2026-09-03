@@ -49,6 +49,7 @@ import {
   User,
   ChevronDown,
   ChevronUp,
+  FileCheck,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { FinancialTransaction, ConsultingProject, TransactionType, PaymentChannelDefinition, Receivable, TaxObligation, TaxType } from '../../types';
@@ -140,6 +141,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     companyCapital,
     taxObligations,
     receivables,
+    companyLetterhead,
   } = useProjects();
 
   // Active Report Type
@@ -165,9 +167,49 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     const month = String(today.getMonth() + 1).padStart(2, '0');
     return `FIN-RPT/${year}/${month}/${Math.floor(1000 + Math.random() * 9000)}`;
   });
-  const [reportNotes, setReportNotes] = useState<string>(
-    'Laporan Keuangan Eksekutif Komprehensif ini disusun berdasarkan data mutasi kas & transaksi operasional resmi konsultasi GAP.CRM. Seluruh angka telah direkonsiliasi dan diverifikasi sesuai bukti pembayaran, faktur pajak, dan invoice terlampir.'
+  const [reportNotes, setReportNotes] = useState<string>(() =>
+    companyLetterhead.notes ||
+    `Laporan Keuangan Eksekutif Komprehensif ini disusun berdasarkan data mutasi kas & transaksi operasional resmi ${companyLetterhead.companyName}. Seluruh angka telah direkonsiliasi dan diverifikasi sesuai bukti pembayaran, faktur pajak, dan invoice terlampir.`
   );
+
+  const renderReportLetterheadLogo = () => {
+    if (companyLetterhead.logoUrl) {
+      return (
+        <img
+          src={companyLetterhead.logoUrl}
+          alt={companyLetterhead.companyName}
+          className="h-12 w-auto max-w-[180px] object-contain shrink-0"
+        />
+      );
+    }
+    const iconColor =
+      companyLetterhead.documentHeaderTheme === 'SLATE'
+        ? 'bg-slate-900 text-slate-100'
+        : companyLetterhead.documentHeaderTheme === 'BLUE'
+        ? 'bg-blue-900 text-blue-300'
+        : companyLetterhead.documentHeaderTheme === 'INDIGO'
+        ? 'bg-indigo-900 text-indigo-300'
+        : 'bg-emerald-900 text-emerald-300';
+
+    const IconComp =
+      companyLetterhead.logoIconName === 'Building2'
+        ? Building2
+        : companyLetterhead.logoIconName === 'Landmark'
+        ? Landmark
+        : companyLetterhead.logoIconName === 'Briefcase'
+        ? Briefcase
+        : companyLetterhead.logoIconName === 'Award'
+        ? Award
+        : companyLetterhead.logoIconName === 'FileCheck'
+        ? FileCheck
+        : ShieldCheck;
+
+    return (
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shrink-0 shadow-md ${iconColor}`}>
+        <IconComp className="w-7 h-7 stroke-[2.5]" />
+      </div>
+    );
+  };
 
   // ---------------------------------------------------------------------------
   // ROLE-RESTRICTED SIGNATORY OPTIONS:
@@ -2541,21 +2583,28 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
         {showLetterhead && (
           <div className="border-b-2 border-slate-800 pb-6 mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-xl bg-slate-900 text-emerald-400 flex items-center justify-center font-bold text-xl shrink-0 shadow-md">
-                  <ShieldCheck className="w-7 h-7 stroke-[2.5]" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold text-slate-900 tracking-tight font-mono">
-                    GAP<span className="text-emerald-600">.CRM</span> CONSULTING
+              <div className="flex items-center gap-3.5 min-w-0">
+                {renderReportLetterheadLogo()}
+                <div className="min-w-0">
+                  <h2 className="text-xl font-extrabold text-slate-900 tracking-tight uppercase font-mono truncate">
+                    {companyLetterhead.companyName}
                   </h2>
-                  <p className="text-xs text-slate-600 font-medium">
-                    Statutory TKDN Verification, SNI & Regulatory Advisory Group
+                  {companyLetterhead.tagline && (
+                    <p className="text-xs text-emerald-800 font-semibold tracking-wide mt-0.5">
+                      {companyLetterhead.tagline}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-slate-500 font-normal leading-tight mt-1">
+                    {companyLetterhead.address && <span>{companyLetterhead.address}</span>}
+                    {companyLetterhead.address && (companyLetterhead.taxId || companyLetterhead.phone || companyLetterhead.email) && <br />}
+                    {companyLetterhead.taxId && <span>{companyLetterhead.taxId} • </span>}
+                    {companyLetterhead.email && <span>Email: {companyLetterhead.email} • </span>}
+                    {companyLetterhead.phone && <span>Telp: {companyLetterhead.phone}</span>}
                   </p>
                 </div>
               </div>
 
-              <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
+              <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 shrink-0">
                 <div className="text-xs font-mono font-bold text-slate-900 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded inline-block">
                   NO: {documentNumber}
                 </div>
@@ -5964,7 +6013,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
               {/* Official Stamp */}
               <div className="h-16 flex items-center justify-center my-1">
                 <span className="text-[10px] font-mono text-purple-900 bg-purple-50 px-2.5 py-1 rounded border border-purple-300 uppercase font-bold tracking-wider shadow-2xs">
-                  ✓ GAP.CRM AUTHORIZED • BOARD
+                  ✓ {companyLetterhead.shortName || 'GAP.CRM'} AUTHORIZED • BOARD
                 </span>
               </div>
 
@@ -6022,7 +6071,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
 
         {/* Paper Footer */}
         <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-          <span>GAP.CRM Financial Suite | Auto-generated Report</span>
+          <span>{companyLetterhead.companyName} Financial Suite | Auto-generated Report</span>
           <span>Halaman 1 dari 1</span>
           <span>ID: {documentNumber}</span>
         </div>

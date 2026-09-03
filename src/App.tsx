@@ -22,6 +22,7 @@ import { RoleManagerModal } from './components/RoleManagerModal';
 import { ServiceTypeManagerModal } from './components/ServiceTypeManagerModal';
 import { DocumentTypeManagerModal } from './components/DocumentTypeManagerModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { CompanyLetterheadModal } from './components/CompanyLetterheadModal';
 import { RealtimeRoleToast } from './components/RealtimeRoleToast';
 import {
   ConsultingProject,
@@ -51,6 +52,7 @@ const DashboardContent: React.FC = () => {
   const [isServiceTypeManagerOpen, setIsServiceTypeManagerOpen] = useState(false);
   const [isDocTypeManagerOpen, setIsDocTypeManagerOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
+  const [isCompanyLetterheadOpen, setIsCompanyLetterheadOpen] = useState(false);
 
   // Selected state for disposition modal
   const [dispositionTargetProject, setDispositionTargetProject] = useState<ConsultingProject | null>(null);
@@ -102,6 +104,7 @@ const DashboardContent: React.FC = () => {
         onOpenRoleManager={() => setIsRoleManagerOpen(true)}
         onOpenServiceManager={() => setIsServiceTypeManagerOpen(true)}
         onOpenDocTypeManager={() => setIsDocTypeManagerOpen(true)}
+        onOpenLetterheadManager={() => setIsCompanyLetterheadOpen(true)}
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
       />
 
@@ -127,6 +130,7 @@ const DashboardContent: React.FC = () => {
           onOpenRoleManager={() => setIsRoleManagerOpen(true)}
           onOpenServiceManager={() => setIsServiceTypeManagerOpen(true)}
           onOpenDocTypeManager={() => setIsDocTypeManagerOpen(true)}
+          onOpenLetterheadManager={() => setIsCompanyLetterheadOpen(true)}
           onOpenUserProfile={() => setIsUserProfileOpen(true)}
         />
 
@@ -336,6 +340,12 @@ const DashboardContent: React.FC = () => {
       <UserProfileModal
         isOpen={isUserProfileOpen}
         onClose={() => setIsUserProfileOpen(false)}
+      />
+
+      {/* 10. Company Letterhead & Printable Document Identity Modal (admin.master exclusive) */}
+      <CompanyLetterheadModal
+        isOpen={isCompanyLetterheadOpen}
+        onClose={() => setIsCompanyLetterheadOpen(false)}
       />
     </div>
   );

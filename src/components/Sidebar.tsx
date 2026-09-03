@@ -28,6 +28,7 @@ import {
   Lock,
   User,
   Landmark,
+  Printer,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 
@@ -47,6 +48,7 @@ interface SidebarProps {
   onOpenRoleManager?: () => void;
   onOpenServiceManager?: () => void;
   onOpenDocTypeManager?: () => void;
+  onOpenLetterheadManager?: () => void;
   onOpenTransactionCategoryManager?: () => void;
   onOpenUserProfile?: () => void;
 }
@@ -65,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenRoleManager,
   onOpenServiceManager,
   onOpenDocTypeManager,
+  onOpenLetterheadManager,
   onOpenUserProfile,
 }) => {
   const {
@@ -639,6 +642,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {(!isCollapsed || isMobileOpen) && (
                       <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-blue-950 text-blue-300 border border-blue-800">
                         {documentTypes.length} Types
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* Kop Surat & Logo Perusahaan (Master Admin Only) */}
+                {isMasterAdmin && onOpenLetterheadManager && (
+                  <button
+                    id="btn-sidebar-letterhead-manager"
+                    onClick={onOpenLetterheadManager}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-emerald-300 hover:text-emerald-100 hover:bg-emerald-950/40 border border-emerald-500/30 ${
+                      isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'
+                    }`}
+                    title="Kop Surat & Logo Dokumen Cetak (Hanya Master Admin)"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Printer className="w-4 h-4 shrink-0 text-emerald-400" />
+                      {(!isCollapsed || isMobileOpen) && <span className="truncate">Kop Surat & Logo</span>}
+                    </div>
+                    {(!isCollapsed || isMobileOpen) && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                        admin.master
                       </span>
                     )}
                   </button>

@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   Download,
   Share2,
+  Landmark,
+  Briefcase,
+  Award,
+  FileCheck,
 } from 'lucide-react';
 import { PayrollPayment } from '../../types';
 import { useProjects } from '../../context/ProjectContext';
@@ -29,7 +33,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({
   onClose,
   payroll,
 }) => {
-  const { paymentChannels } = useProjects();
+  const { paymentChannels, companyLetterhead } = useProjects();
   const [copied, setCopied] = React.useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
 
@@ -150,23 +154,35 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
           <div className="border-b-2 border-slate-900 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-sm tracking-wider">
-                    GAP
-                  </div>
+                <div className="flex items-center gap-3">
+                  {companyLetterhead.logoUrl ? (
+                    <img
+                      src={companyLetterhead.logoUrl}
+                      alt={companyLetterhead.companyName}
+                      className="h-10 w-auto max-w-[150px] object-contain rounded shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-emerald-800 text-white flex items-center justify-center font-black text-sm tracking-wider shrink-0 shadow-xs">
+                      {companyLetterhead.shortName?.slice(0, 3) || 'GAP'}
+                    </div>
+                  )}
                   <div>
-                    <h1 className="text-lg font-black tracking-tight text-slate-950 uppercase font-mono">
-                      PT GAP CONSULTING INDONESIA
+                    <h1 className="text-lg font-black tracking-tight text-slate-950 uppercase font-mono leading-tight">
+                      {companyLetterhead.companyName}
                     </h1>
-                    <p className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wide">
-                      Consulting Services • Sertifikasi TKDN • Perizinan & Kepatuhan Legal
-                    </p>
+                    {companyLetterhead.tagline && (
+                      <p className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wide">
+                        {companyLetterhead.tagline}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <p className="text-[10px] text-slate-500 leading-tight pt-1">
-                  Menara Cakrawala Lt. 12, Jl. M.H. Thamrin No. 9, Menteng, Jakarta Pusat 10340
+                  {companyLetterhead.address || 'Alamat Kantor'}
                   <br />
-                  NPWP: 42.891.204.6-014.000 • Email: finance@gapsite.com • Telp: (021) 390-1288
+                  {companyLetterhead.taxId && <span>{companyLetterhead.taxId} • </span>}
+                  {companyLetterhead.email && <span>Email: {companyLetterhead.email} • </span>}
+                  {companyLetterhead.phone && <span>Telp: {companyLetterhead.phone}</span>}
                 </p>
               </div>
 
@@ -408,9 +424,9 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 underline underline-offset-4">
-                    {payroll.recordedBy || 'Finance Controller'}
+                    {companyLetterhead.authorizedSignatoryName || payroll.recordedBy || 'Finance Controller'}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-mono">PT GAP CONSULTING INDONESIA</p>
+                  <p className="text-[10px] text-slate-500 font-mono">{companyLetterhead.companyName}</p>
                 </div>
               </div>
 
@@ -428,7 +444,7 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
               </div>
             </div>
             <p className="text-[9px] text-center text-slate-400 pt-6 italic">
-              Dokumen ini diterbitkan secara otomatis oleh Sistem Keuangan & ERP PT GAP Consulting Indonesia dan berlaku sah.
+              Dokumen ini diterbitkan secara otomatis oleh Sistem Keuangan & ERP {companyLetterhead.companyName} dan berlaku sah.
             </p>
           </div>
         </div>

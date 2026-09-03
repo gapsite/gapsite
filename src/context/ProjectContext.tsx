@@ -81,6 +81,7 @@ import {
   PayrollPayment,
   PayrollStatus,
   PayrollSummary,
+  CompanyLetterhead,
 } from '../types';
 import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
@@ -94,6 +95,7 @@ import {
   DEFAULT_ROLE_GOVERNANCE_META,
   DEFAULT_COMPANY_CAPITAL,
 } from '../data/mockData';
+import { DEFAULT_COMPANY_LETTERHEAD } from '../data/companyLetterheadData';
 import { INITIAL_PAYROLL_RECORDS } from '../data/payrollData';
 import { DEFAULT_CONSULTING_SERVICES } from '../data/serviceTypesData';
 import { DEFAULT_DOCUMENT_TYPES, DEFAULT_DOCUMENT_CATEGORIES } from '../data/documentTypesData';
@@ -323,6 +325,13 @@ interface ProjectContextType {
   ) => { success: boolean; message?: string };
   resetCompanyCapitalToDefault: () => { success: boolean; message?: string };
 
+  // Company Letterhead & Document Printing Customization (admin.master exclusive)
+  companyLetterhead: CompanyLetterhead;
+  updateCompanyLetterhead: (
+    settings: Partial<CompanyLetterhead>
+  ) => { success: boolean; message?: string };
+  resetCompanyLetterheadToDefault: () => { success: boolean; message?: string };
+
   // Tax & Tax Liabilities Management (PPN, PPh 21, PPh 23, PPh 4(2), PPh Final/Badan Terhutang)
   taxObligations: TaxObligation[];
   addTaxObligation: (
@@ -532,6 +541,7 @@ const STORAGE_KEY_TRANSACTION_CATEGORIES = 'verix_crm_transaction_categories_v1'
 const STORAGE_KEY_PAYMENT_CHANNELS = 'verix_crm_payment_channels_v1';
 const STORAGE_KEY_BANK_LOANS = 'verix_crm_bank_loans_v1';
 const STORAGE_KEY_COMPANY_CAPITAL = 'verix_crm_company_capital_v1';
+const STORAGE_KEY_COMPANY_LETTERHEAD = 'verix_crm_company_letterhead_v1';
 const STORAGE_KEY_TAX_OBLIGATIONS = 'verix_crm_tax_obligations_v1';
 const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
 const STORAGE_KEY_PAYROLL = 'verix_crm_payroll_v1';
@@ -1062,6 +1072,28 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [companyCapital]);
 
+  // Company Letterhead & Printable Identity State
+  const [companyLetterhead, setCompanyLetterhead] = useState<CompanyLetterhead>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_COMPANY_LETTERHEAD);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_COMPANY_LETTERHEAD, ...parsed };
+      }
+    } catch (e) {
+      console.error('Failed to load company letterhead from localStorage', e);
+    }
+    return DEFAULT_COMPANY_LETTERHEAD;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(companyLetterhead));
+    } catch (e) {
+      console.error('Failed to save company letterhead to localStorage', e);
+    }
+  }, [companyLetterhead]);
+
   // Tax Obligations State (PPN & PPh Terhutang, Billing & NTPN)
   const [taxObligations, setTaxObligations] = useState<TaxObligation[]>(() => {
     try {
@@ -1304,7 +1336,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     | 'RECEIVABLES'
     | 'PAYROLL_PAYMENTS'
     | 'ROLE_DEFINITIONS'
-    | 'ROLE_GOVERNANCE_META';
+    | 'ROLE_GOVERNANCE_META'
+    | 'COMPANY_LETTERHEAD';
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
@@ -1444,6 +1477,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setRoleDefinitions(payload);
           } else if (type === 'ROLE_GOVERNANCE_META' && payload) {
             setRoleGovernanceMeta(payload);
+          } else if (type === 'COMPANY_LETTERHEAD' && payload) {
+            setCompanyLetterhead(payload);
           }
         };
       }
@@ -1944,6 +1979,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubLetterhead = subscribeToSettings('company_letterhead', (data) => {
+      if (data && typeof data === 'object') {
+        setCompanyLetterhead((prev) => ({ ...prev, ...data }));
+      }
+    });
+
     return () => {
       unsubProjects();
       unsubDeletedUsers();
@@ -1962,6 +2003,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubTaxObligations();
       unsubReceivables();
       unsubPayroll();
+      unsubLetterhead();
     };
   }, []);
 
@@ -1983,6 +2025,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveSettingsToFirestore('bank_loans', bankLoans),
         saveSettingsToFirestore('company_capital', companyCapital),
         saveSettingsToFirestore('tax_obligations', taxObligations),
+        saveSettingsToFirestore('company_letterhead', companyLetterhead),
         ...receivables.map((r) => saveReceivableToFirestore(r)),
         ...payrollRecords.map((p) => savePayrollToFirestore(p)),
       ]);
@@ -1991,7 +2034,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setIsSyncingWithFirestore(false);
     }
-  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories, bankLoans, companyCapital, taxObligations, receivables, payrollRecords]);
+  }, [projects, teamMembers, dispositions, transactions, documentTypes, documentCategories, consultingServices, roleDefinitions, paymentChannels, transactionCategories, bankLoans, companyCapital, taxObligations, receivables, payrollRecords, companyLetterhead]);
 
   // Auth Functions
   const loginWithGoogle = async (): Promise<{ success: boolean; message?: string }> => {
@@ -4546,6 +4589,58 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
+  // Company Letterhead & Document Printing Customization (Hanya admin.master)
+  const updateCompanyLetterhead = (
+    updates: Partial<CompanyLetterhead>
+  ): { success: boolean; message?: string } => {
+    if (!isMasterAdmin) {
+      return {
+        success: false,
+        message: 'Akses Ditolak: Hanya akun dengan role Master Admin (admin.master) yang memiliki wewenang untuk merubah logo, nama perusahaan, dan kop surat cetak dokumen.',
+      };
+    }
+
+    setCompanyLetterhead((prev) => {
+      const updated: CompanyLetterhead = {
+        ...prev,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser.username || currentUser.name || 'admin.master',
+      };
+      broadcastLiveDataUpdate('COMPANY_LETTERHEAD', updated);
+      saveSettingsToFirestore('company_letterhead', updated);
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: 'Kop surat dan logo perusahaan berhasil diperbarui dan disinkronkan ke seluruh dokumen cetak!',
+    };
+  };
+
+  const resetCompanyLetterheadToDefault = (): { success: boolean; message?: string } => {
+    if (!isMasterAdmin) {
+      return {
+        success: false,
+        message: 'Akses Ditolak: Hanya Master Admin (admin.master) yang dapat mereset kop surat ke pengaturan default.',
+      };
+    }
+
+    const reset: CompanyLetterhead = {
+      ...DEFAULT_COMPANY_LETTERHEAD,
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentUser.username || currentUser.name || 'admin.master',
+    };
+
+    setCompanyLetterhead(reset);
+    broadcastLiveDataUpdate('COMPANY_LETTERHEAD', reset);
+    saveSettingsToFirestore('company_letterhead', reset);
+    return {
+      success: true,
+      message: 'Kop surat dan identitas perusahaan berhasil dikembalikan ke standar awal sistem.',
+    };
+  };
+
   // Tax Obligations & Tax Liabilities (PPN & PPh Terhutang) Methods
   const addTaxObligation = (
     taxData: Omit<TaxObligation, 'id' | 'createdAt' | 'createdBy'>
@@ -6889,6 +6984,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         companyCapital,
         updateCompanyCapital,
         resetCompanyCapitalToDefault,
+        companyLetterhead,
+        updateCompanyLetterhead,
+        resetCompanyLetterheadToDefault,
         taxObligations,
         addTaxObligation,
         updateTaxObligation,

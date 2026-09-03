@@ -903,4 +903,28 @@ export interface PayrollSummary {
   employeeCount: number;
 }
 
+// ==========================================
+// KOP SURAT & IDENTITAS PERUSAHAAN (LETTERHEAD)
+// ==========================================
+export interface CompanyLetterhead {
+  companyName: string; // e.g. "PT GAP CONSULTING INDONESIA"
+  shortName?: string; // e.g. "GAP.CRM" or "GAP"
+  tagline?: string; // e.g. "Statutory TKDN Verification, SNI & Regulatory Advisory Group"
+  address?: string; // e.g. "Menara Cakrawala Lt. 12, Jl. M.H. Thamrin No. 9, Menteng, Jakarta Pusat 10340"
+  phone?: string; // e.g. "(021) 390-1288"
+  email?: string; // e.g. "finance@gapsite.com"
+  website?: string; // e.g. "www.gapsite.com"
+  taxId?: string; // e.g. "NPWP: 42.891.204.6-014.000"
+  logoUrl?: string; // base64 data URL or external image URL
+  logoType?: 'IMAGE' | 'INITIALS' | 'ICON';
+  logoIconName?: string; // e.g. 'ShieldCheck' | 'Building2' | 'Briefcase' | 'Landmark' | 'Award' | 'FileCheck'
+  documentHeaderTheme?: 'EMERALD' | 'SLATE' | 'BLUE' | 'INDIGO';
+  authorizedSignatoryName?: string; // e.g. "Bambang Soediro, S.T., M.M."
+  authorizedSignatoryTitle?: string; // e.g. "Managing Director & Lead TKDN Verifier"
+  notes?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+
 
