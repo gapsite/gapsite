@@ -36,6 +36,7 @@ import { calculatePayrollSummary } from '../../utils/payrollCalculations';
 import { PayslipModal } from './PayslipModal';
 import { PayrollPaymentModal } from './PayrollPaymentModal';
 import { BatchPayrollModal } from './BatchPayrollModal';
+import { AnnualSalaryManagementView } from './AnnualSalaryManagementView';
 
 export const PayrollManagement: React.FC = () => {
   const {
@@ -52,10 +53,18 @@ export const PayrollManagement: React.FC = () => {
     hasPermission,
     paymentChannels,
     isSyncingWithFirestore,
+    employeeSalaryConfigs,
   } = useProjects();
 
   const canManagePayroll =
-    isMasterAdmin || hasPermission('MANAGE_FINANCE') || currentUser.role === 'DIRECTOR_PARTNER';
+    isMasterAdmin ||
+    hasPermission('MANAGE_FINANCE') ||
+    currentUser.role === 'DIRECTOR' ||
+    (currentUser.role as string) === 'DIRECTOR_PARTNER' ||
+    currentUser.role === 'FINANCE_OFFICER';
+
+  // Navigation tab: 'payroll_records' or 'annual_salary'
+  const [activeTab, setActiveTab] = useState<'payroll_records' | 'annual_salary'>('payroll_records');
 
   // Search & Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -341,8 +350,66 @@ export const PayrollManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Tab Switcher: Pembayaran & Slip Gaji vs Penetapan Gaji Karyawan Tahunan */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 gap-3 pb-0">
+        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('payroll_records')}
+            className={`px-4 py-2.5 text-xs font-bold border-b-2 flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'payroll_records'
+                ? 'border-emerald-600 text-emerald-800 bg-emerald-50/60 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+            }`}
+          >
+            <Receipt className="w-4 h-4" />
+            <span>Riwayat Pembayaran &amp; Slip Gaji</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-700">
+              {payrollRecords.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('annual_salary')}
+            className={`px-4 py-2.5 text-xs font-bold border-b-2 flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'annual_salary'
+                ? 'border-emerald-600 text-emerald-800 bg-emerald-50/60 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+            }`}
+          >
+            <Calendar className="w-4 h-4 text-emerald-700" />
+            <span>Penetapan Gaji Karyawan (Tahunan)</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
+              {employeeSalaryConfigs.length} SK
+            </span>
+          </button>
+        </div>
+
+        {activeTab === 'payroll_records' && canManagePayroll && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('annual_salary')}
+            className="hidden md:flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer mb-1"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Kelola Standar Gaji Tahunan Role &amp; Pegawai &rarr;</span>
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'annual_salary' ? (
+        <AnnualSalaryManagementView
+          onOpenPayrollInputForEmployee={(employeeId, year) => {
+            setActiveTab('payroll_records');
+            setEditingPayroll(null);
+            setIsInputModalOpen(true);
+          }}
+        />
+      ) : (
+        <>
+          {/* Summary KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Gaji Bersih Terbayar */}
         <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between">
@@ -425,10 +492,11 @@ export const PayrollManagement: React.FC = () => {
       </div>
 
       {/* Filter, Search & Export Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5 flex-1">
-          {/* Quick Filter: All vs My Payslips */}
-          <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+        {/* Row 1: Kolom Semua Pegawai (Kiri) & Filter Pencarian (Kanan) */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Kolom Semua Pegawai vs Slip Saya */}
+          <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0 self-start">
             <button
               type="button"
               onClick={() => setViewOnlyMine(false)}
@@ -454,89 +522,116 @@ export const PayrollManagement: React.FC = () => {
             </button>
           </div>
 
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[180px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari nama karyawan, no slip, NIK..."
-              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-600 text-slate-800"
-            />
-          </div>
+          {/* Search & Filter Controls: Rapi dan Sejajar */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1 lg:justify-end">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[170px] max-w-sm">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cari nama karyawan, no slip, NIK..."
+                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-600 text-slate-800"
+              />
+            </div>
 
-          {/* Period Filter */}
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            {/* Period Filter */}
+            <div className="relative shrink-0 flex items-center">
+              <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+              <select
+                value={periodFilter}
+                onChange={(e) => setPeriodFilter(e.target.value)}
+                className="text-xs bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-slate-800 font-semibold focus:outline-emerald-600 cursor-pointer"
+              >
+                <option value="ALL">Semua Periode</option>
+                {availablePeriods.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
             <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 font-semibold focus:outline-emerald-600"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-emerald-600 shrink-0 cursor-pointer"
             >
-              <option value="ALL">Semua Periode</option>
-              {availablePeriods.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
+              <option value="ALL">Semua Status</option>
+              <option value="PAID">LUNAS / TERBAYAR</option>
+              <option value="PENDING">PENDING</option>
+              <option value="DRAFT">DRAFT</option>
             </select>
+
+            {/* Department Filter */}
+            {availableDepartments.length > 0 && (
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-emerald-600 shrink-0 cursor-pointer"
+              >
+                <option value="ALL">Semua Divisi</option>
+                {availableDepartments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Reset Filters */}
+            {(searchTerm || periodFilter !== 'ALL' || statusFilter !== 'ALL' || departmentFilter !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setPeriodFilter('ALL');
+                  setStatusFilter('ALL');
+                  setDepartmentFilter('ALL');
+                }}
+                className="px-2.5 py-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl text-xs font-semibold shrink-0 transition-colors cursor-pointer"
+                title="Reset semua filter pencarian"
+              >
+                Reset
+              </button>
+            )}
           </div>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-emerald-600"
-          >
-            <option value="ALL">Semua Status</option>
-            <option value="PAID">LUNAS / TERBAYAR</option>
-            <option value="PENDING">PENDING</option>
-            <option value="DRAFT">DRAFT</option>
-          </select>
-
-          {/* Department Filter */}
-          {availableDepartments.length > 0 && (
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-emerald-600"
-            >
-              <option value="ALL">Semua Divisi</option>
-              {availableDepartments.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Download CSV Rekap Gaji"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Ekspor CSV</span>
-          </button>
-
-          {canManagePayroll && (
+        {/* Row 2: Tombol Ekspor CSV & Input Gaji Di Bawah Kolom Semua Pegawai */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-100">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                setEditingPayroll(null);
-                setIsInputModalOpen(true);
-              }}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shadow-2xs"
+              title="Download CSV Rekap Gaji"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Input Gaji</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>Ekspor CSV</span>
             </button>
-          )}
+
+            {canManagePayroll && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPayroll(null);
+                  setIsInputModalOpen(true);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Input Gaji</span>
+              </button>
+            )}
+          </div>
+
+          <div className="text-xs text-slate-500">
+            Menampilkan <span className="font-bold font-mono text-slate-800">{filteredRecords.length}</span> dari{' '}
+            <span className="font-mono">{payrollRecords.length}</span> total slip pembayaran
+          </div>
         </div>
       </div>
 
@@ -744,6 +839,8 @@ export const PayrollManagement: React.FC = () => {
           </table>
         </div>
       </div>
+      </>
+      )}
 
       {/* Slip Gaji Modal */}
       <PayslipModal

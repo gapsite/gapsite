@@ -21,6 +21,9 @@ import {
   saveReceivableToFirestore,
   deleteReceivableFromFirestore,
   subscribeToReceivables,
+  saveGovernmentProjectToFirestore,
+  deleteGovernmentProjectFromFirestore,
+  subscribeToGovernmentProjects,
   savePayrollToFirestore,
   deletePayrollFromFirestore,
   saveDeletedPayrollIdToFirestore,
@@ -89,6 +92,10 @@ import {
   PayrollSummary,
   CompanyLetterhead,
   EmployeeAnnualSalaryConfig,
+  GovernmentProject,
+  GovMilestone,
+  GovMilestoneStatus,
+  GovernmentProjectStats,
 } from '../types';
 import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
@@ -103,6 +110,7 @@ import {
   DEFAULT_ROLE_GOVERNANCE_META,
   DEFAULT_COMPANY_CAPITAL,
 } from '../data/mockData';
+import { INITIAL_GOVERNMENT_PROJECTS } from '../data/governmentProjectsData';
 import { DEFAULT_COMPANY_LETTERHEAD } from '../data/companyLetterheadData';
 import { INITIAL_PAYROLL_RECORDS } from '../data/payrollData';
 import { DEFAULT_EMPLOYEE_SALARY_CONFIGS, getEffectiveSalaryConfig } from '../data/salaryConfigsData';
@@ -169,8 +177,14 @@ interface ProjectContextType {
   roleGovernanceMeta: RoleGovernanceMeta;
   updateRolePositionTitle: (
     role: UserRole,
-    updates: { title?: string; department?: string; desc?: string },
-    updateExistingMembers?: boolean
+    updates: {
+      title?: string;
+      department?: string;
+      desc?: string;
+      standardCompensation?: RoleDefinition['standardCompensation'];
+    },
+    updateExistingMembers?: boolean,
+    syncSalaryConfigsForRole?: boolean
   ) => void;
   updateRoleCapabilities: (
     role: UserRole,
@@ -401,6 +415,58 @@ interface ProjectContextType {
   cancelReceivable: (id: string, reason?: string) => { success: boolean; message?: string };
   resetReceivablesToDefault: () => { success: boolean; message?: string };
 
+  // Proyek Pemerintah & BUMN (Government Projects, SPK, LS KPPN, SP2D & WAPU Tax)
+  governmentProjects: GovernmentProject[];
+  addGovernmentProject: (
+    data: Omit<GovernmentProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
+  ) => { success: boolean; project?: GovernmentProject; message?: string };
+  updateGovernmentProject: (
+    id: string,
+    updates: Partial<GovernmentProject>
+  ) => { success: boolean; message?: string };
+  deleteGovernmentProject: (id: string) => { success: boolean; message?: string };
+  generateMilestoneInvoiceToReceivables: (
+    projectId: string,
+    milestoneId: string,
+    invoiceData?: {
+      invoiceNumber?: string;
+      issueDate?: string;
+      dueDate?: string;
+      bapNumber?: string;
+      bastNumber?: string;
+      notes?: string;
+    }
+  ) => { success: boolean; receivable?: Receivable; message?: string };
+  recordGovMilestonePaymentSp2d: (
+    projectId: string,
+    milestoneId: string,
+    sp2dData: {
+      sp2dNumber: string;
+      sp2dDisbursementDate: string;
+      paymentChannelId: string;
+      spmNumber?: string;
+      ntpnPpn?: string;
+      bupotPphNumber?: string;
+      notes?: string;
+      syncToCashLedger?: boolean;
+      syncToTaxObligations?: boolean;
+    }
+  ) => { success: boolean; message?: string; transaction?: FinancialTransaction };
+  addGovMilestone: (
+    projectId: string,
+    milestone: Omit<GovMilestone, 'id' | 'projectId' | 'createdAt'>
+  ) => { success: boolean; message?: string };
+  updateGovMilestone: (
+    projectId: string,
+    milestoneId: string,
+    updates: Partial<GovMilestone>
+  ) => { success: boolean; message?: string };
+  deleteGovMilestone: (
+    projectId: string,
+    milestoneId: string
+  ) => { success: boolean; message?: string };
+  resetGovernmentProjectsToDefault: () => { success: boolean; message?: string };
+
   // Employee Salary & Payroll Management (Pembayaran Gaji Karyawan & Integrasi Arus Kas)
   payrollRecords: PayrollPayment[];
   addPayrollPayment: (
@@ -586,6 +652,8 @@ const STORAGE_KEY_TAX_OBLIGATIONS = 'verix_crm_tax_obligations_v1';
 const STORAGE_KEY_DELETED_TAX_IDS = 'verix_crm_deleted_tax_ids_v1';
 const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
 const STORAGE_KEY_DELETED_RECEIVABLE_IDS = 'verix_crm_deleted_receivable_ids_v1';
+const STORAGE_KEY_GOVERNMENT_PROJECTS = 'verix_crm_government_projects_v1';
+const STORAGE_KEY_DELETED_GOV_PROJECT_IDS = 'verix_crm_deleted_gov_project_ids_v1';
 const STORAGE_KEY_PAYROLL = 'verix_crm_payroll_v1';
 const STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS = 'verix_crm_employee_salary_configs_v1';
 const STORAGE_KEY_DELETED_PAYROLL_IDS = 'verix_crm_deleted_payroll_ids_v1';
@@ -1324,6 +1392,51 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [receivables]);
 
+  // Government Projects State (Proyek Pengadaan Pemerintah & BUMN)
+  const [deletedGovProjectIds, setDeletedGovProjectIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_GOV_PROJECT_IDS);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const deletedGovProjectIdsRef = useRef<Set<string>>(new Set(deletedGovProjectIds));
+  useEffect(() => {
+    deletedGovProjectIdsRef.current = new Set(deletedGovProjectIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_GOV_PROJECT_IDS, JSON.stringify(deletedGovProjectIds));
+    } catch (e) {
+      console.error('Failed to save deletedGovProjectIds to localStorage', e);
+    }
+  }, [deletedGovProjectIds]);
+
+  const [governmentProjects, setGovernmentProjects] = useState<GovernmentProject[]>(() => {
+    try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_GOV_PROJECT_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const saved = localStorage.getItem(STORAGE_KEY_GOVERNMENT_PROJECTS);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
+        }
+      }
+      return INITIAL_GOVERNMENT_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id));
+    } catch {
+      return INITIAL_GOVERNMENT_PROJECTS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_GOVERNMENT_PROJECTS, JSON.stringify(governmentProjects));
+    } catch (e) {
+      console.error('Failed to save governmentProjects to localStorage', e);
+    }
+  }, [governmentProjects]);
+
   // Master Data: Assigned By (LVI / Surveyor / Lembaga Pelaksana)
   const [assignedByOptions, setAssignedByOptions] = useState<string[]>(() => {
     try {
@@ -1628,6 +1741,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     | 'COMPANY_CAPITAL'
     | 'TAX_OBLIGATIONS'
     | 'RECEIVABLES'
+    | 'GOVERNMENT_PROJECTS'
+    | 'DELETED_GOV_PROJECT_IDS'
     | 'PAYROLL_PAYMENTS'
     | 'EMPLOYEE_SALARY_CONFIGS'
     | 'ROLE_DEFINITIONS'
@@ -1764,6 +1879,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setTaxObligations(payload);
           } else if (type === 'RECEIVABLES' && Array.isArray(payload)) {
             setReceivables(payload);
+          } else if (type === 'GOVERNMENT_PROJECTS' && Array.isArray(payload)) {
+            setGovernmentProjects(payload);
+          } else if (type === 'DELETED_GOV_PROJECT_IDS' && Array.isArray(payload)) {
+            setDeletedGovProjectIds(payload);
+            setGovernmentProjects((current) => current.filter((p) => !payload.includes(p.id)));
           } else if (type === 'PAYROLL_PAYMENTS' && Array.isArray(payload)) {
             setPayrollRecords(payload);
           } else if (type === 'EMPLOYEE_SALARY_CONFIGS' && Array.isArray(payload)) {
@@ -1833,6 +1953,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_RECEIVABLES) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setReceivables(parsed);
+        } else if (e.key === STORAGE_KEY_GOVERNMENT_PROJECTS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setGovernmentProjects(parsed);
+        } else if (e.key === STORAGE_KEY_DELETED_GOV_PROJECT_IDS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setDeletedGovProjectIds(parsed);
+            setGovernmentProjects((current) => current.filter((p) => !parsed.includes(p.id)));
+          }
         } else if (e.key === STORAGE_KEY_PAYROLL) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setPayrollRecords(parsed);
@@ -2334,6 +2463,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubDeletedGovProjects = subscribeToDeletedEntityIds('deleted_gov_project_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedGovProjectIds(remoteIds);
+        setGovernmentProjects((current) => current.filter((p) => !remoteIds.includes(p.id)));
+      }
+    });
+
+    const unsubGovProjects = subscribeToGovernmentProjects((remoteProjects) => {
+      if (Array.isArray(remoteProjects)) {
+        const deletedSet = deletedGovProjectIdsRef.current;
+        const valid = remoteProjects.filter((p) => p && p.id && !deletedSet.has(p.id));
+        setGovernmentProjects(valid);
+      }
+    });
+
     const unsubDeletedPayroll = subscribeToDeletedPayrollIds((remoteIds) => {
       if (Array.isArray(remoteIds)) {
         setDeletedPayrollIds(remoteIds);
@@ -2364,7 +2508,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     const unsubSalaryConfigs = subscribeToSettings('employee_salary_configs', (data) => {
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setEmployeeSalaryConfigs(data);
         try {
           localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(data));
@@ -2396,6 +2540,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubTaxObligations();
       unsubDeletedReceivables();
       unsubReceivables();
+      unsubDeletedGovProjects();
+      unsubGovProjects();
       unsubDeletedPayroll();
       unsubPayroll();
       unsubLetterhead();
@@ -3138,11 +3284,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
 
-  // Master Admin function to rename/update Role Position Metadata
+  // Master Admin function to rename/update Role Position Metadata & Standard Compensation
   const updateRolePositionTitle = (
     role: UserRole,
-    updates: { title?: string; department?: string; desc?: string },
-    updateExistingMembers: boolean = true
+    updates: {
+      title?: string;
+      department?: string;
+      desc?: string;
+      standardCompensation?: RoleDefinition['standardCompensation'];
+    },
+    updateExistingMembers: boolean = true,
+    syncSalaryConfigsForRole?: boolean
   ) => {
     if (!isMasterAdmin) {
       alert('Only Master Admin (admin.master) has authority to change system role position names.');
@@ -3159,6 +3311,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...(trimmedTitle ? { title: trimmedTitle } : {}),
       ...(trimmedDept !== undefined ? { department: trimmedDept } : {}),
       ...(trimmedDesc !== undefined ? { desc: trimmedDesc } : {}),
+      ...(updates.standardCompensation !== undefined ? { standardCompensation: updates.standardCompensation } : {}),
     };
     const updatedDefinitions: RoleDefinitionsMap = {
       ...roleDefinitions,
@@ -3200,6 +3353,70 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Failed to save members to localStorage:', err);
       }
       broadcastLiveDataUpdate('MEMBERS', updatedMembers);
+    }
+
+    if (syncSalaryConfigsForRole && updates.standardCompensation) {
+      const activeYear = new Date().getFullYear();
+      const comp = updates.standardCompensation;
+      const matchingMembers = teamMembers.filter((m) => m.role === role);
+      if (matchingMembers.length > 0) {
+        setEmployeeSalaryConfigs((prevConfigs) => {
+          let updatedConfigs = [...prevConfigs];
+          const nowIso = new Date().toISOString();
+          matchingMembers.forEach((mem) => {
+            const idx = updatedConfigs.findIndex(
+              (c) => c.employeeId === mem.id && Number(c.year) === activeYear
+            );
+            if (idx >= 0) {
+              updatedConfigs[idx] = {
+                ...updatedConfigs[idx],
+                basicSalary: comp.basicSalary,
+                positionAllowance: comp.positionAllowance,
+                transportAllowance: comp.transportAllowance,
+                mealAllowance: comp.mealAllowance,
+                communicationAllowance: comp.communicationAllowance ?? 0,
+                fixedAllowance: comp.fixedAllowance ?? 0,
+                updatedAt: nowIso,
+                updatedBy: currentUser?.name || 'Master Admin',
+              };
+            } else {
+              updatedConfigs.push({
+                id: `SALCFG-${activeYear}-${mem.id}-${Date.now().toString(36)}`,
+                employeeId: mem.id,
+                employeeName: mem.name,
+                year: activeYear,
+                role: mem.role,
+                roleTitle: mem.roleTitle || trimmedTitle || mem.role,
+                department: mem.department || trimmedDept || 'Konsultansi',
+                basicSalary: comp.basicSalary,
+                positionAllowance: comp.positionAllowance,
+                transportAllowance: comp.transportAllowance,
+                mealAllowance: comp.mealAllowance,
+                communicationAllowance: comp.communicationAllowance ?? 0,
+                fixedAllowance: comp.fixedAllowance ?? 0,
+                annualBonusEstimate: comp.basicSalary * 1.5,
+                thrMonths: 1,
+                skNumber: `SK-DIR/REMUN/${activeYear}/${mem.id.slice(-4).toUpperCase()}`,
+                effectiveDate: `${activeYear}-01-01`,
+                status: 'ACTIVE',
+                notes: `Disinkronkan otomatis dari standar remunerasi jabatan ${trimmedTitle || mem.role}.`,
+                createdAt: nowIso,
+                updatedAt: nowIso,
+                updatedBy: currentUser?.name || 'Master Admin',
+              });
+            }
+          });
+
+          try {
+            localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedConfigs));
+          } catch (e) {
+            console.warn(e);
+          }
+          saveSettingsToFirestore('employee_salary_configs', updatedConfigs);
+          broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedConfigs);
+          return updatedConfigs;
+        });
+      }
     }
   };
 
@@ -5790,6 +6007,443 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   };
 
+  // =========================================================================
+  // PROYEK PEMERINTAH & BUMN (SPK, TERMIN, INTEGRASI PIUTANG, PAJAK & KAS)
+  // =========================================================================
+
+  const addGovernmentProject = (
+    data: Omit<GovernmentProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
+  ): { success: boolean; project?: GovernmentProject; message?: string } => {
+    const now = new Date().toISOString();
+    const id = `gov-${Date.now()}`;
+
+    // Calculate milestone financials & totals
+    const milestones: GovMilestone[] = (data.milestones || []).map((m, idx) => {
+      const gross = Math.round(Number(m.grossAmountIDR) || 0);
+      const defaultPphType = data.institutionType === 'KEMENTERIAN' || data.institutionType === 'LEMBAGA' || data.institutionType === 'DINAS_PEMDA' ? 'PPH_22' : 'PPH_23';
+      const pphType = m.pphType || defaultPphType;
+      const pphRate = Number(m.pphRatePercent) ?? (data.whtRatePph || (pphType === 'PPH_22' ? 1.5 : 2));
+      const ppnRate = Number(m.ppnRatePercent) ?? (data.vatWapuRate || 11);
+      const pphAmount = Math.round((gross * pphRate) / 100);
+      const ppnAmount = Math.round((gross * ppnRate) / 100);
+      const net = Math.round(gross - pphAmount);
+
+      return {
+        ...m,
+        id: m.id || `gov-m-${Date.now()}-${idx + 1}`,
+        projectId: id,
+        termNumber: m.termNumber || idx + 1,
+        grossAmountIDR: gross,
+        pphType,
+        pphRatePercent: pphRate,
+        pphAmountIDR: pphAmount,
+        ppnRatePercent: ppnRate,
+        ppnAmountIDR: ppnAmount,
+        netDisbursementIDR: net,
+        status: m.status || 'BELUM_DITAGIH',
+        createdAt: m.createdAt || now,
+      };
+    });
+
+    const totalBilled = milestones
+      .filter((m) => m.status === 'INVOICE_TERBIT' || m.status === 'PROSES_SPM_KPPN' || m.status === 'SP2D_CAIR')
+      .reduce((acc, m) => acc + m.grossAmountIDR, 0);
+
+    const totalReceived = milestones
+      .filter((m) => m.status === 'SP2D_CAIR')
+      .reduce((acc, m) => acc + (m.netDisbursementIDR || m.grossAmountIDR), 0);
+
+    const totalOutstanding = Math.max(0, data.totalContractValueIDR - totalReceived);
+
+    const newProject: GovernmentProject = {
+      ...data,
+      id,
+      milestones,
+      totalBilledAmountIDR: totalBilled,
+      totalReceivedAmountIDR: totalReceived,
+      totalOutstandingAmountIDR: totalOutstanding,
+      createdAt: now,
+      createdBy: currentUser.name,
+      updatedAt: now,
+    };
+
+    setGovernmentProjects((prev) => {
+      const updated = [newProject, ...prev];
+      broadcastLiveDataUpdate('GOVERNMENT_PROJECTS', updated);
+      saveGovernmentProjectToFirestore(newProject);
+      return updated;
+    });
+
+    addActivity(
+      newProject.linkedCrmProjectId || newProject.id,
+      'Proyek Pemerintah Baru Terdaftar',
+      `Menambahkan Kontrak Pengadaan "${newProject.projectName}" (${newProject.governmentAgency}) No. SPK ${newProject.contractNumber} senilai Rp ${newProject.totalContractValueIDR.toLocaleString('id-ID')}`,
+      'STATUS_CHANGE'
+    );
+
+    return {
+      success: true,
+      project: newProject,
+      message: `Kontrak Pengadaan "${newProject.projectName}" berhasil didaftarkan ke sistem!`,
+    };
+  };
+
+  const updateGovernmentProject = (
+    id: string,
+    updates: Partial<GovernmentProject>
+  ): { success: boolean; message?: string } => {
+    const target = governmentProjects.find((p) => p.id === id);
+    if (!target) {
+      return { success: false, message: 'Proyek pemerintah tidak ditemukan.' };
+    }
+
+    const now = new Date().toISOString();
+    const updatedMilestones = updates.milestones || target.milestones;
+    const contractValue = updates.totalContractValueIDR ?? target.totalContractValueIDR;
+
+    const totalBilled = updatedMilestones
+      .filter((m) => m.status === 'INVOICE_TERBIT' || m.status === 'PROSES_SPM_KPPN' || m.status === 'SP2D_CAIR')
+      .reduce((acc, m) => acc + m.grossAmountIDR, 0);
+
+    const totalReceived = updatedMilestones
+      .filter((m) => m.status === 'SP2D_CAIR')
+      .reduce((acc, m) => acc + (m.netDisbursementIDR || m.grossAmountIDR), 0);
+
+    const totalOutstanding = Math.max(0, contractValue - totalReceived);
+
+    const updatedProject: GovernmentProject = {
+      ...target,
+      ...updates,
+      milestones: updatedMilestones,
+      totalBilledAmountIDR: totalBilled,
+      totalReceivedAmountIDR: totalReceived,
+      totalOutstandingAmountIDR: totalOutstanding,
+      updatedAt: now,
+    };
+
+    setGovernmentProjects((prev) => {
+      const updated = prev.map((p) => (p.id === id ? updatedProject : p));
+      broadcastLiveDataUpdate('GOVERNMENT_PROJECTS', updated);
+      saveGovernmentProjectToFirestore(updatedProject);
+      return updated;
+    });
+
+    return {
+      success: true,
+      message: `Kontrak Proyek "${updatedProject.projectName}" berhasil diperbarui.`,
+    };
+  };
+
+  const deleteGovernmentProject = (id: string): { success: boolean; message?: string } => {
+    const target = governmentProjects.find((p) => p.id === id);
+    if (!target) {
+      return { success: false, message: 'Proyek pemerintah tidak ditemukan.' };
+    }
+
+    setGovernmentProjects((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      broadcastLiveDataUpdate('GOVERNMENT_PROJECTS', updated);
+      return updated;
+    });
+
+    setDeletedGovProjectIds((prev) => {
+      const updated = Array.from(new Set([...prev, id]));
+      broadcastLiveDataUpdate('DELETED_GOV_PROJECT_IDS', updated);
+      return updated;
+    });
+
+    saveDeletedEntityIdToFirestore('deleted_gov_project_ids', id);
+    deleteGovernmentProjectFromFirestore(id);
+
+    return {
+      success: true,
+      message: `Kontrak Pengadaan "${target.projectName}" berhasil dihapus.`,
+    };
+  };
+
+  const generateMilestoneInvoiceToReceivables = (
+    projectId: string,
+    milestoneId: string,
+    invoiceData?: {
+      invoiceNumber?: string;
+      issueDate?: string;
+      dueDate?: string;
+      bapNumber?: string;
+      bastNumber?: string;
+      notes?: string;
+    }
+  ): { success: boolean; receivable?: Receivable; message?: string } => {
+    const project = governmentProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek pemerintah tidak ditemukan.' };
+
+    const milestoneIndex = project.milestones.findIndex((m) => m.id === milestoneId);
+    if (milestoneIndex === -1) return { success: false, message: 'Termin pengadaan tidak ditemukan.' };
+
+    const milestone = project.milestones[milestoneIndex];
+    const now = new Date().toISOString();
+    const invNum = invoiceData?.invoiceNumber || milestone.invoiceNumber || `INV/GOV/${project.fiscalYear}/${project.id.slice(-4)}/T${milestone.termNumber}`;
+    const issueDt = invoiceData?.issueDate || now.slice(0, 10);
+    const dueDt = invoiceData?.dueDate || milestone.targetDate || issueDt;
+
+    // Create receivable entry in Piutang Usaha
+    const receivableResult = addReceivable({
+      invoiceNumber: invNum,
+      category: 'PROYEK_PEMERINTAH_BUMN',
+      title: `Tagihan ${milestone.title} - ${project.projectName}`,
+      clientName: project.governmentAgency,
+      projectId: project.linkedCrmProjectId || project.id,
+      totalAmountIDR: milestone.grossAmountIDR,
+      issueDate: issueDt,
+      dueDate: dueDt,
+      taxIncluded: true,
+      taxAmountIDR: milestone.ppnAmountIDR,
+      notes: invoiceData?.notes || `Kontak PPK: ${project.ppkName || '-'} (NIP: ${project.ppkNip || '-'}). Tagihan Termin Proyek Pemerintah: SPK No. ${project.contractNumber} (${project.sourceOfFunds} TA ${project.fiscalYear}). Mekanisme: ${project.paymentMechanism}. Potongan PPh ${milestone.pphType} ${milestone.pphRatePercent}%: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}. PPN WAPU dipungut Satker: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')}. Estimasi Kas Bersih: Rp ${milestone.netDisbursementIDR.toLocaleString('id-ID')}. BAP: ${invoiceData?.bapNumber || milestone.bapNumber || '-'} | BAST: ${invoiceData?.bastNumber || milestone.bastNumber || '-'}`,
+      syncToCashLedger: false, // will sync when SP2D is actually disbursed!
+    });
+
+    if (!receivableResult.success || !receivableResult.receivable) {
+      return { success: false, message: receivableResult.message || 'Gagal membuat tagihan piutang.' };
+    }
+
+    // Update milestone state
+    const updatedMilestones = [...project.milestones];
+    updatedMilestones[milestoneIndex] = {
+      ...milestone,
+      status: 'INVOICE_TERBIT',
+      invoiceNumber: invNum,
+      receivableId: receivableResult.receivable.id,
+      bapNumber: invoiceData?.bapNumber || milestone.bapNumber,
+      bastNumber: invoiceData?.bastNumber || milestone.bastNumber,
+    };
+
+    updateGovernmentProject(projectId, { milestones: updatedMilestones });
+
+    return {
+      success: true,
+      receivable: receivableResult.receivable,
+      message: `Invoice ${invNum} untuk Termin ${milestone.termNumber} berhasil diterbitkan dan otomatis tercatat pada Buku Piutang Usaha!`,
+    };
+  };
+
+  const recordGovMilestonePaymentSp2d = (
+    projectId: string,
+    milestoneId: string,
+    sp2dData: {
+      sp2dNumber: string;
+      sp2dDisbursementDate: string;
+      paymentChannelId: string;
+      spmNumber?: string;
+      ntpnPpn?: string;
+      bupotPphNumber?: string;
+      notes?: string;
+      syncToCashLedger?: boolean;
+      syncToTaxObligations?: boolean;
+    }
+  ): { success: boolean; message?: string; transaction?: FinancialTransaction } => {
+    const project = governmentProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek pemerintah tidak ditemukan.' };
+
+    const milestoneIndex = project.milestones.findIndex((m) => m.id === milestoneId);
+    if (milestoneIndex === -1) return { success: false, message: 'Termin pengadaan tidak ditemukan.' };
+
+    const milestone = project.milestones[milestoneIndex];
+    const disbursementDate = sp2dData.sp2dDisbursementDate || new Date().toISOString().slice(0, 10);
+    let linkedTx: FinancialTransaction | undefined;
+
+    // 1. Post to Cash Ledger (Finance & Cashflow) as GOVERNMENT_PROJECT_INCOME
+    if (sp2dData.syncToCashLedger !== false) {
+      // The net cash landing into the company bank account from KPPN/Kasda
+      const netCash = milestone.netDisbursementIDR || (milestone.grossAmountIDR - milestone.pphAmountIDR);
+
+      linkedTx = addTransaction({
+        date: disbursementDate,
+        type: 'INCOME',
+        category: 'GOVERNMENT_PROJECT_INCOME',
+        amountIDR: netCash,
+        description: `Pencairan SP2D Termin ${milestone.termNumber}: ${milestone.title} - ${project.projectName} (${project.governmentAgency})`,
+        clientOrVendorName: project.governmentAgency,
+        projectId: project.linkedCrmProjectId || project.id,
+        paymentMethod: sp2dData.paymentChannelId as any,
+        referenceNumber: sp2dData.sp2dNumber,
+        status: 'CLEARED',
+        recordedBy: currentUser.name,
+        notes: `SP2D Cair KPPN: ${sp2dData.sp2dNumber} | SPM: ${sp2dData.spmNumber || milestone.spmNumber || '-'} | Bruto: Rp ${milestone.grossAmountIDR.toLocaleString('id-ID')} | PPh ${milestone.pphType} dipotong Satker: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')} | PPN WAPU dipungut Kas Negara: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')}${sp2dData.notes ? ` | Catatan: ${sp2dData.notes}` : ''}`,
+      });
+    }
+
+    // 2. Mark Linked Receivable as LUNAS (Piutang Usaha)
+    if (milestone.receivableId) {
+      recordReceivablePayment(milestone.receivableId, {
+        amountIDR: milestone.grossAmountIDR,
+        paymentDate: disbursementDate,
+        paymentChannelId: sp2dData.paymentChannelId,
+        referenceNumber: sp2dData.sp2dNumber,
+        notes: `Pelunasan otomatis via Pencairan SP2D No. ${sp2dData.sp2dNumber}. Kas Bersih Diterima: Rp ${milestone.netDisbursementIDR.toLocaleString('id-ID')}. Potongan PPh ${milestone.pphType}: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}.`,
+        syncToCashLedger: false, // Already recorded in step 1 to prevent double counting!
+      });
+    }
+
+    // 3. Record Tax Obligations (Prepaid Withholding Tax / PPN WAPU & PPh 22/23)
+    if (sp2dData.syncToTaxObligations !== false) {
+      // PPh 22 / PPh 23 Withholding Credit
+      if (milestone.pphAmountIDR > 0) {
+        addTaxObligation({
+          taxType: (milestone.pphType || 'PPH_22') as TaxType,
+          taxPeriod: `Masa ${disbursementDate.slice(5, 7)}/${project.fiscalYear}`,
+          taxYear: project.fiscalYear,
+          taxMonth: parseInt(disbursementDate.slice(5, 7), 10) || 1,
+          title: `Bukti Potong PPh ${milestone.pphType} - SP2D ${milestone.title} (${project.projectName})`,
+          taxAmount: milestone.pphAmountIDR,
+          paidAmount: milestone.pphAmountIDR,
+          remainingAmount: 0,
+          status: 'PAID',
+          paidByClient: true,
+          clientWithholdingNumber: sp2dData.bupotPphNumber || `BUPOT-SP2D-${sp2dData.sp2dNumber}`,
+          clientWithholdingDate: disbursementDate,
+          withholdingTaxPayerName: project.governmentAgency,
+          dueDate: disbursementDate,
+          paidAt: disbursementDate,
+          notes: `Pajak Penghasilan Pasal ${milestone.pphType} telah dipotong langsung oleh Bendahara Pengeluaran ${project.governmentAgency} via SP2D KPPN No. ${sp2dData.sp2dNumber}. Menjadi kredit pajak pada SPT Tahunan Badan.`,
+        });
+      }
+
+      // PPN WAPU (Kode Faktur 020 - Pemungutan oleh Instansi Pemerintah)
+      if (milestone.ppnAmountIDR > 0) {
+        addTaxObligation({
+          taxType: 'PPN',
+          taxPeriod: `Masa ${disbursementDate.slice(5, 7)}/${project.fiscalYear}`,
+          taxYear: project.fiscalYear,
+          taxMonth: parseInt(disbursementDate.slice(5, 7), 10) || 1,
+          title: `PPN WAPU (Kode Faktur 020) - SP2D Termin ${milestone.termNumber} (${project.governmentAgency})`,
+          ppnOutputAmount: milestone.ppnAmountIDR,
+          taxAmount: milestone.ppnAmountIDR,
+          paidAmount: milestone.ppnAmountIDR,
+          remainingAmount: 0,
+          status: 'PAID',
+          ntpnNumber: sp2dData.ntpnPpn || `NTPN-WAPU-${sp2dData.sp2dNumber}`,
+          dueDate: disbursementDate,
+          paidAt: disbursementDate,
+          notes: `PPN WAPU dipungut dan disetor langsung ke Kas Negara oleh Instansi Bendahara Satker ${project.governmentAgency}. Bukti setoran NTPN: ${sp2dData.ntpnPpn || 'Terlampir dalam SP2D'}.`,
+        });
+      }
+    }
+
+    // 4. Update Milestone State
+    const updatedMilestones = [...project.milestones];
+    updatedMilestones[milestoneIndex] = {
+      ...milestone,
+      status: 'SP2D_CAIR',
+      sp2dNumber: sp2dData.sp2dNumber,
+      sp2dDisbursementDate: disbursementDate,
+      spmNumber: sp2dData.spmNumber || milestone.spmNumber,
+      paymentChannelId: sp2dData.paymentChannelId,
+      transactionId: linkedTx?.id,
+      ntpnPpn: sp2dData.ntpnPpn,
+      bupotPphNumber: sp2dData.bupotPphNumber,
+    };
+
+    updateGovernmentProject(projectId, { milestones: updatedMilestones });
+
+    addActivity(
+      project.linkedCrmProjectId || project.id,
+      'SP2D Pemerintah Telah Cair',
+      `Pencairan SP2D No. ${sp2dData.sp2dNumber} untuk Termin ${milestone.termNumber} Proyek "${project.projectName}" telah masuk kas Rp ${(milestone.netDisbursementIDR || milestone.grossAmountIDR).toLocaleString('id-ID')} dan terintegrasi ke Piutang, Pajak, dan Arus Kas!`,
+      'STATUS_CHANGE'
+    );
+
+    return {
+      success: true,
+      transaction: linkedTx,
+      message: `Pencairan SP2D No. ${sp2dData.sp2dNumber} berhasil dicatat! Kas bersih Rp ${milestone.netDisbursementIDR.toLocaleString('id-ID')} telah dibukukan ke Arus Kas, piutang dilunasi, dan kredit pajak PPh/PPN WAPU telah masuk ke modul Pajak.`,
+    };
+  };
+
+  const addGovMilestone = (
+    projectId: string,
+    milestone: Omit<GovMilestone, 'id' | 'projectId' | 'createdAt'>
+  ): { success: boolean; message?: string } => {
+    const project = governmentProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek tidak ditemukan.' };
+
+    const gross = Math.round(Number(milestone.grossAmountIDR) || 0);
+    const pphRate = Number(milestone.pphRatePercent) ?? (project.pphType === 'PPH_22' ? 1.5 : 2);
+    const ppnRate = Number(milestone.ppnRatePercent) ?? 11;
+    const pphAmount = Math.round((gross * pphRate) / 100);
+    const ppnAmount = Math.round((gross * ppnRate) / 100);
+    const net = Math.round(gross - pphAmount);
+
+    const newMilestone: GovMilestone = {
+      ...milestone,
+      id: `gov-m-${Date.now()}`,
+      projectId,
+      grossAmountIDR: gross,
+      pphType: milestone.pphType || project.pphType,
+      pphRatePercent: pphRate,
+      pphAmountIDR: pphAmount,
+      ppnRatePercent: ppnRate,
+      ppnAmountIDR: ppnAmount,
+      netDisbursementIDR: net,
+      status: milestone.status || 'BELUM_DITAGIH',
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedMilestones = [...project.milestones, newMilestone];
+    return updateGovernmentProject(projectId, { milestones: updatedMilestones });
+  };
+
+  const updateGovMilestone = (
+    projectId: string,
+    milestoneId: string,
+    updates: Partial<GovMilestone>
+  ): { success: boolean; message?: string } => {
+    const project = governmentProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek tidak ditemukan.' };
+
+    const updatedMilestones = project.milestones.map((m) => {
+      if (m.id !== milestoneId) return m;
+      const merged = { ...m, ...updates };
+      const gross = Math.round(Number(merged.grossAmountIDR) || 0);
+      const pphRate = Number(merged.pphRatePercent) ?? (project.pphType === 'PPH_22' ? 1.5 : 2);
+      const ppnRate = Number(merged.ppnRatePercent) ?? 11;
+      const pphAmount = Math.round((gross * pphRate) / 100);
+      const ppnAmount = Math.round((gross * ppnRate) / 100);
+      const net = Math.round(gross - pphAmount);
+
+      return {
+        ...merged,
+        grossAmountIDR: gross,
+        pphRatePercent: pphRate,
+        pphAmountIDR: pphAmount,
+        ppnRatePercent: ppnRate,
+        ppnAmountIDR: ppnAmount,
+        netDisbursementIDR: net,
+      };
+    });
+
+    return updateGovernmentProject(projectId, { milestones: updatedMilestones });
+  };
+
+  const deleteGovMilestone = (
+    projectId: string,
+    milestoneId: string
+  ): { success: boolean; message?: string } => {
+    const project = governmentProjects.find((p) => p.id === projectId);
+    if (!project) return { success: false, message: 'Proyek tidak ditemukan.' };
+
+    const updatedMilestones = project.milestones.filter((m) => m.id !== milestoneId);
+    return updateGovernmentProject(projectId, { milestones: updatedMilestones });
+  };
+
+  const resetGovernmentProjectsToDefault = (): { success: boolean; message?: string } => {
+    setGovernmentProjects(INITIAL_GOVERNMENT_PROJECTS);
+    INITIAL_GOVERNMENT_PROJECTS.forEach((p) => saveGovernmentProjectToFirestore(p));
+    broadcastLiveDataUpdate('GOVERNMENT_PROJECTS', INITIAL_GOVERNMENT_PROJECTS);
+    return {
+      success: true,
+      message: 'Master data Proyek Pemerintah (APBN/BUMN) berhasil direset ke standar sistem.',
+    };
+  };
+
   const updateMilestoneDocRequirements = (
     projectId: string,
     milestoneId: string,
@@ -7412,9 +8066,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const getEmployeeSalaryConfigForYear = useCallback(
     (employeeId: string, year: number, fallbackRole?: import('../types').UserRole) => {
-      return getEffectiveSalaryConfig(employeeSalaryConfigs, employeeId, year, fallbackRole);
+      return getEffectiveSalaryConfig(employeeSalaryConfigs, employeeId, year, fallbackRole, roleDefinitions);
     },
-    [employeeSalaryConfigs]
+    [employeeSalaryConfigs, roleDefinitions]
   );
 
   const toggleMilestoneManualSignoff = (
@@ -7888,6 +8542,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         recordReceivablePayment,
         cancelReceivable,
         resetReceivablesToDefault,
+        governmentProjects,
+        addGovernmentProject,
+        updateGovernmentProject,
+        deleteGovernmentProject,
+        generateMilestoneInvoiceToReceivables,
+        recordGovMilestonePaymentSp2d,
+        addGovMilestone,
+        updateGovMilestone,
+        deleteGovMilestone,
+        resetGovernmentProjectsToDefault,
         payrollRecords,
         addPayrollPayment,
         updatePayrollPayment,

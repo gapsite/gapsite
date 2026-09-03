@@ -40,6 +40,14 @@ export const TAX_TYPE_CONFIGS: Record<
     categoryGroup: 'PPH',
     color: 'blue',
   },
+  PPH_22: {
+    name: 'PPh Pasal 22 (Pengadaan & Proyek Pemerintah / BUMN)',
+    shortName: 'PPh 22 (1.5%)',
+    defaultRate: 1.5,
+    description: 'Pajak pemungutan 1.5% oleh Bendahara Pengeluaran Pemerintah / BUMN atas pembayaran proyek pengadaan barang/jasa APBN/APBD.',
+    categoryGroup: 'PPH',
+    color: 'sky',
+  },
   PPH_23: {
     name: 'PPh Pasal 23 (Jasa Surveyor & Konsultansi)',
     shortName: 'PPh 23 (2%)',

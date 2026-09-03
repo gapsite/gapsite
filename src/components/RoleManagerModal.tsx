@@ -32,10 +32,13 @@ import {
   CreditCard,
   Landmark,
   Copy,
+  DollarSign,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { TeamMember, UserRole, UserPermission, RoleDefinition } from '../types';
 import { DEFAULT_ROLE_GOVERNANCE_META } from '../data/mockData';
+import { DEFAULT_ROLE_COMPENSATION } from '../utils/payrollCalculations';
+import { formatIDR } from '../utils/formatters';
 
 export const POPULAR_BANKS = [
   'Bank Mandiri',
@@ -300,12 +303,18 @@ export const RoleManagerModal: React.FC<{
   const [editingCapabilitiesPermissions, setEditingCapabilitiesPermissions] = useState<UserPermission[]>([]);
   const [capabilitiesSyncMembers, setCapabilitiesSyncMembers] = useState(true);
 
-  // Master Admin: Editing Role Position Name Modal state
+  // Master Admin: Editing Role Position Name & Standard Compensation Modal state
   const [editingRoleModal, setEditingRoleModal] = useState<UserRole | null>(null);
   const [editRoleFormTitle, setEditRoleFormTitle] = useState('');
   const [editRoleFormDept, setEditRoleFormDept] = useState('');
   const [editRoleFormDesc, setEditRoleFormDesc] = useState('');
   const [editRoleSyncExisting, setEditRoleSyncExisting] = useState(true);
+  const [editRoleBasicSalary, setEditRoleBasicSalary] = useState<number>(0);
+  const [editRolePositionAllowance, setEditRolePositionAllowance] = useState<number>(0);
+  const [editRoleTransportAllowance, setEditRoleTransportAllowance] = useState<number>(0);
+  const [editRoleMealAllowance, setEditRoleMealAllowance] = useState<number>(0);
+  const [editRoleCommunicationAllowance, setEditRoleCommunicationAllowance] = useState<number>(250_000);
+  const [editRoleSyncSalaryConfigs, setEditRoleSyncSalaryConfigs] = useState<boolean>(true);
   const [roleEditSuccessMsg, setRoleEditSuccessMsg] = useState<string | null>(null);
 
   // Master Admin: Editing Role & Position Governance Name & Description Modal state
@@ -1876,12 +1885,19 @@ export const RoleManagerModal: React.FC<{
                                     setEditRoleFormDept(role.department || '');
                                     setEditRoleFormDesc(role.desc || '');
                                     setEditRoleSyncExisting(true);
+                                    const comp = role.standardCompensation || DEFAULT_ROLE_COMPENSATION[roleKey];
+                                    setEditRoleBasicSalary(comp?.basicSalary || 0);
+                                    setEditRolePositionAllowance(comp?.positionAllowance || 0);
+                                    setEditRoleTransportAllowance(comp?.transportAllowance || 0);
+                                    setEditRoleMealAllowance(comp?.mealAllowance || 0);
+                                    setEditRoleCommunicationAllowance(comp?.communicationAllowance ?? 250_000);
+                                    setEditRoleSyncSalaryConfigs(true);
                                   }}
                                   className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
-                                  title="Change Role Position Name & Department"
+                                  title="Change Role Position Name, Department & Standard Remuneration"
                                 >
                                   <Edit2 className="w-3 h-3 text-amber-700" />
-                                  <span>Edit Title</span>
+                                  <span>Edit Title &amp; Gaji</span>
                                 </button>
                               </div>
                             )}
@@ -1896,6 +1912,17 @@ export const RoleManagerModal: React.FC<{
                           {role.department && (
                             <p className="text-[11px] text-amber-800 font-medium">{role.department}</p>
                           )}
+                        </div>
+
+                        {/* Standar Remunerasi Role Tag */}
+                        <div className="mb-3 p-2 bg-emerald-50/70 rounded-lg border border-emerald-200/80 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5 text-emerald-800">
+                            <DollarSign className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="text-[11px] font-bold">Standar Gaji Pokok:</span>
+                          </div>
+                          <span className="font-mono font-bold text-emerald-900 text-xs">
+                            {formatIDR(role.standardCompensation?.basicSalary ?? DEFAULT_ROLE_COMPENSATION[roleKey]?.basicSalary ?? 0)}
+                          </span>
                         </div>
 
                         <p className="text-xs text-slate-600 mb-4 leading-relaxed">{role.desc}</p>
@@ -2719,10 +2746,21 @@ export const RoleManagerModal: React.FC<{
                     title: editRoleFormTitle,
                     department: editRoleFormDept,
                     desc: editRoleFormDesc,
+                    standardCompensation: {
+                      basicSalary: editRoleBasicSalary,
+                      positionAllowance: editRolePositionAllowance,
+                      transportAllowance: editRoleTransportAllowance,
+                      mealAllowance: editRoleMealAllowance,
+                      communicationAllowance: editRoleCommunicationAllowance,
+                      fixedAllowance: 0,
+                    },
                   },
-                  editRoleSyncExisting
+                  editRoleSyncExisting,
+                  editRoleSyncSalaryConfigs
                 );
-                setRoleEditSuccessMsg(`Position name for ${editingRoleModal} updated to "${editRoleFormTitle.trim()}".`);
+                setRoleEditSuccessMsg(
+                  `Standar remunerasi & jabatan ${editingRoleModal} berhasil disimpan dan disinkronkan ke seluruh role & menu Gaji secara realtime.`
+                );
                 setEditingRoleModal(null);
                 setTimeout(() => setRoleEditSuccessMsg(null), 4000);
               }}
@@ -2731,9 +2769,9 @@ export const RoleManagerModal: React.FC<{
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 flex items-start gap-2">
                 <Sparkles className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold">Master Admin Governance</p>
+                  <p className="font-bold">Master Admin &amp; Governance Remunerasi</p>
                   <p className="text-[11px] text-amber-900 mt-0.5">
-                    Modifying this title updates the statutory position designation across all consulting files, disposition headers, and team profile cards.
+                    Pembaruan ini secara otomatis terintegrasi ke sistem remunerasi, slip gaji, dan penetapan gaji karyawan per tahun secara real-time.
                   </p>
                 </div>
               </div>
@@ -2770,7 +2808,7 @@ export const RoleManagerModal: React.FC<{
                   Statutory Role Description / Purpose
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={editRoleFormDesc}
                   onChange={(e) => setEditRoleFormDesc(e.target.value)}
                   placeholder="Describe the responsibilities and scope of this role..."
@@ -2778,7 +2816,76 @@ export const RoleManagerModal: React.FC<{
                 />
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              {/* Standar Remunerasi Role Section */}
+              <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-900">
+                  <DollarSign className="w-4 h-4 text-emerald-700" />
+                  <span className="text-xs font-bold">Standar Remunerasi Acuan Jabatan (Per Bulan)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Gaji Pokok Standar (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={100_000}
+                      value={editRoleBasicSalary}
+                      onChange={(e) => setEditRoleBasicSalary(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">{formatIDR(editRoleBasicSalary)}</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Tunjangan Jabatan (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={50_000}
+                      value={editRolePositionAllowance}
+                      onChange={(e) => setEditRolePositionAllowance(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">{formatIDR(editRolePositionAllowance)}</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Tunjangan Transportasi (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={50_000}
+                      value={editRoleTransportAllowance}
+                      onChange={(e) => setEditRoleTransportAllowance(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">{formatIDR(editRoleTransportAllowance)}</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Tunjangan Makan &amp; Operasional (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={50_000}
+                      value={editRoleMealAllowance}
+                      onChange={(e) => setEditRoleMealAllowance(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">{formatIDR(editRoleMealAllowance)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                 <label className="flex items-start gap-2 cursor-pointer text-xs">
                   <input
                     type="checkbox"
@@ -2788,10 +2895,27 @@ export const RoleManagerModal: React.FC<{
                   />
                   <div>
                     <span className="font-bold text-slate-900 block">
-                      Synchronize to all current {roleDefinitions[editingRoleModal]?.title || editingRoleModal.replace('_', ' ')} members
+                      Perbarui nama jabatan &amp; departemen profil seluruh anggota role ini
                     </span>
                     <span className="text-[11px] text-slate-500 block">
-                      Automatically updates the job title and department on existing member profiles assigned to this role.
+                      Memperbarui tampilan nama role di profil, kartu anggota, dan header laporan.
+                    </span>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2 cursor-pointer text-xs border-t border-slate-200/80 pt-2">
+                  <input
+                    type="checkbox"
+                    checked={editRoleSyncSalaryConfigs}
+                    onChange={(e) => setEditRoleSyncSalaryConfigs(e.target.checked)}
+                    className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <span className="font-bold text-emerald-950 block">
+                      Sinkronkan langsung standar gaji ke Menu Gaji Karyawan untuk seluruh anggota role ini
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      Memperbarui ketetapan gaji tahun {new Date().getFullYear()} seluruh karyawan dengan role ini secara realtime.
                     </span>
                   </div>
                 </label>
@@ -2810,7 +2934,7 @@ export const RoleManagerModal: React.FC<{
                   className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-extrabold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4 text-slate-950" />
-                  <span>Save Position Name</span>
+                  <span>Simpan Perubahan &amp; Sinkronkan Role</span>
                 </button>
               </div>
             </form>

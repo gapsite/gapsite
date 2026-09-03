@@ -254,6 +254,19 @@ const DashboardContent: React.FC = () => {
             </div>
           )}
 
+          {/* TAB 3-GOV: GOVERNMENT PROJECT INCOME & SP2D DISBURSEMENT */}
+          {activeTab === 'government-projects' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="GOVERNMENT_PROJECTS"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
           {/* TAB 3A: ACCOUNTS RECEIVABLE & INVOICE MANAGEMENT */}
           {activeTab === 'receivables' && (
             <div className="animate-in fade-in duration-150">

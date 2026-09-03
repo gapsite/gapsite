@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 
-export type MainTabType = 'projects' | 'dispositions' | 'finance' | 'receivables' | 'bank-loans' | 'tax' | 'payroll' | 'financial-reports' | 'documents' | 'calculator' | 'team';
+export type MainTabType = 'projects' | 'dispositions' | 'finance' | 'government-projects' | 'receivables' | 'bank-loans' | 'tax' | 'payroll' | 'financial-reports' | 'documents' | 'calculator' | 'team';
 
 interface SidebarProps {
   activeTab: MainTabType;
@@ -81,6 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     bankLoans,
     receivables,
     payrollRecords,
+    governmentProjects,
     teamMembers,
     currentUser,
     logout,
@@ -345,6 +346,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }`}
                     >
                       {transactions.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Proyek Pemerintah (APBN/BUMN) Tab */}
+                <button
+                  id="nav-government-projects"
+                  onClick={() => handleNavClick('government-projects')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'government-projects'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Pendapatan Proyek Pemerintah, SP2D & Pengadaan APBN/BUMN"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Landmark className={`w-4 h-4 shrink-0 ${activeTab === 'government-projects' ? 'text-white' : 'text-blue-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Proyek Pemerintah</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'government-projects'
+                          ? 'bg-blue-950 text-blue-200'
+                          : governmentProjects && governmentProjects.length > 0
+                          ? 'bg-blue-950 text-blue-300 border border-blue-800'
+                          : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      {governmentProjects ? governmentProjects.length : 0} Paket
                     </span>
                   )}
                 </button>

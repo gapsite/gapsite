@@ -39,6 +39,14 @@ export const DEFAULT_ROLE_DEFINITIONS: RoleDefinitionsMap = {
       'EXPORT_AUDIT_REPORTS',
     ],
     isCustomizable: true,
+    standardCompensation: {
+      basicSalary: 18_000_000,
+      positionAllowance: 4_500_000,
+      transportAllowance: 1_500_000,
+      mealAllowance: 1_000_000,
+      communicationAllowance: 500_000,
+      fixedAllowance: 0,
+    },
   },
   DIRECTOR: {
     role: 'DIRECTOR',
@@ -64,6 +72,14 @@ export const DEFAULT_ROLE_DEFINITIONS: RoleDefinitionsMap = {
       'EXPORT_AUDIT_REPORTS',
     ],
     isCustomizable: true,
+    standardCompensation: {
+      basicSalary: 20_000_000,
+      positionAllowance: 5_000_000,
+      transportAllowance: 2_000_000,
+      mealAllowance: 1_200_000,
+      communicationAllowance: 600_000,
+      fixedAllowance: 0,
+    },
   },
   LEAD_CONSULTANT: {
     role: 'LEAD_CONSULTANT',
@@ -83,6 +99,14 @@ export const DEFAULT_ROLE_DEFINITIONS: RoleDefinitionsMap = {
       'EXPORT_AUDIT_REPORTS',
     ],
     isCustomizable: true,
+    standardCompensation: {
+      basicSalary: 12_500_000,
+      positionAllowance: 3_000_000,
+      transportAllowance: 1_250_000,
+      mealAllowance: 900_000,
+      communicationAllowance: 350_000,
+      fixedAllowance: 0,
+    },
   },
   TECHNICAL_CONSULTANT: {
     role: 'TECHNICAL_CONSULTANT',
@@ -98,6 +122,14 @@ export const DEFAULT_ROLE_DEFINITIONS: RoleDefinitionsMap = {
       'EXPORT_AUDIT_REPORTS',
     ],
     isCustomizable: true,
+    standardCompensation: {
+      basicSalary: 9_500_000,
+      positionAllowance: 2_000_000,
+      transportAllowance: 1_000_000,
+      mealAllowance: 800_000,
+      communicationAllowance: 300_000,
+      fixedAllowance: 0,
+    },
   },
   SURVEYOR_LIAISON: {
     role: 'SURVEYOR_LIAISON',
@@ -113,6 +145,14 @@ export const DEFAULT_ROLE_DEFINITIONS: RoleDefinitionsMap = {
       'EXPORT_AUDIT_REPORTS',
     ],
     isCustomizable: true,
+    standardCompensation: {
+      basicSalary: 8_000_000,
+      positionAllowance: 1_500_000,
+      transportAllowance: 1_200_000,
+      mealAllowance: 800_000,
+      communicationAllowance: 250_000,
+      fixedAllowance: 0,
+    },
   },
   FINANCE_OFFICER: {
     role: 'FINANCE_OFFICER',
@@ -127,6 +167,14 @@ export const DEFAULT_ROLE_DEFINITIONS: RoleDefinitionsMap = {
       'EXPORT_AUDIT_REPORTS',
     ],
     isCustomizable: true,
+    standardCompensation: {
+      basicSalary: 8_500_000,
+      positionAllowance: 1_500_000,
+      transportAllowance: 1_000_000,
+      mealAllowance: 800_000,
+      communicationAllowance: 250_000,
+      fixedAllowance: 0,
+    },
   },
   CLIENT_VIEWER: {
     role: 'CLIENT_VIEWER',
@@ -140,6 +188,14 @@ export const DEFAULT_ROLE_DEFINITIONS: RoleDefinitionsMap = {
       'EXPORT_AUDIT_REPORTS',
     ],
     isCustomizable: true,
+    standardCompensation: {
+      basicSalary: 0,
+      positionAllowance: 0,
+      transportAllowance: 0,
+      mealAllowance: 0,
+      communicationAllowance: 0,
+      fixedAllowance: 0,
+    },
   },
 };
 

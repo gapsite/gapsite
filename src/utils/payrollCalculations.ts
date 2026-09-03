@@ -104,42 +104,57 @@ export const DEFAULT_ROLE_COMPENSATION: Record<string, {
   positionAllowance: number;
   transportAllowance: number;
   mealAllowance: number;
+  communicationAllowance?: number;
+  fixedAllowance?: number;
 }> = {
   MASTER_ADMIN: {
     basicSalary: 18_000_000,
     positionAllowance: 4_500_000,
     transportAllowance: 1_500_000,
     mealAllowance: 1_000_000,
+    communicationAllowance: 500_000,
+  },
+  DIRECTOR: {
+    basicSalary: 20_000_000,
+    positionAllowance: 5_000_000,
+    transportAllowance: 2_000_000,
+    mealAllowance: 1_200_000,
+    communicationAllowance: 600_000,
   },
   LEAD_CONSULTANT: {
     basicSalary: 12_500_000,
     positionAllowance: 3_000_000,
     transportAllowance: 1_250_000,
     mealAllowance: 900_000,
+    communicationAllowance: 350_000,
   },
   TECHNICAL_CONSULTANT: {
     basicSalary: 9_500_000,
     positionAllowance: 2_000_000,
     transportAllowance: 1_000_000,
     mealAllowance: 800_000,
+    communicationAllowance: 300_000,
   },
   SURVEYOR_LIAISON: {
     basicSalary: 8_000_000,
     positionAllowance: 1_500_000,
     transportAllowance: 1_200_000,
     mealAllowance: 800_000,
+    communicationAllowance: 250_000,
   },
   FINANCE_OFFICER: {
     basicSalary: 8_500_000,
     positionAllowance: 1_500_000,
     transportAllowance: 1_000_000,
     mealAllowance: 800_000,
+    communicationAllowance: 250_000,
   },
   CLIENT_VIEWER: {
     basicSalary: 0,
     positionAllowance: 0,
     transportAllowance: 0,
     mealAllowance: 0,
+    communicationAllowance: 0,
   },
 };
 

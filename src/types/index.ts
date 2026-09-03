@@ -411,6 +411,14 @@ export interface RoleDefinition {
   desc: string;
   defaultPermissions: UserPermission[];
   isCustomizable?: boolean;
+  standardCompensation?: {
+    basicSalary: number;
+    positionAllowance: number;
+    transportAllowance: number;
+    mealAllowance: number;
+    communicationAllowance?: number;
+    fixedAllowance?: number;
+  };
 }
 
 export type RoleDefinitionsMap = Record<UserRole, RoleDefinition>;
@@ -495,6 +503,7 @@ export type TransactionType = 'INCOME' | 'EXPENSE';
 export type IncomeCategory =
   | 'CLIENT_CONSULTING_FEE'
   | 'TKDN_MILESTONE_PAYMENT'
+  | 'GOVERNMENT_PROJECT_INCOME'
   | 'SURVEYOR_FACILITATION'
   | 'LEGAL_RETAINER'
   | 'SUCCESS_FEE'
@@ -688,6 +697,7 @@ export interface FinancialTransaction {
 export type TaxType =
   | 'PPN' // Pajak Pertambahan Nilai (PPN 11% / 12%)
   | 'PPH_21' // PPh Pasal 21 (Gaji Pegawai, Tenaga Ahli, Asesor & Konsultan)
+  | 'PPH_22' // PPh Pasal 22 (Pengadaan & Jasa Pemerintah / BUMN 1.5%)
   | 'PPH_23' // PPh Pasal 23 (Jasa Konsultasi / Jasa Surveyor / Sewa Harta 2%)
   | 'PPH_4_2' // PPh Final Pasal 4 ayat (2) (Sewa Gedung Kantor 10%, Konstruksi)
   | 'PPH_FINAL_UMKM' // PPh Final PP 23/55 (0.5% Omzet Bruto)
@@ -756,6 +766,7 @@ export interface TaxObligation {
 
 export type ReceivableCategory =
   | 'TERMIN_KONSULTASI_TKDN'
+  | 'PROYEK_PEMERINTAH_BUMN'
   | 'TERMIN_SERTIFIKASI_BMP'
   | 'JASA_PERIZINAN_LEGAL'
   | 'SUCCESS_FEE_TENDER'
@@ -985,6 +996,139 @@ export interface AnnualSalaryStats {
   year: number;
 }
 
+// ==========================================
+// PROYEK PEMERINTAH & BUMN (GOVERNMENT PROJECTS & SPK)
+// ==========================================
 
+export type GovernmentInstitutionType =
+  | 'KEMENTERIAN'
+  | 'LEMBAGA'
+  | 'DINAS_PEMDA'
+  | 'BUMN'
+  | 'BUMD'
+  | 'BLU'
+  | 'UNIVERSITAS_NEGERI';
 
+export type GovernmentFundingSource =
+  | 'APBN'
+  | 'APBD'
+  | 'BUMN_INTERNAL'
+  | 'BLU'
+  | 'DAK_DAU'
+  | 'HIBAH';
 
+export type GovernmentPaymentMechanism =
+  | 'LS_KPPN' // Pembayaran Langsung via KPPN (Kas Negara)
+  | 'LS_KASDA' // Pembayaran Langsung via Kas Daerah
+  | 'UP_GU_BENDAHARA' // Uang Persediaan / Ganti Uang Bendahara
+  | 'BUMN_SAP' // Sistem Pembayaran BUMN (SAP / Vendor Portal)
+  | 'BANK_GARANSI';
+
+export type GovMilestoneStatus =
+  | 'BELUM_DITAGIH' // Not yet billed
+  | 'INVOICE_TERBIT' // Tagihan Terbit / Diajukan ke Satker
+  | 'PROSES_SPM_KPPN' // SPM dalam proses verifikasi KPPN / Kasda
+  | 'SP2D_CAIR' // Dana SP2D sudah cair ke rekening bank perusahaan
+  | 'DIBATALKAN';
+
+export interface GovMilestone {
+  id: string;
+  projectId: string;
+  termNumber: number; // 1, 2, 3, etc.
+  title: string; // e.g. "Termin 1 (Uang Muka 20%)", "Termin 2 (Progres Fisik 50% & Laporan Antara)", "Termin 3 (Pelunasan 30% & BAST)"
+  percentage: number; // e.g. 20
+  grossAmountIDR: number; // Nominal Bruto Termin
+  
+  // Tax calculations for government project (WAPU - Wajib Pungut)
+  ppnRatePercent: number; // Standard 11% PPN WAPU
+  ppnAmountIDR: number; // PPN dipungut bendahara satker pemerintah
+  pphType: 'PPH_22' | 'PPH_23' | 'PPH_FINAL' | 'NONE'; // PPh 22 (1.5%) atau PPh 23 (2%)
+  pphRatePercent: number; // 1.5% atau 2.0%
+  pphAmountIDR: number; // Potongan PPh oleh bendahara pemerintah
+  
+  // Net cash disbursement expected to bank account
+  netDisbursementIDR: number; // Kas Bersih yang Masuk ke Rekening Bank (Gross - PPh - PPN WAPU jika dipotong KPPN)
+  
+  // Timeline
+  targetDate: string; // Target tanggal penagihan / jatuh tempo (YYYY-MM-DD)
+  
+  // Status
+  status: GovMilestoneStatus;
+  
+  // Government Statutory Billing References
+  invoiceNumber?: string; // Nomor Invoice Resmi (INV/GOV/2026/...)
+  bapNumber?: string; // Nomor Berita Acara Pembayaran (BAP)
+  bastNumber?: string; // Nomor Berita Acara Serah Terima (BAST)
+  spmNumber?: string; // Nomor Surat Perintah Membayar (SPM Satker)
+  sp2dNumber?: string; // Nomor SP2D KPPN / Kasda (Surat Perintah Pencairan Dana)
+  sp2dDisbursementDate?: string; // Tanggal Dana SP2D Masuk Rekening (YYYY-MM-DD)
+  ntpnPpn?: string; // Nomor Transaksi Penerimaan Negara (NTPN Setoran PPN WAPU)
+  bupotPphNumber?: string; // Nomor Bukti Potong PPh 22 / PPh 23 dari Satker
+  
+  // Cross-Module Integration IDs
+  receivableId?: string; // ID Piutang Usaha (terhubung ke modul AR)
+  transactionId?: string; // ID Transaksi Buku Kas Masuk (terhubung ke Buku Kas & Arus Kas)
+  taxObligationPphId?: string; // ID Pajak PPh 22/23 Terhutang/Kredit Pajak (Tax Management)
+  taxObligationPpnId?: string; // ID Pajak PPN Keluaran WAPU (Tax Management)
+  paymentChannelId?: string; // Akun Rekening Bank Perusahaan Penerima SP2D
+  
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface GovernmentProject {
+  id: string;
+  contractNumber: string; // Nomor SPK / Kontrak Dinas (e.g. "027/SPK-TKDN/KEMENPERIN/2026")
+  projectName: string; // Nama Pengadaan / Konsultansi Pemerintah
+  institutionType: GovernmentInstitutionType;
+  governmentAgency: string; // Kementerian / Satuan Kerja / Dinas / BUMN
+  satkerCode?: string; // Kode Satuan Kerja / DIPA / RKA-K/L (e.g. "Satker 412981")
+  fiscalYear: number; // Tahun Anggaran (e.g. 2026)
+  sourceOfFunds: GovernmentFundingSource; // APBN / APBD / BUMN
+  
+  // Contact & Officials
+  ppkName?: string; // Pejabat Pembuat Komitmen
+  ppkNip?: string; // NIP PPK
+  treasurerName?: string; // Bendahara Pengeluaran
+  treasurerPhone?: string;
+  agencyAddress?: string;
+  
+  // Contract financials
+  totalContractValueIDR: number; // Nilai Kontrak Bruto (Termasuk Pajak)
+  paymentMechanism: GovernmentPaymentMechanism;
+  whtRatePph: number; // e.g. 1.5 or 2.0 (%)
+  vatWapuRate: number; // e.g. 11 (%)
+  
+  startDate: string;
+  endDate: string;
+  status: 'AKTIF' | 'SELESAI' | 'BATAL' | 'DRAFT';
+  
+  // Milestones & Termin List
+  milestones: GovMilestone[];
+  
+  // Aggregates
+  totalBilledAmountIDR: number; // Sudah diterbitkan Invoice / Masuk Piutang
+  totalReceivedAmountIDR: number; // SP2D yang sudah cair ke Kas & Bank
+  totalOutstandingAmountIDR: number; // Sisa piutang / termin belum cair
+  
+  // Linked standard CRM project (optional)
+  linkedCrmProjectId?: string;
+  
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+}
+
+export interface GovernmentProjectStats {
+  totalProjects: number;
+  activeProjects: number;
+  totalContractValueIDR: number;
+  totalBilledIDR: number;
+  totalDisbursedCashIDR: number;
+  totalOutstandingReceivablesIDR: number;
+  totalWithholdingTaxPaidIDR: number;
+  totalVatWapuIDR: number;
+  pendingSp2dCount: number;
+}

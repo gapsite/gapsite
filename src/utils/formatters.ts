@@ -489,6 +489,8 @@ export const getTransactionCategoryLabel = (
       return 'CERTIFICATION SUCCESS FEE';
     case 'TRAINING_WORKSHOP':
       return 'TRAINING & WORKSHOP FEE';
+    case 'GOVERNMENT_PROJECT_INCOME':
+      return 'PENDAPATAN PROYEK PEMERINTAH & BUMN (SP2D)';
     case 'BANK_LOAN_DISBURSEMENT':
       return 'PENCAIRAN PINJAMAN / HUTANG (LOAN INFLOW)';
     case 'OTHER_INCOME':

@@ -1,4 +1,4 @@
-import { EmployeeAnnualSalaryConfig, UserRole } from '../types';
+import { EmployeeAnnualSalaryConfig, UserRole, RoleDefinitionsMap } from '../types';
 import {
   DEFAULT_ROLE_COMPENSATION,
   hitungBpjsKesehatan,
@@ -257,7 +257,8 @@ export const getEffectiveSalaryConfig = (
   configs: EmployeeAnnualSalaryConfig[],
   employeeId: string,
   year: number,
-  fallbackRole?: UserRole
+  fallbackRole?: UserRole,
+  customRoleDefinitions?: RoleDefinitionsMap
 ): {
   config?: EmployeeAnnualSalaryConfig;
   isFromRoleBenchmark: boolean;
@@ -312,7 +313,8 @@ export const getEffectiveSalaryConfig = (
 
   // 3. Fallback ke benchmark standar role
   const roleKey = fallbackRole || 'TECHNICAL_CONSULTANT';
-  const roleBenchmark = DEFAULT_ROLE_COMPENSATION[roleKey] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
+  const customRoleComp = customRoleDefinitions?.[roleKey]?.standardCompensation;
+  const roleBenchmark = customRoleComp || DEFAULT_ROLE_COMPENSATION[roleKey] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
 
   return {
     config: undefined,
@@ -321,8 +323,8 @@ export const getEffectiveSalaryConfig = (
     positionAllowance: roleBenchmark.positionAllowance,
     transportAllowance: roleBenchmark.transportAllowance,
     mealAllowance: roleBenchmark.mealAllowance,
-    communicationAllowance: 0,
-    fixedAllowance: 0,
+    communicationAllowance: roleBenchmark.communicationAllowance || 0,
+    fixedAllowance: roleBenchmark.fixedAllowance || 0,
     annualBonusEstimate: 0,
     thrMonths: 1,
   };

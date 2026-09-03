@@ -23,7 +23,8 @@ import {
   Receivable,
   TaxObligation,
   PayrollPayment,
-  CompanyLetterhead
+  CompanyLetterhead,
+  GovernmentProject
 } from '../types';
 
 export const FirestoreCollections = {
@@ -38,6 +39,7 @@ export const FirestoreCollections = {
   RECEIVABLES: 'receivables',
   TAX_OBLIGATIONS: 'tax_obligations',
   PAYROLL: 'payroll_records',
+  GOVERNMENT_PROJECTS: 'government_projects',
 };
 
 // Deeply sanitize objects so no `undefined` values are ever sent to Firestore (which causes setDoc to fail)
@@ -555,6 +557,84 @@ export const removeDeletedPayrollIdFromFirestore = async (payrollId: string): Pr
   } catch (err) {
     console.error('Failed to remove deleted payroll ID from Firestore:', err);
   }
+};
+
+// ==========================================
+// GOVERNMENT PROJECTS (PROYEK PEMERINTAH & BUMN) FIRESTORE SYNC
+// ==========================================
+
+export const saveGovernmentProjectToFirestore = async (project: GovernmentProject): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.GOVERNMENT_PROJECTS, project.id);
+    const sanitized = sanitizeForFirestore({
+      ...project,
+      satkerCode: project.satkerCode || '',
+      ppkName: project.ppkName || '',
+      ppkNip: project.ppkNip || '',
+      treasurerName: project.treasurerName || '',
+      treasurerPhone: project.treasurerPhone || '',
+      agencyAddress: project.agencyAddress || '',
+      linkedCrmProjectId: project.linkedCrmProjectId || '',
+      notes: project.notes || '',
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(docRef, sanitized, { merge: true });
+
+    // Also update settings backup document for atomic fallback
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'government_projects');
+    const snap = await getDoc(settingsRef);
+    let list: GovernmentProject[] = [];
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      list = snap.data().data;
+    }
+    const filtered = list.filter((p) => p.id !== project.id);
+    await setDoc(
+      settingsRef,
+      sanitizeForFirestore({ data: [project, ...filtered], updatedAt: new Date().toISOString() }),
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Firestore save government project error:', error);
+  }
+};
+
+export const deleteGovernmentProjectFromFirestore = async (projectId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.GOVERNMENT_PROJECTS, projectId);
+    await deleteDoc(docRef);
+
+    const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'government_projects');
+    const snap = await getDoc(settingsRef);
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      const filtered = snap.data().data.filter((p: GovernmentProject) => p.id !== projectId);
+      await setDoc(
+        settingsRef,
+        sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
+        { merge: true }
+      );
+    }
+  } catch (error) {
+    console.error('Firestore delete government project error:', error);
+    throw error;
+  }
+};
+
+export const subscribeToGovernmentProjects = (onUpdate: (projects: GovernmentProject[]) => void) => {
+  const colRef = collection(db, FirestoreCollections.GOVERNMENT_PROJECTS);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const loaded: GovernmentProject[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as GovernmentProject;
+        if (data && data.id) {
+          loaded.push(data);
+        }
+      });
+      onUpdate(loaded);
+    },
+    (err) => console.warn('Firestore government projects listener warning:', err)
+  );
 };
 
 export const subscribeToDeletedPayrollIds = (onUpdate: (ids: string[]) => void) => {

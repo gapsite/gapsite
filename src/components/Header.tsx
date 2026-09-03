@@ -74,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
     receivables,
     bankLoans,
     taxObligations,
+    governmentProjects,
     transactionCategories,
     paymentChannels,
     teamMembers,
@@ -128,6 +129,13 @@ export const Header: React.FC<HeaderProps> = ({
           subtitle: '',
           icon: Wallet,
           badge: `${transactions.length} Ledger Records`,
+        };
+      case 'government-projects':
+        return {
+          title: 'Pendapatan Proyek Pemerintah & SP2D',
+          subtitle: 'Integrasi Kontrak Pengadaan APBN/BUMN, Invoice Piutang, Potongan Pajak, & Kas Negara',
+          icon: Landmark,
+          badge: `${governmentProjects ? governmentProjects.length : 0} Kontrak Pengadaan`,
         };
       case 'payroll':
         return {

@@ -50,7 +50,11 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
   } = useProjects();
 
   const canManage =
-    isMasterAdmin || hasPermission('MANAGE_FINANCE') || currentUser.role === 'DIRECTOR_PARTNER';
+    isMasterAdmin ||
+    hasPermission('MANAGE_FINANCE') ||
+    currentUser.role === 'DIRECTOR' ||
+    (currentUser.role as string) === 'DIRECTOR_PARTNER' ||
+    currentUser.role === 'FINANCE_OFFICER';
 
   // Filters
   const [selectedYearFilter, setSelectedYearFilter] = useState<string>('2026');

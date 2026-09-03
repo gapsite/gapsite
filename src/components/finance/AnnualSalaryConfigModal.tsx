@@ -39,6 +39,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
     currentUser,
     employeeSalaryConfigs,
     addOrUpdateEmployeeSalaryConfig,
+    roleDefinitions,
   } = useProjects();
 
   const currentYear = defaultYear || new Date().getFullYear();
@@ -50,6 +51,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
   const [role, setRole] = useState<UserRole>('TECHNICAL_CONSULTANT');
   const [roleTitle, setRoleTitle] = useState<string>('');
   const [department, setDepartment] = useState<string>('');
+  const [syncToAllWithSameRole, setSyncToAllWithSameRole] = useState<boolean>(false);
 
   // Compensation
   const [basicSalary, setBasicSalary] = useState<number>(10_000_000);
@@ -159,17 +161,29 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
       return;
     }
 
-    // Otherwise apply default role benchmark
-    const benchmark = DEFAULT_ROLE_COMPENSATION[member.role] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
+    // Otherwise apply default role benchmark (or custom role definition if set)
+    const customComp = roleDefinitions[member.role]?.standardCompensation;
+    const benchmark = customComp || DEFAULT_ROLE_COMPENSATION[member.role] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
     setBasicSalary(benchmark.basicSalary);
     setPositionAllowance(benchmark.positionAllowance);
     setTransportAllowance(benchmark.transportAllowance);
     setMealAllowance(benchmark.mealAllowance);
-    setCommunicationAllowance(250_000);
-    setFixedAllowance(0);
+    setCommunicationAllowance(benchmark.communicationAllowance ?? 250_000);
+    setFixedAllowance(benchmark.fixedAllowance ?? 0);
     setAnnualBonusEstimate(benchmark.basicSalary * 1.5);
     setThrMonths(1);
     setNotes(`Penetapan standar gaji tahunan berdasarkan benchmark kompetensi jabatan ${member.roleTitle || member.role}.`);
+  };
+
+  const applyRoleStandard = () => {
+    const customComp = roleDefinitions[role]?.standardCompensation;
+    const benchmark = customComp || DEFAULT_ROLE_COMPENSATION[role] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
+    setBasicSalary(benchmark.basicSalary);
+    setPositionAllowance(benchmark.positionAllowance);
+    setTransportAllowance(benchmark.transportAllowance);
+    setMealAllowance(benchmark.mealAllowance);
+    setCommunicationAllowance(benchmark.communicationAllowance ?? 250_000);
+    setFixedAllowance(benchmark.fixedAllowance ?? 0);
   };
 
   // Live calculation breakdown
@@ -263,10 +277,40 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
       });
 
       if (res.success) {
-        setSuccessNotice(res.message);
+        if (syncToAllWithSameRole) {
+          const peers = teamMembers.filter((m) => m.role === role && m.id !== selectedEmployeeId);
+          for (const peer of peers) {
+            await addOrUpdateEmployeeSalaryConfig({
+              employeeId: peer.id,
+              employeeName: peer.name,
+              year,
+              role: peer.role,
+              roleTitle: peer.roleTitle || roleTitle || peer.role,
+              department: peer.department || department || 'Konsultansi',
+              basicSalary,
+              positionAllowance,
+              transportAllowance,
+              mealAllowance,
+              communicationAllowance,
+              fixedAllowance,
+              annualBonusEstimate,
+              thrMonths,
+              skNumber: `SK-DIR/${year}/REMUN/${peer.id.slice(-4).toUpperCase()}`,
+              effectiveDate,
+              status,
+              notes: `Disinkronkan otomatis seragam dengan ${employeeName} (${roleTitle || role}).`,
+            });
+          }
+        }
+
+        setSuccessNotice(
+          syncToAllWithSameRole
+            ? `Standar remunerasi ${year} untuk ${employeeName} & seluruh karyawan jabatan ${roleTitle || role} berhasil disimpan dan disinkronkan secara realtime!`
+            : res.message
+        );
         setTimeout(() => {
           onClose();
-        }, 1200);
+        }, 1400);
       } else {
         setErrorMsg(res.message);
       }
@@ -406,10 +450,38 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
 
           {/* Section 2: Komponen Remunerasi Bulanan */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-emerald-600" />
-              <span>2. Komponen Remunerasi &amp; Tunjangan Bulanan (Rupiah)</span>
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <span>2. Komponen Remunerasi &amp; Tunjangan Bulanan (Rupiah)</span>
+              </h3>
+              <button
+                type="button"
+                onClick={applyRoleStandard}
+                className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-2xs"
+                title="Terapkan standar remunerasi jabatan dari pengaturan role"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>Isi dari Standar Jabatan ({roleTitle || role})</span>
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-700">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Benchmark Role <strong>{roleTitle || role}</strong>: Gaji Pokok{' '}
+                  <span className="font-bold font-mono text-emerald-700">
+                    {formatIDR(
+                      roleDefinitions[role]?.standardCompensation?.basicSalary ??
+                        DEFAULT_ROLE_COMPENSATION[role]?.basicSalary ??
+                        0
+                    )}
+                  </span>
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500 hidden md:inline">Terintegrasi otomatis ke Input Gaji &amp; Slip Payroll</span>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {/* Gaji Pokok */}
@@ -633,6 +705,26 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                 placeholder="Penetapan remunerasi mengacu pada evaluasi kinerja dan benchmark industri konsultansi sertifikasi TKDN..."
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
               />
+            </div>
+
+            {/* Sync to all members of same role */}
+            <div className="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200">
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs">
+                <input
+                  type="checkbox"
+                  checked={syncToAllWithSameRole}
+                  onChange={(e) => setSyncToAllWithSameRole(e.target.checked)}
+                  className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+                <div>
+                  <span className="font-bold text-slate-900 block">
+                    Terapkan juga ke seluruh karyawan aktif dengan Jabatan ini ({roleTitle || role}) untuk Tahun {year}
+                  </span>
+                  <span className="text-[11px] text-slate-600 block mt-0.5">
+                    Menyimpan &amp; menyinkronkan standar gaji pokok, tunjangan, dan bonus ini secara real-time ke semua karyawan yang memegang role {roleTitle || role}.
+                  </span>
+                </div>
+              </label>
             </div>
           </div>
 
