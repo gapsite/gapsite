@@ -27,6 +27,7 @@ import {
   Eye,
   RefreshCw,
   UserCheck,
+  Loader2,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { PayrollPayment, PayrollStatus } from '../../types';
@@ -69,6 +70,7 @@ export const PayrollManagement: React.FC = () => {
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
   const [editingPayroll, setEditingPayroll] = useState<PayrollPayment | null>(null);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Count user's own payslips
   const myRecordsCount = useMemo(() => {
@@ -174,13 +176,18 @@ export const PayrollManagement: React.FC = () => {
   };
 
   // Delete Payroll
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (
       window.confirm(
-        `Apakah Anda yakin ingin menghapus slip gaji ${name}? Transaksi pengeluaran kas yang terkait akan otomatis terhapus dari Finance, Arus Kas (Cashflow), dan Laporan Keuangan.`
+        `Apakah Anda yakin ingin menghapus slip gaji ${name}? Semua data yang terintegrasi (transaksi pengeluaran kas di Arus Kas/Buku Kas dan kewajiban PPh 21 di Menu Pajak) akan otomatis ikut terhapus secara permanen dari Cloud Firestore dan tersimpan realtime ke seluruh role.`
       )
     ) {
-      deletePayrollPayment(id);
+      setDeletingId(id);
+      try {
+        await deletePayrollPayment(id);
+      } finally {
+        setDeletingId(null);
+      }
     }
   };
 
@@ -713,11 +720,18 @@ export const PayrollManagement: React.FC = () => {
                             </button>
                             <button
                               type="button"
+                              disabled={deletingId === payroll.id}
                               onClick={() => handleDelete(payroll.id, payroll.employeeName)}
-                              className="p-1.5 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                              title="Hapus Slip Gaji & Transaksi Kas"
+                              className={`p-1.5 text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer ${
+                                deletingId === payroll.id ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                              title="Hapus Slip Gaji & Seluruh Data Kas Terkait"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              {deletingId === payroll.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-rose-600" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </button>
                           </>
                         )}

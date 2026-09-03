@@ -148,3 +148,89 @@ export function getTaxTypeBadge(taxType: TaxType) {
     group: cfg.categoryGroup,
   };
 }
+
+/**
+ * Generate synchronized default description based on tax type, rate, and optional details
+ */
+export function getDefaultTaxDescription(params: {
+  taxType: TaxType;
+  taxRatePercent?: number;
+  counterpartyName?: string;
+  projectCode?: string;
+}): string {
+  const cfg = TAX_TYPE_CONFIGS[params.taxType] || TAX_TYPE_CONFIGS.OTHER_TAX;
+  const rate = params.taxRatePercent !== undefined ? params.taxRatePercent : cfg.defaultRate;
+  const counterparty = params.counterpartyName?.trim() ? ` Lawan transaksi: ${params.counterpartyName.trim()}` : '';
+  const project = params.projectCode?.trim() ? ` [Proyek ${params.projectCode.trim()}]` : '';
+
+  switch (params.taxType) {
+    case 'PPN':
+      return `PPN ${rate}% atas Faktur Pajak Keluaran Penyerahan JKP Konsultansi & Sertifikasi TKDN dikurangi Pajak Masukan.${project}${counterparty}`;
+    case 'PPH_23':
+      return `Pemotongan PPh 23 (${rate}%) atas transaksi Jasa Manajemen, Jasa Konsultan, atau Jasa Pengujian Surveyor.${project}${counterparty}`;
+    case 'PPH_21':
+      return `Pemotongan PPh 21 (${rate}%) atas gaji, upah, atau honorarium tenaga ahli / asesor.${project}${counterparty}`;
+    case 'PPH_4_2':
+      return `PPh Final Pasal 4 ayat (2) (${rate}%) atas sewa kantor, ruko operasional atau jasa konstruksi.${project}${counterparty}`;
+    case 'PPH_FINAL_UMKM':
+      return `PPh Final PP 23/55 (${rate}%) dari omzet bruto peredaran usaha bulanan.${project}${counterparty}`;
+    case 'PPH_25_29':
+      return `Angsuran PPh Pasal 25 bulanan atau pelunasan PPh Badan Pasal 29 tahunan perusahaan.${project}${counterparty}`;
+    default:
+      return `${cfg.description}.${project}${counterparty}`;
+  }
+}
+
+/**
+ * Check if a tax obligation has a mismatched description (e.g., PPh 23 record with PPN description)
+ * and return the sanitized/synchronized tax obligation.
+ */
+export function syncTaxObligationDescription(obligation: TaxObligation): TaxObligation {
+  if (!obligation) return obligation;
+
+  const desc = (obligation.description || '').trim();
+  const lowerDesc = desc.toLowerCase();
+  const isPpnDesc = lowerDesc.includes('ppn 11%') || lowerDesc.includes('faktur pajak keluaran') || lowerDesc.includes('pajak masukan');
+  const isPphDesc = lowerDesc.includes('pph 23') || lowerDesc.includes('pph 21') || lowerDesc.includes('pph 4') || lowerDesc.includes('pph final') || lowerDesc.includes('pph badan');
+
+  // Case 1: Tax type is NOT PPN (e.g. PPH_23, PPH_21), but description refers to PPN / Faktur Pajak Keluaran
+  if (obligation.taxType !== 'PPN' && isPpnDesc) {
+    return {
+      ...obligation,
+      description: getDefaultTaxDescription({
+        taxType: obligation.taxType,
+        taxRatePercent: obligation.taxRatePercent,
+        counterpartyName: obligation.counterpartyName,
+        projectCode: obligation.projectCode,
+      }),
+    };
+  }
+
+  // Case 2: Tax type is PPN, but description solely mentions PPh
+  if (obligation.taxType === 'PPN' && isPphDesc && !lowerDesc.includes('ppn')) {
+    return {
+      ...obligation,
+      description: getDefaultTaxDescription({
+        taxType: 'PPN',
+        taxRatePercent: obligation.taxRatePercent || 11,
+        counterpartyName: obligation.counterpartyName,
+        projectCode: obligation.projectCode,
+      }),
+    };
+  }
+
+  // Case 3: Empty description
+  if (!desc) {
+    return {
+      ...obligation,
+      description: getDefaultTaxDescription({
+        taxType: obligation.taxType,
+        taxRatePercent: obligation.taxRatePercent,
+        counterpartyName: obligation.counterpartyName,
+        projectCode: obligation.projectCode,
+      }),
+    };
+  }
+
+  return obligation;
+}

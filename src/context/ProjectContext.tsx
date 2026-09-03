@@ -23,6 +23,12 @@ import {
   subscribeToReceivables,
   savePayrollToFirestore,
   deletePayrollFromFirestore,
+  saveDeletedPayrollIdToFirestore,
+  removeDeletedPayrollIdFromFirestore,
+  subscribeToDeletedPayrollIds,
+  saveDeletedEntityIdToFirestore,
+  removeDeletedEntityIdFromFirestore,
+  subscribeToDeletedEntityIds,
   subscribeToPayroll,
   saveTaxObligationToFirestore,
   deleteTaxObligationFromFirestore,
@@ -85,6 +91,7 @@ import {
 } from '../types';
 import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
+import { syncTaxObligationDescription } from '../utils/taxCalculations';
 import {
   INITIAL_PROJECTS,
   INITIAL_DISPOSITIONS,
@@ -396,7 +403,9 @@ interface ProjectContextType {
     id: string,
     updates: Partial<PayrollPayment>
   ) => { success: boolean; message?: string };
-  deletePayrollPayment: (id: string) => { success: boolean; message?: string };
+  deletePayrollPayment: (
+    id: string
+  ) => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
   batchAddPayrollPayments: (
     records: Array<Omit<PayrollPayment, 'id' | 'payrollNumber' | 'createdAt'>>
   ) => { success: boolean; count: number; message?: string };
@@ -404,7 +413,7 @@ interface ProjectContextType {
     id: string,
     paymentDate?: string
   ) => { success: boolean; message?: string };
-  resetPayrollToDefault: () => { success: boolean; message?: string };
+  resetPayrollToDefault: () => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
 
   // Milestone Document Requirements customization
   updateMilestoneDocRequirements: (
@@ -543,8 +552,14 @@ const STORAGE_KEY_BANK_LOANS = 'verix_crm_bank_loans_v1';
 const STORAGE_KEY_COMPANY_CAPITAL = 'verix_crm_company_capital_v1';
 const STORAGE_KEY_COMPANY_LETTERHEAD = 'verix_crm_company_letterhead_v1';
 const STORAGE_KEY_TAX_OBLIGATIONS = 'verix_crm_tax_obligations_v1';
+const STORAGE_KEY_DELETED_TAX_IDS = 'verix_crm_deleted_tax_ids_v1';
 const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
+const STORAGE_KEY_DELETED_RECEIVABLE_IDS = 'verix_crm_deleted_receivable_ids_v1';
 const STORAGE_KEY_PAYROLL = 'verix_crm_payroll_v1';
+const STORAGE_KEY_DELETED_PAYROLL_IDS = 'verix_crm_deleted_payroll_ids_v1';
+const STORAGE_KEY_DELETED_PROJECT_IDS = 'verix_crm_deleted_project_ids_v1';
+const STORAGE_KEY_DELETED_DISPOSITION_IDS = 'verix_crm_deleted_disposition_ids_v1';
+const STORAGE_KEY_DELETED_TRANSACTION_IDS = 'verix_crm_deleted_transaction_ids_v1';
 const STORAGE_KEY_ASSIGNED_BY_OPTIONS = 'verix_crm_assigned_by_options_v1';
 const STORAGE_KEY_CURRENT_USER_ID = 'verix_crm_current_user_id_v1';
 const STORAGE_KEY_AUTH_STATE = 'verix_crm_auth_state_v1';
@@ -754,31 +769,81 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
+  // Deleted Projects Blacklist State (persists deletions across refreshes and syncs to all roles)
+  const [deletedProjectIds, setDeletedProjectIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_PROJECT_IDS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+  const deletedProjectIdsRef = useRef<Set<string>>(new Set(deletedProjectIds));
+  useEffect(() => {
+    deletedProjectIdsRef.current = new Set(deletedProjectIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_PROJECT_IDS, JSON.stringify(deletedProjectIds));
+    } catch (e) {
+      console.warn('Failed to save deleted project IDs to localStorage', e);
+    }
+  }, [deletedProjectIds]);
+
   const [projects, setProjects] = useState<ConsultingProject[]>(() => {
     try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_PROJECT_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
       const saved = localStorage.getItem(STORAGE_KEY_PROJECTS);
       if (saved) {
         const parsed: ConsultingProject[] = JSON.parse(saved);
         const mockProjectCodes = new Set(['PRJ-2025-041', 'PRJ-2025-054', 'PRJ-2025-060', 'PRJ-2025-067', 'PRJ-2025-072', 'PRJ-2025-078']);
         const mockProjectIds = new Set(['prj-101', 'prj-102', 'prj-103', 'prj-104', 'prj-105', 'prj-106']);
-        return parsed.filter((p) => !mockProjectIds.has(p.id) && !mockProjectCodes.has(p.code));
+        return parsed.filter((p) => p && p.id && !mockProjectIds.has(p.id) && !mockProjectCodes.has(p.code) && !deletedIds.has(p.id));
       }
-      return INITIAL_PROJECTS;
+      return INITIAL_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id));
     } catch {
       return INITIAL_PROJECTS;
     }
   });
 
+  // Deleted Dispositions Blacklist State (persists deletions across refreshes and syncs to all roles)
+  const [deletedDispositionIds, setDeletedDispositionIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_DISPOSITION_IDS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+  const deletedDispositionIdsRef = useRef<Set<string>>(new Set(deletedDispositionIds));
+  useEffect(() => {
+    deletedDispositionIdsRef.current = new Set(deletedDispositionIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_DISPOSITION_IDS, JSON.stringify(deletedDispositionIds));
+    } catch (e) {
+      console.warn('Failed to save deleted disposition IDs to localStorage', e);
+    }
+  }, [deletedDispositionIds]);
+
   const [dispositions, setDispositions] = useState<JobDisposition[]>(() => {
     try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_DISPOSITION_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
       const saved = localStorage.getItem(STORAGE_KEY_DISPOSITIONS);
       if (saved) {
         const parsed: JobDisposition[] = JSON.parse(saved);
         const mockDispIds = new Set(['dsp-1001', 'dsp-1002', 'dsp-1003', 'dsp-1004', 'dsp-1005']);
         const mockProjectIds = new Set(['prj-101', 'prj-102', 'prj-103', 'prj-104', 'prj-105', 'prj-106']);
-        return parsed.filter((d) => !mockDispIds.has(d.id) && !mockProjectIds.has(d.projectId));
+        return parsed.filter((d) => d && d.id && !mockDispIds.has(d.id) && !mockProjectIds.has(d.projectId) && !deletedIds.has(d.id));
       }
-      return INITIAL_DISPOSITIONS;
+      return INITIAL_DISPOSITIONS.filter((d) => d && d.id && !deletedIds.has(d.id));
     } catch {
       return INITIAL_DISPOSITIONS;
     }
@@ -842,8 +907,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
+  // Deleted Transactions Blacklist State (persists deletions across refreshes and syncs to all roles)
+  const [deletedTransactionIds, setDeletedTransactionIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_TRANSACTION_IDS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+  const deletedTransactionIdsRef = useRef<Set<string>>(new Set(deletedTransactionIds));
+  useEffect(() => {
+    deletedTransactionIdsRef.current = new Set(deletedTransactionIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_TRANSACTION_IDS, JSON.stringify(deletedTransactionIds));
+    } catch (e) {
+      console.warn('Failed to save deleted transaction IDs to localStorage', e);
+    }
+  }, [deletedTransactionIds]);
+
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(() => {
     try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_TRANSACTION_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
       const saved = localStorage.getItem(STORAGE_KEY_TRANSACTIONS);
       if (saved) {
         const parsed: FinancialTransaction[] = JSON.parse(saved);
@@ -866,12 +956,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const mockProjectIds = new Set(['prj-101', 'prj-102', 'prj-103', 'prj-104', 'prj-105', 'prj-106']);
         return parsed.filter(
           (t) =>
+            t &&
+            t.id &&
             !mockTrxIds.has(t.id) &&
             !(t.projectId && mockProjectIds.has(t.projectId)) &&
-            !t.transactionNumber?.startsWith('TRX-202503-')
+            !t.transactionNumber?.startsWith('TRX-202503-') &&
+            !deletedIds.has(t.id)
         );
       }
-      return INITIAL_TRANSACTIONS;
+      return INITIAL_TRANSACTIONS.filter((t) => t && t.id && !deletedIds.has(t.id));
     } catch {
       return INITIAL_TRANSACTIONS;
     }
@@ -1094,19 +1187,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [companyLetterhead]);
 
+  // Deleted Tax Obligations Blacklist State (persists deletions across refreshes and syncs to all roles)
+  const [deletedTaxIds, setDeletedTaxIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_TAX_IDS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+  const deletedTaxIdsRef = useRef<Set<string>>(new Set(deletedTaxIds));
+  useEffect(() => {
+    deletedTaxIdsRef.current = new Set(deletedTaxIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_TAX_IDS, JSON.stringify(deletedTaxIds));
+    } catch (e) {
+      console.warn('Failed to save deleted tax IDs to localStorage', e);
+    }
+  }, [deletedTaxIds]);
+
   // Tax Obligations State (PPN & PPh Terhutang, Billing & NTPN)
   const [taxObligations, setTaxObligations] = useState<TaxObligation[]>(() => {
     try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_TAX_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
       const saved = localStorage.getItem(STORAGE_KEY_TAX_OBLIGATIONS);
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          return parsed
+            .filter((t) => t && t.id && !deletedIds.has(t.id))
+            .map(syncTaxObligationDescription);
         }
       }
-      return INITIAL_TAX_OBLIGATIONS;
+      return INITIAL_TAX_OBLIGATIONS.filter((t) => t && t.id && !deletedIds.has(t.id)).map(syncTaxObligationDescription);
     } catch {
-      return INITIAL_TAX_OBLIGATIONS;
+      return INITIAL_TAX_OBLIGATIONS.map(syncTaxObligationDescription);
     }
   });
 
@@ -1118,17 +1238,42 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [taxObligations]);
 
+  // Deleted Receivables Blacklist State (persists deletions across refreshes and syncs to all roles)
+  const [deletedReceivableIds, setDeletedReceivableIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+  const deletedReceivableIdsRef = useRef<Set<string>>(new Set(deletedReceivableIds));
+  useEffect(() => {
+    deletedReceivableIdsRef.current = new Set(deletedReceivableIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS, JSON.stringify(deletedReceivableIds));
+    } catch (e) {
+      console.warn('Failed to save deleted receivable IDs to localStorage', e);
+    }
+  }, [deletedReceivableIds]);
+
   // Receivables State (Piutang Usaha & Termin Proyek)
   const [receivables, setReceivables] = useState<Receivable[]>(() => {
     try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
       const saved = localStorage.getItem(STORAGE_KEY_RECEIVABLES);
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          return parsed.filter((r) => r && r.id && !deletedIds.has(r.id));
         }
       }
-      return INITIAL_RECEIVABLES;
+      return INITIAL_RECEIVABLES.filter((r) => r && r.id && !deletedIds.has(r.id));
     } catch {
       return INITIAL_RECEIVABLES;
     }
@@ -1166,17 +1311,44 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [assignedByOptions]);
 
+  // Deleted Payroll Records Blacklist State (persists deletions across refreshes and syncs to all roles)
+  const [deletedPayrollIds, setDeletedPayrollIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_PAYROLL_IDS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
+
+  const deletedPayrollIdsRef = useRef<Set<string>>(new Set(deletedPayrollIds));
+  useEffect(() => {
+    deletedPayrollIdsRef.current = new Set(deletedPayrollIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify(deletedPayrollIds));
+    } catch (e) {
+      console.warn('Failed to save deleted payroll IDs to localStorage', e);
+    }
+  }, [deletedPayrollIds]);
+
   // Employee Salary & Payroll Records State
   const [payrollRecords, setPayrollRecords] = useState<PayrollPayment[]>(() => {
     try {
+      const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_PAYROLL_IDS);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+
       const saved = localStorage.getItem(STORAGE_KEY_PAYROLL);
       if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
         }
       }
-      return INITIAL_PAYROLL_RECORDS;
+      return INITIAL_PAYROLL_RECORDS.filter((p) => !deletedIds.has(p.id));
     } catch {
       return INITIAL_PAYROLL_RECORDS;
     }
@@ -1253,6 +1425,67 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const activeDocumentCategories = useMemo(() => {
     return documentCategories.filter((c) => c.status !== 'INACTIVE');
   }, [documentCategories]);
+
+  // Synchronized Deletion Helpers - atomically update state, local storage, and Firestore
+  const addDeletedProjectId = useCallback((id: string) => {
+    setDeletedProjectIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      saveDeletedEntityIdToFirestore('deleted_project_ids', id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_PROJECT_IDS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
+  const addDeletedDispositionId = useCallback((id: string) => {
+    setDeletedDispositionIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      saveDeletedEntityIdToFirestore('deleted_disposition_ids', id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_DISPOSITION_IDS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
+  const addDeletedTransactionId = useCallback((id: string) => {
+    setDeletedTransactionIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      saveDeletedEntityIdToFirestore('deleted_transaction_ids', id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_TRANSACTION_IDS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
+  const addDeletedReceivableId = useCallback((id: string) => {
+    setDeletedReceivableIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      saveDeletedEntityIdToFirestore('deleted_receivable_ids', id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
+  const addDeletedTaxId = useCallback((id: string) => {
+    setDeletedTaxIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      saveDeletedEntityIdToFirestore('deleted_tax_ids', id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_TAX_IDS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
@@ -1471,6 +1704,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setReceivables(payload);
           } else if (type === 'PAYROLL_PAYMENTS' && Array.isArray(payload)) {
             setPayrollRecords(payload);
+          } else if (type === 'DELETED_PAYROLL_IDS' && Array.isArray(payload)) {
+            setDeletedPayrollIds(payload);
+            setPayrollRecords((current) => current.filter((p) => !payload.includes(p.id)));
           } else if (type === 'CONSULTING_SERVICES' && Array.isArray(payload)) {
             setConsultingServices(payload);
           } else if (type === 'ROLE_DEFINITIONS' && payload) {
@@ -1536,6 +1772,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_PAYROLL) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setPayrollRecords(parsed);
+        } else if (e.key === STORAGE_KEY_DELETED_PAYROLL_IDS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setDeletedPayrollIds(parsed);
+            setPayrollRecords((current) => current.filter((p) => !parsed.includes(p.id)));
+          }
         } else if (e.key === STORAGE_KEY_CONSULTING_SERVICES) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setConsultingServices(parsed);
@@ -1767,9 +2009,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       DEFAULT_COMPANY_LETTERHEAD
     );
 
+    const unsubDeletedProjects = subscribeToDeletedEntityIds('deleted_project_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedProjectIds(remoteIds);
+        setProjects((current) => current.filter((p) => !remoteIds.includes(p.id)));
+      }
+    });
+
     const unsubProjects = subscribeToProjects((remoteProjects) => {
       if (Array.isArray(remoteProjects)) {
-        setProjects(remoteProjects);
+        const deletedSet = deletedProjectIdsRef.current;
+        const valid = remoteProjects.filter((p) => p && p.id && !deletedSet.has(p.id));
+        setProjects(valid);
       }
     });
 
@@ -1911,15 +2162,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubDeletedDispositions = subscribeToDeletedEntityIds('deleted_disposition_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedDispositionIds(remoteIds);
+        setDispositions((current) => current.filter((d) => !remoteIds.includes(d.id)));
+      }
+    });
+
     const unsubDispositions = subscribeToDispositions((remoteDisps) => {
       if (Array.isArray(remoteDisps)) {
-        setDispositions(remoteDisps);
+        const deletedSet = deletedDispositionIdsRef.current;
+        const valid = remoteDisps.filter((d) => d && d.id && !deletedSet.has(d.id));
+        setDispositions(valid);
+      }
+    });
+
+    const unsubDeletedTransactions = subscribeToDeletedEntityIds('deleted_transaction_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedTransactionIds(remoteIds);
+        setTransactions((current) => current.filter((t) => !remoteIds.includes(t.id)));
       }
     });
 
     const unsubTransactions = subscribeToTransactions((remoteTrxs) => {
       if (Array.isArray(remoteTrxs)) {
-        setTransactions(remoteTrxs);
+        const deletedSet = deletedTransactionIdsRef.current;
+        const valid = remoteTrxs.filter((t) => t && t.id && !deletedSet.has(t.id));
+        setTransactions(valid);
       }
     });
 
@@ -1965,21 +2234,50 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubDeletedTax = subscribeToDeletedEntityIds('deleted_tax_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedTaxIds(remoteIds);
+        setTaxObligations((current) => current.filter((t) => !remoteIds.includes(t.id)));
+      }
+    });
+
     const unsubTaxObligations = subscribeToSettings('tax_obligations', (data) => {
       if (Array.isArray(data)) {
-        setTaxObligations(data);
+        const deletedSet = deletedTaxIdsRef.current;
+        const valid = data
+          .filter((t: any) => t && t.id && !deletedSet.has(t.id))
+          .map(syncTaxObligationDescription);
+        setTaxObligations(valid);
+      }
+    });
+
+    const unsubDeletedReceivables = subscribeToDeletedEntityIds('deleted_receivable_ids', (remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedReceivableIds(remoteIds);
+        setReceivables((current) => current.filter((r) => !remoteIds.includes(r.id)));
       }
     });
 
     const unsubReceivables = subscribeToReceivables((remoteRecs) => {
       if (Array.isArray(remoteRecs)) {
-        setReceivables(remoteRecs);
+        const deletedSet = deletedReceivableIdsRef.current;
+        const valid = remoteRecs.filter((r) => r && r.id && !deletedSet.has(r.id));
+        setReceivables(valid);
+      }
+    });
+
+    const unsubDeletedPayroll = subscribeToDeletedPayrollIds((remoteIds) => {
+      if (Array.isArray(remoteIds)) {
+        setDeletedPayrollIds(remoteIds);
+        setPayrollRecords((current) => current.filter((p) => !remoteIds.includes(p.id)));
       }
     });
 
     const unsubPayroll = subscribeToPayroll((remotePayrolls) => {
       if (Array.isArray(remotePayrolls)) {
-        setPayrollRecords(remotePayrolls);
+        const deletedSet = deletedPayrollIdsRef.current;
+        const valid = remotePayrolls.filter((p) => p && p.id && !deletedSet.has(p.id));
+        setPayrollRecords(valid);
       }
     });
 
@@ -1998,12 +2296,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     return () => {
+      unsubDeletedProjects();
       unsubProjects();
       unsubDeletedUsers();
       unsubUsers();
       unsubDocTypes();
       unsubDocCategories();
+      unsubDeletedDispositions();
       unsubDispositions();
+      unsubDeletedTransactions();
       unsubTransactions();
       unsubConsultingServices();
       unsubRoleDefs();
@@ -2012,8 +2313,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubTransactionCategories();
       unsubBankLoans();
       unsubCompanyCapital();
+      unsubDeletedTax();
       unsubTaxObligations();
+      unsubDeletedReceivables();
       unsubReceivables();
+      unsubDeletedPayroll();
       unsubPayroll();
       unsubLetterhead();
     };
@@ -4689,7 +4993,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ? taxData.remainingAmount
         : Math.max(0, taxData.taxAmount - (taxData.paidAmount || 0));
 
-    const newTax: TaxObligation = {
+    const newTax: TaxObligation = syncTaxObligationDescription({
       ...taxData,
       id: `tax-${Date.now()}`,
       paidAmount: taxData.paidAmount || 0,
@@ -4697,7 +5001,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: taxData.status || (calculatedRemaining <= 0 ? 'PAID' : 'TERHUTANG'),
       createdAt: new Date().toISOString(),
       createdBy: currentUser.username || currentUser.name || 'Finance Officer',
-    };
+    });
 
     setTaxObligations((prev) => {
       const updated = [newTax, ...prev];
@@ -4726,7 +5030,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = prev.map((t) => {
         if (t.id === id) {
           found = true;
-          const merged = { ...t, ...updates, updatedAt: new Date().toISOString() };
+          const merged = syncTaxObligationDescription({ ...t, ...updates, updatedAt: new Date().toISOString() });
           if (updates.taxAmount !== undefined || updates.paidAmount !== undefined) {
             const taxAmt = updates.taxAmount ?? t.taxAmount;
             const paidAmt = updates.paidAmount ?? t.paidAmount;
@@ -4794,14 +5098,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    addDeletedTaxId(id);
+
     if (txIdsToDelete.size > 0) {
+      txIdsToDelete.forEach((txId) => {
+        addDeletedTransactionId(txId);
+        deleteTransactionFromFirestore(txId);
+      });
       setTransactions((prev) => {
         const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        try {
+          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
-      });
-      txIdsToDelete.forEach((txId) => {
-        deleteTransactionFromFirestore(txId);
       });
     }
 
@@ -5088,8 +5398,44 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Data piutang tidak ditemukan.' };
     }
 
+    // 1. Blacklist and delete any linked financial transactions from payments
+    const txIdsToDelete = new Set<string>();
+    if (target.payments && target.payments.length > 0) {
+      target.payments.forEach((p) => {
+        if (p.transactionId) txIdsToDelete.add(p.transactionId);
+      });
+    }
+    transactions.forEach((t) => {
+      const matchInv = target.invoiceNumber && (
+        t.referenceNumber?.includes(`RCV-PAY-${target.invoiceNumber}`) ||
+        t.description?.includes(target.invoiceNumber) ||
+        t.notes?.includes(target.invoiceNumber)
+      );
+      if (matchInv) txIdsToDelete.add(t.id);
+    });
+
+    if (txIdsToDelete.size > 0) {
+      txIdsToDelete.forEach((txId) => {
+        addDeletedTransactionId(txId);
+        deleteTransactionFromFirestore(txId);
+      });
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        try {
+          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+    }
+
+    addDeletedReceivableId(id);
+
     setReceivables((prev) => {
       const updated = prev.filter((r) => r.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
+      } catch {}
       broadcastLiveDataUpdate('RECEIVABLES', updated);
       return updated;
     });
@@ -5584,17 +5930,70 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('Unauthorized deletion attempt: Only admin.master (Master Admin) can delete projects.');
       return;
     }
+
+    addDeletedProjectId(id);
+
     setProjects((prev) => {
       const updated = prev.filter((p) => p.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
     });
-    setDispositions((prev) => {
-      const updated = prev.filter((d) => d.projectId !== id);
-      broadcastLiveDataUpdate('DISPOSITIONS', updated);
-      return updated;
-    });
     deleteProjectFromFirestore(id);
+
+    // Cascading deletion for dispositions linked to this project
+    const linkedDispositions = dispositions.filter((d) => d.projectId === id);
+    if (linkedDispositions.length > 0) {
+      linkedDispositions.forEach((d) => {
+        addDeletedDispositionId(d.id);
+        deleteDispositionFromFirestore(d.id);
+      });
+      setDispositions((prev) => {
+        const updated = prev.filter((d) => d.projectId !== id);
+        try {
+          localStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('DISPOSITIONS', updated);
+        return updated;
+      });
+    }
+
+    // Cascading deletion for receivables linked to this project
+    const linkedReceivables = receivables.filter((r) => r.projectId === id);
+    if (linkedReceivables.length > 0) {
+      linkedReceivables.forEach((r) => {
+        addDeletedReceivableId(r.id);
+        deleteReceivableFromFirestore(r.id);
+      });
+      setReceivables((prev) => {
+        const updated = prev.filter((r) => r.projectId !== id);
+        try {
+          localStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('RECEIVABLES', updated);
+        return updated;
+      });
+    }
+
+    // Cascading deletion for transactions linked to this project
+    const linkedTransactions = transactions.filter((t) => t.projectId === id);
+    if (linkedTransactions.length > 0) {
+      linkedTransactions.forEach((t) => {
+        addDeletedTransactionId(t.id);
+        deleteTransactionFromFirestore(t.id);
+      });
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => t.projectId !== id);
+        try {
+          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+    }
+
     if (selectedProjectId === id) setSelectedProjectId(null);
   };
 
@@ -5710,8 +6109,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('Unauthorized deletion attempt: Only admin.master (Master Admin) can delete job dispositions.');
       return;
     }
+    addDeletedDispositionId(id);
     setDispositions((prev) => {
       const updated = prev.filter((d) => d.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(updated));
+      } catch {}
       broadcastLiveDataUpdate('DISPOSITIONS', updated);
       return updated;
     });
@@ -6113,8 +6516,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('Unauthorized deletion attempt: Only Admin / Finance Manager can delete financial transactions.');
       return;
     }
+    addDeletedTransactionId(id);
+
     setTransactions((prev) => {
       const updated = prev.filter((t) => t.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+      } catch {}
       broadcastLiveDataUpdate('TRANSACTIONS', updated);
       return updated;
     });
@@ -6246,6 +6654,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       createdAt: new Date().toISOString(),
       paidAt: data.status === 'PAID' ? (data.paidAt || data.paymentDate) : undefined,
     };
+
+    if (deletedPayrollIds.includes(id)) {
+      const updatedDeleted = deletedPayrollIds.filter((d) => d !== id);
+      setDeletedPayrollIds(updatedDeleted);
+      removeDeletedPayrollIdFromFirestore(id);
+      broadcastLiveDataUpdate('DELETED_PAYROLL_IDS', updatedDeleted);
+    }
 
     setPayrollRecords((prev) => {
       const updated = [newRecord, ...prev];
@@ -6379,13 +6794,25 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, message: 'Data slip gaji dan sinkronisasi pajak berhasil diperbarui.' };
   };
 
-  const deletePayrollPayment = (id: string): { success: boolean; message?: string } => {
+  const deletePayrollPayment = async (
+    id: string
+  ): Promise<{ success: boolean; message?: string }> => {
     const existing = payrollRecords.find((r) => r.id === id);
     if (!existing) {
       return { success: false, message: 'Slip gaji tidak ditemukan.' };
     }
 
-    // 1. Identify and automatically delete ALL linked transactions in Finance & Cashflow
+    // 1. Mark ID in deleted list & update localStorage immediately
+    const updatedDeletedIds = Array.from(new Set([id, ...deletedPayrollIds]));
+    setDeletedPayrollIds(updatedDeletedIds);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify(updatedDeletedIds));
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+    broadcastLiveDataUpdate('DELETED_PAYROLL_IDS', updatedDeletedIds);
+
+    // 2. Identify and automatically delete ALL linked transactions in Finance & Cashflow
     const txIdsToDelete = new Set<string>();
     if (existing.transactionId) {
       txIdsToDelete.add(existing.transactionId);
@@ -6408,10 +6835,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
-    // 2. Identify linked tax obligations (PPh 21) AND any payment transactions linked to them
+    // 3. Identify linked tax obligations (PPh 21) AND any payment transactions linked to them
     const taxIdsToDelete = new Set<string>();
     taxObligations.forEach((t) => {
-      if (t.payrollId === id || (existing.pph21ObligationId && t.id === existing.pph21ObligationId)) {
+      const matchPayrollId = t.payrollId === id;
+      const matchTaxId = Boolean(existing.pph21ObligationId && t.id === existing.pph21ObligationId);
+      const matchPayrollNumber = Boolean(existing.payrollNumber && t.payrollNumber === existing.payrollNumber);
+      const matchEmployeeAndPeriod = Boolean(
+        t.taxType === 'PPH_21' &&
+        existing.employeeId &&
+        t.employeeId === existing.employeeId &&
+        existing.period &&
+        t.taxPeriod === existing.period
+      );
+
+      if (matchPayrollId || matchTaxId || matchPayrollNumber || matchEmployeeAndPeriod) {
         taxIdsToDelete.add(t.id);
         if (t.transactionId) {
           txIdsToDelete.add(t.transactionId);
@@ -6426,44 +6864,60 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
-    // 3. Purge all collected transactions from cash ledger and Firestore
+    // 4. Purge all collected transactions from cash ledger and Firestore
+    txIdsToDelete.forEach((txId) => addDeletedTransactionId(txId));
+    taxIdsToDelete.forEach((taxId) => addDeletedTaxId(taxId));
+
+    const updatedTransactions = transactions.filter((t) => !txIdsToDelete.has(t.id));
     if (txIdsToDelete.size > 0) {
-      setTransactions((prev) => {
-        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
-        broadcastLiveDataUpdate('TRANSACTIONS', updated);
-        return updated;
-      });
-      txIdsToDelete.forEach((txId) => {
-        deleteTransactionFromFirestore(txId);
-      });
+      setTransactions(updatedTransactions);
+      try {
+        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updatedTransactions));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+      broadcastLiveDataUpdate('TRANSACTIONS', updatedTransactions);
     }
 
-    // 4. Purge linked tax obligations (PPh 21) from Tax Management and Firestore
+    // 5. Purge linked tax obligations (PPh 21) from Tax Management and Firestore
+    const updatedTaxes = taxObligations.filter((t) => !taxIdsToDelete.has(t.id));
     if (taxIdsToDelete.size > 0) {
-      setTaxObligations((prevTaxes) => {
-        const updatedTaxes = prevTaxes.filter((t) => !taxIdsToDelete.has(t.id));
-        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
-        saveSettingsToFirestore('tax_obligations', updatedTaxes);
-        return updatedTaxes;
-      });
-      taxIdsToDelete.forEach((taxId) => {
-        deleteTaxObligationFromFirestore(taxId);
-      });
+      setTaxObligations(updatedTaxes);
+      try {
+        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updatedTaxes));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+      broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
     }
 
-    // 5. Purge payroll record
-    setPayrollRecords((prev) => {
-      const updated = prev.filter((r) => r.id !== id);
-      broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
-      saveSettingsToFirestore('payroll_records', updated);
-      return updated;
-    });
+    // 6. Purge payroll record from state & localStorage
+    const updatedPayrolls = payrollRecords.filter((r) => r.id !== id);
+    setPayrollRecords(updatedPayrolls);
+    try {
+      localStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(updatedPayrolls));
+    } catch (e) {
+      console.warn('LocalStorage save error:', e);
+    }
+    broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updatedPayrolls);
 
-    deletePayrollFromFirestore(id);
+    // 7. Persist all removals simultaneously to Cloud Firestore and await
+    try {
+      await Promise.all([
+        deletePayrollFromFirestore(id),
+        saveDeletedPayrollIdToFirestore(id),
+        saveSettingsToFirestore('payroll_records', updatedPayrolls),
+        saveSettingsToFirestore('tax_obligations', updatedTaxes),
+        ...Array.from(txIdsToDelete).map((txId) => deleteTransactionFromFirestore(txId)),
+        ...Array.from(taxIdsToDelete).map((taxId) => deleteTaxObligationFromFirestore(taxId)),
+      ]);
+    } catch (err) {
+      console.error('Firestore batch deletion error:', err);
+    }
 
     return {
       success: true,
-      message: `Slip gaji ${existing.payrollNumber}, seluruh transaksi kas terkait (${txIdsToDelete.size} transaksi), dan kewajiban PPh 21 berhasil dihapus dari Finance, Arus Kas, dan Laporan Keuangan.`,
+      message: `Slip gaji ${existing.payrollNumber}, seluruh transaksi kas terkait (${txIdsToDelete.size} transaksi), dan kewajiban PPh 21 berhasil dihapus secara menyeluruh dari Finance, Arus Kas, dan Laporan Keuangan, serta tersinkronisasi realtime ke seluruh role.`,
     };
   };
 
@@ -6566,11 +7020,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const resetPayrollToDefault = (): { success: boolean; message?: string } => {
+  const resetPayrollToDefault = async (): Promise<{ success: boolean; message?: string }> => {
+    setDeletedPayrollIds([]);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify([]));
+    } catch (e) {
+      console.warn(e);
+    }
+    await saveSettingsToFirestore('deleted_payroll_ids', []);
+
     setPayrollRecords(INITIAL_PAYROLL_RECORDS);
     broadcastLiveDataUpdate('PAYROLL_PAYMENTS', INITIAL_PAYROLL_RECORDS);
-    saveSettingsToFirestore('payroll_records', INITIAL_PAYROLL_RECORDS);
-    INITIAL_PAYROLL_RECORDS.forEach((p) => savePayrollToFirestore(p));
+    broadcastLiveDataUpdate('DELETED_PAYROLL_IDS', []);
+    await saveSettingsToFirestore('payroll_records', INITIAL_PAYROLL_RECORDS);
+    await Promise.all(INITIAL_PAYROLL_RECORDS.map((p) => savePayrollToFirestore(p)));
     return { success: true, message: 'Data payroll berhasil direset ke contoh default dan tersimpan di Cloud Firestore.' };
   };
 

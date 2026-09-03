@@ -516,7 +516,102 @@ export const deletePayrollFromFirestore = async (payrollId: string): Promise<voi
     }
   } catch (error) {
     console.error('Firestore delete payroll error:', error);
+    throw error;
   }
+};
+
+// Deleted Payroll IDs Management (prevents deleted payroll records from resurfacing)
+export const saveDeletedPayrollIdToFirestore = async (payrollId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_payroll_ids');
+    const snap = await getDoc(docRef);
+    let existingList: string[] = [];
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data?.data)) {
+        existingList = data.data;
+      }
+    }
+    if (!existingList.includes(payrollId)) {
+      const updated = [payrollId, ...existingList];
+      await setDoc(docRef, sanitizeForFirestore({ data: updated, updatedAt: new Date().toISOString() }));
+    }
+  } catch (err) {
+    console.error('Failed to save deleted payroll ID to Firestore:', err);
+  }
+};
+
+export const removeDeletedPayrollIdFromFirestore = async (payrollId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_payroll_ids');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data?.data)) {
+        const filtered = data.data.filter((id: string) => id !== payrollId);
+        await setDoc(docRef, sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }));
+      }
+    }
+  } catch (err) {
+    console.error('Failed to remove deleted payroll ID from Firestore:', err);
+  }
+};
+
+export const subscribeToDeletedPayrollIds = (onUpdate: (ids: string[]) => void) => {
+  const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_payroll_ids');
+  return onSnapshot(
+    docRef,
+    (snap) => {
+      if (snap.exists() && Array.isArray(snap.data()?.data)) {
+        onUpdate(snap.data().data);
+      }
+    },
+    (err) => console.warn('Firestore deleted_payroll_ids listener warning:', err)
+  );
+};
+
+// Generic deleted entity ID helpers for comprehensive cross-module deletion persistence
+export const saveDeletedEntityIdToFirestore = async (settingKey: string, entityId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.SETTINGS, settingKey);
+    const snap = await getDoc(docRef);
+    let currentIds: string[] = [];
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      currentIds = snap.data().data;
+    }
+    if (!currentIds.includes(entityId)) {
+      const updated = [...currentIds, entityId];
+      await setDoc(docRef, sanitizeForFirestore({ data: updated, updatedAt: new Date().toISOString() }));
+    }
+  } catch (err) {
+    console.error(`Failed to save deleted ID (${settingKey}) to Firestore:`, err);
+  }
+};
+
+export const removeDeletedEntityIdFromFirestore = async (settingKey: string, entityId: string): Promise<void> => {
+  try {
+    const docRef = doc(db, FirestoreCollections.SETTINGS, settingKey);
+    const snap = await getDoc(docRef);
+    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+      const filtered = snap.data().data.filter((id: string) => id !== entityId);
+      await setDoc(docRef, sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }));
+    }
+  } catch (err) {
+    console.error(`Failed to remove deleted ID (${settingKey}) from Firestore:`, err);
+  }
+};
+
+export const subscribeToDeletedEntityIds = (settingKey: string, onUpdate: (ids: string[]) => void) => {
+  const docRef = doc(db, FirestoreCollections.SETTINGS, settingKey);
+  return onSnapshot(
+    docRef,
+    (snap) => {
+      if (snap.exists() && Array.isArray(snap.data()?.data)) {
+        onUpdate(snap.data().data);
+      }
+    },
+    (err) => console.warn(`Firestore ${settingKey} listener warning:`, err)
+  );
 };
 
 export const subscribeToPayroll = (onUpdate: (payrolls: PayrollPayment[]) => void) => {
@@ -531,25 +626,13 @@ export const subscribeToPayroll = (onUpdate: (payrolls: PayrollPayment[]) => voi
           loaded.push(data);
         }
       });
-      if (loaded.length > 0) {
-        onUpdate(loaded);
-      } else {
-        // Check settings fallback
-        const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
-        getDoc(settingsRef)
-          .then((snap) => {
-            if (snap.exists() && Array.isArray(snap.data()?.data) && snap.data().data.length > 0) {
-              onUpdate(snap.data().data);
-            }
-          })
-          .catch(() => {});
-      }
+      onUpdate(loaded);
     },
     (err) => {
       console.warn('Firestore payroll listener warning:', err);
       // Fallback to settings listener
       subscribeToSettings('payroll_records', (data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           onUpdate(data);
         }
       });
@@ -601,6 +684,33 @@ export const ensureInitialFirestoreSeed = async (
       await setDoc(masterDocRef, sanitizeForFirestore({ ...masterAdmin, lastSyncedAt: new Date().toISOString() }));
     }
 
+    // Helper to check deleted entity IDs from app_settings
+    const getDeletedSet = async (settingKey: string): Promise<Set<string>> => {
+      try {
+        const snap = await getDoc(doc(db, FirestoreCollections.SETTINGS, settingKey));
+        if (snap.exists() && Array.isArray(snap.data()?.data)) {
+          return new Set<string>(snap.data().data);
+        }
+      } catch {}
+      return new Set<string>();
+    };
+
+    const [
+      deletedProjects,
+      deletedDispositions,
+      deletedTransactions,
+      deletedTaxObligations,
+      deletedReceivables,
+      deletedPayroll,
+    ] = await Promise.all([
+      getDeletedSet('deleted_project_ids'),
+      getDeletedSet('deleted_disposition_ids'),
+      getDeletedSet('deleted_transaction_ids'),
+      getDeletedSet('deleted_tax_ids'),
+      getDeletedSet('deleted_receivable_ids'),
+      getDeletedSet('deleted_payroll_ids'),
+    ]);
+
     // 2. Ensure initial users exist if collection is empty
     if (defaultTeamMembers && defaultTeamMembers.length > 0) {
       const usersSnap = await getDocs(collection(db, FirestoreCollections.USERS));
@@ -628,65 +738,82 @@ export const ensureInitialFirestoreSeed = async (
       await setDoc(rolesRef, sanitizeForFirestore({ data: defaultRoles, updatedAt: new Date().toISOString() }));
     }
 
-    // 5. Ensure master document types exist
-    const docTypesSnap = await getDocs(collection(db, FirestoreCollections.DOCUMENT_TYPES));
-    if (docTypesSnap.empty) {
-      await Promise.all(
-        defaultDocTypes.map((dt) => {
-          const dRef = doc(db, FirestoreCollections.DOCUMENT_TYPES, dt.id);
-          return setDoc(dRef, sanitizeForFirestore({ ...dt, updatedAt: new Date().toISOString() }));
-        })
-      );
-    }
-
-    // 6. Ensure master document categories exist
-    const categoriesSnap = await getDocs(collection(db, FirestoreCollections.DOCUMENT_CATEGORIES));
-    if (categoriesSnap.empty) {
-      await Promise.all(
-        defaultCategories.map((dc) => {
-          const cRef = doc(db, FirestoreCollections.DOCUMENT_CATEGORIES, dc.id);
-          return setDoc(cRef, sanitizeForFirestore({ ...dc, updatedAt: new Date().toISOString() }));
-        })
-      );
-    }
-
-    // 7. Ensure projects exist if empty
-    if (defaultProjects && defaultProjects.length > 0) {
-      const projectsSnap = await getDocs(collection(db, FirestoreCollections.PROJECTS));
-      if (projectsSnap.empty) {
+    // 5. Ensure master document types exist ONLY IF NEVER SEEDED BEFORE
+    const docTypesSeedRef = doc(db, FirestoreCollections.SETTINGS, 'doc_types_seed_meta');
+    const docTypesSeedSnap = await getDoc(docTypesSeedRef);
+    if (!docTypesSeedSnap.exists()) {
+      if (defaultDocTypes && defaultDocTypes.length > 0) {
         await Promise.all(
-          defaultProjects.map((p) => {
+          defaultDocTypes.map((dt) => {
+            const dRef = doc(db, FirestoreCollections.DOCUMENT_TYPES, dt.id);
+            return setDoc(dRef, sanitizeForFirestore({ ...dt, updatedAt: new Date().toISOString() }));
+          })
+        );
+      }
+      await setDoc(docTypesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+    }
+
+    // 6. Ensure master document categories exist ONLY IF NEVER SEEDED BEFORE
+    const docCategoriesSeedRef = doc(db, FirestoreCollections.SETTINGS, 'doc_categories_seed_meta');
+    const docCategoriesSeedSnap = await getDoc(docCategoriesSeedRef);
+    if (!docCategoriesSeedSnap.exists()) {
+      if (defaultCategories && defaultCategories.length > 0) {
+        await Promise.all(
+          defaultCategories.map((dc) => {
+            const cRef = doc(db, FirestoreCollections.DOCUMENT_CATEGORIES, dc.id);
+            return setDoc(cRef, sanitizeForFirestore({ ...dc, updatedAt: new Date().toISOString() }));
+          })
+        );
+      }
+      await setDoc(docCategoriesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+    }
+
+    // 7. Ensure projects exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted projects on refresh!)
+    const projectsSeedRef = doc(db, FirestoreCollections.SETTINGS, 'projects_seed_meta');
+    const projectsSeedSnap = await getDoc(projectsSeedRef);
+    if (!projectsSeedSnap.exists()) {
+      if (defaultProjects && defaultProjects.length > 0) {
+        const toSeed = defaultProjects.filter((p) => !deletedProjects.has(p.id));
+        await Promise.all(
+          toSeed.map((p) => {
             const pRef = doc(db, FirestoreCollections.PROJECTS, p.id);
             return setDoc(pRef, sanitizeForFirestore(p));
           })
         );
       }
+      await setDoc(projectsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 8. Ensure dispositions exist if empty
-    if (defaultDispositions && defaultDispositions.length > 0) {
-      const dispSnap = await getDocs(collection(db, FirestoreCollections.DISPOSITIONS));
-      if (dispSnap.empty) {
+    // 8. Ensure dispositions exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted dispositions on refresh!)
+    const dispSeedRef = doc(db, FirestoreCollections.SETTINGS, 'dispositions_seed_meta');
+    const dispSeedSnap = await getDoc(dispSeedRef);
+    if (!dispSeedSnap.exists()) {
+      if (defaultDispositions && defaultDispositions.length > 0) {
+        const toSeed = defaultDispositions.filter((d) => !deletedDispositions.has(d.id));
         await Promise.all(
-          defaultDispositions.map((d) => {
+          toSeed.map((d) => {
             const dRef = doc(db, FirestoreCollections.DISPOSITIONS, d.id);
             return setDoc(dRef, sanitizeForFirestore(d));
           })
         );
       }
+      await setDoc(dispSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 9. Ensure transactions exist if empty
-    if (defaultTransactions && defaultTransactions.length > 0) {
-      const trxsSnap = await getDocs(collection(db, FirestoreCollections.TRANSACTIONS));
-      if (trxsSnap.empty) {
+    // 9. Ensure transactions exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted transactions on refresh!)
+    const trxsSeedRef = doc(db, FirestoreCollections.SETTINGS, 'transactions_seed_meta');
+    const trxsSeedSnap = await getDoc(trxsSeedRef);
+    if (!trxsSeedSnap.exists()) {
+      if (defaultTransactions && defaultTransactions.length > 0) {
+        const toSeed = defaultTransactions.filter((t) => !deletedTransactions.has(t.id));
         await Promise.all(
-          defaultTransactions.map((t) => {
+          toSeed.map((t) => {
             const tRef = doc(db, FirestoreCollections.TRANSACTIONS, t.id);
             return setDoc(tRef, sanitizeForFirestore(t));
           })
         );
       }
+      await setDoc(trxsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
     // 10. Ensure transaction categories exist in settings
@@ -707,22 +834,22 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 12. Ensure tax obligations exist in Firestore if collection is empty
-    if (defaultTaxObligations !== undefined && defaultTaxObligations.length > 0) {
-      const taxSnap = await getDocs(collection(db, FirestoreCollections.TAX_OBLIGATIONS));
-      if (taxSnap.empty) {
+    // 12. Ensure tax obligations exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted tax obligations on refresh!)
+    const taxSeedRef = doc(db, FirestoreCollections.SETTINGS, 'tax_seed_meta');
+    const taxSeedSnap = await getDoc(taxSeedRef);
+    if (!taxSeedSnap.exists()) {
+      if (defaultTaxObligations !== undefined && defaultTaxObligations.length > 0) {
+        const toSeed = defaultTaxObligations.filter((t) => !deletedTaxObligations.has(t.id));
         await Promise.all(
-          defaultTaxObligations.map((t) => {
+          toSeed.map((t) => {
             const tRef = doc(db, FirestoreCollections.TAX_OBLIGATIONS, t.id);
             return setDoc(tRef, sanitizeForFirestore(t));
           })
         );
+        const taxSettingsRef = doc(db, FirestoreCollections.SETTINGS, 'tax_obligations');
+        await setDoc(taxSettingsRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
       }
-      const taxSettingsRef = doc(db, FirestoreCollections.SETTINGS, 'tax_obligations');
-      const taxSettingsSnap = await getDoc(taxSettingsRef);
-      if (!taxSettingsSnap.exists()) {
-        await setDoc(taxSettingsRef, sanitizeForFirestore({ data: defaultTaxObligations, updatedAt: new Date().toISOString() }));
-      }
+      await setDoc(taxSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
     // 13. Ensure bank loans exist in settings if not present
@@ -743,35 +870,38 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 15. Ensure receivables exist in Firestore if collection is empty
-    if (defaultReceivables && defaultReceivables.length > 0) {
-      const recSnap = await getDocs(collection(db, FirestoreCollections.RECEIVABLES));
-      if (recSnap.empty) {
+    // 15. Ensure receivables exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted receivables on refresh!)
+    const recSeedRef = doc(db, FirestoreCollections.SETTINGS, 'receivables_seed_meta');
+    const recSeedSnap = await getDoc(recSeedRef);
+    if (!recSeedSnap.exists()) {
+      if (defaultReceivables && defaultReceivables.length > 0) {
+        const toSeed = defaultReceivables.filter((r) => !deletedReceivables.has(r.id));
         await Promise.all(
-          defaultReceivables.map((r) => {
+          toSeed.map((r) => {
             const rRef = doc(db, FirestoreCollections.RECEIVABLES, r.id);
             return setDoc(rRef, sanitizeForFirestore(r));
           })
         );
       }
+      await setDoc(recSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 16. Ensure payroll records exist in Firestore collection & settings if not present
-    if (defaultPayrollRecords && defaultPayrollRecords.length > 0) {
-      const payrollColSnap = await getDocs(collection(db, FirestoreCollections.PAYROLL));
-      if (payrollColSnap.empty) {
+    // 16. Ensure payroll records exist in Firestore collection & settings ONLY IF NEVER SEEDED BEFORE
+    const payrollSeedRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_seed_meta');
+    const payrollSeedSnap = await getDoc(payrollSeedRef);
+    if (!payrollSeedSnap.exists()) {
+      if (defaultPayrollRecords && defaultPayrollRecords.length > 0) {
+        const toSeed = defaultPayrollRecords.filter((p) => !deletedPayroll.has(p.id));
         await Promise.all(
-          defaultPayrollRecords.map((p) => {
+          toSeed.map((p) => {
             const pRef = doc(db, FirestoreCollections.PAYROLL, p.id);
             return setDoc(pRef, sanitizeForFirestore(p));
           })
         );
+        const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
+        await setDoc(payrollRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
       }
-      const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
-      const payrollSnap = await getDoc(payrollRef);
-      if (!payrollSnap.exists()) {
-        await setDoc(payrollRef, sanitizeForFirestore({ data: defaultPayrollRecords, updatedAt: new Date().toISOString() }));
-      }
+      await setDoc(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
     // 17. Ensure company letterhead exists in settings if not present
