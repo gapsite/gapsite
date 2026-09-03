@@ -67,6 +67,8 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
     activePaymentChannels,
     paymentChannels,
     currentUser,
+    employeeSalaryConfigs,
+    getEmployeeSalaryConfigForYear,
   } = useProjects();
 
   const availableYears = useMemo(() => {
@@ -96,6 +98,12 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
   const [paymentDate, setPaymentDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
+
+  // Selected year derived from period or payment date
+  const selectedYear = useMemo(() => {
+    const match = period.match(/\d{4}/);
+    return match ? Number(match[0]) : Number(paymentDate?.slice(0, 4)) || 2026;
+  }, [period, paymentDate]);
 
   // Earnings
   const [basicSalary, setBasicSalary] = useState<number>(10_000_000);
@@ -204,6 +212,43 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
     }
   }, [initialPayroll, isOpen]);
 
+  // Active annual salary config details for the selected employee and year
+  const activeAnnualConfig = useMemo(() => {
+    if (!selectedEmployeeId || selectedEmployeeId === 'custom') return null;
+    const member = teamMembers.find((m) => m.id === selectedEmployeeId);
+    return getEmployeeSalaryConfigForYear(selectedEmployeeId, selectedYear, member?.role);
+  }, [selectedEmployeeId, selectedYear, teamMembers, getEmployeeSalaryConfigForYear]);
+
+  // Apply annual salary configuration values to the form
+  const applyAnnualSalaryConfig = (empId: string, yr: number) => {
+    if (!empId || empId === 'custom') return;
+    const member = teamMembers.find((m) => m.id === empId);
+    if (!member) return;
+
+    const configInfo = getEmployeeSalaryConfigForYear(empId, yr, member.role);
+    setBasicSalary(configInfo.basicSalary);
+    setPositionAllowance(configInfo.positionAllowance);
+    setTransportAllowance(configInfo.transportAllowance);
+    setMealAllowance(configInfo.mealAllowance);
+    setOtherAllowances((configInfo.communicationAllowance || 0) + (configInfo.fixedAllowance || 0));
+
+    // Recalculate BPJS and PPh21
+    const bpjsKes = hitungBpjsKesehatan(configInfo.basicSalary, configInfo.positionAllowance);
+    const bpjsTk = hitungBpjsKetenagakerjaan(configInfo.basicSalary, configInfo.positionAllowance);
+    const gross =
+      configInfo.basicSalary +
+      configInfo.positionAllowance +
+      configInfo.transportAllowance +
+      configInfo.mealAllowance +
+      (configInfo.communicationAllowance || 0) +
+      (configInfo.fixedAllowance || 0);
+    const tax = estimasiPph21(gross);
+
+    setBpjsKesehatan(bpjsKes);
+    setBpjsKetenagakerjaan(bpjsTk);
+    setPph21Amount(tax);
+  };
+
   const handleSelectEmployee = (empId: string) => {
     setSelectedEmployeeId(empId);
     setErrorMsg(null);
@@ -233,22 +278,8 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
       setBankAccountNumber(member.bankAccountNumber || '');
       setBankAccountHolder(member.bankAccountHolder || member.name);
 
-      // Apply default compensation benchmark if available
-      const benchmark = DEFAULT_ROLE_COMPENSATION[member.role] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
-      setBasicSalary(benchmark.basicSalary);
-      setPositionAllowance(benchmark.positionAllowance);
-      setTransportAllowance(benchmark.transportAllowance);
-      setMealAllowance(benchmark.mealAllowance);
-
-      // Recalculate BPJS and PPh21
-      const bpjsKes = hitungBpjsKesehatan(benchmark.basicSalary, benchmark.positionAllowance);
-      const bpjsTk = hitungBpjsKetenagakerjaan(benchmark.basicSalary, benchmark.positionAllowance);
-      const gross = benchmark.basicSalary + benchmark.positionAllowance + benchmark.transportAllowance + benchmark.mealAllowance;
-      const tax = estimasiPph21(gross);
-
-      setBpjsKesehatan(bpjsKes);
-      setBpjsKetenagakerjaan(bpjsTk);
-      setPph21Amount(tax);
+      // Apply annual employee salary configuration for this year (or fallback to role benchmark)
+      applyAnnualSalaryConfig(empId, selectedYear);
     }
   };
 
@@ -570,6 +601,58 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Integration Banner: Status Penetapan Gaji Tahunan */}
+          {activeAnnualConfig && (
+            <div
+              className={`p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                activeAnnualConfig.config
+                  ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
+                  : 'bg-blue-50/90 border-blue-200 text-blue-950'
+              }`}
+            >
+              <div className="flex items-start sm:items-center gap-2.5">
+                <span
+                  className={`p-1.5 rounded-lg shrink-0 ${
+                    activeAnnualConfig.config
+                      ? 'bg-emerald-200 text-emerald-800'
+                      : 'bg-blue-200 text-blue-800'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <div>
+                  <div className="font-bold flex flex-wrap items-center gap-2 text-slate-900">
+                    <span>
+                      {activeAnnualConfig.config
+                        ? `Terkoneksi SK Penetapan Gaji Tahunan (Tahun ${activeAnnualConfig.config.year})`
+                        : `Acuan Standar Benchmark Role (${roleTitle || 'Konsultan'})`}
+                    </span>
+                    {activeAnnualConfig.config && (
+                      <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 text-[10px] rounded font-mono font-bold border border-emerald-300">
+                        {activeAnnualConfig.config.skNumber || 'Resmi'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    Standar Gaji Pokok: <strong>{formatIDR(activeAnnualConfig.basicSalary)}</strong> | Tunjangan: <strong>{formatIDR(activeAnnualConfig.positionAllowance + activeAnnualConfig.transportAllowance + activeAnnualConfig.mealAllowance + activeAnnualConfig.communicationAllowance + activeAnnualConfig.fixedAllowance)}</strong>
+                    {activeAnnualConfig.config?.effectiveDate && (
+                      <span> • Efektif: {activeAnnualConfig.config.effectiveDate}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => applyAnnualSalaryConfig(selectedEmployeeId, selectedYear)}
+                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold rounded-lg text-xs shadow-2xs transition-colors shrink-0 cursor-pointer"
+                title="Terapkan ulang nilai gaji sesuai standar ketetapan tahunan ini"
+              >
+                Terapkan Ulang Standar
+              </button>
+            </div>
+          )}
 
           {/* Section 2: Rincian Penghasilan vs Pemotongan */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

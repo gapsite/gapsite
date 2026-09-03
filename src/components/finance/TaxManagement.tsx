@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  AlertCircle,
   CreditCard,
   Building2,
   Calendar,
@@ -164,6 +165,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     notes: string;
     clientWithholdingNumber: string;
     withholdingTaxPayerName: string;
+    deductFromCashChannel: boolean;
   }>({
     isPaidByClient: false,
     ntpnNumber: '',
@@ -173,6 +175,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     notes: '',
     clientWithholdingNumber: '',
     withholdingTaxPayerName: '',
+    deductFromCashChannel: true,
   });
 
   // Calculate Metrics
@@ -550,6 +553,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       notes: `Setoran ${t.taxType} ${t.taxPeriod} ke Kas Negara`,
       clientWithholdingNumber: t.clientWithholdingNumber || t.taxInvoiceNumber || '',
       withholdingTaxPayerName: t.withholdingTaxPayerName || clientName,
+      deductFromCashChannel: true,
     });
     setIsPayModalOpen(true);
   };
@@ -572,12 +576,13 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     }
 
     const res = payTaxObligation(payingTax.id, {
-      channelId: payFormData.isPaidByClient ? undefined : payFormData.paymentChannelId,
+      channelId: payFormData.paymentChannelId,
       date: payFormData.date,
       ntpnNumber: payFormData.ntpnNumber,
       billingCode: payFormData.billingCode,
       notes: payFormData.notes,
       paidByClient: payFormData.isPaidByClient,
+      deductFromCashChannel: payFormData.deductFromCashChannel,
       clientWithholdingNumber: payFormData.clientWithholdingNumber,
       clientWithholdingDate: payFormData.date,
       withholdingTaxPayerName: payFormData.withholdingTaxPayerName,
@@ -866,29 +871,29 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       </div>
 
       {/* Auto-Sync & Anti-Double Input Status Banner */}
-      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-indigo-950/30 border border-emerald-200/80 dark:border-emerald-800/50 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
+      <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-sm font-bold text-slate-900">
                 Integrasi Pajak Gaji Karyawan (PPh 21) &amp; Laporan Keuangan
               </h4>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                 Anti Double-Input Aktif
               </span>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-              Pemotongan PPh 21 dari menu <strong>Pembayaran Gaji Karyawan</strong> otomatis tersinkronisasi sebagai kewajiban pajak di menu ini dan diakui pada Neraca/Laporan Keuangan tanpa perlu input ulang manual.
+            <p className="text-xs text-slate-700 mt-1 leading-relaxed">
+              Pemotongan PPh 21 dari menu <strong className="font-semibold text-slate-900">Pembayaran Gaji Karyawan</strong> otomatis tersinkronisasi sebagai kewajiban pajak di menu ini dan diakui pada Neraca/Laporan Keuangan tanpa perlu input ulang manual.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
           <div className="text-right">
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">PPh 21 Payroll Terhubung:</div>
-            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+            <div className="text-[11px] text-slate-600 font-medium">PPh 21 Payroll Terhubung:</div>
+            <div className="text-xs font-bold text-emerald-800">
               {taxObligations.filter((t) => t.taxType === 'PPH_21' && (t.payrollId || t.payrollNumber)).length} Dokumen Slip
             </div>
           </div>
@@ -1713,7 +1718,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   </h3>
                   <p className="text-xs text-slate-300 mt-0.5">
                     {payFormData.isPaidByClient
-                      ? 'Dipotong & disetor pihak klien (Bukti Potong e-Bupot). Saldo kas perusahaan tetap utuh.'
+                      ? 'Dipotong & disetor pihak klien (Bukti Potong e-Bupot). Saldo penerimaan kas tidak utuh (terpotong PPh).'
                       : 'Otomatis menerbitkan transaksi pengeluaran kas & menghapus hutang pajak di neraca.'}
                   </p>
                 </div>
@@ -1810,6 +1815,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     setPayFormData((prev) => ({
                       ...prev,
                       isPaidByClient: true,
+                      deductFromCashChannel: true,
                       withholdingTaxPayerName: prev.withholdingTaxPayerName || clientName,
                       notes: `PPh dipotong & disetor oleh klien (${clientName}) - Bukti Potong e-Bupot`,
                     }));
@@ -1840,7 +1846,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       PPh Dibayar oleh Client
                     </div>
                     <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
-                      Dipotong oleh pihak klien (Bukti Potong e-Bupot). Kas utuh.
+                      Dipotong oleh pihak klien (Bukti Potong e-Bupot). Saldo kas tidak utuh.
                     </div>
                   </div>
                 </button>
@@ -1851,10 +1857,49 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               {payFormData.isPaidByClient ? (
                 /* SECTION FORM: PPH DIBAYAR OLEH CLIENT */
                 <>
-                  <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-800/60 text-xs text-sky-200 flex items-start gap-2.5 leading-relaxed">
-                    <FileCheck className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                  <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-800/60 text-xs text-amber-200 flex items-start gap-2.5 leading-relaxed">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-sky-300">PPh Dipotong & Disetor Klien:</strong> Pembayaran PPh ini ditanggung/dipotong langsung oleh pihak klien dari termin penagihan invoice. <strong>Saldo kas / bank perusahaan TIDAK akan berkurang</strong>. Kewajiban pajak dicatat lunas sebagai Kredit Pajak (Bukti Potong PPh / e-Bupot).
+                      <strong className="text-amber-300">Penerimaan Kas Tidak Utuh (Dipotong PPh oleh Klien):</strong> Pembayaran tagihan yang masuk ke rekening kas/bank perusahaan tidak utuh karena telah dipotong PPh secara langsung dari invoice/termin oleh pihak klien. Saldo rekening kas/bank penerima disesuaikan/dipotong sebesar nilai PPh terpotong, dan bukti potong e-Bupot dicatat sebagai Kredit Pajak.
+                    </div>
+                  </div>
+
+                  {/* Ringkasan DPP vs Potongan PPh vs Kas Bersih */}
+                  <div className="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700 space-y-2">
+                    <div className="text-xs font-bold text-slate-200 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+                        Simulasi Arus Kas & Saldo Penerimaan (Tidak Utuh):
+                      </span>
+                      <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold">
+                        Potongan PPh {payingTax.taxRatePercent || 2}%
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                      <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-700/80">
+                        <span className="text-[10px] text-slate-400 block font-medium">Tagihan DPP (Gross)</span>
+                        <span className="text-xs font-mono font-bold text-slate-200 mt-0.5 block">
+                          {formatRupiah(payingTax.taxableBaseAmount || 0)}
+                        </span>
+                      </div>
+                      <div className="bg-rose-950/40 p-2.5 rounded-lg border border-rose-800/50">
+                        <span className="text-[10px] text-rose-300 block font-medium">Potongan PPh {payingTax.taxType}</span>
+                        <span className="text-xs font-mono font-bold text-rose-400 mt-0.5 block">
+                          - {formatRupiah(payingTax.remainingAmount || payingTax.taxAmount)}
+                        </span>
+                      </div>
+                      <div className="bg-sky-950/40 p-2.5 rounded-lg border border-sky-800/50">
+                        <span className="text-[10px] text-sky-300 block font-medium">Kas Bersih (Netto)</span>
+                        <span className="text-xs font-mono font-bold text-sky-300 mt-0.5 block">
+                          {formatRupiah(
+                            Math.max(
+                              0,
+                              (payingTax.taxableBaseAmount || (payingTax.remainingAmount || payingTax.taxAmount)) -
+                                (payingTax.remainingAmount || payingTax.taxAmount)
+                            )
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -1874,15 +1919,17 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-200 mb-1">
-                        Nomor Bukti Potong (e-Bupot) / NTPN Klien <span className="text-rose-400">*</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                    <div className="flex flex-col">
+                      <label className="text-xs font-semibold text-slate-200 mb-1.5 sm:min-h-[32px] flex items-end">
+                        <span>
+                          Nomor Bukti Potong / NTPN <span className="text-rose-400">*</span>
+                        </span>
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="Contoh: BUPOT-2024-XXXX atau 16 Digit NTPN"
+                        placeholder="Contoh: BUPOT-2024-XXXX atau NTPN"
                         value={payFormData.clientWithholdingNumber}
                         onChange={(e) =>
                           setPayFormData({
@@ -1891,45 +1938,98 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                             ntpnNumber: e.target.value,
                           })
                         }
-                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                        className="w-full h-10 px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-200 mb-1">
-                        Tanggal Bukti Potong / Pemotongan <span className="text-rose-400">*</span>
+                    <div className="flex flex-col">
+                      <label className="text-xs font-semibold text-slate-200 mb-1.5 sm:min-h-[32px] flex items-end">
+                        <span>
+                          Tanggal Bukti Potong / Pemotongan <span className="text-rose-400">*</span>
+                        </span>
                       </label>
                       <input
                         type="date"
                         required
                         value={payFormData.date}
                         onChange={(e) => setPayFormData({ ...payFormData, date: e.target.value })}
-                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                        className="w-full h-10 px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-200 mb-1">
-                      Kode ID Billing / Ref DJP Klien (Opsional)
-                    </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                    <div className="flex flex-col">
+                      <label className="text-xs font-semibold text-slate-200 mb-1.5 sm:min-h-[32px] flex items-end">
+                        <span>
+                          Rekening Kas / Bank Penerima <span className="text-rose-400">*</span>
+                        </span>
+                      </label>
+                      <select
+                        required
+                        value={payFormData.paymentChannelId}
+                        onChange={(e) => setPayFormData({ ...payFormData, paymentChannelId: e.target.value })}
+                        className="w-full h-10 px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-xs font-medium text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                      >
+                        {paymentChannels.map((c) => (
+                          <option key={c.id} value={c.id} className="bg-slate-800 text-white">
+                            {c.name} {c.accountNumber ? `(${c.accountNumber})` : ''} - {c.category}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <label className="text-xs font-semibold text-slate-200 mb-1.5 sm:min-h-[32px] flex items-end">
+                        <span>
+                          Kode ID Billing / Ref DJP Klien (Opsional)
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: 918273645019283 (Bila tercantum pada bupot)"
+                        value={payFormData.billingCode}
+                        onChange={(e) =>
+                          setPayFormData({ ...payFormData, billingCode: e.target.value })
+                        }
+                        className="w-full h-10 px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Checkbox Penyesuaian Saldo Kas (Dipotong PPh) */}
+                  <div className="p-3 rounded-xl bg-slate-800/90 border border-slate-700 flex items-start gap-3">
                     <input
-                      type="text"
-                      placeholder="Contoh: 918273645019283 (Bila tercantum pada bupot)"
-                      value={payFormData.billingCode}
+                      type="checkbox"
+                      id="deductFromCashChannel"
+                      checked={payFormData.deductFromCashChannel}
                       onChange={(e) =>
-                        setPayFormData({ ...payFormData, billingCode: e.target.value })
+                        setPayFormData({ ...payFormData, deductFromCashChannel: e.target.checked })
                       }
-                      className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                      className="mt-1 w-4 h-4 rounded text-sky-600 bg-slate-700 border-slate-600 focus:ring-sky-500 focus:ring-offset-slate-900 cursor-pointer"
                     />
+                    <label htmlFor="deductFromCashChannel" className="text-xs cursor-pointer select-none">
+                      <span className="font-bold text-slate-200 block">
+                        Potong saldo rekening kas/bank penerima sebesar PPh ini
+                      </span>
+                      <span className="text-[11px] text-slate-400 block mt-0.5 leading-relaxed">
+                        Jika pembayaran invoice sebelumnya dicatat kotor (belum dipotong PPh), opsi ini akan otomatis memotong saldo rekening kas/bank sebesar <strong className="text-rose-400">{formatRupiah(payingTax.remainingAmount || payingTax.taxAmount)}</strong> sehingga saldo kas riil di buku kas menjadi tidak utuh (bersih / netto).
+                      </span>
+                    </label>
                   </div>
 
                   {/* Informational Cash Notice */}
                   <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700 text-xs text-slate-300 flex items-center justify-between">
-                    <span className="text-slate-400">Pengaruh ke Kas / Bank Perusahaan:</span>
-                    <span className="font-semibold text-sky-300 bg-sky-950/60 px-2.5 py-1 rounded-lg border border-sky-800/50">
-                      Saldo Utuh (Kredit Pajak PPh)
-                    </span>
+                    <span className="text-slate-400">Pengaruh ke Saldo Kas / Bank:</span>
+                    {payFormData.deductFromCashChannel ? (
+                      <span className="font-semibold text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded-lg border border-amber-800/50">
+                        Saldo Kas Terpotong PPh (-{formatRupiah(payingTax.remainingAmount || payingTax.taxAmount)}) • Netto Tidak Utuh
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-sky-300 bg-sky-950/60 px-2.5 py-1 rounded-lg border border-sky-800/50">
+                        Sudah Dicatat Netto Sebelumnya • Kredit Pajak e-Bupot
+                      </span>
+                    )}
                   </div>
 
                   <div>
@@ -1962,30 +2062,32 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-200 mb-1">
-                        Kode ID Billing (DJP)
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                    <div className="flex flex-col">
+                      <label className="text-xs font-semibold text-slate-200 mb-1.5 sm:min-h-[32px] flex items-end">
+                        <span>Kode ID Billing (DJP)</span>
                       </label>
                       <input
                         type="text"
                         placeholder="Contoh: 918273645019283"
                         value={payFormData.billingCode}
                         onChange={(e) => setPayFormData({ ...payFormData, billingCode: e.target.value })}
-                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full h-10 px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-mono font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-200 mb-1">
-                        Tanggal Penyetoran <span className="text-rose-400">*</span>
+                    <div className="flex flex-col">
+                      <label className="text-xs font-semibold text-slate-200 mb-1.5 sm:min-h-[32px] flex items-end">
+                        <span>
+                          Tanggal Penyetoran <span className="text-rose-400">*</span>
+                        </span>
                       </label>
                       <input
                         type="date"
                         required
                         value={payFormData.date}
                         onChange={(e) => setPayFormData({ ...payFormData, date: e.target.value })}
-                        className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                        className="w-full h-10 px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                       />
                     </div>
                   </div>

@@ -88,8 +88,23 @@ export const DocumentManager: React.FC = () => {
   const [reviewNoteInput, setReviewNoteInput] = useState<{ [docId: string]: string }>({});
   const [editingNotesDocId, setEditingNotesDocId] = useState<string | null>(null);
 
-  // Document Preview Modal
+  // Document Preview Modal states
   const [previewDoc, setPreviewDoc] = useState<(ProjectDocument & { projectCode: string; clientName: string; productName: string }) | null>(null);
+  const [previewInitialTab, setPreviewInitialTab] = useState<'preview' | 'compliance_check' | 'metadata_audit'>('preview');
+  const [previewDefaultEditMode, setPreviewDefaultEditMode] = useState<boolean>(false);
+  const [docToDelete, setDocToDelete] = useState<{ projectId: string; docId: string; docName: string } | null>(null);
+
+  const canManageDocuments =
+    isMasterAdmin ||
+    currentUser?.role === 'DIRECTOR' ||
+    currentUser?.role === 'LEAD_CONSULTANT' ||
+    currentUser?.role === 'TECHNICAL_CONSULTANT' ||
+    currentUser?.role === 'SURVEYOR_LIAISON' ||
+    currentUser?.role === 'FINANCE_OFFICER' ||
+    Boolean(currentUser?.permissions?.includes('UPLOAD_DOCUMENTS')) ||
+    Boolean(currentUser?.permissions?.includes('EDIT_PROJECTS')) ||
+    Boolean(currentUser?.permissions?.includes('DELETE_PROJECTS')) ||
+    Boolean(currentUser?.permissions?.includes('MANAGE_DOCUMENT_TYPES'));
 
   // Flatten all documents across projects and augment with project metadata and categoryGroup
   const allDocs = projects.flatMap((p) =>
@@ -669,14 +684,18 @@ export const DocumentManager: React.FC = () => {
                           <div>
                             <button
                               type="button"
-                              onClick={() => setPreviewDoc(doc)}
+                              onClick={() => {
+                                setPreviewDoc(doc);
+                                setPreviewInitialTab('preview');
+                                setPreviewDefaultEditMode(false);
+                              }}
                               className="text-left group/title flex items-center gap-1.5 cursor-pointer"
                             >
-                              <span className="font-bold text-slate-900 text-xs group-hover/title:text-blue-600 transition-colors">
+                              <span className="font-bold text-slate-900 dark:text-slate-100 text-xs group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 transition-colors">
                                 {doc.name}
                               </span>
                               {doc.referenceNumber && (
-                                <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-semibold">
+                                <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 font-semibold">
                                   #{doc.referenceNumber}
                                 </span>
                               )}
@@ -851,33 +870,27 @@ export const DocumentManager: React.FC = () => {
                           <div className="flex items-center gap-1 shrink-0 w-14">
                             {/* Edit / Inspect Document Button */}
                             <button
-                              onClick={() => setPreviewDoc(doc)}
-                              className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                              title="Edit / Inspect Document Details & Verification Record"
+                              onClick={() => {
+                                setPreviewDoc(doc);
+                                setPreviewInitialTab('metadata_audit');
+                                setPreviewDefaultEditMode(true);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Detail & Metadata Dokumen"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
 
-                            {/* Delete Document Button - ONLY admin.master */}
-                            <button
-                              onClick={() => {
-                                if (!isMasterAdmin) {
-                                  alert('Access Denied: Only admin.master (Master Admin) can delete documents from repository.');
-                                  return;
-                                }
-                                if (confirm(`Remove "${doc.name}" from repository? This action cannot be undone.`)) {
-                                  deleteDocument(doc.projectId, doc.id);
-                                }
-                              }}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                isMasterAdmin
-                                  ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
-                                  : 'text-slate-300 dark:text-slate-600 hover:text-rose-400 cursor-not-allowed opacity-60'
-                              }`}
-                              title={isMasterAdmin ? "Delete file (admin.master)" : "Protected: Only admin.master can delete documents"}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {/* Delete Document Button - Available for authorized roles */}
+                            {canManageDocuments && (
+                              <button
+                                onClick={() => setDocToDelete({ projectId: doc.projectId, docId: doc.id, docName: doc.name })}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus dokumen dari repositori"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
 
                           {/* Dynamic Status Action Buttons (Placed to the right without shifting the icon columns) */}
@@ -965,7 +978,44 @@ export const DocumentManager: React.FC = () => {
         isOpen={!!previewDoc}
         onClose={() => setPreviewDoc(null)}
         document={previewDoc}
+        initialTab={previewInitialTab}
+        defaultEditMode={previewDefaultEditMode}
       />
+
+      {/* Delete Document Confirmation Modal */}
+      {docToDelete && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-rose-900/60 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Hapus Dokumen Repositori?</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
+              Apakah Anda yakin ingin menghapus <strong className="text-slate-900 dark:text-white">"{docToDelete.docName}"</strong>? Dokumen ini akan dihapus secara permanen dari repositori proyek dan seluruh perubahan akan disinkronisasikan secara real-time ke semua role dan Cloud Firestore.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDocToDelete(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteDocument(docToDelete.projectId, docToDelete.docId);
+                  setDocToDelete(null);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-md shadow-rose-900/20 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Sekarang</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Categorized File Upload Modal */}
       <CategorizedUploadModal

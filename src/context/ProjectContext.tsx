@@ -88,6 +88,7 @@ import {
   PayrollStatus,
   PayrollSummary,
   CompanyLetterhead,
+  EmployeeAnnualSalaryConfig,
 } from '../types';
 import { calculateBankLoanSchedule, generateRevolvingRenewalSchedule } from '../utils/loanCalculations';
 import { calculateReceivablesAgingSummary, calculateDaysOverdue } from '../utils/receivableCalculations';
@@ -104,6 +105,7 @@ import {
 } from '../data/mockData';
 import { DEFAULT_COMPANY_LETTERHEAD } from '../data/companyLetterheadData';
 import { INITIAL_PAYROLL_RECORDS } from '../data/payrollData';
+import { DEFAULT_EMPLOYEE_SALARY_CONFIGS, getEffectiveSalaryConfig } from '../data/salaryConfigsData';
 import { DEFAULT_CONSULTING_SERVICES } from '../data/serviceTypesData';
 import { DEFAULT_DOCUMENT_TYPES, DEFAULT_DOCUMENT_CATEGORIES } from '../data/documentTypesData';
 import { DEFAULT_TRANSACTION_CATEGORIES } from '../data/transactionCategoriesData';
@@ -360,6 +362,7 @@ interface ProjectContextType {
       billingCode?: string;
       notes?: string;
       paidByClient?: boolean;
+      deductFromCashChannel?: boolean;
       clientWithholdingNumber?: string;
       clientWithholdingDate?: string;
       withholdingTaxPayerName?: string;
@@ -418,6 +421,30 @@ interface ProjectContextType {
     paymentDate?: string
   ) => { success: boolean; message?: string };
   resetPayrollToDefault: () => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
+
+  // Penetapan Gaji Tahunan Karyawan (Annual Salary Configuration per Employee & Year)
+  employeeSalaryConfigs: EmployeeAnnualSalaryConfig[];
+  addOrUpdateEmployeeSalaryConfig: (
+    config: Omit<EmployeeAnnualSalaryConfig, 'id' | 'updatedAt' | 'createdAt'> & { id?: string }
+  ) => Promise<{ success: boolean; message: string; config?: EmployeeAnnualSalaryConfig }>;
+  deleteEmployeeSalaryConfig: (id: string) => Promise<{ success: boolean; message: string }>;
+  resetEmployeeSalaryConfigsToDefault: () => Promise<{ success: boolean; message: string }>;
+  getEmployeeSalaryConfigForYear: (
+    employeeId: string,
+    year: number,
+    fallbackRole?: import('../types').UserRole
+  ) => {
+    config?: EmployeeAnnualSalaryConfig;
+    isFromRoleBenchmark: boolean;
+    basicSalary: number;
+    positionAllowance: number;
+    transportAllowance: number;
+    mealAllowance: number;
+    communicationAllowance: number;
+    fixedAllowance: number;
+    annualBonusEstimate: number;
+    thrMonths: number;
+  };
 
   // Milestone Document Requirements customization
   updateMilestoneDocRequirements: (
@@ -560,6 +587,7 @@ const STORAGE_KEY_DELETED_TAX_IDS = 'verix_crm_deleted_tax_ids_v1';
 const STORAGE_KEY_RECEIVABLES = 'verix_crm_receivables_v1';
 const STORAGE_KEY_DELETED_RECEIVABLE_IDS = 'verix_crm_deleted_receivable_ids_v1';
 const STORAGE_KEY_PAYROLL = 'verix_crm_payroll_v1';
+const STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS = 'verix_crm_employee_salary_configs_v1';
 const STORAGE_KEY_DELETED_PAYROLL_IDS = 'verix_crm_deleted_payroll_ids_v1';
 const STORAGE_KEY_DELETED_PROJECT_IDS = 'verix_crm_deleted_project_ids_v1';
 const STORAGE_KEY_DELETED_DISPOSITION_IDS = 'verix_crm_deleted_disposition_ids_v1';
@@ -1371,6 +1399,30 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [payrollRecords]);
 
+  // Employee Annual Salary Configurations State (Penetapan Standar Gaji Karyawan Tahunan)
+  const [employeeSalaryConfigs, setEmployeeSalaryConfigs] = useState<EmployeeAnnualSalaryConfig[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      return DEFAULT_EMPLOYEE_SALARY_CONFIGS;
+    } catch {
+      return DEFAULT_EMPLOYEE_SALARY_CONFIGS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(employeeSalaryConfigs));
+    } catch (e) {
+      console.warn('Failed to save employee salary configs to localStorage', e);
+    }
+  }, [employeeSalaryConfigs]);
+
   // Auto-sync any existing payroll records with Tax Management (anti double-input safeguard)
   useEffect(() => {
     if (!payrollRecords || payrollRecords.length === 0) return;
@@ -1577,6 +1629,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     | 'TAX_OBLIGATIONS'
     | 'RECEIVABLES'
     | 'PAYROLL_PAYMENTS'
+    | 'EMPLOYEE_SALARY_CONFIGS'
     | 'ROLE_DEFINITIONS'
     | 'ROLE_GOVERNANCE_META'
     | 'COMPANY_LETTERHEAD';
@@ -1713,6 +1766,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setReceivables(payload);
           } else if (type === 'PAYROLL_PAYMENTS' && Array.isArray(payload)) {
             setPayrollRecords(payload);
+          } else if (type === 'EMPLOYEE_SALARY_CONFIGS' && Array.isArray(payload)) {
+            setEmployeeSalaryConfigs(payload);
           } else if (type === 'DELETED_PAYROLL_IDS' && Array.isArray(payload)) {
             setDeletedPayrollIds(payload);
             setPayrollRecords((current) => current.filter((p) => !payload.includes(p.id)));
@@ -1781,6 +1836,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_PAYROLL) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) setPayrollRecords(parsed);
+        } else if (e.key === STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setEmployeeSalaryConfigs(parsed);
         } else if (e.key === STORAGE_KEY_DELETED_PAYROLL_IDS) {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
@@ -2015,7 +2073,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       DEFAULT_COMPANY_CAPITAL,
       INITIAL_RECEIVABLES,
       INITIAL_PAYROLL_RECORDS,
-      DEFAULT_COMPANY_LETTERHEAD
+      DEFAULT_COMPANY_LETTERHEAD,
+      DEFAULT_EMPLOYEE_SALARY_CONFIGS
     );
 
     const unsubDeletedProjects = subscribeToDeletedEntityIds('deleted_project_ids', (remoteIds) => {
@@ -2304,6 +2363,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    const unsubSalaryConfigs = subscribeToSettings('employee_salary_configs', (data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setEmployeeSalaryConfigs(data);
+        try {
+          localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(data));
+        } catch (e) {
+          console.warn('LocalStorage save on salary configs update warning:', e);
+        }
+      }
+    });
+
     return () => {
       unsubDeletedProjects();
       unsubProjects();
@@ -2329,6 +2399,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unsubDeletedPayroll();
       unsubPayroll();
       unsubLetterhead();
+      unsubSalaryConfigs();
     };
   }, []);
 
@@ -5254,6 +5325,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       billingCode?: string;
       notes?: string;
       paidByClient?: boolean;
+      deductFromCashChannel?: boolean;
       clientWithholdingNumber?: string;
       clientWithholdingDate?: string;
       withholdingTaxPayerName?: string;
@@ -5274,6 +5346,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const paymentAmount = target.remainingAmount > 0 ? target.remainingAmount : target.taxAmount;
     const isPaidByClient = Boolean(options?.paidByClient);
+    const shouldDeductCash = options?.deductFromCashChannel !== false;
     const paymentMethod = options?.channelId || target.paymentChannelId || 'BANK_TRANSFER_BRI';
     const payDate = options?.date || new Date().toISOString().slice(0, 10);
     const ntpn = options?.ntpnNumber?.trim();
@@ -5284,9 +5357,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     let txId: string | undefined = undefined;
 
-    // 1. If paid by company, create Cleared Expense Transaction in Cash Ledger under category based on taxType.
-    // If paid by client, DO NOT deduct company's cash/bank accounts!
+    // 1. Transaction creation in Cash Ledger
     if (!isPaidByClient) {
+      // Setor Sendiri: Terbitkan pengeluaran kas pembayaran pajak ke Kas Negara
       const tx = addTransaction({
         date: payDate,
         type: 'EXPENSE',
@@ -5298,6 +5371,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         referenceNumber: ntpn ? `NTPN-${ntpn}` : billing ? `BILL-${billing}` : `TAX-${target.id.slice(-4).toUpperCase()}`,
         status: 'CLEARED',
         notes: `${customNotes ? customNotes + ' | ' : ''}NTPN: ${ntpn || '-'} | Kode Billing: ${billing || '-'} | Pelunasan Kewajiban Pajak ${target.title}`,
+        recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
+      });
+      txId = tx?.id;
+    } else if (shouldDeductCash) {
+      // PPh Dibayar / Dipotong Client: Penerimaan saldo kas tidak utuh karena dipotong PPh langsung dari invoice/termin.
+      // Catat mutasi potongan PPh pada rekening kas/bank penerima agar saldo pembukuan berkurang riil (netto).
+      const tx = addTransaction({
+        date: payDate,
+        type: 'EXPENSE',
+        category: 'TAX_PPH_PPN',
+        amountIDR: paymentAmount,
+        description: `Potongan PPh ${target.taxType} oleh Klien (${clientName}) - ${target.title}`,
+        clientOrVendorName: clientName,
+        paymentMethod: paymentMethod as any,
+        referenceNumber: clientWithholdingNum ? `BUPOT-${clientWithholdingNum}` : (ntpn ? `NTPN-${ntpn}` : `TAX-BUPOT-${target.id.slice(-4).toUpperCase()}`),
+        status: 'CLEARED',
+        notes: `${customNotes ? customNotes + ' | ' : ''}Pemotongan PPh oleh Klien (Saldo penerimaan kas tidak utuh / netto). No Bukti Potong: ${clientWithholdingNum || '-'} | Rekening kas penerima terpotong PPh sebesar Rp ${paymentAmount.toLocaleString('id-ID')}`,
         recordedBy: currentUser.name || currentUser.username || 'Finance Officer',
       });
       txId = tx?.id;
@@ -5316,7 +5406,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       withholdingTaxPayerName: isPaidByClient ? clientName : target.withholdingTaxPayerName,
       ntpnNumber: ntpn || target.ntpnNumber,
       billingCode: billing,
-      paymentChannelId: !isPaidByClient ? paymentMethod : undefined,
+      paymentChannelId: paymentMethod,
       transactionId: txId,
       notes: customNotes || (isPaidByClient ? `PPh dipotong & disetor oleh klien (${clientName}) - Bukti Potong: ${clientWithholdingNum || 'Tercatat'}` : target.notes),
       updatedAt: new Date().toISOString(),
@@ -5333,7 +5423,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       success: true,
       transactionId: txId,
       message: isPaidByClient
-        ? `PPh ${target.taxType} sebesar Rp ${paymentAmount.toLocaleString('id-ID')} berhasil dicatat lunas via pemotongan & setoran oleh Klien (${clientName})! Bukti Potong: ${clientWithholdingNum || 'Tercatat'}. Saldo kas/bank perusahaan tidak berkurang.`
+        ? shouldDeductCash
+          ? `PPh ${target.taxType} sebesar Rp ${paymentAmount.toLocaleString('id-ID')} berhasil dicatat lunas via pemotongan Klien (${clientName}). Saldo rekening kas telah disesuaikan/dipotong sebesar PPh (saldo bersih tidak utuh). Bukti Potong: ${clientWithholdingNum || 'Tercatat'}.`
+          : `PPh ${target.taxType} sebesar Rp ${paymentAmount.toLocaleString('id-ID')} berhasil dicatat lunas via pemotongan Klien (${clientName}) sebagai Kredit Pajak e-Bupot! Bukti Potong: ${clientWithholdingNum || 'Tercatat'}.`
         : `Setoran Pajak ${target.taxType} sebesar Rp ${paymentAmount.toLocaleString('id-ID')} berhasil dicatat & dibukukan ke jurnal kas! NTPN: ${ntpn || 'Tercatat'}.`,
     };
   };
@@ -6322,8 +6414,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       version: docData.version || 'v1.0',
     };
 
-    setProjects((prev) =>
-      prev.map((p) => {
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
         const updatedProj = {
           ...p,
@@ -6331,8 +6423,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
         saveProjectToFirestore(updatedProj);
         return updatedProj;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch {}
+      broadcastLiveDataUpdate('PROJECTS', updated);
+      return updated;
+    });
 
     const driveDetail = driveMeta.googleDriveSyncStatus === 'SYNCED' ? ' • Google Drive Cloud Synced' : '';
 
@@ -6425,8 +6522,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     status: ProjectDocument['status'],
     reviewNotes?: string
   ) => {
-    setProjects((prev) =>
-      prev.map((p) => {
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
         let targetDocName = 'Document';
         const updatedDocs = p.documents.map((d) => {
@@ -6447,7 +6544,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           actorAvatar: currentUser.avatar,
           actorRole: currentUser.role,
           action: 'Document Status Updated',
-          details: `Document "${targetDocName}" status changed to ${status.replace(/_/g, ' ')}${reviewNotes ? ` (Notes: ${reviewNotes})` : ''}`,
+          details: `Document "${targetDocName}" status changed to ${status.replace(/_/g, ' ')}${reviewNotes ? ` (Notes: ${reviewNotes})` : ''} by ${currentUser.name} (${currentUser.role})`,
           type: 'DOC_UPLOAD',
           metadata: {
             documentName: targetDocName,
@@ -6458,13 +6555,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const updatedProj: ConsultingProject = { ...p, documents: updatedDocs, activities: [newAct, ...(p.activities || [])] };
         saveProjectToFirestore(updatedProj);
         return updatedProj;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch {}
+      broadcastLiveDataUpdate('PROJECTS', updated);
+      return updated;
+    });
   };
 
   const updateDocument = (projectId: string, docId: string, updates: Partial<ProjectDocument>) => {
-    setProjects((prev) =>
-      prev.map((p) => {
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
         let targetDocName = 'Document';
         const updatedDocs = p.documents.map((d) => {
@@ -6483,7 +6585,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           actorAvatar: currentUser.avatar,
           actorRole: currentUser.role,
           action: 'Document Updated',
-          details: `Updated metadata/details for document "${targetDocName}"`,
+          details: `Updated metadata/details for document "${targetDocName}" by ${currentUser.name} (${currentUser.role})`,
           type: 'DOC_UPLOAD',
           metadata: {
             documentName: targetDocName,
@@ -6493,15 +6595,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const updatedProj: ConsultingProject = { ...p, documents: updatedDocs, activities: [newAct, ...(p.activities || [])] };
         saveProjectToFirestore(updatedProj);
         return updatedProj;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch {}
+      broadcastLiveDataUpdate('PROJECTS', updated);
+      return updated;
+    });
   };
 
   const deleteDocument = (projectId: string, docId: string) => {
-    if (!isMasterAdmin) {
-      console.warn('Unauthorized deletion attempt: Only admin.master (Master Admin) can delete repository documents.');
+    const canDelete =
+      isMasterAdmin ||
+      currentUser.role === 'DIRECTOR' ||
+      currentUser.role === 'LEAD_CONSULTANT' ||
+      currentUser.role === 'TECHNICAL_CONSULTANT' ||
+      currentUser.role === 'SURVEYOR_LIAISON' ||
+      currentUser.role === 'FINANCE_OFFICER' ||
+      Boolean(currentUser.permissions?.includes('UPLOAD_DOCUMENTS')) ||
+      Boolean(currentUser.permissions?.includes('EDIT_PROJECTS')) ||
+      Boolean(currentUser.permissions?.includes('DELETE_PROJECTS')) ||
+      Boolean(currentUser.permissions?.includes('MANAGE_DOCUMENT_TYPES'));
+
+    if (!canDelete) {
+      console.warn('Unauthorized deletion attempt: Insufficient permissions to delete repository documents.');
       return;
     }
+
     setProjects((prev) => {
       const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
@@ -6515,7 +6635,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           actorAvatar: currentUser.avatar,
           actorRole: currentUser.role,
           action: 'Document Removed',
-          details: `Removed "${docName}" from project repository`,
+          details: `Removed "${docName}" from project repository by ${currentUser.name} (${currentUser.role})`,
           type: 'DOC_UPLOAD',
           metadata: {
             documentName: docName,
@@ -6531,6 +6651,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveProjectToFirestore(updatedProj);
         return updatedProj;
       });
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
     });
@@ -7157,6 +7280,143 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, message: 'Data payroll berhasil direset ke contoh default dan tersimpan di Cloud Firestore.' };
   };
 
+  // -------------------------------------------------------------
+  // Penetapan Gaji Tahunan Karyawan (Annual Salary Configuration)
+  // Real-time synchronization across all roles & persistent storage
+  // -------------------------------------------------------------
+  const addOrUpdateEmployeeSalaryConfig = async (
+    configData: Omit<EmployeeAnnualSalaryConfig, 'id' | 'updatedAt' | 'createdAt'> & { id?: string }
+  ): Promise<{ success: boolean; message: string; config?: EmployeeAnnualSalaryConfig }> => {
+    try {
+      const nowStr = new Date().toISOString();
+      const targetYear = Number(configData.year) || new Date().getFullYear();
+      const configId = configData.id || `SALCFG-${targetYear}-${configData.employeeId}-${Date.now().toString(36)}`;
+
+      const newConfig: EmployeeAnnualSalaryConfig = {
+        ...configData,
+        id: configId,
+        year: targetYear,
+        createdAt: nowStr,
+        updatedAt: nowStr,
+        updatedBy: currentUser?.name || 'Master Admin',
+      };
+
+      let updatedList: EmployeeAnnualSalaryConfig[] = [];
+
+      setEmployeeSalaryConfigs((prev) => {
+        const existsIndex = prev.findIndex(
+          (c) => c.id === configId || (c.employeeId === configData.employeeId && Number(c.year) === targetYear)
+        );
+
+        if (existsIndex >= 0) {
+          updatedList = [...prev];
+          updatedList[existsIndex] = {
+            ...prev[existsIndex],
+            ...newConfig,
+            id: prev[existsIndex].id || configId,
+            createdAt: prev[existsIndex].createdAt || nowStr,
+            updatedAt: nowStr,
+            updatedBy: currentUser?.name || 'Master Admin',
+          };
+        } else {
+          updatedList = [newConfig, ...prev];
+        }
+
+        // 1. Broadcast real-time across tabs and roles
+        broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedList);
+
+        // 2. Persist to localStorage
+        try {
+          localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
+        } catch (e) {
+          console.warn('LocalStorage save salary config error:', e);
+        }
+
+        return updatedList;
+      });
+
+      // 3. Persist to Cloud Firestore settings collection
+      try {
+        await saveSettingsToFirestore('employee_salary_configs', updatedList);
+      } catch (err) {
+        console.warn('Firestore save employee_salary_configs notice:', err);
+      }
+
+      return {
+        success: true,
+        message: `Standar gaji tahunan untuk ${configData.employeeName} (${targetYear}) berhasil disimpan dan disinkronisasikan ke seluruh role secara real-time.`,
+        config: newConfig,
+      };
+    } catch (err: any) {
+      console.error('Error saving employee salary config:', err);
+      return {
+        success: false,
+        message: 'Gagal menyimpan penetapan gaji: ' + (err?.message || 'Terjadi kesalahan sistem.'),
+      };
+    }
+  };
+
+  const deleteEmployeeSalaryConfig = async (
+    id: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      let updatedList: EmployeeAnnualSalaryConfig[] = [];
+
+      setEmployeeSalaryConfigs((prev) => {
+        updatedList = prev.filter((c) => c.id !== id);
+        broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedList);
+        try {
+          localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
+        } catch (e) {
+          console.warn('LocalStorage delete salary config error:', e);
+        }
+        return updatedList;
+      });
+
+      await saveSettingsToFirestore('employee_salary_configs', updatedList);
+
+      return {
+        success: true,
+        message: 'Penetapan gaji tahunan berhasil dihapus dan diperbarui ke seluruh role secara real-time.',
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: 'Gagal menghapus penetapan gaji: ' + (err?.message || ''),
+      };
+    }
+  };
+
+  const resetEmployeeSalaryConfigsToDefault = async (): Promise<{ success: boolean; message: string }> => {
+    try {
+      setEmployeeSalaryConfigs(DEFAULT_EMPLOYEE_SALARY_CONFIGS);
+      broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', DEFAULT_EMPLOYEE_SALARY_CONFIGS);
+      try {
+        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(DEFAULT_EMPLOYEE_SALARY_CONFIGS));
+      } catch (e) {
+        console.warn('LocalStorage reset salary configs error:', e);
+      }
+      await saveSettingsToFirestore('employee_salary_configs', DEFAULT_EMPLOYEE_SALARY_CONFIGS);
+
+      return {
+        success: true,
+        message: 'Penetapan gaji tahunan seluruh karyawan berhasil direset ke standar acuan dan tersimpan di Cloud Firestore.',
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: 'Gagal mereset penetapan gaji: ' + (err?.message || ''),
+      };
+    }
+  };
+
+  const getEmployeeSalaryConfigForYear = useCallback(
+    (employeeId: string, year: number, fallbackRole?: import('../types').UserRole) => {
+      return getEffectiveSalaryConfig(employeeSalaryConfigs, employeeId, year, fallbackRole);
+    },
+    [employeeSalaryConfigs]
+  );
+
   const toggleMilestoneManualSignoff = (
     projectId: string,
     milestoneId: string,
@@ -7345,8 +7605,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     docType: DocumentType,
     isOptional?: boolean
   ) => {
-    setProjects((prev) =>
-      prev.map((p) => {
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
 
         // Find current requirements (from custom configuration, or base milestone template)
@@ -7412,13 +7672,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         saveProjectToFirestore(updatedProj);
         return updatedProj;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch {}
+      broadcastLiveDataUpdate('PROJECTS', updated);
+      return updated;
+    });
   };
 
   const resetProjectMilestonesToDefault = (projectId: string) => {
-    setProjects((prev) =>
-      prev.map((p) => {
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
         const newAct: ProjectActivity = {
           id: `act-${Date.now()}`,
@@ -7440,8 +7705,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         saveProjectToFirestore(updatedProj);
         return updatedProj;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+      } catch {}
+      broadcastLiveDataUpdate('PROJECTS', updated);
+      return updated;
+    });
   };
 
   const addAssignedByOption = (name: string) => {
@@ -7625,6 +7895,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         batchAddPayrollPayments,
         markPayrollAsPaid,
         resetPayrollToDefault,
+        employeeSalaryConfigs,
+        addOrUpdateEmployeeSalaryConfig,
+        deleteEmployeeSalaryConfig,
+        resetEmployeeSalaryConfigsToDefault,
+        getEmployeeSalaryConfigForYear,
         updateMilestoneDocRequirements,
         filters,
         setFilters,

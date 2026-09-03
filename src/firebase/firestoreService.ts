@@ -674,7 +674,8 @@ export const ensureInitialFirestoreSeed = async (
   defaultCompanyCapital?: any,
   defaultReceivables?: Receivable[],
   defaultPayrollRecords?: PayrollPayment[],
-  defaultCompanyLetterhead?: CompanyLetterhead
+  defaultCompanyLetterhead?: CompanyLetterhead,
+  defaultEmployeeSalaryConfigs?: any[]
 ): Promise<void> => {
   try {
     // 1. Ensure master admin root user exists in Firestore
@@ -910,6 +911,15 @@ export const ensureInitialFirestoreSeed = async (
       const letterheadSnap = await getDoc(letterheadRef);
       if (!letterheadSnap.exists()) {
         await setDoc(letterheadRef, sanitizeForFirestore({ data: defaultCompanyLetterhead, updatedAt: new Date().toISOString() }));
+      }
+    }
+
+    // 18. Ensure employee salary configs exist in settings if not present
+    if (defaultEmployeeSalaryConfigs !== undefined && defaultEmployeeSalaryConfigs.length > 0) {
+      const salaryConfigRef = doc(db, FirestoreCollections.SETTINGS, 'employee_salary_configs');
+      const salaryConfigSnap = await getDoc(salaryConfigRef);
+      if (!salaryConfigSnap.exists()) {
+        await setDoc(salaryConfigRef, sanitizeForFirestore({ data: defaultEmployeeSalaryConfigs, updatedAt: new Date().toISOString() }));
       }
     }
   } catch (err) {

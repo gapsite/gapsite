@@ -938,5 +938,53 @@ export interface CompanyLetterhead {
   updatedBy?: string;
 }
 
+// ==========================================
+// PENETAPAN GAJI TAHUNAN KARYAWAN (ANNUAL SALARY SETUP)
+// ==========================================
+export interface EmployeeAnnualSalaryConfig {
+  id: string; // e.g. "SALCFG-2026-usr-0"
+  employeeId: string; // ID karyawan (AppUser.id / TeamMember.id)
+  employeeName: string;
+  year: number; // Tahun berlaku penetapan gaji (e.g. 2026, 2025, 2027)
+  role: UserRole;
+  roleTitle?: string;
+  department?: string;
+
+  // Komponen Remunerasi Bulanan (Monthly Salary Breakdown)
+  basicSalary: number; // Gaji Pokok Bulanan
+  positionAllowance: number; // Tunjangan Jabatan / Fungsional
+  transportAllowance: number; // Tunjangan Transportasi & Dinas
+  mealAllowance: number; // Tunjangan Uang Makan
+  communicationAllowance?: number; // Tunjangan Komunikasi & Kuota
+  fixedAllowance?: number; // Tunjangan Tetap Lainnya
+
+  // Komponen Tahunan & Variabel (Annual Budget & Bonus Projections)
+  annualBonusEstimate?: number; // Proyeksi Bonus Kinerja / Insentif Tahunan
+  thrMonths?: number; // Pengali Tunjangan Hari Raya (default 1x Gaji Pokok)
+
+  // Pengaturan Statutori & BPJS
+  bpjsKesehatanPercentage?: number; // Standar 1% potongan karyawan
+  bpjsTkPercentage?: number; // Standar 2% potongan JHT karyawan
+
+  // Legalitas & Riwayat Penetapan
+  skNumber?: string; // Nomor SK Direksi / Surat Keputusan (e.g. SK-DIR/001/SAL/2026)
+  effectiveDate?: string; // Tanggal Mulai Berlaku (YYYY-MM-DD)
+  status: 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
+  notes?: string;
+
+  createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface AnnualSalaryStats {
+  totalAnnualBudgetIDR: number;
+  totalMonthlyPayrollIDR: number;
+  averageMonthlySalaryIDR: number;
+  configuredEmployeesCount: number;
+  year: number;
+}
+
+
 
 

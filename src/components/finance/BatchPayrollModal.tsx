@@ -42,6 +42,8 @@ interface BatchEmployeeRow {
   bankAccountNumber: string;
   bankAccountHolder?: string;
   selected: boolean;
+  skNumber?: string;
+  hasAnnualConfig?: boolean;
 }
 
 const CALENDAR_MONTHS = [
@@ -64,7 +66,12 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
   onClose,
   onBatchProcess,
 }) => {
-  const { teamMembers, currentUser } = useProjects();
+  const {
+    teamMembers,
+    currentUser,
+    employeeSalaryConfigs,
+    getEmployeeSalaryConfigForYear,
+  } = useProjects();
 
   const availableYears = useMemo(() => {
     const startYear = 2021;
@@ -90,14 +97,19 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
   );
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER_MANDIRI');
 
-  // Prepare initial rows based on team members
-  const [rows, setRows] = useState<BatchEmployeeRow[]>(() => {
+  // Helper to generate rows for a given year using official annual salary configurations
+  const buildRowsForYear = (targetYear: number): BatchEmployeeRow[] => {
     return teamMembers.map((m) => {
-      const benchmark = DEFAULT_ROLE_COMPENSATION[m.role] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
-      const base = benchmark.basicSalary;
-      const allow = benchmark.positionAllowance + benchmark.transportAllowance + benchmark.mealAllowance;
-      const bpjsKes = hitungBpjsKesehatan(base, benchmark.positionAllowance);
-      const bpjsTk = hitungBpjsKetenagakerjaan(base, benchmark.positionAllowance);
+      const configInfo = getEmployeeSalaryConfigForYear(m.id, targetYear, m.role);
+      const base = configInfo.basicSalary;
+      const allow =
+        configInfo.positionAllowance +
+        configInfo.transportAllowance +
+        configInfo.mealAllowance +
+        (configInfo.communicationAllowance || 0) +
+        (configInfo.fixedAllowance || 0);
+      const bpjsKes = hitungBpjsKesehatan(base, configInfo.positionAllowance);
+      const bpjsTk = hitungBpjsKetenagakerjaan(base, configInfo.positionAllowance);
       const tax = estimasiPph21(base + allow);
       const deductions = bpjsKes + bpjsTk + tax;
       const net = Math.max(0, base + allow - deductions);
@@ -117,44 +129,21 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
         bankAccountNumber: m.bankAccountNumber || '',
         bankAccountHolder: m.bankAccountHolder || m.name,
         selected: true,
+        skNumber: configInfo.config?.skNumber,
+        hasAnnualConfig: Boolean(configInfo.config),
       };
     });
-  });
+  };
 
-  // Re-sync rows if teamMembers changes when opened
+  // Prepare initial rows based on team members and annual salary config
+  const [rows, setRows] = useState<BatchEmployeeRow[]>(() => buildRowsForYear(2026));
+
+  // Re-sync rows if teamMembers or employeeSalaryConfigs changes when modal is opened
   React.useEffect(() => {
     if (isOpen) {
-      setRows(
-        teamMembers.map((m) => {
-          const benchmark = DEFAULT_ROLE_COMPENSATION[m.role] || DEFAULT_ROLE_COMPENSATION.TECHNICAL_CONSULTANT;
-          const base = benchmark.basicSalary;
-          const allow = benchmark.positionAllowance + benchmark.transportAllowance + benchmark.mealAllowance;
-          const bpjsKes = hitungBpjsKesehatan(base, benchmark.positionAllowance);
-          const bpjsTk = hitungBpjsKetenagakerjaan(base, benchmark.positionAllowance);
-          const tax = estimasiPph21(base + allow);
-          const deductions = bpjsKes + bpjsTk + tax;
-          const net = Math.max(0, base + allow - deductions);
-
-          return {
-            employeeId: m.id,
-            employeeName: m.name,
-            employeeNik: m.nik || '',
-            roleTitle: m.roleTitle || m.role,
-            department: m.department || 'Konsultansi',
-            basicSalary: base,
-            allowances: allow,
-            bonus: 0,
-            deductions,
-            netSalary: net,
-            bankName: m.bankName || 'Bank Mandiri',
-            bankAccountNumber: m.bankAccountNumber || '',
-            bankAccountHolder: m.bankAccountHolder || m.name,
-            selected: true,
-          };
-        })
-      );
+      setRows(buildRowsForYear(selectedYear));
     }
-  }, [isOpen, teamMembers]);
+  }, [isOpen, teamMembers, employeeSalaryConfigs, selectedYear]);
 
   const toggleSelectAll = (checked: boolean) => {
     setRows((prev) => prev.map((r) => ({ ...r, selected: checked })));
@@ -287,7 +276,11 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
             <select
               id="batch-payroll-year-select"
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => {
+                const yr = Number(e.target.value);
+                setSelectedYear(yr);
+                setRows(buildRowsForYear(yr));
+              }}
               className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-emerald-600 font-semibold cursor-pointer"
             >
               {availableYears.map((y) => (
@@ -366,7 +359,24 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
                       />
                     </td>
                     <td className="py-2.5 px-3">
-                      <p className="font-bold text-slate-900">{row.employeeName}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-bold text-slate-900">{row.employeeName}</p>
+                        {row.hasAnnualConfig ? (
+                          <span
+                            className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9px] font-mono font-bold border border-emerald-300"
+                            title={`Terkoneksi SK Penetapan Gaji Tahunan (${selectedYear}): ${row.skNumber || ''}`}
+                          >
+                            SK {selectedYear}
+                          </span>
+                        ) : (
+                          <span
+                            className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[9px] font-mono border border-slate-200"
+                            title="Menggunakan standar benchmark role"
+                          >
+                            Acuan Role
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-slate-500">{row.roleTitle}</p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px]">
                         {row.bankAccountNumber ? (

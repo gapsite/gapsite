@@ -30,6 +30,7 @@ import {
   CreditCard,
   CheckSquare,
   Eye,
+  Edit2,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { TransactionModal } from './finance/TransactionModal';
@@ -112,6 +113,19 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const [docCategorySubTab, setDocCategorySubTab] = useState<DocumentCategoryGroup>('ALL');
   const [isDocUploadModalOpen, setIsDocUploadModalOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<ProjectDocument | null>(null);
+  const [docToDelete, setDocToDelete] = useState<{ docId: string; docName: string } | null>(null);
+
+  const canManageDocuments =
+    isMasterAdmin ||
+    currentUser?.role === 'DIRECTOR' ||
+    currentUser?.role === 'LEAD_CONSULTANT' ||
+    currentUser?.role === 'TECHNICAL_CONSULTANT' ||
+    currentUser?.role === 'SURVEYOR_LIAISON' ||
+    currentUser?.role === 'FINANCE_OFFICER' ||
+    Boolean(currentUser?.permissions?.includes('UPLOAD_DOCUMENTS')) ||
+    Boolean(currentUser?.permissions?.includes('EDIT_PROJECTS')) ||
+    Boolean(currentUser?.permissions?.includes('DELETE_PROJECTS')) ||
+    Boolean(currentUser?.permissions?.includes('MANAGE_DOCUMENT_TYPES'));
   
   // Quick doc upload state
   const [docUploadName, setDocUploadName] = useState('');
@@ -921,24 +935,22 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                             </div>
 
                             <button
-                              onClick={() => {
-                                if (!isMasterAdmin) {
-                                  alert('Access Denied: Only admin.master (Master Admin) can delete documents.');
-                                  return;
-                                }
-                                if (confirm(`Remove document "${doc.name}"? This action cannot be undone.`)) {
-                                  deleteDocument(project.id, doc.id);
-                                }
-                              }}
-                              className={`p-1.5 rounded-lg transition-colors shrink-0 ${
-                                isMasterAdmin
-                                  ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer'
-                                  : 'text-slate-300 dark:text-slate-600 hover:text-rose-400 cursor-not-allowed opacity-60'
-                              }`}
-                              title={isMasterAdmin ? "Delete document (admin.master)" : "Protected: Only admin.master can delete documents"}
+                              onClick={() => setPreviewDoc(doc)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors shrink-0 cursor-pointer"
+                              title="Edit & Periksa Dokumen"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
+
+                            {canManageDocuments && (
+                              <button
+                                onClick={() => setDocToDelete({ docId: doc.id, docName: doc.name })}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors shrink-0 cursor-pointer"
+                                title="Hapus dokumen dari repositori"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -1360,6 +1372,41 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
         document={previewDoc}
         project={project}
       />
+
+      {/* Delete Document Confirmation Modal */}
+      {docToDelete && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-rose-900/60 rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Hapus Dokumen Proyek?</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
+              Apakah Anda yakin ingin menghapus <strong className="text-slate-900 dark:text-white">"{docToDelete.docName}"</strong>? Dokumen ini akan dihapus secara permanen dari repositori proyek dan perubahannya disinkronisasi ke Cloud Firestore secara real-time.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDocToDelete(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteDocument(project.id, docToDelete.docId);
+                  setDocToDelete(null);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-md shadow-rose-900/20 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Sekarang</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

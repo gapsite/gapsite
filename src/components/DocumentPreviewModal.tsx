@@ -67,6 +67,8 @@ interface DocumentPreviewModalProps {
   document: ProjectDocument | null;
   project?: ConsultingProject | null;
   onStatusChange?: (status: DocumentStatus, notes?: string) => void;
+  initialTab?: TabMode;
+  defaultEditMode?: boolean;
 }
 
 type TabMode = 'preview' | 'compliance_check' | 'metadata_audit';
@@ -77,6 +79,8 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   document: doc,
   project: passedProject,
   onStatusChange,
+  initialTab,
+  defaultEditMode,
 }) => {
   const {
     projects,
@@ -86,12 +90,26 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     currentUser,
     hasPermission,
     isMasterAdmin,
+    activeDocumentTypes,
+    activeDocumentCategories,
     syncDocumentToGoogleDrive,
     isGoogleDriveConnected,
     connectGoogleDrive,
     isDriveSyncing,
     companyLetterhead,
   } = useProjects();
+
+  const canManageDocuments =
+    isMasterAdmin ||
+    currentUser?.role === 'DIRECTOR' ||
+    currentUser?.role === 'LEAD_CONSULTANT' ||
+    currentUser?.role === 'TECHNICAL_CONSULTANT' ||
+    currentUser?.role === 'SURVEYOR_LIAISON' ||
+    currentUser?.role === 'FINANCE_OFFICER' ||
+    Boolean(currentUser?.permissions?.includes('UPLOAD_DOCUMENTS')) ||
+    Boolean(currentUser?.permissions?.includes('EDIT_PROJECTS')) ||
+    Boolean(currentUser?.permissions?.includes('DELETE_PROJECTS')) ||
+    Boolean(currentUser?.permissions?.includes('MANAGE_DOCUMENT_TYPES'));
 
   // Active view tab
   const [activeTab, setActiveTab] = useState<TabMode>('preview');
@@ -106,8 +124,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   // Spreadsheet filter in preview mode
   const [spreadsheetOriginFilter, setSpreadsheetOriginFilter] = useState<'ALL' | 'KDN' | 'KLN'>('ALL');
 
-  // Inline editing state for metadata
+  // Inline editing state for metadata & document properties
   const [isEditingMetadata, setIsEditingMetadata] = useState<boolean>(false);
+  const [editDocName, setEditDocName] = useState<string>('');
+  const [editCategoryGroup, setEditCategoryGroup] = useState<DocumentCategoryGroup>('TECHNICAL_DOSSIER');
+  const [editDocType, setEditDocType] = useState<DocumentType>('SURVEY_REPORT');
   const [editRefNumber, setEditRefNumber] = useState<string>('');
   const [editAmount, setEditAmount] = useState<number | ''>('');
   const [editCounterparty, setEditCounterparty] = useState<string>('');
@@ -117,6 +138,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const [editReviewNotes, setEditReviewNotes] = useState<string>('');
   const [showFlagPrompt, setShowFlagPrompt] = useState<boolean>(false);
   const [flagInputNote, setFlagInputNote] = useState<string>('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
   // Integrity Check re-scan state
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -125,8 +147,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   // Initialize edit fields when doc changes
   React.useEffect(() => {
     if (doc) {
+      setEditDocName(doc.name || '');
+      setEditCategoryGroup(doc.categoryGroup || getDocCategoryGroup(doc.type));
+      setEditDocType(doc.type);
       setEditRefNumber(doc.referenceNumber || '');
-      setEditAmount(doc.amountIDR || '');
+      setEditAmount(doc.amountIDR !== undefined ? doc.amountIDR : '');
       setEditCounterparty(doc.counterpartyName || '');
       setEditTaxNumber(doc.taxNumber || '');
       setEditValidUntil(doc.validUntil || '');
@@ -137,9 +162,15 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
       setRotation(0);
       setCurrentPage(1);
       setShowFlagPrompt(false);
-      setIsEditingMetadata(false);
+      setShowDeleteConfirm(false);
+      setIsEditingMetadata(Boolean(defaultEditMode));
+      if (initialTab) {
+        setActiveTab(initialTab);
+      } else {
+        setActiveTab('preview');
+      }
     }
-  }, [doc]);
+  }, [doc, defaultEditMode, initialTab]);
 
   if (!isOpen || !doc) return null;
 
@@ -184,6 +215,9 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const handleSaveMetadata = () => {
     if (project) {
       updateDocument(project.id, doc.id, {
+        name: editDocName.trim() || doc.name,
+        categoryGroup: editCategoryGroup,
+        type: editDocType,
         referenceNumber: editRefNumber.trim() || undefined,
         amountIDR: typeof editAmount === 'number' ? editAmount : undefined,
         counterpartyName: editCounterparty.trim() || undefined,
@@ -1515,63 +1549,101 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
                 {isEditingMetadata ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div className="sm:col-span-2">
+                      <label className="block text-slate-400 font-bold mb-1">Judul / Nama File Dokumen</label>
+                      <input
+                        type="text"
+                        value={editDocName}
+                        onChange={(e) => setEditDocName(e.target.value)}
+                        placeholder="Contoh: Dokumen Hasil Verifikasi TKDN"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
                     <div>
-                      <label className="block text-slate-400 font-bold mb-1">Reference / Number #</label>
+                      <label className="block text-slate-400 font-bold mb-1">Kategori Dokumen</label>
+                      <select
+                        value={editCategoryGroup}
+                        onChange={(e) => setEditCategoryGroup(e.target.value as DocumentCategoryGroup)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      >
+                        <option value="TECHNICAL_DOSSIER">Berkas Teknis (Technical Dossier)</option>
+                        <option value="OFFER_QUOTATION">Penawaran &amp; Proposal (Offer/Quotation)</option>
+                        <option value="INVOICE_RECEIPT">Invoice &amp; Bukti Bayar (Invoice/Receipt)</option>
+                        <option value="EXPENSE_PROOF">Bukti Biaya &amp; Pengeluaran (Expense Proof)</option>
+                        <option value="LEGAL_COMPLIANCE">Legalitas &amp; Izin (Legal Compliance)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Tipe Dokumen Spesifik</label>
+                      <select
+                        value={editDocType}
+                        onChange={(e) => setEditDocType(e.target.value as DocumentType)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      >
+                        {(activeDocumentTypes || []).map((dt) => (
+                          <option key={dt.id} value={dt.id}>
+                            {dt.name} ({dt.category})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 font-bold mb-1">Nomor Referensi / Surat / Faktur #</label>
                       <input
                         type="text"
                         value={editRefNumber}
                         onChange={(e) => setEditRefNumber(e.target.value)}
-                        placeholder="e.g. INV-2024-001 or SP-VRX/2024"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono"
+                        placeholder="Contoh: INV-2024-001 / SP-VRX/2024"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 font-bold mb-1">Valuation / Amount (IDR)</label>
+                      <label className="block text-slate-400 font-bold mb-1">Nilai Nominal / Valuation (IDR)</label>
                       <input
                         type="number"
                         value={editAmount}
                         onChange={(e) => setEditAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                        placeholder="e.g. 150000000"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono"
+                        placeholder="Contoh: 150000000"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 font-bold mb-1">Counterparty / Entity Name</label>
+                      <label className="block text-slate-400 font-bold mb-1">Entitas / Rekanan / Counterparty</label>
                       <input
                         type="text"
                         value={editCounterparty}
                         onChange={(e) => setEditCounterparty(e.target.value)}
-                        placeholder="e.g. PT Client or PT Sucofindo"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs"
+                        placeholder="Contoh: PT Sucofindo / PT Klien"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 font-bold mb-1">Tax Faktur Number</label>
+                      <label className="block text-slate-400 font-bold mb-1">Nomor Faktur Pajak</label>
                       <input
                         type="text"
                         value={editTaxNumber}
                         onChange={(e) => setEditTaxNumber(e.target.value)}
-                        placeholder="e.g. 010.000-24.881920"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono"
+                        placeholder="Contoh: 010.000-24.881920"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 font-bold mb-1">Validity / Expiry Date</label>
+                      <label className="block text-slate-400 font-bold mb-1">Masa Berlaku / Tanggal Berakhir</label>
                       <input
                         type="date"
                         value={editValidUntil}
                         onChange={(e) => setEditValidUntil(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 font-bold mb-1">General Notes & Terms</label>
+                      <label className="block text-slate-400 font-bold mb-1">Catatan &amp; Keterangan Tambahan</label>
                       <input
                         type="text"
                         value={editNotes}
                         onChange={(e) => setEditNotes(e.target.value)}
-                        placeholder="Additional terms or details..."
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs"
+                        placeholder="Tambahkan catatan khusus..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1734,29 +1806,18 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
               <span>Download File</span>
             </button>
 
-            {/* Delete Document Button - ONLY admin.master */}
-            <button
-              type="button"
-              onClick={() => {
-                if (!isMasterAdmin) {
-                  alert('Access Denied: Only admin.master (Master Admin) can delete documents.');
-                  return;
-                }
-                if (confirm(`Are you sure you want to permanently remove "${doc.name}" from the repository? This action cannot be undone.`)) {
-                  deleteDocument(doc.projectId, doc.id);
-                  onClose();
-                }
-              }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                isMasterAdmin
-                  ? 'bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 cursor-pointer'
-                  : 'bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed opacity-50'
-              }`}
-              title={isMasterAdmin ? "Delete document from repository (admin.master)" : "Protected: Only admin.master can delete documents"}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Document</span>
-            </button>
+            {/* Delete Document Button - Available for all authorized roles */}
+            {canManageDocuments && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 cursor-pointer shadow-sm"
+                title="Hapus dokumen dari repositori"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Dokumen</span>
+              </button>
+            )}
 
             {/* Close Button */}
             <button
@@ -1768,6 +1829,42 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal Overlay */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-rose-800/80 rounded-2xl p-6 max-w-md w-full shadow-2xl text-left animate-in fade-in zoom-in-95">
+              <div className="w-12 h-12 rounded-xl bg-rose-950 border border-rose-800 flex items-center justify-center text-rose-400 mb-4">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Hapus Dokumen Repositori?</h3>
+              <p className="text-xs text-slate-300 mb-5 leading-relaxed">
+                Apakah Anda yakin ingin menghapus <strong className="text-white">"{doc.name}"</strong>? Dokumen ini akan dihapus secara permanen dari repositori proyek dan seluruh perubahan akan disinkronisasikan secara real-time ke semua role dan Cloud Firestore.
+              </p>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    deleteDocument(doc.projectId, doc.id);
+                    setShowDeleteConfirm(false);
+                    onClose();
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-lg shadow-rose-950 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus Sekarang</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
