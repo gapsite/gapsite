@@ -184,7 +184,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setProjectId(editingTransaction.projectId || '');
       setPaymentMethod(editingTransaction.paymentMethod);
       setReferenceNumber(editingTransaction.referenceNumber || '');
-      setStatus(editingTransaction.status);
+      setStatus(editingTransaction.status === 'HUTANG' ? 'HUTANG' : 'CLEARED');
       setNotes(editingTransaction.notes || '');
       setAttachmentName(editingTransaction.attachmentName || '');
       setAttachmentUrl(editingTransaction.attachmentUrl);
@@ -346,7 +346,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     const finalProjectCode = selectedPrj?.code ? selectedPrj.code : '';
 
     const isDebtIncome = type === 'INCOME' && (status === 'HUTANG' || isFromDebt);
-    const finalStatus: TransactionStatus = isDebtIncome ? 'HUTANG' : status;
+    const finalStatus: TransactionStatus = isDebtIncome ? 'HUTANG' : 'CLEARED';
 
     let registeredLoanId: string | undefined = editingTransaction?.loanId;
 
@@ -563,8 +563,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           </div>
 
-          {/* Category & Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category & Option */}
+          <div className={type === 'INCOME' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'w-full'}>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -573,7 +573,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsCategoryManagerOpen(true)}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
                   title="Kelola Master Kategori Keuangan (Admin.Master Editable)"
                 >
                   <Settings className="w-3 h-3" />
@@ -632,56 +632,33 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Settlement Status <span className="text-rose-500">*</span>
-                </label>
-                {type === 'INCOME' && (
-                  <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                    Sourced from Debt? Pilih "Hutang"
-                  </span>
-                )}
-              </div>
-              <div className="relative">
-                <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <select
-                  value={status}
-                  onChange={(e) => {
-                    const newStatus = e.target.value as TransactionStatus;
-                    setStatus(newStatus);
-                    if (newStatus === 'HUTANG') {
-                      setIsFromDebt(true);
-                    } else if (newStatus !== 'TERHUTANG') {
-                      setIsFromDebt(false);
-                    }
-                  }}
-                  className={`w-full pl-9 pr-3 py-2 text-sm rounded-xl border focus:outline-none focus:ring-2 bg-white ${
-                    status === 'HUTANG'
-                      ? 'border-indigo-400 focus:ring-indigo-500 ring-1 ring-indigo-300 font-semibold text-indigo-900 bg-indigo-50/30'
-                      : 'border-slate-300 focus:ring-emerald-500'
+            {type === 'INCOME' && (
+              <div className="flex flex-col justify-end">
+                <label
+                  htmlFor="isFromDebtCheckbox"
+                  className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                    isFromDebt
+                      ? 'bg-indigo-50/90 border-indigo-300 text-indigo-950 font-medium ring-1 ring-indigo-200'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
                   }`}
                 >
-                  <option value="CLEARED">
-                    {type === 'EXPENSE' ? 'Cleared / Paid (Sudah Lunas)' : 'Cleared / Settled (Lunas / Masuk)'}
-                  </option>
-                  <option value="HUTANG">
-                    {type === 'INCOME'
-                      ? '💳 Hutang (Penerimaan dari Pinjaman / Utang Baru)'
-                      : '📌 Hutang / Pinjaman (Liabilitas Utang)'}
-                  </option>
-                  {type === 'EXPENSE' && (
-                    <option value="TERHUTANG">
-                      Terhutang (Utang Usaha / Belum Dibayar)
-                    </option>
-                  )}
-                  <option value="PENDING">
-                    {type === 'EXPENSE' ? 'Pending Settlement / Diproses' : 'Pending Settlement / Piutang Berjalan'}
-                  </option>
-                  <option value="OVERDUE">Overdue / Outstanding (Jatuh Tempo)</option>
-                </select>
+                  <input
+                    type="checkbox"
+                    id="isFromDebtCheckbox"
+                    checked={isFromDebt}
+                    onChange={(e) => {
+                      setIsFromDebt(e.target.checked);
+                      setStatus(e.target.checked ? 'HUTANG' : 'CLEARED');
+                    }}
+                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold block">Penerimaan dari Pinjaman / Hutang Modal</span>
+                    <span className="text-[11px] text-slate-500 block">Otomatis sinkron ke menu Hutang & Pinjaman Bank</span>
+                  </div>
+                </label>
               </div>
-            </div>
+            )}
           </div>
 
           {/* SOURCED FROM DEBT/LOAN DEDICATED PANEL FOR INCOME */}

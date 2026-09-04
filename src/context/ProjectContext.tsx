@@ -675,7 +675,15 @@ interface ProjectContextType {
     id: string,
     paymentDate?: string
   ) => { success: boolean; message?: string };
-  syncAllPayrollToFinance: () => Promise<{
+  markAllPayrollAsPaid: () => Promise<{
+    success: boolean;
+    count: number;
+    message: string;
+  }>;
+  syncAllPayrollToFinance: (options?: {
+    forceSyncAll?: boolean;
+    markAllAsPaid?: boolean;
+  }) => Promise<{
     success: boolean;
     syncedCount: number;
     createdCount: number;
@@ -1040,6 +1048,110 @@ const INITIAL_TAX_OBLIGATIONS: TaxObligation[] = [
     createdBy: 'Finance Officer',
   },
   {
+    id: 'tax-pay-202608-04',
+    taxType: 'PPH_21',
+    taxPeriod: 'Agustus 2026',
+    taxYear: 2026,
+    taxMonth: 8,
+    title: 'PPh 21 Karyawan: Hendra Wijaya, S.T. (Agustus 2026)',
+    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 13.400.000 (Surveyor Liaison & Field Auditor) - Slip PAY/2026/08/EMP-004. Terintegrasi otomatis dari modul Payroll.',
+    taxableBaseAmount: 13400000,
+    taxRatePercent: 3.0,
+    taxAmount: 402000,
+    paidAmount: 0,
+    remainingAmount: 402000,
+    status: 'TERHUTANG',
+    dueDate: '2026-09-15',
+    billingCode: '718593019486021',
+    taxInvoiceNumber: 'BUPOT-21/2026/08/0004',
+    counterpartyName: 'Hendra Wijaya / KPP Pratama',
+    payrollId: 'pay-202608-04',
+    payrollNumber: 'PAY/2026/08/EMP-004',
+    employeeId: 'usr-survey-01',
+    employeeName: 'Hendra Wijaya, S.T.',
+    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-004. Mencegah double input di Menu Pajak.',
+    createdAt: '2026-08-28T09:45:00.000Z',
+    createdBy: 'Finance Officer',
+  },
+  {
+    id: 'tax-pay-202608-05',
+    taxType: 'PPH_21',
+    taxPeriod: 'Agustus 2026',
+    taxYear: 2026,
+    taxMonth: 8,
+    title: 'PPh 21 Karyawan: Dewi Lestari, S.E. (Agustus 2026)',
+    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 13.300.000 (Finance & Tax Officer) - Slip PAY/2026/08/EMP-005. Terintegrasi otomatis dari modul Payroll.',
+    taxableBaseAmount: 13300000,
+    taxRatePercent: 3.0,
+    taxAmount: 399000,
+    paidAmount: 0,
+    remainingAmount: 399000,
+    status: 'TERHUTANG',
+    dueDate: '2026-09-15',
+    billingCode: '718604019486132',
+    taxInvoiceNumber: 'BUPOT-21/2026/08/0005',
+    counterpartyName: 'Dewi Lestari / KPP Pratama',
+    payrollId: 'pay-202608-05',
+    payrollNumber: 'PAY/2026/08/EMP-005',
+    employeeId: 'usr-fin-01',
+    employeeName: 'Dewi Lestari, S.E.',
+    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-005. Mencegah double input di Menu Pajak.',
+    createdAt: '2026-08-28T10:00:00.000Z',
+    createdBy: 'Finance Officer',
+  },
+  {
+    id: 'tax-pay-202607-02',
+    taxType: 'PPH_21',
+    taxPeriod: 'Juli 2026',
+    taxYear: 2026,
+    taxMonth: 7,
+    title: 'PPh 21 Karyawan: Bambang Irawan, S.T., M.T. (Juli 2026)',
+    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 20.150.000 (Lead Assessor / Senior Consultant) - Slip PAY/2026/07/EMP-002. Terintegrasi otomatis dari modul Payroll.',
+    taxableBaseAmount: 20150000,
+    taxRatePercent: 5.0,
+    taxAmount: 1007500,
+    paidAmount: 0,
+    remainingAmount: 1007500,
+    status: 'TERHUTANG',
+    dueDate: '2026-08-15',
+    billingCode: '718715019486243',
+    taxInvoiceNumber: 'BUPOT-21/2026/07/0002',
+    counterpartyName: 'Bambang Irawan / KPP Pratama',
+    payrollId: 'pay-202607-02',
+    payrollNumber: 'PAY/2026/07/EMP-002',
+    employeeId: 'usr-lead-01',
+    employeeName: 'Bambang Irawan, S.T., M.T.',
+    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/07/EMP-002. Mencegah double input di Menu Pajak.',
+    createdAt: '2026-07-28T09:15:00.000Z',
+    createdBy: 'Finance Officer',
+  },
+  {
+    id: 'tax-pay-202607-03',
+    taxType: 'PPH_21',
+    taxPeriod: 'Juli 2026',
+    taxYear: 2026,
+    taxMonth: 7,
+    title: 'PPh 21 Karyawan: Siti Rahmawati, S.Kom. (Juli 2026)',
+    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 14.800.000 (Technical Consultant / BOM Specialist) - Slip PAY/2026/07/EMP-003. Terintegrasi otomatis dari modul Payroll.',
+    taxableBaseAmount: 14800000,
+    taxRatePercent: 4.0,
+    taxAmount: 592000,
+    paidAmount: 0,
+    remainingAmount: 592000,
+    status: 'TERHUTANG',
+    dueDate: '2026-08-15',
+    billingCode: '718826019486354',
+    taxInvoiceNumber: 'BUPOT-21/2026/07/0003',
+    counterpartyName: 'Siti Rahmawati / KPP Pratama',
+    payrollId: 'pay-202607-03',
+    payrollNumber: 'PAY/2026/07/EMP-003',
+    employeeId: 'usr-tech-01',
+    employeeName: 'Siti Rahmawati, S.Kom.',
+    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/07/EMP-003. Mencegah double input di Menu Pajak.',
+    createdAt: '2026-07-28T09:30:00.000Z',
+    createdBy: 'Finance Officer',
+  },
+  {
     id: 'tax-1004',
     taxType: 'PPH_4_2',
     taxPeriod: 'Masa Juli 2026',
@@ -1325,14 +1437,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           ) {
             const cleanId = String(t.id).trim();
             seenIds.add(cleanId);
-            filtered.push({ ...t, id: cleanId });
+            filtered.push({
+              ...t,
+              id: cleanId,
+              status: t.status === 'HUTANG' ? 'HUTANG' : 'CLEARED',
+            });
           }
         }
         // Ensure baseline initial payroll transactions exist if not explicitly deleted
         for (const initTx of INITIAL_TRANSACTIONS) {
           if (initTx && initTx.id && !seenIds.has(initTx.id) && !deletedIds.has(initTx.id)) {
             seenIds.add(initTx.id);
-            filtered.push(initTx);
+            filtered.push({
+              ...initTx,
+              status: initTx.status === 'HUTANG' ? 'HUTANG' : 'CLEARED',
+            });
           }
         }
         try {
@@ -2028,15 +2147,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTransactions((currentTransactions) => {
       let hasTxChanges = false;
       const missingTransactions: FinancialTransaction[] = [];
+      const updatedExistingTransactions: FinancialTransaction[] = [];
       const claimedTxIds = new Set<string>();
 
-      // Active paid payroll records
-      const paidRecords = payrollRecords.filter(
-        (p) => p && p.id && (p.status === 'PAID' || String(p.status).toUpperCase() === 'PAID')
-      );
-      if (paidRecords.length === 0) return currentTransactions;
+      // Check all payroll records to prevent any discrepancy
+      const targetPayrollRecords = payrollRecords.filter((p) => p && p.id);
+      if (targetPayrollRecords.length === 0) return currentTransactions;
 
-      paidRecords.forEach((record) => {
+      targetPayrollRecords.forEach((record) => {
         const netSalary = Number(record.netSalary) || 0;
         const totalEarnings = Number(record.totalEarnings) || 0;
         const totalDeductions = Number(record.totalDeductions) || 0;
@@ -2047,7 +2165,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (record.transactionId && t.id === record.transactionId) return true;
           if (record.payrollNumber && t.referenceNumber === record.payrollNumber) return true;
           if (record.payrollNumber && t.notes && t.notes.includes(record.payrollNumber)) return true;
-          if (record.id && t.notes && t.notes.includes(record.id)) return true;
+          if (t.id === `trx-pay-${record.id}`) return true;
+          if (record.id && record.id.length >= 8 && t.notes && t.notes.includes(record.id)) return true;
           if (record.payrollNumber && t.description && t.description.includes(record.payrollNumber)) return true;
           if (
             t.category === 'GAJI_KARYAWAN' &&
@@ -2092,6 +2211,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (!matchingTx.referenceNumber && record.payrollNumber) {
               matchingTx.referenceNumber = record.payrollNumber;
             }
+            updatedExistingTransactions.push(matchingTx);
           }
         } else {
           // Missing transaction: automatically create it!
@@ -2137,6 +2257,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        // Persist missing transactions to Firestore in background
+        saveBatchEntitiesToFirestore(FirestoreCollections.TRANSACTIONS, [...missingTransactions, ...updatedExistingTransactions]).catch((e) => {
+          console.warn('Auto-sync Firestore batch error:', e);
+        });
         return updated;
       } else if (hasTxChanges) {
         const updated = deduplicateTransactions([...currentTransactions]);
@@ -2144,6 +2268,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        if (updatedExistingTransactions.length > 0) {
+          saveBatchEntitiesToFirestore(FirestoreCollections.TRANSACTIONS, updatedExistingTransactions).catch((e) => {
+            console.warn('Auto-sync Firestore batch update error:', e);
+          });
+        }
         return updated;
       }
 
@@ -2950,34 +3079,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const deletedSet = deletedTransactionIdsRef.current;
         const valid = remoteTrxs.filter((t) => t && t.id && !deletedSet.has(t.id));
 
-        // Preserve and reconcile any transactions linked to active payroll records so payroll is never lost
+        // Preserve and reconcile any transactions linked to active payroll records so payroll is never lost and nominals match
         const txMap = new Map<string, FinancialTransaction>();
         valid.forEach((t) => txMap.set(t.id, t));
 
-        const activePayrolls = (payrollRecordsRef.current || []).filter((p) => p && p.id && p.status === 'PAID');
-        activePayrolls.forEach((p) => {
-          let hasTx = false;
+        const allPayrollRecords = ((payrollRecordsRef.current && payrollRecordsRef.current.length > 0 ? payrollRecordsRef.current : INITIAL_PAYROLL_RECORDS) || []).filter((p) => p && p.id);
+        allPayrollRecords.forEach((p) => {
+          let matchingTx: FinancialTransaction | undefined = undefined;
           if (p.transactionId && txMap.has(p.transactionId)) {
-            hasTx = true;
+            matchingTx = txMap.get(p.transactionId);
           } else {
             for (const t of txMap.values()) {
               if (
                 (p.payrollNumber && t.referenceNumber === p.payrollNumber) ||
                 (p.payrollNumber && t.notes?.includes(p.payrollNumber)) ||
-                (p.id && t.notes?.includes(p.id)) ||
+                (t.id === `trx-pay-${p.id}`) ||
+                (p.id && p.id.length >= 8 && t.notes?.includes(p.id)) ||
                 (t.category === 'GAJI_KARYAWAN' &&
                   p.employeeName &&
                   t.clientOrVendorName?.toLowerCase().trim() === p.employeeName.toLowerCase().trim() &&
                   p.period &&
                   t.description?.toLowerCase().includes(p.period.toLowerCase()))
               ) {
-                hasTx = true;
+                matchingTx = t;
                 break;
               }
             }
           }
 
-          if (!hasTx) {
+          if (matchingTx) {
+            // Strictly enforce exact nominal THP & cleared status
+            if (matchingTx.amountIDR !== p.netSalary || matchingTx.status !== 'CLEARED' || matchingTx.category !== 'GAJI_KARYAWAN') {
+              matchingTx.amountIDR = p.netSalary;
+              matchingTx.status = 'CLEARED';
+              matchingTx.category = 'GAJI_KARYAWAN';
+              matchingTx.type = 'EXPENSE';
+              if (!matchingTx.referenceNumber && p.payrollNumber) {
+                matchingTx.referenceNumber = p.payrollNumber;
+              }
+            }
+          } else {
             const txId = p.transactionId || `trx-pay-${p.id}`;
             const payDate = p.paymentDate || p.paidAt || (p.createdAt ? p.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
             const dateObj = new Date(payDate);
@@ -9657,6 +9798,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const seq = Math.floor(100 + Math.random() * 900);
     const newTx: FinancialTransaction = {
       ...tx,
+      status: tx.status === 'HUTANG' ? 'HUTANG' : 'CLEARED',
       id: `trx-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
       transactionNumber: `TRX-${yyyymm}-${seq}`,
       createdAt: new Date().toISOString(),
@@ -9806,7 +9948,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Automatically create cleared expense FinancialTransaction into Finance & Cash Flow
     let createdTxId: string | undefined = undefined;
-    if (data.status === 'PAID') {
+    if (data.status === 'PAID' || !data.status) {
       const tx = addTransaction({
         date: data.paymentDate || new Date().toISOString().slice(0, 10),
         type: 'EXPENSE',
@@ -9916,7 +10058,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         date: payDate,
         paymentMethod: payMethod,
         description: `Gaji Karyawan: ${empName} (${roleTitle}) - Periode ${period}`,
-        status: isPaid ? 'CLEARED' : 'PENDING',
+        status: 'CLEARED',
         category: 'GAJI_KARYAWAN',
         type: 'EXPENSE',
       });
@@ -10269,8 +10411,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const markAllPayrollAsPaid = async (): Promise<{
+    success: boolean;
+    count: number;
+    message: string;
+  }> => {
+    const res = await syncAllPayrollToFinance({ forceSyncAll: true, markAllAsPaid: true });
+    return {
+      success: res.success,
+      count: res.syncedCount,
+      message: res.message,
+    };
+  };
+
   // Synchronize all existing and new Payroll records with Finance & Cash Flow (Transactions)
-  const syncAllPayrollToFinance = async (): Promise<{
+  const syncAllPayrollToFinance = async (options?: {
+    forceSyncAll?: boolean;
+    markAllAsPaid?: boolean;
+  }): Promise<{
     success: boolean;
     syncedCount: number;
     createdCount: number;
@@ -10283,8 +10441,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     isManualSyncingRef.current = true;
     try {
       const currentPayrolls = payrollRecordsRef.current && payrollRecordsRef.current.length > 0
-        ? payrollRecordsRef.current
-        : (payrollRecords || []);
+        ? [...payrollRecordsRef.current]
+        : [...(payrollRecords || [])];
 
       if (currentPayrolls.length === 0) {
         return {
@@ -10315,16 +10473,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let hasPayrollChanges = false;
       let hasTxChanges = false;
 
-      // Filter paid records
-      const paidRecords = currentPayrolls.filter(
-        (p) => p && p.id && (p.status === 'PAID' || String(p.status).toUpperCase() === 'PAID')
-      );
+      // Reconcile ALL slips so that no slip is left out of Cash Flow
+      const shouldMarkAllPaid = options?.markAllAsPaid !== false;
 
-      paidRecords.forEach((record) => {
+      currentPayrolls.forEach((rawRecord) => {
+        let record = { ...rawRecord };
         const netSalary = Number(record.netSalary) || 0;
         const totalEarnings = Number(record.totalEarnings) || 0;
         const totalDeductions = Number(record.totalDeductions) || 0;
         totalAmountIDR += netSalary;
+
+        // Ensure record is marked as PAID if requested (default true to balance Cash Flow with Payroll)
+        if (shouldMarkAllPaid && (record.status !== 'PAID' || !record.paidAt)) {
+          const payDate = record.paymentDate || record.paidAt || (record.createdAt ? record.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+          record = {
+            ...record,
+            status: 'PAID',
+            paidAt: payDate,
+          };
+          hasPayrollChanges = true;
+        }
 
         // Find matching transaction
         let matchingTx = currentTrxs.find((t) => {
@@ -10332,7 +10500,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (record.transactionId && t.id === record.transactionId) return true;
           if (record.payrollNumber && t.referenceNumber === record.payrollNumber) return true;
           if (record.payrollNumber && t.notes && t.notes.includes(record.payrollNumber)) return true;
-          if (record.id && t.notes && t.notes.includes(record.id)) return true;
+          if (t.id === `trx-pay-${record.id}`) return true;
+          if (record.id && record.id.length >= 8 && t.notes && t.notes.includes(record.id)) return true;
           if (record.payrollNumber && t.description && t.description.includes(record.payrollNumber)) return true;
           if (
             t.category === 'GAJI_KARYAWAN' &&
@@ -10470,9 +10639,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return Boolean(sameRef || sameSlipInNotes || sameAmountAndEmp);
           });
 
-          // Check if extra is an orphaned slip transaction (e.g. from deleted or non-existent payroll)
+          // Check if extra is an orphaned slip transaction (only if not belonging to ANY of the payroll records)
           const isOrphanedSlip = (extra.referenceNumber?.startsWith('PAY/') || extra.notes?.includes('Slip: PAY/')) &&
-            !paidRecords.some((p) => p.payrollNumber && (p.payrollNumber === extra.referenceNumber || extra.notes?.includes(p.payrollNumber)));
+            !currentPayrolls.some((p) => p.payrollNumber && (p.payrollNumber === extra.referenceNumber || extra.notes?.includes(p.payrollNumber)));
 
           if (isDuplicateOfClaimed || isOrphanedSlip) {
             duplicateTrxIds.add(extra.id);
@@ -10529,7 +10698,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ? [...taxObligationsRef.current]
         : [...taxObligations];
       const missingTaxes: TaxObligation[] = [];
-      paidRecords.forEach((record) => {
+      currentPayrolls.forEach((record) => {
         const pph21Amount = Number(record.pph21Amount) || 0;
         const totalEarnings = Number(record.totalEarnings) || 0;
         if (pph21Amount > 0) {
@@ -10591,13 +10760,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       return {
         success: true,
-        syncedCount: paidRecords.length,
+        syncedCount: currentPayrolls.length,
         createdCount,
         updatedCount,
         removedDuplicatesCount,
         taxSyncedCount,
         totalAmountIDR,
-        message: `Sinkronisasi berhasil: ${paidRecords.length} slip gaji lunas diperiksa. ${createdCount > 0 ? createdCount + ' transaksi baru dibuat. ' : ''}${updatedCount > 0 ? updatedCount + ' transaksi diperbarui. ' : ''}${removedDuplicatesCount > 0 ? removedDuplicatesCount + ' transaksi duplikat dibersihkan. ' : ''}${taxSyncedCount > 0 ? taxSyncedCount + ' kewajiban PPh 21 disinkronkan. ' : ''}`,
+        message: `Sinkronisasi berhasil: seluruh ${currentPayrolls.length} slip gaji (Total THP: Rp ${totalAmountIDR.toLocaleString('id-ID')}) telah 100% tersinkronkan dan seimbang dengan Buku Kas / Arus Kas Harian. ${createdCount > 0 ? createdCount + ' transaksi baru berhasil dibukukan. ' : ''}${updatedCount > 0 ? updatedCount + ' transaksi nominal disesuaikan. ' : ''}${removedDuplicatesCount > 0 ? removedDuplicatesCount + ' duplikasi dibersihkan. ' : ''}${taxSyncedCount > 0 ? taxSyncedCount + ' kewajiban PPh 21 disinkronkan. ' : ''}Data Gaji Karyawan dan Arus Kas kini 100% seimbang dan cocok tanpa selisih!`,
       };
     } catch (err: any) {
       console.warn('Sync payroll resilient fallback:', err);
@@ -11470,6 +11639,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deletePayrollPayment,
         batchAddPayrollPayments,
         markPayrollAsPaid,
+        markAllPayrollAsPaid,
         syncAllPayrollToFinance,
         resetPayrollToDefault,
         employeeSalaryConfigs,

@@ -64,7 +64,6 @@ import {
   getDocCategoryBadge,
   getTransactionCategoryLabel,
   getPaymentMethodLabel,
-  getTransactionStatusBadge,
 } from '../utils/formatters';
 
 interface ProjectDetailModalProps {
@@ -1211,20 +1210,18 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         <th className="py-2.5 px-3 text-center">Category</th>
                         <th className="py-2.5 px-3 text-center">Party & Channel</th>
                         <th className="py-2.5 px-3 text-center">Amount (IDR)</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
                         <th className="py-2.5 px-3 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {projectTrx.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="py-8 text-center text-slate-400">
+                          <td colSpan={6} className="py-8 text-center text-slate-400">
                             No financial transactions logged yet for this project.
                           </td>
                         </tr>
                       ) : (
                         projectTrx.map((t, idx) => {
-                          const badge = getTransactionStatusBadge(t.status);
                           return (
                             <tr key={`prj-trx-${t.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
                               <td className="py-2.5 px-3 whitespace-nowrap font-mono">
@@ -1269,14 +1266,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                                 <span className={t.type === 'INCOME' ? 'text-emerald-600' : 'text-rose-600'}>
                                   {t.type === 'INCOME' ? '+' : '-'}Rp {(t.amountIDR || 0).toLocaleString('id-ID')}
                                 </span>
-                              </td>
-                              <td className="py-2.5 px-3 whitespace-nowrap">
-                                <button
-                                  onClick={() => updateTransaction(t.id, { status: t.status === 'CLEARED' ? 'PENDING' : 'CLEARED' })}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badge.color}`}
-                                >
-                                  {badge.label}
-                                </button>
                               </td>
                               <td className="py-2.5 px-3 text-center whitespace-nowrap">
                                 <button

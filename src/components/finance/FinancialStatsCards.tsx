@@ -25,32 +25,13 @@ export const FinancialStatsCards: React.FC<FinancialStatsCardsProps> = ({
   selectedDateRangeLabel = 'All Time',
 }) => {
   // All transactions tally
-  const totalIncome = transactions
-    .filter((t) => t.type === 'INCOME')
-    .reduce((acc, t) => acc + t.amountIDR, 0);
+  const incomeTransactions = transactions.filter((t) => t.type === 'INCOME');
+  const expenseTransactions = transactions.filter((t) => t.type === 'EXPENSE');
 
-  const clearedIncome = transactions
-    .filter((t) => t.type === 'INCOME' && t.status === 'CLEARED')
-    .reduce((acc, t) => acc + t.amountIDR, 0);
-
-  const pendingIncome = transactions
-    .filter((t) => t.type === 'INCOME' && t.status !== 'CLEARED')
-    .reduce((acc, t) => acc + t.amountIDR, 0);
-
-  const totalExpense = transactions
-    .filter((t) => t.type === 'EXPENSE')
-    .reduce((acc, t) => acc + t.amountIDR, 0);
-
-  const clearedExpense = transactions
-    .filter((t) => t.type === 'EXPENSE' && t.status === 'CLEARED')
-    .reduce((acc, t) => acc + t.amountIDR, 0);
-
-  const pendingExpense = transactions
-    .filter((t) => t.type === 'EXPENSE' && t.status !== 'CLEARED')
-    .reduce((acc, t) => acc + t.amountIDR, 0);
+  const totalIncome = incomeTransactions.reduce((acc, t) => acc + t.amountIDR, 0);
+  const totalExpense = expenseTransactions.reduce((acc, t) => acc + t.amountIDR, 0);
 
   const netCashFlow = totalIncome - totalExpense;
-  const realizedNet = clearedIncome - clearedExpense;
   const profitMargin = totalIncome > 0 ? ((netCashFlow / totalIncome) * 100).toFixed(1) : '0';
 
   // Today's daily statistics
@@ -90,14 +71,9 @@ export const FinancialStatsCards: React.FC<FinancialStatsCardsProps> = ({
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
             <span className="flex items-center gap-1 text-emerald-700 font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Cleared: {formatIDRShort(clearedIncome)}
+              {incomeTransactions.length} Transaksi Masuk
             </span>
-            {pendingIncome > 0 && (
-              <span className="flex items-center gap-1 text-amber-700 font-medium">
-                <Clock className="w-3.5 h-3.5" />
-                Unpaid: {formatIDRShort(pendingIncome)}
-              </span>
-            )}
+            <span className="text-[11px] text-slate-400 font-medium">Tercatat Langsung</span>
           </div>
         </div>
 
@@ -123,14 +99,9 @@ export const FinancialStatsCards: React.FC<FinancialStatsCardsProps> = ({
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
             <span className="flex items-center gap-1 text-rose-700 font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Paid: {formatIDRShort(clearedExpense)}
+              {expenseTransactions.length} Transaksi Keluar
             </span>
-            {pendingExpense > 0 && (
-              <span className="flex items-center gap-1 text-amber-700 font-medium">
-                <Clock className="w-3.5 h-3.5" />
-                Due: {formatIDRShort(pendingExpense)}
-              </span>
-            )}
+            <span className="text-[11px] text-slate-400 font-medium">Tercatat Langsung</span>
           </div>
         </div>
 
@@ -164,48 +135,48 @@ export const FinancialStatsCards: React.FC<FinancialStatsCardsProps> = ({
             </p>
           </div>
           <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-300">
-            <span>Realized (Cleared):</span>
+            <span>Saldo Kas Bersih:</span>
             <span className="font-mono font-bold text-emerald-300">
-              {realizedNet >= 0 ? '+' : '-'}{formatIDRShort(Math.abs(realizedNet))}
+              {netCashFlow >= 0 ? '+' : '-'}{formatIDRShort(Math.abs(netCashFlow))}
             </span>
           </div>
         </div>
 
-        {/* 4. Receivables & Payables Balance */}
+        {/* 4. Rekap Transaksi Arus Kas */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Scale className="w-4 h-4 text-indigo-600" />
-              Pending Settlement
+              Aktivitas Buku Kas
             </span>
-            <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">
-              Unsettled
+            <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
+              Realtime
             </span>
           </div>
           <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                Receivable (Piutang):
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Total Entri Transaksi:
               </span>
-              <span className="font-mono font-bold text-amber-700">
-                {formatIDRShort(pendingIncome)}
+              <span className="font-mono font-bold text-slate-800">
+                {transactions.length} Entri
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500" />
-                Payable (Hutang Biaya):
+                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                Aktivitas Hari Ini:
               </span>
-              <span className="font-mono font-bold text-rose-700">
-                {formatIDRShort(pendingExpense)}
+              <span className="font-mono font-bold text-indigo-700">
+                {todayTransactions.length} Transaksi
               </span>
             </div>
           </div>
           <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Expected Net Inflow:</span>
-            <span className="font-mono font-bold text-slate-800">
-              {formatIDRShort(pendingIncome - pendingExpense)}
+            <span>Arus Kas Hari Ini:</span>
+            <span className={`font-mono font-bold ${todayNet >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+              {todayNet >= 0 ? '+' : '-'}{formatIDRShort(Math.abs(todayNet))}
             </span>
           </div>
         </div>

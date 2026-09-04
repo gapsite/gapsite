@@ -33,7 +33,6 @@ import {
 import {
   getTransactionCategoryLabel,
   getPaymentMethodLabel,
-  getTransactionStatusBadge,
   formatIDRShort,
 } from '../../utils/formatters';
 import { TransactionCategoryManagerModal } from './TransactionCategoryManagerModal';
@@ -46,7 +45,7 @@ interface FinancialLedgerTableProps {
   onOpenNewTransaction: (type: TransactionType) => void;
   onEditTransaction: (transaction: FinancialTransaction) => void;
   onDeleteTransaction: (id: string) => void;
-  onUpdateTransactionStatus: (id: string, newStatus: TransactionStatus) => void;
+  onUpdateTransactionStatus?: (id: string, newStatus: TransactionStatus) => void;
   onSelectProject?: (projectId: string) => void;
 }
 
@@ -63,7 +62,6 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | TransactionStatus>('ALL');
   const [projectFilter, setProjectFilter] = useState<string>('ALL');
   const [dateRangeFilter, setDateRangeFilter] = useState<'ALL' | 'TODAY' | '7DAYS' | 'THIS_MONTH' | 'LAST_MONTH'>('ALL');
   const [selectedReceipt, setSelectedReceipt] = useState<FinancialTransaction | null>(null);
@@ -91,9 +89,6 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
 
       // Category Filter
       if (categoryFilter !== 'ALL' && t.category !== categoryFilter) return false;
-
-      // Status Filter
-      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
 
       // Project Filter
       if (projectFilter !== 'ALL') {
@@ -137,7 +132,7 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
       seenIds.add(normalizedId);
       return true;
     });
-  }, [transactions, typeFilter, categoryFilter, statusFilter, projectFilter, dateRangeFilter, searchQuery]);
+  }, [transactions, typeFilter, categoryFilter, projectFilter, dateRangeFilter, searchQuery]);
 
   // Export to CSV function
   const handleExportCSV = () => {
@@ -152,7 +147,6 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
       'Amount (IDR)',
       'Payment Method',
       'Reference No',
-      'Status',
       'Recorded By',
     ];
 
@@ -167,7 +161,6 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
       t.amountIDR,
       getPaymentMethodLabel(t.paymentMethod, paymentChannels),
       t.referenceNumber || '',
-      t.status,
       t.recordedBy,
     ]);
 
@@ -312,20 +305,6 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
             <option value="LAST_MONTH">⏮️ Last Month</option>
           </select>
 
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="px-2.5 py-1.5 text-xs bg-white rounded-lg border border-slate-300 font-medium text-slate-700 focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-          >
-            <option value="ALL">All Settlement Status</option>
-            <option value="CLEARED">✅ Cleared / Settled (Lunas)</option>
-            <option value="HUTANG">💳 Hutang / Pinjaman</option>
-            <option value="TERHUTANG">📌 Terhutang (Utang Usaha)</option>
-            <option value="PENDING">⏳ Pending Settlement</option>
-            <option value="OVERDUE">⚠️ Overdue</option>
-          </select>
-
           {/* Project Filter */}
           <select
             value={projectFilter}
@@ -386,12 +365,11 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
           </select>
 
           {/* Reset Filters button if any are non-default */}
-          {(typeFilter !== 'ALL' || categoryFilter !== 'ALL' || statusFilter !== 'ALL' || projectFilter !== 'ALL' || dateRangeFilter !== 'ALL' || searchQuery) && (
+          {(typeFilter !== 'ALL' || categoryFilter !== 'ALL' || projectFilter !== 'ALL' || dateRangeFilter !== 'ALL' || searchQuery) && (
             <button
               onClick={() => {
                 setTypeFilter('ALL');
                 setCategoryFilter('ALL');
-                setStatusFilter('ALL');
                 setProjectFilter('ALL');
                 setDateRangeFilter('ALL');
                 setSearchQuery('');
@@ -428,14 +406,13 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
               <th className="py-3 px-2.5 text-left w-[130px]">Party & Channel</th>
               <th className="py-3 px-2.5 text-center w-[120px]">Category</th>
               <th className="py-3 px-2.5 text-right w-[125px]">Amount (IDR)</th>
-              <th className="py-3 px-2.5 text-center w-[110px]">Status</th>
               <th className="py-3 px-3 text-center w-[85px]">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-xs">
             {filteredTransactions.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-400">
+                <td colSpan={6} className="py-12 text-center text-slate-400">
                   <FileSpreadsheet className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                   <p className="font-semibold text-slate-600">No transactions match your current filters</p>
                   <p className="text-xs text-slate-400 mt-0.5">Try resetting search filters or record a new daily transaction</p>
@@ -443,7 +420,6 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
               </tr>
             ) : (
               filteredTransactions.map((t, idx) => {
-                const statusBadge = getTransactionStatusBadge(t.status);
                 const categoryLabel = getTransactionCategoryLabel(t.category, transactionCategories);
                 const paymentLabel = getPaymentMethodLabel(t.paymentMethod, paymentChannels);
 
@@ -529,30 +505,6 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
                       <span className="text-[10px] text-slate-400 block mt-0.5">
                         {formatIDRShort(t.amountIDR)}
                       </span>
-                    </td>
-
-                    {/* Status with 1-click toggle */}
-                    <td className="py-2.5 px-2.5 whitespace-nowrap text-center">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onUpdateTransactionStatus(
-                            t.id,
-                            t.status === 'CLEARED' ? 'PENDING' : 'CLEARED'
-                          )
-                        }
-                        className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all hover:scale-105 cursor-pointer whitespace-nowrap shadow-2xs ${statusBadge.color}`}
-                        title="Klik untuk mengubah status Cleared / Pending"
-                      >
-                        {t.status === 'CLEARED' ? (
-                          <CheckCircle2 className="w-3 h-3 shrink-0" />
-                        ) : t.status === 'HUTANG' ? (
-                          <Landmark className="w-3 h-3 shrink-0" />
-                        ) : (
-                          <Clock className="w-3 h-3 shrink-0" />
-                        )}
-                        <span className="whitespace-nowrap">{statusBadge.label}</span>
-                      </button>
                     </td>
 
                     {/* Actions */}

@@ -4927,7 +4927,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                   </tr>
                   {(() => {
                     const payrollCleared = filteredTransactions
-                      .filter((t) => t.type === 'EXPENSE' && t.category === 'GAJI_KARYAWAN' && t.status === 'CLEARED')
+                      .filter((t) => t.type === 'EXPENSE' && t.category === 'GAJI_KARYAWAN' && (t.status === 'CLEARED' || !t.status))
                       .reduce((sum, t) => sum + (t.amountIDR || 0), 0);
                     const otherCleared = metrics.clearedExpense - payrollCleared;
 

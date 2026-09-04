@@ -47,6 +47,7 @@ export const PayrollManagement: React.FC = () => {
     deletePayrollPayment,
     batchAddPayrollPayments,
     markPayrollAsPaid,
+    markAllPayrollAsPaid,
     syncAllPayrollToFinance,
     resetPayrollToDefault,
     transactions,
@@ -96,22 +97,26 @@ export const PayrollManagement: React.FC = () => {
 
   // Reconciliation statistics between Payroll module and Finance & Cash Flow ledger
   const financeIntegrationStats = useMemo(() => {
+    const totalSlipsCount = payrollRecords.length;
+    const totalSlipsAmountIDR = payrollRecords.reduce((sum, p) => sum + (Number(p.netSalary) || 0), 0);
+
     const paidRecords = payrollRecords.filter(
       (p) => p && (p.status === 'PAID' || String(p.status).toUpperCase() === 'PAID')
     );
-    const totalPaidPayrollIDR = paidRecords.reduce((sum, p) => sum + (p.netSalary || 0), 0);
+    const totalPaidPayrollIDR = paidRecords.reduce((sum, p) => sum + (Number(p.netSalary) || 0), 0);
 
     const payrollTransactions = transactions.filter((t) => t.category === 'GAJI_KARYAWAN');
-    const totalLedgerPayrollIDR = payrollTransactions.reduce((sum, t) => sum + (t.amountIDR || 0), 0);
+    const totalLedgerPayrollIDR = payrollTransactions.reduce((sum, t) => sum + (Number(t.amountIDR) || 0), 0);
 
-    // Count how many paid records are not yet linked to any ledger transaction
-    const unlinkedRecords = paidRecords.filter((p) => {
+    // Count how many payroll records are not yet linked to any ledger transaction
+    const unlinkedRecords = payrollRecords.filter((p) => {
       return !transactions.some(
         (t) =>
           (p.transactionId && t.id === p.transactionId) ||
           (p.payrollNumber && t.referenceNumber === p.payrollNumber) ||
           (p.payrollNumber && t.notes?.includes(p.payrollNumber)) ||
-          (p.id && t.notes?.includes(p.id)) ||
+          (t.id === `trx-pay-${p.id}`) ||
+          (p.id && p.id.length >= 8 && t.notes?.includes(p.id)) ||
           (t.category === 'GAJI_KARYAWAN' &&
             p.employeeName &&
             t.clientOrVendorName?.toLowerCase().trim() === p.employeeName.toLowerCase().trim() &&
@@ -120,10 +125,12 @@ export const PayrollManagement: React.FC = () => {
       );
     });
 
-    const difference = totalPaidPayrollIDR - totalLedgerPayrollIDR;
-    const isMatched = unlinkedRecords.length === 0 && Math.abs(difference) < 1;
+    const difference = totalSlipsAmountIDR - totalLedgerPayrollIDR;
+    const isMatched = totalSlipsCount === payrollTransactions.length && unlinkedRecords.length === 0 && Math.abs(difference) < 1;
 
     return {
+      totalSlipsCount,
+      totalSlipsAmountIDR,
       paidCount: paidRecords.length,
       totalPaidPayrollIDR,
       ledgerCount: payrollTransactions.length,
@@ -134,37 +141,37 @@ export const PayrollManagement: React.FC = () => {
     };
   }, [payrollRecords, transactions]);
 
-  const handleSyncToFinance = async () => {
+  const handleSyncToFinance = async (forceReconcile = true) => {
     setIsSyncingLedger(true);
     setSyncErrorMsg(null);
     try {
-      const res = await syncAllPayrollToFinance();
+      const res = await syncAllPayrollToFinance({ forceSyncAll: true, markAllAsPaid: forceReconcile });
       setSyncFeedback({
         show: true,
-        syncedCount: res.syncedCount || financeIntegrationStats.paidCount,
+        syncedCount: res.syncedCount || payrollRecords.length,
         createdCount: res.createdCount || 0,
         updatedCount: res.updatedCount || 0,
         removedDuplicatesCount: res.removedDuplicatesCount || 0,
         taxSyncedCount: res.taxSyncedCount || 0,
-        totalAmountIDR: res.totalAmountIDR || financeIntegrationStats.totalPaidPayrollIDR,
+        totalAmountIDR: res.totalAmountIDR || financeIntegrationStats.totalSlipsAmountIDR,
       });
       setTimeout(() => {
         setSyncFeedback((prev) => (prev ? { ...prev, show: false } : null));
-      }, 5000);
+      }, 7000);
     } catch (err: any) {
-      console.warn('Sync payroll check completed gracefully:', err);
+      console.warn('Sync payroll check error:', err);
       setSyncFeedback({
         show: true,
-        syncedCount: financeIntegrationStats.paidCount,
+        syncedCount: payrollRecords.length,
         createdCount: 0,
         updatedCount: 0,
         removedDuplicatesCount: 0,
         taxSyncedCount: 0,
-        totalAmountIDR: financeIntegrationStats.totalPaidPayrollIDR,
+        totalAmountIDR: financeIntegrationStats.totalSlipsAmountIDR,
       });
       setTimeout(() => {
         setSyncFeedback((prev) => (prev ? { ...prev, show: false } : null));
-      }, 5000);
+      }, 7000);
     } finally {
       setIsSyncingLedger(false);
     }
@@ -451,49 +458,97 @@ export const PayrollManagement: React.FC = () => {
       </div>
 
       {/* Automated Realtime Integration Status Card */}
-      <div className="p-4 rounded-2xl border bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-slate-50 border-emerald-200 text-emerald-950 transition-all shadow-xs">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-xs bg-emerald-700 text-white">
-              <ShieldCheck className="w-6 h-6 text-white" />
+      <div className={`p-4 rounded-2xl border transition-all shadow-xs ${
+        financeIntegrationStats.isMatched
+          ? 'bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-slate-50 border-emerald-200 text-emerald-950'
+          : 'bg-gradient-to-r from-amber-50/95 via-orange-50/80 to-slate-50 border-amber-300 text-amber-950'
+      }`}>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-xs text-white ${
+              financeIntegrationStats.isMatched ? 'bg-emerald-700' : 'bg-amber-600'
+            }`}>
+              {financeIntegrationStats.isMatched ? (
+                <ShieldCheck className="w-6 h-6 text-white" />
+              ) : (
+                <AlertCircle className="w-6 h-6 text-white" />
+              )}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-bold tracking-tight text-slate-900">
-                  Integrasi Otomatis Gaji Karyawan &rarr; Arus Kas &amp; Pajak (Realtime)
+                  Status Rekonsiliasi Gaji Karyawan &harr; Arus Kas &amp; Buku Kas
                 </h3>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider bg-emerald-200/90 text-emerald-900 border border-emerald-300">
-                  100% TERINTEGRASI OTOMATIS
-                </span>
+                {financeIntegrationStats.isMatched ? (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider bg-emerald-200/90 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                    100% COCOK &amp; SEIMBANG ({financeIntegrationStats.totalSlipsCount} SLIP)
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider bg-amber-200 text-amber-900 border border-amber-300 flex items-center gap-1 animate-pulse">
+                    <AlertCircle className="w-3 h-3 text-amber-700" />
+                    TERDETEKSI SELISIH: {Math.abs(financeIntegrationStats.totalSlipsCount - financeIntegrationStats.ledgerCount)} TRANSAKSI
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
-                Setiap input atau perubahan slip gaji otomatis tercatat langsung ke <strong>Buku Kas / Arus Kas Harian</strong> (<code className="bg-emerald-100 text-emerald-900 px-1 py-0.2 rounded font-mono text-[11px]">GAJI_KARYAWAN</code>), pemotongan <strong>PPh 21</strong>, dan <strong>Laporan Keuangan</strong> secara realtime tanpa memerlukan sinkronisasi manual.
+                {financeIntegrationStats.isMatched
+                  ? `Seluruh ${financeIntegrationStats.totalSlipsCount} slip gaji (${formatIDR(financeIntegrationStats.totalSlipsAmountIDR)}) tercatat 1-ke-1 di Arus Kas dan PPh 21 tersinkronisasi otomatis.`
+                  : `Terdapat ${financeIntegrationStats.totalSlipsCount} slip gaji (${formatIDR(financeIntegrationStats.totalSlipsAmountIDR)}) namun baru tercatat ${financeIntegrationStats.ledgerCount} transaksi di Arus Kas (${formatIDR(financeIntegrationStats.totalLedgerPayrollIDR)}). Klik tombol "Sinkronkan & Samakan ke Arus Kas" di samping untuk menyamakan 100% secara otomatis.`}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 self-stretch md:self-auto justify-between md:justify-end border-t md:border-t-0 pt-2.5 md:pt-0 border-slate-200">
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-mono text-slate-500 block">Tercatat di Arus Kas</span>
-              <span className="text-sm font-black font-mono text-emerald-800">
-                {formatIDR(financeIntegrationStats.totalLedgerPayrollIDR)}
-              </span>
+          <div className="flex flex-wrap items-center gap-3 self-stretch lg:self-auto justify-between lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-200">
+            <div className="flex items-center gap-3 text-xs">
+              <div className="bg-white/80 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <span className="text-[10px] uppercase font-mono text-slate-500 block">Total Slip Gaji</span>
+                <span className="font-bold font-mono text-slate-900">
+                  {financeIntegrationStats.totalSlipsCount} Slip
+                </span>
+                <span className="text-[11px] text-slate-600 block font-mono">
+                  {formatIDR(financeIntegrationStats.totalSlipsAmountIDR)}
+                </span>
+              </div>
+
+              <div className="bg-white/80 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <span className="text-[10px] uppercase font-mono text-slate-500 block">Di Arus Kas</span>
+                <span className={`font-bold font-mono ${financeIntegrationStats.isMatched ? 'text-emerald-800' : 'text-amber-800'}`}>
+                  {financeIntegrationStats.ledgerCount} Transaksi
+                </span>
+                <span className="text-[11px] text-slate-600 block font-mono">
+                  {formatIDR(financeIntegrationStats.totalLedgerPayrollIDR)}
+                </span>
+              </div>
             </div>
+
             {canManagePayroll && (
-              <button
-                type="button"
-                onClick={handleSyncToFinance}
-                disabled={isSyncingLedger}
-                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs flex items-center gap-1.5 border border-slate-300 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-                title="Periksa dan verifikasi integritas data pembukuan keuangan"
-              >
-                {isSyncingLedger ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-700" />
-                ) : (
-                  <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
-                )}
-                <span>{isSyncingLedger ? 'Memeriksa...' : 'Cek Integritas Data'}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSyncToFinance(true)}
+                  disabled={isSyncingLedger}
+                  className={`px-4 py-2 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50 shrink-0 ${
+                    financeIntegrationStats.isMatched
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-700 shadow-md ring-2 ring-emerald-400/40 animate-bounce'
+                  }`}
+                  title="Sinkronkan dan samakan seluruh slip gaji ke Arus Kas"
+                >
+                  {isSyncingLedger ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  <span>
+                    {isSyncingLedger
+                      ? 'Menyelaraskan Data...'
+                      : financeIntegrationStats.isMatched
+                      ? 'Cek Integritas Data'
+                      : 'Sinkronkan & Samakan ke Arus Kas'}
+                  </span>
+                </button>
+              </div>
             )}
           </div>
         </div>
