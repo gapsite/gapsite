@@ -69,10 +69,12 @@ export const generateOfficeRentSchedule = (params: {
     items.push({
       id: `${contractId}-m${i + 1}`,
       monthIndex: i + 1,
+      month: i + 1,
       monthName,
       periodMonthYear: period,
       dueDate,
       rentAmountIDR: monthlyRent,
+      baseRentIDR: monthlyRent,
       serviceChargeIDR: monthlyServiceChargeIDR,
       grossTotalIDR: grossTotal,
       pph42RatePercent,
@@ -80,11 +82,38 @@ export const generateOfficeRentSchedule = (params: {
       ppnRatePercent: isSubjectToPpn ? ppnRatePercent : 0,
       ppnAmountIDR: ppnAmount,
       netPayableToLandlordIDR: netPayable,
+      netPaymentIDR: netPayable,
       status: 'UNPAID',
     });
   }
 
   return items;
+};
+
+/**
+ * Convenience helper to generate a standard 12-month schedule
+ */
+export const generate12MonthRentSchedule = (
+  annualBaseRentIDR: number,
+  monthlyServiceChargeIDR: number = 0,
+  year: number = new Date().getFullYear(),
+  dueDayOfMonth: number = 5,
+  pph42RatePercent: number = 10,
+  hasPpn: boolean = false,
+  ppnRatePercent: number = 11
+): OfficeRentMonthlyScheduleItem[] => {
+  return generateOfficeRentSchedule({
+    contractId: `rent-${year}-${Date.now().toString().slice(-4)}`,
+    year,
+    startDate: `${year}-01-01`,
+    tenureMonths: 12,
+    annualRentAmountIDR: annualBaseRentIDR,
+    monthlyServiceChargeIDR,
+    pph42RatePercent,
+    isSubjectToPpn: hasPpn,
+    ppnRatePercent,
+    dueDayOfMonth,
+  });
 };
 
 // Initial Seed Contract for Office Rent (2025 & 2026)
@@ -173,15 +202,19 @@ export const INITIAL_OFFICE_RENTS: OfficeRentContract[] = [
     endDate: '2025-12-31',
     tenureMonths: 12,
     annualRentAmountIDR: 120_000_000,
+    annualBaseRentIDR: 120_000_000,
     monthlyRentAmountIDR: 10_000_000,
+    monthlyBaseRentIDR: 10_000_000,
     monthlyServiceChargeIDR: 2_500_000,
     securityDepositIDR: 25_000_000,
     pph42RatePercent: 10,
     isSubjectToPpn: true,
+    hasPpn: true,
     ppnRatePercent: 11,
     autoSyncToLedger: true,
     autoSyncToTax: true,
     schedules: seededSchedules2025,
+    monthlySchedules: seededSchedules2025,
     status: 'EXTENDED',
     isRenewed: true,
     renewedToContractId: 'rent-2026-001',
@@ -223,15 +256,19 @@ export const INITIAL_OFFICE_RENTS: OfficeRentContract[] = [
     endDate: '2026-12-31',
     tenureMonths: 12,
     annualRentAmountIDR: 132_000_000,
+    annualBaseRentIDR: 132_000_000,
     monthlyRentAmountIDR: 11_000_000,
+    monthlyBaseRentIDR: 11_000_000,
     monthlyServiceChargeIDR: 2_750_000,
     securityDepositIDR: 25_000_000,
     pph42RatePercent: 10,
     isSubjectToPpn: true,
+    hasPpn: true,
     ppnRatePercent: 11,
     autoSyncToLedger: true,
     autoSyncToTax: true,
     schedules: seededSchedules2026,
+    monthlySchedules: seededSchedules2026,
     status: 'ACTIVE',
     previousContractId: 'rent-2025-001',
     notes: 'Perpanjangan kontrak sewa tahun ke-2 (2026) dengan tarif baru Rp 132.000.000/tahun.',

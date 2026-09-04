@@ -8003,33 +8003,41 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addOfficeRentContract = (
     data: Omit<OfficeRentContract, 'id' | 'createdAt' | 'createdBy' | 'schedules'> & {
       customSchedules?: OfficeRentMonthlyScheduleItem[];
+      schedules?: OfficeRentMonthlyScheduleItem[];
     }
   ): { success: boolean; contract?: OfficeRentContract; message?: string } => {
     const now = new Date().toISOString();
     const newId = `rent-${data.year}-${Date.now()}`;
     const contractNum = data.contractNumber || `SPK-SEWA/JKT/${data.year}/${Math.floor(100 + Math.random() * 900)}`;
 
-    const schedules = data.customSchedules && data.customSchedules.length > 0
-      ? data.customSchedules
+    const annualRent = data.annualRentAmountIDR ?? data.annualBaseRentIDR ?? 0;
+    const isSubjectToPpn = data.isSubjectToPpn ?? data.hasPpn ?? false;
+    const rawSchedules = data.customSchedules || data.monthlySchedules || data.schedules;
+    const schedules = rawSchedules && rawSchedules.length > 0
+      ? rawSchedules
       : generateOfficeRentSchedule({
           contractId: newId,
           year: data.year,
           startDate: data.startDate,
           tenureMonths: data.tenureMonths || 12,
-          annualRentAmountIDR: data.annualRentAmountIDR,
+          annualRentAmountIDR: annualRent,
           monthlyServiceChargeIDR: data.monthlyServiceChargeIDR || 0,
           pph42RatePercent: data.pph42RatePercent || 10,
-          isSubjectToPpn: data.isSubjectToPpn || false,
+          isSubjectToPpn,
           ppnRatePercent: data.ppnRatePercent || 11,
-          dueDayOfMonth: 5,
+          dueDayOfMonth: data.dueDayOfMonth || 5,
         });
 
     const newContract: OfficeRentContract = {
       ...data,
       id: newId,
       contractNumber: contractNum,
-      monthlyRentAmountIDR: Math.round(data.annualRentAmountIDR / (data.tenureMonths || 12)),
+      annualRentAmountIDR: annualRent,
+      annualBaseRentIDR: annualRent,
+      monthlyRentAmountIDR: Math.round(annualRent / (data.tenureMonths || 12)),
+      monthlyBaseRentIDR: Math.round(annualRent / (data.tenureMonths || 12)),
       schedules,
+      monthlySchedules: schedules,
       createdAt: now,
       createdBy: currentUser.name || 'Master Admin',
     };
@@ -8107,10 +8115,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const contract = officeRentContracts.find((c) => c.id === contractId);
     if (!contract) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
 
-    const schedIndex = contract.schedules.findIndex((s) => s.id === scheduleId);
+    const schedList = contract.schedules || contract.monthlySchedules || [];
+    const schedIndex = schedList.findIndex(
+      (s) => s.id === scheduleId || String(s.monthIndex) === String(scheduleId) || String(s.month) === String(scheduleId)
+    );
     if (schedIndex === -1) return { success: false, message: 'Jadwal termin sewa kantor tidak ditemukan.' };
 
-    const sched = contract.schedules[schedIndex];
+    const sched = schedList[schedIndex];
     const paidDate = paymentData.paidDate || new Date().toISOString().split('T')[0];
     const dateObj = new Date(paidDate);
     const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;

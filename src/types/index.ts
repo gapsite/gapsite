@@ -641,10 +641,12 @@ export type OfficeRentScheduleStatus = 'UNPAID' | 'PAID' | 'OVERDUE' | 'CANCELLE
 export interface OfficeRentMonthlyScheduleItem {
   id: string;
   monthIndex: number; // 1 to 12
+  month?: number; // Alias for monthIndex
   monthName: string; // e.g. "Januari", "Februari"
   periodMonthYear: string; // e.g. "2025-01", "01/2025"
   dueDate: string; // YYYY-MM-DD
   rentAmountIDR: number; // Nilai sewa pokok bulan ini
+  baseRentIDR?: number; // Alias for rentAmountIDR
   serviceChargeIDR?: number; // Biaya IPL / maintenance gedung bulanan
   grossTotalIDR: number; // Total Tagihan Kotor = rentAmountIDR + serviceChargeIDR
   pph42RatePercent: number; // Default 10% (PPh Final Pasal 4(2) Sewa Bangunan)
@@ -652,6 +654,7 @@ export interface OfficeRentMonthlyScheduleItem {
   ppnRatePercent?: number; // 11% jika PKP
   ppnAmountIDR?: number; // PPN 11% jika ada
   netPayableToLandlordIDR: number; // Nilai Bersih ditransfer ke Pemilik Gedung
+  netPaymentIDR?: number; // Alias for netPayableToLandlordIDR
   status: OfficeRentScheduleStatus;
   paidDate?: string;
   paymentChannelId?: string;
@@ -663,6 +666,8 @@ export interface OfficeRentMonthlyScheduleItem {
   notes?: string;
 }
 
+export type RentMonthlyScheduleItem = OfficeRentMonthlyScheduleItem;
+
 export type OfficeRentStatus = 'ACTIVE' | 'EXTENDED' | 'TERMINATED' | 'DRAFT';
 
 export interface OfficeRentContract {
@@ -672,25 +677,32 @@ export interface OfficeRentContract {
   buildingName?: string; // e.g. "Menara Kadin Indonesia Lt. 15"
   address: string; // e.g. "Jl. H.R. Rasuna Said Blok X-5 Kav. 2-3, Jakarta Selatan"
   landlordName: string; // e.g. "PT Graha Sarana Gedung" atau nama pemilik
-  landlordType: 'CORPORATE_PKP' | 'CORPORATE_NON_PKP' | 'INDIVIDUAL';
+  landlordType?: 'CORPORATE_PKP' | 'CORPORATE_NON_PKP' | 'INDIVIDUAL';
   landlordNpwp?: string;
   landlordPhone?: string;
   landlordEmail?: string;
+  landlordBank?: string;
+  landlordAccount?: string;
   landlordBankAccount?: string; // e.g. "BCA 5410-988-123 a/n PT Graha Sarana Gedung"
   year: number; // Tahun Anggaran Sewa e.g. 2025, 2026
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
-  tenureMonths: number; // Default 12
-  annualRentAmountIDR: number; // Harga Sewa Per Tahun
-  monthlyRentAmountIDR: number; // Harga Sewa Per Bulan (annual / tenureMonths)
+  tenureMonths?: number; // Default 12
+  annualRentAmountIDR?: number; // Harga Sewa Per Tahun
+  annualBaseRentIDR?: number; // Alias for annualRentAmountIDR
+  monthlyRentAmountIDR?: number; // Harga Sewa Per Bulan (annual / tenureMonths)
+  monthlyBaseRentIDR?: number; // Alias for monthlyRentAmountIDR
   monthlyServiceChargeIDR?: number; // IPL / Service Charge bulanan
   securityDepositIDR?: number; // Uang jaminan / deposit sewa
-  pph42RatePercent: number; // Default 10%
-  isSubjectToPpn: boolean; // True jika pemilik gedung PKP (PPN 11%)
-  ppnRatePercent: number; // 11%
-  autoSyncToLedger: boolean; // Otomatis catat ke Buku Kas & Cashflow saat dibayar
-  autoSyncToTax: boolean; // Otomatis catat ke Pajak PPh 4(2) saat dibayar / dijadwalkan
-  schedules: OfficeRentMonthlyScheduleItem[];
+  dueDayOfMonth?: number;
+  pph42RatePercent?: number; // Default 10%
+  isSubjectToPpn?: boolean; // True jika pemilik gedung PKP (PPN 11%)
+  hasPpn?: boolean; // Alias for isSubjectToPpn
+  ppnRatePercent?: number; // 11%
+  autoSyncToLedger?: boolean; // Otomatis catat ke Buku Kas & Cashflow saat dibayar
+  autoSyncToTax?: boolean; // Otomatis catat ke Pajak PPh 4(2) saat dibayar / dijadwalkan
+  schedules?: OfficeRentMonthlyScheduleItem[];
+  monthlySchedules?: OfficeRentMonthlyScheduleItem[]; // Alias for schedules
   status: OfficeRentStatus;
   // Perpanjangan Tahunan
   isRenewed?: boolean;
@@ -712,7 +724,13 @@ export type OverheadCategory =
   | 'TRANSPORTASI'
   | 'AKOMODASI'
   | 'ATK_OFFICE'
-  | 'LAIN_LAIN';
+  | 'LAIN_LAIN'
+  | 'LISTRIK_UTILITAS'
+  | 'IURAN_GEDUNG'
+  | 'KONSUMSI_PANTRY'
+  | 'TRANSPORTASI_BBM'
+  | 'AKOMODASI_HOTEL'
+  | 'ATK_SUPPLIES';
 
 export interface OverheadExpense {
   id: string;
@@ -735,10 +753,12 @@ export interface OverheadExpense {
   taxObligationId?: string; // Link ke Tax Management / TaxObligation
   transactionId?: string; // Link ke FinancialTransaction di Buku Kas
   department?: string; // Divisi pemohon
+  division?: string; // Alias for department
   requestedBy?: string;
   approvedBy?: string;
   receiptName?: string;
   receiptUrl?: string;
+  receiptAttachment?: string; // Alias for receiptName / attachment
   notes?: string;
   createdAt: string;
   createdBy: string;

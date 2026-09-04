@@ -42,12 +42,26 @@ const CATEGORY_CONFIG: Record<
   OverheadCategory,
   { label: string; icon: React.FC<{ className?: string }>; color: string; badgeBg: string; border: string }
 > = {
+  LISTRIK: {
+    label: 'Listrik & Utilitas (PLN/Air)',
+    icon: Zap,
+    color: 'text-amber-500',
+    badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
+    border: 'border-amber-400',
+  },
   LISTRIK_UTILITAS: {
     label: 'Listrik & Utilitas (PLN/Air)',
     icon: Zap,
     color: 'text-amber-500',
     badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
     border: 'border-amber-400',
+  },
+  IURAN: {
+    label: 'Iuran Gedung / Lingkungan',
+    icon: Building,
+    color: 'text-blue-500',
+    badgeBg: 'bg-blue-50 text-blue-800 border-blue-200',
+    border: 'border-blue-400',
   },
   IURAN_GEDUNG: {
     label: 'Iuran Gedung / Lingkungan',
@@ -56,12 +70,26 @@ const CATEGORY_CONFIG: Record<
     badgeBg: 'bg-blue-50 text-blue-800 border-blue-200',
     border: 'border-blue-400',
   },
+  KONSUMSI: {
+    label: 'Konsumsi & Pantry Kantor',
+    icon: Utensils,
+    color: 'text-emerald-500',
+    badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    border: 'border-emerald-400',
+  },
   KONSUMSI_PANTRY: {
     label: 'Konsumsi & Pantry Kantor',
     icon: Utensils,
     color: 'text-emerald-500',
     badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
     border: 'border-emerald-400',
+  },
+  TRANSPORTASI: {
+    label: 'Transportasi, BBM & Tol',
+    icon: Car,
+    color: 'text-violet-500',
+    badgeBg: 'bg-violet-50 text-violet-800 border-violet-200',
+    border: 'border-violet-400',
   },
   TRANSPORTASI_BBM: {
     label: 'Transportasi, BBM & Tol',
@@ -70,12 +98,26 @@ const CATEGORY_CONFIG: Record<
     badgeBg: 'bg-violet-50 text-violet-800 border-violet-200',
     border: 'border-violet-400',
   },
+  AKOMODASI: {
+    label: 'Akomodasi & Hotel Auditor',
+    icon: Bed,
+    color: 'text-rose-500',
+    badgeBg: 'bg-rose-50 text-rose-800 border-rose-200',
+    border: 'border-rose-400',
+  },
   AKOMODASI_HOTEL: {
     label: 'Akomodasi & Hotel Auditor',
     icon: Bed,
     color: 'text-rose-500',
     badgeBg: 'bg-rose-50 text-rose-800 border-rose-200',
     border: 'border-rose-400',
+  },
+  ATK_OFFICE: {
+    label: 'ATK & Perlengkapan Kerja',
+    icon: FileText,
+    color: 'text-teal-500',
+    badgeBg: 'bg-teal-50 text-teal-800 border-teal-200',
+    border: 'border-teal-400',
   },
   ATK_SUPPLIES: {
     label: 'ATK & Perlengkapan Kerja',
@@ -155,9 +197,17 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
         exp.vendorOrMerchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
         exp.overheadNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (exp.notes && exp.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        exp.division.toLowerCase().includes(searchQuery.toLowerCase());
+        ((exp.division || exp.department || '')).toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesCategory = categoryFilter === 'ALL' || exp.category === categoryFilter;
+      const matchesCategory =
+        categoryFilter === 'ALL' ||
+        exp.category === categoryFilter ||
+        (categoryFilter === 'LISTRIK_UTILITAS' && exp.category === 'LISTRIK') ||
+        (categoryFilter === 'IURAN_GEDUNG' && exp.category === 'IURAN') ||
+        (categoryFilter === 'KONSUMSI_PANTRY' && exp.category === 'KONSUMSI') ||
+        (categoryFilter === 'TRANSPORTASI_BBM' && exp.category === 'TRANSPORTASI') ||
+        (categoryFilter === 'AKOMODASI_HOTEL' && exp.category === 'AKOMODASI') ||
+        (categoryFilter === 'ATK_SUPPLIES' && exp.category === 'ATK_OFFICE');
       const matchesStatus = statusFilter === 'ALL' || exp.status === statusFilter;
       const matchesTax =
         taxFilter === 'ALL' ||
@@ -180,23 +230,23 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
       .reduce((sum, e) => sum + (e.amountIDR || 0), 0);
 
     const electricityTotal = overheadExpenses
-      .filter((e) => e.category === 'LISTRIK_UTILITAS')
+      .filter((e) => e.category === 'LISTRIK_UTILITAS' || e.category === 'LISTRIK')
       .reduce((sum, e) => sum + (e.amountIDR || 0), 0);
 
     const duesTotal = overheadExpenses
-      .filter((e) => e.category === 'IURAN_GEDUNG')
+      .filter((e) => e.category === 'IURAN_GEDUNG' || e.category === 'IURAN')
       .reduce((sum, e) => sum + (e.amountIDR || 0), 0);
 
     const consumptionTotal = overheadExpenses
-      .filter((e) => e.category === 'KONSUMSI_PANTRY')
+      .filter((e) => e.category === 'KONSUMSI_PANTRY' || e.category === 'KONSUMSI')
       .reduce((sum, e) => sum + (e.amountIDR || 0), 0);
 
     const transportTotal = overheadExpenses
-      .filter((e) => e.category === 'TRANSPORTASI_BBM')
+      .filter((e) => e.category === 'TRANSPORTASI_BBM' || e.category === 'TRANSPORTASI')
       .reduce((sum, e) => sum + (e.amountIDR || 0), 0);
 
     const accommodationTotal = overheadExpenses
-      .filter((e) => e.category === 'AKOMODASI_HOTEL')
+      .filter((e) => e.category === 'AKOMODASI_HOTEL' || e.category === 'AKOMODASI')
       .reduce((sum, e) => sum + (e.amountIDR || 0), 0);
 
     const totalTaxes = overheadExpenses.reduce((sum, e) => sum + (e.taxAmountIDR || 0), 0);
@@ -249,14 +299,14 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
       paidDate: exp.paidDate || exp.date,
       paymentChannelId: exp.paymentChannelId || 'BANK_TRANSFER_BCA',
       status: exp.status,
-      division: exp.division,
+      division: exp.division || exp.department || 'Operasional',
       requestedBy: exp.requestedBy || 'Staff Operasional',
       approvedBy: exp.approvedBy || 'Finance Manager',
       hasTax: !!exp.hasTax,
       taxType: exp.taxType || 'PPH_23',
       taxRatePercent: exp.taxRatePercent || 2,
       notes: exp.notes || '',
-      receiptAttachment: exp.receiptAttachment || '',
+      receiptAttachment: exp.receiptAttachment || exp.receiptName || '',
     });
     setIsModalOpen(true);
   };
@@ -366,7 +416,7 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
       `"${CATEGORY_CONFIG[e.category]?.label || e.category}"`,
       `"${e.title.replace(/"/g, '""')}"`,
       `"${e.vendorOrMerchant.replace(/"/g, '""')}"`,
-      `"${e.division}"`,
+      `"${e.division || e.department || 'Operasional'}"`,
       e.amountIDR,
       e.hasTax ? 'YA' : 'TIDAK',
       e.taxType || '-',
@@ -749,7 +799,7 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
                       {/* Division */}
                       <td className="py-3 px-4">
                         <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
-                          {exp.division}
+                          {exp.division || exp.department || 'Operasional'}
                         </span>
                         <div className="text-[10px] text-slate-500 mt-0.5">Oleh: {exp.requestedBy || '-'}</div>
                       </td>
