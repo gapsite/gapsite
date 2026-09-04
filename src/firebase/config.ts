@@ -16,8 +16,7 @@ import {
 import {
   getFirestore,
   initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
+  memoryLocalCache,
   collection,
   doc,
   getDocs,
@@ -32,6 +31,10 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
+import { purgeStaleStorage } from '../utils/storage';
+
+// Ensure any stale Firestore multi-tab client state mutations in localStorage are purged
+purgeStaleStorage();
 
 const firebaseConfig = {
   apiKey: firebaseConfigJson.apiKey,
@@ -65,9 +68,7 @@ const databaseId = rawDbId && rawDbId !== '(default)'
 let firestoreInstance;
 try {
   firestoreInstance = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    }),
+    localCache: memoryLocalCache(),
     ...(databaseId ? { databaseId } : {})
   });
 } catch (e) {

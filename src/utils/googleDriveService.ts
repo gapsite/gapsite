@@ -1,6 +1,7 @@
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import { auth, googleProvider } from '../firebase/config';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { safeLocalStorage } from './storage';
 
 /**
  * Google Drive Integration Service
@@ -105,10 +106,10 @@ export async function initGoogleDriveAuth(callback?: (token: string) => void): P
  * Save access token to storage
  */
 export function saveAccessToken(token: string, expiresAt: number, user?: { email?: string; name?: string; photo?: string }) {
-  localStorage.setItem(STORAGE_KEY_TOKEN, token);
-  localStorage.setItem(STORAGE_KEY_EXPIRY, expiresAt.toString());
+  safeLocalStorage.setItem(STORAGE_KEY_TOKEN, token);
+  safeLocalStorage.setItem(STORAGE_KEY_EXPIRY, expiresAt.toString());
   if (user) {
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
+    safeLocalStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
   }
 }
 

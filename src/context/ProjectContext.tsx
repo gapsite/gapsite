@@ -147,6 +147,8 @@ import { DEFAULT_CONSULTING_SERVICES } from '../data/serviceTypesData';
 import { DEFAULT_DOCUMENT_TYPES, DEFAULT_DOCUMENT_CATEGORIES } from '../data/documentTypesData';
 import { DEFAULT_TRANSACTION_CATEGORIES } from '../data/transactionCategoriesData';
 import { DEFAULT_PAYMENT_CHANNELS } from '../data/paymentChannelsData';
+import { DEFAULT_ROLE_COMPENSATION } from '../utils/payrollCalculations';
+import { safeLocalStorage, purgeStaleStorage } from '../utils/storage';
 import { CERTIFICATION_MILESTONE_TEMPLATES } from '../utils/checklistGenerator';
 import { getServiceTypeName, getServiceTypeBadgeColor } from '../utils/formatters';
 import { calculateMemberWorkload } from '../utils/workload';
@@ -637,12 +639,16 @@ interface ProjectContextType {
     id: string,
     paymentDate?: string
   ) => { success: boolean; message?: string };
-  syncAllPayrollToFinance: () => {
+  syncAllPayrollToFinance: () => Promise<{
+    success: boolean;
     syncedCount: number;
     createdCount: number;
     updatedCount: number;
+    removedDuplicatesCount: number;
+    taxSyncedCount: number;
     totalAmountIDR: number;
-  };
+    message: string;
+  }>;
   resetPayrollToDefault: () => Promise<{ success: boolean; message?: string }> | { success: boolean; message?: string };
 
   // Penetapan Gaji Tahunan Karyawan (Annual Salary Configuration per Employee & Year)
@@ -653,6 +659,11 @@ interface ProjectContextType {
   addOrUpdateMultipleEmployeeSalaryConfigs: (
     configs: (Omit<EmployeeAnnualSalaryConfig, 'id' | 'updatedAt' | 'createdAt'> & { id?: string })[]
   ) => Promise<{ success: boolean; message: string; configs?: EmployeeAnnualSalaryConfig[] }>;
+  syncAllEmployeeSalaryConfigsToDefault: (targetYear: number) => Promise<{
+    success: boolean;
+    syncedCount: number;
+    message: string;
+  }>;
   deleteEmployeeSalaryConfig: (id: string) => Promise<{ success: boolean; message: string }>;
   resetEmployeeSalaryConfigsToDefault: () => Promise<{ success: boolean; message: string }>;
   getEmployeeSalaryConfigForYear: (
@@ -1054,7 +1065,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     deletedProjectIdsRef.current = new Set(deletedProjectIds);
     try {
-      localStorage.setItem(STORAGE_KEY_DELETED_PROJECT_IDS, JSON.stringify(deletedProjectIds));
+      safeLocalStorage.setItem(STORAGE_KEY_DELETED_PROJECT_IDS, JSON.stringify(deletedProjectIds));
     } catch (e) {
       console.warn('Failed to save deleted project IDs to localStorage', e);
     }
@@ -1094,7 +1105,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     deletedDispositionIdsRef.current = new Set(deletedDispositionIds);
     try {
-      localStorage.setItem(STORAGE_KEY_DELETED_DISPOSITION_IDS, JSON.stringify(deletedDispositionIds));
+      safeLocalStorage.setItem(STORAGE_KEY_DELETED_DISPOSITION_IDS, JSON.stringify(deletedDispositionIds));
     } catch (e) {
       console.warn('Failed to save deleted disposition IDs to localStorage', e);
     }
@@ -1197,7 +1208,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     deletedTransactionIdsRef.current = new Set(deletedTransactionIds);
     try {
-      localStorage.setItem(STORAGE_KEY_DELETED_TRANSACTION_IDS, JSON.stringify(deletedTransactionIds));
+      safeLocalStorage.setItem(STORAGE_KEY_DELETED_TRANSACTION_IDS, JSON.stringify(deletedTransactionIds));
     } catch (e) {
       console.warn('Failed to save deleted transaction IDs to localStorage', e);
     }
@@ -1365,11 +1376,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TRANSACTION_CATEGORIES, JSON.stringify(transactionCategories));
-    } catch (e) {
-      console.error('Failed to save transaction categories to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_TRANSACTION_CATEGORIES, JSON.stringify(transactionCategories));
   }, [transactionCategories]);
 
   const [paymentChannels, setPaymentChannels] = useState<PaymentChannelDefinition[]>(() => {
@@ -1388,11 +1395,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_PAYMENT_CHANNELS, JSON.stringify(paymentChannels));
-    } catch (e) {
-      console.error('Failed to save payment channels to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_PAYMENT_CHANNELS, JSON.stringify(paymentChannels));
   }, [paymentChannels]);
 
   // Bank Loans State (Formal Bank Loan Management)
@@ -1412,11 +1415,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_BANK_LOANS, JSON.stringify(bankLoans));
-    } catch (e) {
-      console.error('Failed to save bank loans to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_BANK_LOANS, JSON.stringify(bankLoans));
   }, [bankLoans]);
 
   // Company Capital Settings State (Modal Dasar, Disetor, Tambahan, Retained Earnings)
@@ -1436,11 +1435,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, JSON.stringify(companyCapital));
-    } catch (e) {
-      console.error('Failed to save company capital to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, JSON.stringify(companyCapital));
   }, [companyCapital]);
 
   // Company Letterhead & Printable Identity State
@@ -1458,11 +1453,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(companyLetterhead));
-    } catch (e) {
-      console.error('Failed to save company letterhead to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(companyLetterhead));
   }, [companyLetterhead]);
 
   // Deleted Tax Obligations Blacklist State (persists deletions across refreshes and syncs to all roles)
@@ -1481,11 +1472,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletedTaxIdsRef = useRef<Set<string>>(new Set(deletedTaxIds));
   useEffect(() => {
     deletedTaxIdsRef.current = new Set(deletedTaxIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_TAX_IDS, JSON.stringify(deletedTaxIds));
-    } catch (e) {
-      console.warn('Failed to save deleted tax IDs to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_TAX_IDS, JSON.stringify(deletedTaxIds));
   }, [deletedTaxIds]);
 
   // Tax Obligations State (PPN & PPh Terhutang, Billing & NTPN)
@@ -1509,11 +1496,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(taxObligations));
-    } catch (e) {
-      console.error('Failed to save tax obligations to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(taxObligations));
   }, [taxObligations]);
 
   // Deleted Receivables Blacklist State (persists deletions across refreshes and syncs to all roles)
@@ -1532,11 +1515,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletedReceivableIdsRef = useRef<Set<string>>(new Set(deletedReceivableIds));
   useEffect(() => {
     deletedReceivableIdsRef.current = new Set(deletedReceivableIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS, JSON.stringify(deletedReceivableIds));
-    } catch (e) {
-      console.warn('Failed to save deleted receivable IDs to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS, JSON.stringify(deletedReceivableIds));
   }, [deletedReceivableIds]);
 
   // Receivables State (Piutang Usaha & Termin Proyek)
@@ -1558,11 +1537,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(receivables));
-    } catch (e) {
-      console.error('Failed to save receivables to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(receivables));
   }, [receivables]);
 
   // Government Projects State (Proyek Pengadaan Pemerintah & BUMN)
@@ -1578,11 +1553,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletedGovProjectIdsRef = useRef<Set<string>>(new Set(deletedGovProjectIds));
   useEffect(() => {
     deletedGovProjectIdsRef.current = new Set(deletedGovProjectIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_GOV_PROJECT_IDS, JSON.stringify(deletedGovProjectIds));
-    } catch (e) {
-      console.error('Failed to save deletedGovProjectIds to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_GOV_PROJECT_IDS, JSON.stringify(deletedGovProjectIds));
   }, [deletedGovProjectIds]);
 
   const [governmentProjects, setGovernmentProjects] = useState<GovernmentProject[]>(() => {
@@ -1603,11 +1574,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_GOVERNMENT_PROJECTS, JSON.stringify(governmentProjects));
-    } catch (e) {
-      console.error('Failed to save governmentProjects to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_GOVERNMENT_PROJECTS, JSON.stringify(governmentProjects));
   }, [governmentProjects]);
 
   // Retail Projects State (Proyek Retail B2B / Korporasi Swasta)
@@ -1623,11 +1590,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletedRetailProjectIdsRef = useRef<Set<string>>(new Set(deletedRetailProjectIds));
   useEffect(() => {
     deletedRetailProjectIdsRef.current = new Set(deletedRetailProjectIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS, JSON.stringify(deletedRetailProjectIds));
-    } catch (e) {
-      console.error('Failed to save deletedRetailProjectIds to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_RETAIL_PROJECT_IDS, JSON.stringify(deletedRetailProjectIds));
   }, [deletedRetailProjectIds]);
 
   const [retailProjects, setRetailProjects] = useState<RetailProject[]>(() => {
@@ -1648,11 +1611,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(retailProjects));
-    } catch (e) {
-      console.error('Failed to save retailProjects to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(retailProjects));
   }, [retailProjects]);
 
   // Overhead Operational Expenses State (Kebutuhan Operasional: Listrik, Iuran, Konsumsi, Transportasi, Akomodasi, ATK)
@@ -1668,11 +1627,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletedOverheadIdsRef = useRef<Set<string>>(new Set(deletedOverheadIds));
   useEffect(() => {
     deletedOverheadIdsRef.current = new Set(deletedOverheadIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_OVERHEAD_IDS, JSON.stringify(deletedOverheadIds));
-    } catch (e) {
-      console.error('Failed to save deletedOverheadIds to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_OVERHEAD_IDS, JSON.stringify(deletedOverheadIds));
   }, [deletedOverheadIds]);
 
   const [overheadExpenses, setOverheadExpenses] = useState<OverheadExpense[]>(() => {
@@ -1693,11 +1648,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(overheadExpenses));
-    } catch (e) {
-      console.error('Failed to save overheadExpenses to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(overheadExpenses));
   }, [overheadExpenses]);
 
   // Sewa Kantor Tahunan & Breakdown 12 Bulan (Amortisasi, PPh 4(2) 10%, PPN 11%)
@@ -1713,11 +1664,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletedOfficeRentIdsRef = useRef<Set<string>>(new Set(deletedOfficeRentIds));
   useEffect(() => {
     deletedOfficeRentIdsRef.current = new Set(deletedOfficeRentIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_OFFICE_RENT_IDS, JSON.stringify(deletedOfficeRentIds));
-    } catch (e) {
-      console.error('Failed to save deletedOfficeRentIds to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_OFFICE_RENT_IDS, JSON.stringify(deletedOfficeRentIds));
   }, [deletedOfficeRentIds]);
 
   const [officeRentContracts, setOfficeRentContracts] = useState<OfficeRentContract[]>(() => {
@@ -1738,11 +1685,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(officeRentContracts));
-    } catch (e) {
-      console.error('Failed to save officeRentContracts to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(officeRentContracts));
   }, [officeRentContracts]);
 
   // Master Data: Tipe Instansi Pemerintah & BUMN (Editable)
@@ -1762,11 +1705,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(institutionTypes));
-    } catch (e) {
-      console.error('Failed to save institutionTypes to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(institutionTypes));
   }, [institutionTypes]);
 
   // Master Data: Skema Pembagian Termin (Editable)
@@ -1786,11 +1725,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(termDistributionSchemes));
-    } catch (e) {
-      console.error('Failed to save termDistributionSchemes to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(termDistributionSchemes));
   }, [termDistributionSchemes]);
 
   // Master Data: Assigned By (LVI / Surveyor / Lembaga Pelaksana)
@@ -1810,11 +1745,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_ASSIGNED_BY_OPTIONS, JSON.stringify(assignedByOptions));
-    } catch (e) {
-      console.error('Failed to save assigned by options to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_ASSIGNED_BY_OPTIONS, JSON.stringify(assignedByOptions));
   }, [assignedByOptions]);
 
   // Deleted Payroll Records Blacklist State (persists deletions across refreshes and syncs to all roles)
@@ -1834,11 +1765,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deletedPayrollIdsRef = useRef<Set<string>>(new Set(deletedPayrollIds));
   useEffect(() => {
     deletedPayrollIdsRef.current = new Set(deletedPayrollIds);
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify(deletedPayrollIds));
-    } catch (e) {
-      console.warn('Failed to save deleted payroll IDs to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify(deletedPayrollIds));
   }, [deletedPayrollIds]);
 
   // Employee Salary & Payroll Records State
@@ -1861,11 +1788,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(payrollRecords));
-    } catch (e) {
-      console.error('Failed to save payroll records to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(payrollRecords));
   }, [payrollRecords]);
 
   const payrollRecordsRef = useRef<PayrollPayment[]>(payrollRecords);
@@ -1893,11 +1816,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     employeeSalaryConfigsRef.current = employeeSalaryConfigs;
-    try {
-      localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(employeeSalaryConfigs));
-    } catch (e) {
-      console.warn('Failed to save employee salary configs to localStorage', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(employeeSalaryConfigs));
   }, [employeeSalaryConfigs]);
 
   // Auto-sync any existing payroll records with Tax Management (anti double-input safeguard)
@@ -1909,7 +1828,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const missingTaxes: TaxObligation[] = [];
 
       payrollRecords.forEach((record) => {
-        if (record.pph21Amount && record.pph21Amount > 0) {
+        const pph21Amount = Number(record.pph21Amount) || 0;
+        const totalEarnings = Number(record.totalEarnings) || 0;
+        if (pph21Amount > 0) {
           const alreadyLinked = currentTaxes.some(
             (t) => t.payrollId === record.id || (record.pph21ObligationId && t.id === record.pph21ObligationId)
           );
@@ -1923,38 +1844,45 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const nextYear = month === 12 ? year + 1 : year;
             const dueDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`;
 
-            missingTaxes.push({
-              id: `tax-pay-${record.id}`,
+            const newTax: TaxObligation = {
+              id: record.pph21ObligationId || `tax-pay-${record.id}`,
               taxType: 'PPH_21',
-              taxPeriod: record.period,
+              taxPeriod: record.period || `${month} ${year}`,
               taxYear: year,
               taxMonth: month,
-              title: `PPh 21 Karyawan: ${record.employeeName} (${record.period})`,
-              description: `Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp ${record.totalEarnings.toLocaleString('id-ID')} (${record.roleTitle || 'Pegawai Tetap'}) - Slip ${record.payrollNumber}`,
-              taxableBaseAmount: record.totalEarnings,
-              taxRatePercent: record.totalEarnings > 0 ? Number(((record.pph21Amount / record.totalEarnings) * 100).toFixed(2)) : 5,
-              taxAmount: record.pph21Amount,
+              title: `PPh 21 Karyawan: ${record.employeeName} (${record.period || 'Masa Pajak'})`,
+              description: `Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp ${totalEarnings.toLocaleString('id-ID')} (${record.roleTitle || 'Pegawai Tetap'}) - Slip ${record.payrollNumber || '-'}`,
+              taxableBaseAmount: totalEarnings,
+              taxRatePercent: totalEarnings > 0 ? Number(((pph21Amount / totalEarnings) * 100).toFixed(2)) : 5,
+              taxAmount: pph21Amount,
               paidAmount: 0,
-              remainingAmount: record.pph21Amount,
+              remainingAmount: pph21Amount,
               status: 'TERHUTANG',
               dueDate,
               billingCode: `718${String(year).slice(-2)}${String(month).padStart(2, '0')}${Math.floor(100000 + Math.random() * 900000)}`,
-              taxInvoiceNumber: `BUPOT-21/${year}/${String(month).padStart(2, '0')}/${record.payrollNumber.split('/').pop() || '001'}`,
-              counterpartyName: `${record.employeeName} / KPP Pratama`,
+              taxInvoiceNumber: `BUPOT-21/${year}/${String(month).padStart(2, '0')}/${(record.payrollNumber && record.payrollNumber.split('/').pop()) || '001'}`,
+              counterpartyName: `${record.employeeName || 'Karyawan'} / KPP Pratama`,
               payrollId: record.id,
               payrollNumber: record.payrollNumber,
               employeeId: record.employeeId,
               employeeName: record.employeeName,
-              notes: `Otomatis disinkronisasi dari Slip Gaji: ${record.payrollNumber}. Terintegrasi ke Menu Pajak & Neraca Keuangan (anti double input).`,
+              notes: `Otomatis disinkronisasi dari Slip Gaji: ${record.payrollNumber || '-'}. Terintegrasi ke Menu Pajak & Neraca Keuangan (anti double input).`,
               createdAt: record.createdAt || new Date().toISOString(),
               createdBy: record.recordedBy || 'System Payroll Sync',
-            });
+            };
+            missingTaxes.push(newTax);
+            saveTaxObligationToFirestore(newTax);
           }
         }
       });
 
       if (hasChanges && missingTaxes.length > 0) {
-        return [...missingTaxes, ...currentTaxes];
+        const updated = [...missingTaxes, ...currentTaxes];
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        return updated;
       }
       return currentTaxes;
     });
@@ -1970,10 +1898,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const claimedTxIds = new Set<string>();
 
       // Active paid payroll records
-      const paidRecords = payrollRecords.filter((p) => p && p.id && p.status === 'PAID');
+      const paidRecords = payrollRecords.filter(
+        (p) => p && p.id && (p.status === 'PAID' || String(p.status).toUpperCase() === 'PAID')
+      );
       if (paidRecords.length === 0) return currentTransactions;
 
       paidRecords.forEach((record) => {
+        const netSalary = Number(record.netSalary) || 0;
+        const totalEarnings = Number(record.totalEarnings) || 0;
+        const totalDeductions = Number(record.totalDeductions) || 0;
+
         // Match existing transaction in currentTransactions or missingTransactions
         let matchingTx = currentTransactions.find((t) => {
           if (claimedTxIds.has(t.id)) return false;
@@ -2011,14 +1945,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
           // Update transaction if out of sync
           if (
-            matchingTx.amountIDR !== record.netSalary ||
+            matchingTx.amountIDR !== netSalary ||
             matchingTx.status !== 'CLEARED' ||
             matchingTx.category !== 'GAJI_KARYAWAN' ||
             matchingTx.type !== 'EXPENSE' ||
             (!matchingTx.referenceNumber && record.payrollNumber)
           ) {
             hasTxChanges = true;
-            matchingTx.amountIDR = record.netSalary;
+            matchingTx.amountIDR = netSalary;
             matchingTx.status = 'CLEARED';
             matchingTx.category = 'GAJI_KARYAWAN';
             matchingTx.type = 'EXPENSE';
@@ -2030,7 +1964,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else {
           // Missing transaction: automatically create it!
           hasTxChanges = true;
-          const txId = record.transactionId || `trx-pay-${record.id}`;
+          const txId = record.transactionId && !deletedTransactionIdsRef.current.has(record.transactionId)
+            ? record.transactionId
+            : `trx-pay-${record.id}`;
+
           const payDate = record.paymentDate || record.paidAt || (record.createdAt ? record.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
           const dateObj = new Date(payDate);
           const yyyymm = !isNaN(dateObj.getFullYear())
@@ -2045,13 +1982,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             date: payDate,
             type: 'EXPENSE',
             category: 'GAJI_KARYAWAN',
-            amountIDR: record.netSalary,
-            description: `Gaji Karyawan: ${record.employeeName} (${record.roleTitle || 'Pegawai'}) - Periode ${record.period}`,
-            clientOrVendorName: record.employeeName,
+            amountIDR: netSalary,
+            description: `Gaji Karyawan: ${record.employeeName || 'Pegawai'} (${record.roleTitle || 'Pegawai'}) - Periode ${record.period || ''}`,
+            clientOrVendorName: record.employeeName || 'Pegawai',
             paymentMethod: record.paymentMethod || 'BANK_TRANSFER_MANDIRI',
             referenceNumber: record.payrollNumber,
             status: 'CLEARED',
-            notes: `Slip: ${record.payrollNumber} | Bruto: Rp ${record.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${record.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${record.netSalary.toLocaleString('id-ID')}${record.notes ? ' | ' + record.notes : ''}`,
+            notes: `Slip: ${record.payrollNumber || '-'} | Bruto: Rp ${totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${netSalary.toLocaleString('id-ID')}${record.notes ? ' | ' + record.notes : ''}`,
             recordedBy: record.recordedBy || 'System Payroll Sync',
             createdAt: record.createdAt || new Date().toISOString(),
           };
@@ -2059,20 +1996,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           claimedTxIds.add(txId);
           missingTransactions.push(newTx);
           saveTransactionToFirestore(newTx);
+
+          // If txId was previously marked deleted, unban it
+          if (deletedTransactionIdsRef.current.has(txId)) {
+            deletedTransactionIdsRef.current.delete(txId);
+            setDeletedTransactionIds((prev) => prev.filter((id) => id !== txId));
+            removeDeletedEntityIdFromFirestore('deleted_transaction_ids', txId);
+          }
         }
       });
 
       if (hasTxChanges && missingTransactions.length > 0) {
         const updated = [...missingTransactions, ...currentTransactions];
         try {
-          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
       } else if (hasTxChanges) {
         const updated = [...currentTransactions];
         try {
-          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
@@ -2093,7 +2037,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = [...prev, id];
       saveDeletedEntityIdToFirestore('deleted_project_ids', id);
       try {
-        localStorage.setItem(STORAGE_KEY_DELETED_PROJECT_IDS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_PROJECT_IDS, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -2105,7 +2049,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = [...prev, id];
       saveDeletedEntityIdToFirestore('deleted_disposition_ids', id);
       try {
-        localStorage.setItem(STORAGE_KEY_DELETED_DISPOSITION_IDS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_DISPOSITION_IDS, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -2117,7 +2061,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = [...prev, id];
       saveDeletedEntityIdToFirestore('deleted_transaction_ids', id);
       try {
-        localStorage.setItem(STORAGE_KEY_DELETED_TRANSACTION_IDS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_TRANSACTION_IDS, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -2129,7 +2073,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = [...prev, id];
       saveDeletedEntityIdToFirestore('deleted_receivable_ids', id);
       try {
-        localStorage.setItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -2141,7 +2085,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = [...prev, id];
       saveDeletedEntityIdToFirestore('deleted_tax_ids', id);
       try {
-        localStorage.setItem(STORAGE_KEY_DELETED_TAX_IDS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_TAX_IDS, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -2202,7 +2146,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {}
 
     try {
-      localStorage.setItem(
+      safeLocalStorage.setItem(
         'tkdn_live_user_update_event',
         JSON.stringify({
           ...updatedMember,
@@ -2317,7 +2261,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           };
 
           try {
-            localStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, mergedCurrent.id);
+            safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, mergedCurrent.id);
           } catch {}
 
           return mergedCurrent;
@@ -2556,110 +2500,60 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Sync to local storage
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
   }, [projects]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(dispositions));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(dispositions));
   }, [dispositions]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(teamMembers));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(teamMembers));
   }, [teamMembers]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_DELETED_USERS, JSON.stringify(deletedUsers));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DELETED_USERS, JSON.stringify(deletedUsers));
   }, [deletedUsers]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
   }, [transactions]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(roleDefinitions));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(roleDefinitions));
   }, [roleDefinitions]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(roleGovernanceMeta));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(roleGovernanceMeta));
   }, [roleGovernanceMeta]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_CONSULTING_SERVICES, JSON.stringify(consultingServices));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_CONSULTING_SERVICES, JSON.stringify(consultingServices));
   }, [consultingServices]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_DOCUMENT_TYPES, JSON.stringify(documentTypes));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DOCUMENT_TYPES, JSON.stringify(documentTypes));
   }, [documentTypes]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_DOCUMENT_CATEGORIES, JSON.stringify(documentCategories));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_DOCUMENT_CATEGORIES, JSON.stringify(documentCategories));
   }, [documentCategories]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_PAYMENT_CHANNELS, JSON.stringify(paymentChannels));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_PAYMENT_CHANNELS, JSON.stringify(paymentChannels));
   }, [paymentChannels]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TRANSACTION_CATEGORIES, JSON.stringify(transactionCategories));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    safeLocalStorage.setItem(STORAGE_KEY_TRANSACTION_CATEGORIES, JSON.stringify(transactionCategories));
   }, [transactionCategories]);
 
   useEffect(() => {
-    try {
-      if (currentUser?.id) {
-        localStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, currentUser.id);
-      }
-      sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, JSON.stringify(isAuthenticated));
-    } catch (e) {
-      console.error('Storage error:', e);
+    if (currentUser?.id) {
+      safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, currentUser.id);
     }
+    try {
+      sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, JSON.stringify(isAuthenticated));
+    } catch {}
   }, [currentUser, isAuthenticated]);
 
   // Sync state with Firebase Auth
@@ -2838,7 +2732,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           };
 
           try {
-            localStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, mergedCurrent.id);
+            safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, mergedCurrent.id);
           } catch {}
 
           return mergedCurrent;
@@ -2964,7 +2858,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const merged = Array.from(txMap.values());
         setTransactions(merged);
         try {
-          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(merged));
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(merged));
         } catch {}
       }
     });
@@ -3123,7 +3017,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCompanyLetterhead((prev) => {
           const merged = { ...prev, ...data };
           try {
-            localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(merged));
+            safeLocalStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(merged));
           } catch (e) {
             console.warn('LocalStorage save on remote update warning:', e);
           }
@@ -3137,7 +3031,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setEmployeeSalaryConfigs(data);
         employeeSalaryConfigsRef.current = data;
         try {
-          localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(data));
+          safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(data));
         } catch (e) {
           console.warn('LocalStorage save on salary configs update warning:', e);
         }
@@ -3148,7 +3042,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(data) && data.length > 0) {
         setInstitutionTypes(data);
         try {
-          localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(data));
+          safeLocalStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(data));
         } catch (e) {
           console.warn('LocalStorage save on institution types update warning:', e);
         }
@@ -3159,7 +3053,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(data) && data.length > 0) {
         setTermDistributionSchemes(data);
         try {
-          localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(data));
+          safeLocalStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(data));
         } catch (e) {
           console.warn('LocalStorage save on term schemes update warning:', e);
         }
@@ -3393,7 +3287,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthenticated(true);
     try {
       sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
-      localStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
+      safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
     } catch (e) {
       console.error(e);
     }
@@ -3499,7 +3393,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthenticated(true);
     try {
       sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
-      localStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
+      safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
     } catch (e) {
       console.error(e);
     }
@@ -3558,7 +3452,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           d.email?.toLowerCase() !== cleanEmail
       );
       try {
-        localStorage.setItem(STORAGE_KEY_DELETED_USERS, JSON.stringify(filtered));
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_USERS, JSON.stringify(filtered));
       } catch (e) {
         console.error(e);
       }
@@ -3581,7 +3475,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTeamMembers((prev) => {
       const next = [...prev.filter((m) => m.id !== newId), newUser];
       try {
-        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(next));
+        safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(next));
       } catch (e) {
         console.error(e);
       }
@@ -3638,7 +3532,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const nextMembers = teamMembers.map((m) => (m.id === userId ? verifiedMember : m));
     setTeamMembers(nextMembers);
     try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+      safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
     } catch (e) {
       console.error(e);
     }
@@ -3661,7 +3555,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const nextMembers = teamMembers.filter((m) => m.id !== userId);
     setTeamMembers(nextMembers);
     try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+      safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
     } catch (e) {
       console.error(e);
     }
@@ -3778,7 +3672,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const nextMembers = teamMembers.map((m) => (m.id === userId ? updatedMember : m));
     setTeamMembers(nextMembers);
     try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+      safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
     } catch (e) {
       console.error(e);
     }
@@ -3805,7 +3699,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const nextMembers = teamMembers.map((m) => (m.id === id ? { ...m, ...updates } : m));
     setTeamMembers(nextMembers);
     try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+      safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
     } catch (e) {
       console.error(e);
     }
@@ -3870,7 +3764,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         record,
       ];
       try {
-        localStorage.setItem(STORAGE_KEY_DELETED_USERS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_USERS, JSON.stringify(updated));
       } catch (e) {
         console.error(e);
       }
@@ -3891,7 +3785,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
     setTeamMembers(updatedMembers);
     try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
+      safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
     } catch (e) {
       console.error(e);
     }
@@ -3933,7 +3827,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const nextMembers = teamMembers.map((m) => (m.id === id ? toggledMember : m));
     setTeamMembers(nextMembers);
     try {
-      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
+      safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(nextMembers));
     } catch (e) {
       console.error(e);
     }
@@ -3983,7 +3877,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setRoleDefinitions(updatedDefinitions);
     try {
-      localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(updatedDefinitions));
+      safeLocalStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(updatedDefinitions));
     } catch (err) {
       console.error('Failed to save role definitions to localStorage:', err);
     }
@@ -4011,7 +3905,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setTeamMembers(updatedMembers);
       try {
-        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
+        safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
       } catch (err) {
         console.error('Failed to save members to localStorage:', err);
       }
@@ -4071,7 +3965,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
 
           try {
-            localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedConfigs));
+            safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedConfigs));
           } catch (e) {
             console.warn(e);
           }
@@ -4090,7 +3984,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     setRoleDefinitions(DEFAULT_ROLE_DEFINITIONS);
     try {
-      localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(DEFAULT_ROLE_DEFINITIONS));
+      safeLocalStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(DEFAULT_ROLE_DEFINITIONS));
     } catch (err) {
       console.error(err);
     }
@@ -4123,7 +4017,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setRoleDefinitions(updatedDefinitions);
     try {
-      localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(updatedDefinitions));
+      safeLocalStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(updatedDefinitions));
     } catch (err) {
       console.error('Failed to save role definitions to localStorage:', err);
     }
@@ -4150,7 +4044,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setTeamMembers(updatedMembers);
       try {
-        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
+        safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
       } catch (err) {
         console.error('Failed to save members to localStorage:', err);
       }
@@ -4176,7 +4070,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else {
       setRoleDefinitions(DEFAULT_ROLE_DEFINITIONS);
       try {
-        localStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(DEFAULT_ROLE_DEFINITIONS));
+        safeLocalStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(DEFAULT_ROLE_DEFINITIONS));
       } catch (err) {
         console.error(err);
       }
@@ -4202,7 +4096,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setTeamMembers(updatedMembers);
       try {
-        localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
+        safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(updatedMembers));
       } catch (err) {
         console.error(err);
       }
@@ -4222,7 +4116,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setRoleGovernanceMeta(nextMeta);
     try {
-      localStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(nextMeta));
+      safeLocalStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(nextMeta));
     } catch (e) {
       console.error(e);
     }
@@ -4237,7 +4131,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     setRoleGovernanceMeta(DEFAULT_ROLE_GOVERNANCE_META);
     try {
-      localStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(DEFAULT_ROLE_GOVERNANCE_META));
+      safeLocalStorage.setItem(STORAGE_KEY_ROLE_GOVERNANCE_META, JSON.stringify(DEFAULT_ROLE_GOVERNANCE_META));
     } catch (e) {
       console.error(e);
     }
@@ -5975,7 +5869,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 3. Save to localStorage with storage event fallback
     try {
-      localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(updated));
+      safeLocalStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(updated));
     } catch (e) {
       console.warn('LocalStorage save letterhead warning:', e);
     }
@@ -6020,7 +5914,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setCompanyLetterhead(reset);
     broadcastLiveDataUpdate('COMPANY_LETTERHEAD', reset);
     try {
-      localStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(reset));
+      safeLocalStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(reset));
     } catch (e) {
       console.warn('LocalStorage reset letterhead warning:', e);
     }
@@ -6159,7 +6053,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTransactions((prev) => {
         const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
         try {
-          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
@@ -6514,7 +6408,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTransactions((prev) => {
         const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
         try {
-          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
@@ -6526,7 +6420,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setReceivables((prev) => {
       const updated = prev.filter((r) => r.id !== id);
       try {
-        localStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('RECEIVABLES', updated);
       return updated;
@@ -7696,7 +7590,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTrxs.length > 0) {
       setTransactions((prev) => {
         const updated = [...newTrxs, ...prev];
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         newTrxs.forEach((t) => saveTransactionToFirestore(t));
         return updated;
@@ -7706,7 +7600,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTaxes.length > 0) {
       setTaxObligations((prev) => {
         const updated = [...newTaxes, ...prev];
-        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
         saveSettingsToFirestore('tax_obligations', updated);
         return updated;
@@ -7773,7 +7667,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
       setTransactions((prev) => {
         const updated = [newTx, ...prev];
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         saveTransactionToFirestore(newTx);
         return updated;
@@ -7798,7 +7692,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
         setTaxObligations((prev) => {
           const updated = [newTax, ...prev];
-          localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
           broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
           saveSettingsToFirestore('tax_obligations', updated);
           return updated;
@@ -7964,7 +7858,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTrxs.length > 0) {
       setTransactions((prev) => {
         const updated = [...newTrxs, ...prev];
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         newTrxs.forEach((t) => saveTransactionToFirestore(t));
         return updated;
@@ -7974,7 +7868,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTaxes.length > 0) {
       setTaxObligations((prev) => {
         const updated = [...newTaxes, ...prev];
-        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
         saveSettingsToFirestore('tax_obligations', updated);
         return updated;
@@ -8151,7 +8045,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setTransactions((prev) => {
         const updated = [newTx!, ...prev];
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         saveTransactionToFirestore(newTx!);
         return updated;
@@ -8178,7 +8072,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       setTaxObligations((prev) => {
         const updated = [newTax, ...prev];
-        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
         saveSettingsToFirestore('tax_obligations', updated);
         return updated;
@@ -8294,7 +8188,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTrxs.length > 0) {
       setTransactions((prev) => {
         const updated = [...newTrxs, ...prev];
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         newTrxs.forEach((t) => saveTransactionToFirestore(t));
         return updated;
@@ -8304,7 +8198,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTaxes.length > 0) {
       setTaxObligations((prev) => {
         const updated = [...newTaxes, ...prev];
-        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
         saveSettingsToFirestore('tax_obligations', updated);
         return updated;
@@ -8375,7 +8269,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       broadcastLiveDataUpdate('INSTITUTION_TYPES', updated);
       saveSettingsToFirestore('institution_types', updated);
       try {
-        localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
       } catch (e) {
         console.error('Failed to save to localStorage', e);
       }
@@ -8417,7 +8311,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       broadcastLiveDataUpdate('INSTITUTION_TYPES', updated);
       saveSettingsToFirestore('institution_types', updated);
       try {
-        localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
       } catch (e) {
         console.error('Failed to save to localStorage', e);
       }
@@ -8445,7 +8339,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       broadcastLiveDataUpdate('INSTITUTION_TYPES', updated);
       saveSettingsToFirestore('institution_types', updated);
       try {
-        localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(updated));
       } catch (e) {
         console.error('Failed to save to localStorage', e);
       }
@@ -8470,7 +8364,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     broadcastLiveDataUpdate('INSTITUTION_TYPES', DEFAULT_GOVERNMENT_INSTITUTION_TYPES);
     saveSettingsToFirestore('institution_types', DEFAULT_GOVERNMENT_INSTITUTION_TYPES);
     try {
-      localStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(DEFAULT_GOVERNMENT_INSTITUTION_TYPES));
+      safeLocalStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(DEFAULT_GOVERNMENT_INSTITUTION_TYPES));
     } catch (e) {
       console.error('Failed to save to localStorage', e);
     }
@@ -8541,7 +8435,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', updated);
       saveSettingsToFirestore('term_distribution_schemes', updated);
       try {
-        localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
       } catch (e) {
         console.error('Failed to save to localStorage', e);
       }
@@ -8586,7 +8480,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', updated);
       saveSettingsToFirestore('term_distribution_schemes', updated);
       try {
-        localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
       } catch (e) {
         console.error('Failed to save to localStorage', e);
       }
@@ -8614,7 +8508,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', updated);
       saveSettingsToFirestore('term_distribution_schemes', updated);
       try {
-        localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(updated));
       } catch (e) {
         console.error('Failed to save to localStorage', e);
       }
@@ -8639,7 +8533,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     broadcastLiveDataUpdate('TERM_DISTRIBUTION_SCHEMES', DEFAULT_TERM_DISTRIBUTION_SCHEMES);
     saveSettingsToFirestore('term_distribution_schemes', DEFAULT_TERM_DISTRIBUTION_SCHEMES);
     try {
-      localStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(DEFAULT_TERM_DISTRIBUTION_SCHEMES));
+      safeLocalStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(DEFAULT_TERM_DISTRIBUTION_SCHEMES));
     } catch (e) {
       console.error('Failed to save to localStorage', e);
     }
@@ -9011,7 +8905,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setProjects((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
@@ -9028,7 +8922,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setDispositions((prev) => {
         const updated = prev.filter((d) => d.projectId !== id);
         try {
-          localStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('DISPOSITIONS', updated);
         return updated;
@@ -9045,7 +8939,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setReceivables((prev) => {
         const updated = prev.filter((r) => r.projectId !== id);
         try {
-          localStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('RECEIVABLES', updated);
         return updated;
@@ -9062,7 +8956,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTransactions((prev) => {
         const updated = prev.filter((t) => t.projectId !== id);
         try {
-          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
@@ -9188,7 +9082,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setDispositions((prev) => {
       const updated = prev.filter((d) => d.id !== id);
       try {
-        localStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('DISPOSITIONS', updated);
       return updated;
@@ -9288,7 +9182,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return updatedProj;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
@@ -9420,7 +9314,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return updatedProj;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
@@ -9460,7 +9354,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return updatedProj;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
@@ -9515,7 +9409,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return updatedProj;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
@@ -9568,7 +9462,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTransactions((prev) => {
       const updated = [newTx, ...prev];
       try {
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('TRANSACTIONS', updated);
       return updated;
@@ -9630,7 +9524,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTransactions((prev) => {
       const updated = prev.filter((t) => t.id !== id);
       try {
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('TRANSACTIONS', updated);
       return updated;
@@ -9934,7 +9828,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const updatedDeletedIds = Array.from(new Set([id, ...deletedPayrollIds]));
     setDeletedPayrollIds(updatedDeletedIds);
     try {
-      localStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify(updatedDeletedIds));
+      safeLocalStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify(updatedDeletedIds));
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
@@ -10000,7 +9894,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (txIdsToDelete.size > 0) {
       setTransactions(updatedTransactions);
       try {
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updatedTransactions));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updatedTransactions));
       } catch (e) {
         console.warn('LocalStorage save error:', e);
       }
@@ -10012,7 +9906,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (taxIdsToDelete.size > 0) {
       setTaxObligations(updatedTaxes);
       try {
-        localStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updatedTaxes));
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updatedTaxes));
       } catch (e) {
         console.warn('LocalStorage save error:', e);
       }
@@ -10023,7 +9917,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const updatedPayrolls = payrollRecords.filter((r) => r.id !== id);
     setPayrollRecords(updatedPayrolls);
     try {
-      localStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(updatedPayrolls));
+      safeLocalStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(updatedPayrolls));
     } catch (e) {
       console.warn('LocalStorage save error:', e);
     }
@@ -10129,7 +10023,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTransactions((prev) => {
         const updated = [...newTransactions, ...prev];
         try {
-          localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
@@ -10173,21 +10067,36 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Synchronize all existing and new Payroll records with Finance & Cash Flow (Transactions)
-  const syncAllPayrollToFinance = (): {
+  const syncAllPayrollToFinance = async (): Promise<{
+    success: boolean;
     syncedCount: number;
     createdCount: number;
     updatedCount: number;
+    removedDuplicatesCount: number;
+    taxSyncedCount: number;
     totalAmountIDR: number;
-  } => {
+    message: string;
+  }> => {
     if (!payrollRecords || payrollRecords.length === 0) {
-      return { syncedCount: 0, createdCount: 0, updatedCount: 0, totalAmountIDR: 0 };
+      return {
+        success: true,
+        syncedCount: 0,
+        createdCount: 0,
+        updatedCount: 0,
+        removedDuplicatesCount: 0,
+        taxSyncedCount: 0,
+        totalAmountIDR: 0,
+        message: 'Tidak ada data payroll untuk disinkronkan.',
+      };
     }
 
     let createdCount = 0;
     let updatedCount = 0;
+    let removedDuplicatesCount = 0;
+    let taxSyncedCount = 0;
     let totalAmountIDR = 0;
 
-    const currentTrxs = [...transactions];
+    let currentTrxs = [...transactions];
     const claimedTxIds = new Set<string>();
     const newTrxsToAdd: FinancialTransaction[] = [];
     const updatedPayrollList: PayrollPayment[] = [];
@@ -10200,7 +10109,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 
     paidRecords.forEach((record) => {
-      totalAmountIDR += record.netSalary;
+      const netSalary = Number(record.netSalary) || 0;
+      const totalEarnings = Number(record.totalEarnings) || 0;
+      const totalDeductions = Number(record.totalDeductions) || 0;
+      totalAmountIDR += netSalary;
 
       // Find matching transaction
       let matchingTx = currentTrxs.find((t) => {
@@ -10238,8 +10150,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         claimedTxIds.add(matchingTx.id);
 
         let txNeedsUpdate = false;
-        if (matchingTx.amountIDR !== record.netSalary) {
-          matchingTx.amountIDR = record.netSalary;
+        if (matchingTx.amountIDR !== netSalary) {
+          matchingTx.amountIDR = netSalary;
           txNeedsUpdate = true;
         }
         if (matchingTx.status !== 'CLEARED') {
@@ -10275,7 +10187,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Missing transaction: automatically create it!
         createdCount++;
         hasTxChanges = true;
-        const txId = record.transactionId || `trx-pay-${record.id}`;
+        const txId = record.transactionId && !deletedTransactionIdsRef.current.has(record.transactionId)
+          ? record.transactionId
+          : `trx-pay-${record.id}`;
+
         const payDate = record.paymentDate || record.paidAt || (record.createdAt ? record.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
         const dateObj = new Date(payDate);
         const yyyymm = !isNaN(dateObj.getFullYear())
@@ -10290,13 +10205,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           date: payDate,
           type: 'EXPENSE',
           category: 'GAJI_KARYAWAN',
-          amountIDR: record.netSalary,
-          description: `Gaji Karyawan: ${record.employeeName} (${record.roleTitle || 'Pegawai'}) - Periode ${record.period}`,
-          clientOrVendorName: record.employeeName,
+          amountIDR: netSalary,
+          description: `Gaji Karyawan: ${record.employeeName || 'Pegawai'} (${record.roleTitle || 'Pegawai'}) - Periode ${record.period || ''}`,
+          clientOrVendorName: record.employeeName || 'Pegawai',
           paymentMethod: record.paymentMethod || 'BANK_TRANSFER_MANDIRI',
           referenceNumber: record.payrollNumber,
           status: 'CLEARED',
-          notes: `Slip: ${record.payrollNumber} | Bruto: Rp ${record.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${record.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${record.netSalary.toLocaleString('id-ID')}${record.notes ? ' | ' + record.notes : ''}`,
+          notes: `Slip: ${record.payrollNumber || '-'} | Bruto: Rp ${totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${netSalary.toLocaleString('id-ID')}${record.notes ? ' | ' + record.notes : ''}`,
           recordedBy: record.recordedBy || 'System Payroll Sync',
           createdAt: record.createdAt || new Date().toISOString(),
         };
@@ -10305,10 +10220,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         newTrxsToAdd.push(createdTx);
         saveTransactionToFirestore(createdTx);
 
-        // Ensure this txId is not in deletedTransactionIds
+        // Ensure this txId is unbanned from deletedTransactionIds
         if (deletedTransactionIdsRef.current.has(txId)) {
           deletedTransactionIdsRef.current.delete(txId);
           setDeletedTransactionIds((prev) => prev.filter((id) => id !== txId));
+          removeDeletedEntityIdFromFirestore('deleted_transaction_ids', txId);
         }
 
         updatedPayrollList.push({ ...record, transactionId: txId });
@@ -10316,12 +10232,46 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
+    // Reconcile orphaned/duplicate GAJI_KARYAWAN transactions
+    const extraPayrollTrxs = currentTrxs.filter(
+      (t) => t.category === 'GAJI_KARYAWAN' && !claimedTxIds.has(t.id)
+    );
+    if (extraPayrollTrxs.length > 0) {
+      const duplicateTrxIds = new Set<string>();
+      extraPayrollTrxs.forEach((extra) => {
+        const isDuplicateOfClaimed = Array.from(claimedTxIds).some((claimedId) => {
+          const claimedTx = [...newTrxsToAdd, ...currentTrxs].find((t) => t.id === claimedId);
+          if (!claimedTx) return false;
+          const sameRef = extra.referenceNumber && claimedTx.referenceNumber && extra.referenceNumber === claimedTx.referenceNumber;
+          const sameSlipInNotes = extra.notes && claimedTx.referenceNumber && extra.notes.includes(claimedTx.referenceNumber);
+          const sameAmountAndEmp = extra.amountIDR === claimedTx.amountIDR &&
+            extra.clientOrVendorName && claimedTx.clientOrVendorName &&
+            extra.clientOrVendorName.toLowerCase().trim() === claimedTx.clientOrVendorName.toLowerCase().trim() &&
+            extra.description && claimedTx.description &&
+            extra.description.toLowerCase().trim() === claimedTx.description.toLowerCase().trim();
+          return Boolean(sameRef || sameSlipInNotes || sameAmountAndEmp);
+        });
+
+        if (isDuplicateOfClaimed) {
+          duplicateTrxIds.add(extra.id);
+          deleteTransactionFromFirestore(extra.id);
+        }
+      });
+
+      if (duplicateTrxIds.size > 0) {
+        currentTrxs = currentTrxs.filter((t) => !duplicateTrxIds.has(t.id));
+        removedDuplicatesCount = duplicateTrxIds.size;
+        hasTxChanges = true;
+      }
+    }
+
     if (newTrxsToAdd.length > 0 || hasTxChanges) {
       const mergedTrxs = [...newTrxsToAdd, ...currentTrxs];
       setTransactions(mergedTrxs);
       try {
-        localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(mergedTrxs));
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(mergedTrxs));
       } catch {}
+      saveSettingsToFirestore('transactions', mergedTrxs);
       broadcastLiveDataUpdate('TRANSACTIONS', mergedTrxs);
     }
 
@@ -10332,24 +10282,94 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       setPayrollRecords(finalPayrollRecords);
       try {
-        localStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(finalPayrollRecords));
+        safeLocalStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(finalPayrollRecords));
       } catch {}
       saveSettingsToFirestore('payroll_records', finalPayrollRecords);
       broadcastLiveDataUpdate('PAYROLL_PAYMENTS', finalPayrollRecords);
+      // Persist all updated documents directly to Firestore collection
+      await Promise.all(
+        updatedPayrollList.map((p) => savePayrollToFirestore(p))
+      );
+    }
+
+    // Synchronize PPh 21 Tax Obligations as well
+    const currentTaxes = [...taxObligations];
+    const missingTaxes: TaxObligation[] = [];
+    paidRecords.forEach((record) => {
+      const pph21Amount = Number(record.pph21Amount) || 0;
+      const totalEarnings = Number(record.totalEarnings) || 0;
+      if (pph21Amount > 0) {
+        const alreadyLinked = currentTaxes.some(
+          (t) => t.payrollId === record.id || (record.pph21ObligationId && t.id === record.pph21ObligationId)
+        );
+        if (!alreadyLinked) {
+          const payDate = record.paymentDate || new Date().toISOString().slice(0, 10);
+          const dateObj = new Date(payDate);
+          const year = !isNaN(dateObj.getFullYear()) ? dateObj.getFullYear() : new Date().getFullYear();
+          const month = !isNaN(dateObj.getMonth()) ? dateObj.getMonth() + 1 : new Date().getMonth() + 1;
+          const nextMonth = month === 12 ? 1 : month + 1;
+          const nextYear = month === 12 ? year + 1 : year;
+          const dueDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-15`;
+
+          const newTax: TaxObligation = {
+            id: record.pph21ObligationId || `tax-pay-${record.id}`,
+            taxType: 'PPH_21',
+            taxPeriod: record.period || `${month} ${year}`,
+            taxYear: year,
+            taxMonth: month,
+            title: `PPh 21 Karyawan: ${record.employeeName} (${record.period || 'Masa Pajak'})`,
+            description: `Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp ${totalEarnings.toLocaleString('id-ID')} (${record.roleTitle || 'Pegawai Tetap'}) - Slip ${record.payrollNumber || '-'}`,
+            taxableBaseAmount: totalEarnings,
+            taxRatePercent: totalEarnings > 0 ? Number(((pph21Amount / totalEarnings) * 100).toFixed(2)) : 5,
+            taxAmount: pph21Amount,
+            paidAmount: 0,
+            remainingAmount: pph21Amount,
+            status: 'TERHUTANG',
+            dueDate,
+            billingCode: `718${String(year).slice(-2)}${String(month).padStart(2, '0')}${Math.floor(100000 + Math.random() * 900000)}`,
+            taxInvoiceNumber: `BUPOT-21/${year}/${String(month).padStart(2, '0')}/${(record.payrollNumber && record.payrollNumber.split('/').pop()) || '001'}`,
+            counterpartyName: `${record.employeeName || 'Karyawan'} / KPP Pratama`,
+            payrollId: record.id,
+            payrollNumber: record.payrollNumber,
+            employeeId: record.employeeId,
+            employeeName: record.employeeName,
+            notes: `Otomatis disinkronisasi dari Slip Gaji: ${record.payrollNumber || '-'}. Terintegrasi ke Menu Pajak & Neraca Keuangan (anti double input).`,
+            createdAt: record.createdAt || new Date().toISOString(),
+            createdBy: record.recordedBy || 'System Payroll Sync',
+          };
+          missingTaxes.push(newTax);
+          saveTaxObligationToFirestore(newTax);
+        }
+      }
+    });
+
+    if (missingTaxes.length > 0) {
+      taxSyncedCount = missingTaxes.length;
+      const updatedTaxes = [...missingTaxes, ...currentTaxes];
+      setTaxObligations(updatedTaxes);
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updatedTaxes));
+      } catch {}
+      saveSettingsToFirestore('tax_obligations', updatedTaxes);
+      broadcastLiveDataUpdate('TAX_OBLIGATIONS', updatedTaxes);
     }
 
     return {
+      success: true,
       syncedCount: paidRecords.length,
       createdCount,
       updatedCount,
+      removedDuplicatesCount,
+      taxSyncedCount,
       totalAmountIDR,
+      message: `Sinkronisasi berhasil: ${paidRecords.length} slip gaji lunas diperiksa. ${createdCount > 0 ? createdCount + ' transaksi baru dibuat. ' : ''}${updatedCount > 0 ? updatedCount + ' transaksi diperbarui. ' : ''}${removedDuplicatesCount > 0 ? removedDuplicatesCount + ' transaksi duplikat dibersihkan. ' : ''}${taxSyncedCount > 0 ? taxSyncedCount + ' kewajiban PPh 21 disinkronkan. ' : ''}`,
     };
   };
 
   const resetPayrollToDefault = async (): Promise<{ success: boolean; message?: string }> => {
     setDeletedPayrollIds([]);
     try {
-      localStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify([]));
+      safeLocalStorage.setItem(STORAGE_KEY_DELETED_PAYROLL_IDS, JSON.stringify([]));
     } catch (e) {
       console.warn(e);
     }
@@ -10420,7 +10440,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // 2. Persist to localStorage
       try {
-        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
+        safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
       } catch (e) {
         console.warn('LocalStorage save salary config error:', e);
       }
@@ -10493,7 +10513,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setEmployeeSalaryConfigs(currentConfigs);
       broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', currentConfigs);
       try {
-        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(currentConfigs));
+        safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(currentConfigs));
       } catch (e) {
         console.warn('LocalStorage save salary configs error:', e);
       }
@@ -10517,6 +10537,88 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const syncAllEmployeeSalaryConfigsToDefault = async (
+    targetYear: number
+  ): Promise<{ success: boolean; syncedCount: number; message: string }> => {
+    try {
+      const year = Number(targetYear) || new Date().getFullYear();
+      const currentConfigs = employeeSalaryConfigsRef.current || employeeSalaryConfigs;
+      const unconfigured = teamMembers.filter(
+        (m) => !currentConfigs.some((c) => c.employeeId === m.id && Number(c.year) === year)
+      );
+
+      if (unconfigured.length === 0) {
+        return {
+          success: true,
+          syncedCount: 0,
+          message: `Seluruh karyawan (${teamMembers.length} orang) telah memiliki penetapan standar remunerasi untuk Tahun ${year}.`,
+        };
+      }
+
+      const configsToAdd: (Omit<EmployeeAnnualSalaryConfig, 'id' | 'updatedAt' | 'createdAt'> & { id?: string })[] =
+        unconfigured.map((m, idx) => {
+          const roleDef = roleDefinitions[m.role];
+          const standardComp = roleDef?.standardCompensation || DEFAULT_ROLE_COMPENSATION[m.role] || {
+            basicSalary: 10_000_000,
+            positionAllowance: 2_500_000,
+            transportAllowance: 1_000_000,
+            mealAllowance: 800_000,
+          };
+
+          const base = standardComp.basicSalary || 10_000_000;
+          const pos = standardComp.positionAllowance || 0;
+          const trans = standardComp.transportAllowance || 0;
+          const meal = standardComp.mealAllowance || 0;
+          const comm = (standardComp as any).communicationAllowance || 0;
+          const fix = (standardComp as any).fixedAllowance || 0;
+          const totalAllowance = pos + trans + meal + comm + fix;
+          const totalCompensation = base + totalAllowance;
+
+          const seq = String(idx + 1).padStart(3, '0');
+          const skNumber = `SK/${year}/REM-DIR/${seq}`;
+
+          return {
+            id: `salcfg-${m.id}-${year}`,
+            employeeId: m.id,
+            employeeName: m.name,
+            employeeNik: m.nik || '',
+            role: m.role,
+            roleTitle: m.roleTitle || roleDef?.title || m.role,
+            department: m.department || 'Konsultansi & Operasional',
+            year,
+            basicSalary: base,
+            positionAllowance: pos,
+            transportAllowance: trans,
+            mealAllowance: meal,
+            communicationAllowance: comm,
+            fixedAllowance: fix,
+            totalAllowance,
+            totalCompensation,
+            effectiveDate: `${year}-01-01`,
+            notes: `Disinkronkan otomatis dari standar remunerasi jabatan ${m.roleTitle || roleDef?.title || m.role}.`,
+            skNumber,
+            establishedBy: currentUser?.name || currentUser?.username || 'HR Auto-Sync',
+          };
+        });
+
+      const result = await addOrUpdateMultipleEmployeeSalaryConfigs(configsToAdd);
+      return {
+        success: result.success,
+        syncedCount: configsToAdd.length,
+        message: result.success
+          ? `${configsToAdd.length} karyawan berhasil disinkronkan standar gajinya untuk Tahun ${year} berdasarkan remunerasi jabatan resmi!`
+          : result.message,
+      };
+    } catch (err: any) {
+      console.error('syncAllEmployeeSalaryConfigsToDefault error:', err);
+      return {
+        success: false,
+        syncedCount: 0,
+        message: 'Gagal melakukan sinkronisasi gaji: ' + (err?.message || 'Terjadi kesalahan sistem.'),
+      };
+    }
+  };
+
   const deleteEmployeeSalaryConfig = async (
     id: string
   ): Promise<{ success: boolean; message: string }> => {
@@ -10528,7 +10630,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setEmployeeSalaryConfigs(updatedList);
       broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', updatedList);
       try {
-        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
+        safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(updatedList));
       } catch (e) {
         console.warn('LocalStorage delete salary config error:', e);
       }
@@ -10552,7 +10654,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setEmployeeSalaryConfigs(DEFAULT_EMPLOYEE_SALARY_CONFIGS);
       broadcastLiveDataUpdate('EMPLOYEE_SALARY_CONFIGS', DEFAULT_EMPLOYEE_SALARY_CONFIGS);
       try {
-        localStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(DEFAULT_EMPLOYEE_SALARY_CONFIGS));
+        safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(DEFAULT_EMPLOYEE_SALARY_CONFIGS));
       } catch (e) {
         console.warn('LocalStorage reset salary configs error:', e);
       }
@@ -10712,7 +10814,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch (err) {
         console.error('Failed to sync projects to localStorage:', err);
       }
@@ -10750,7 +10852,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch (err) {
         console.error('Failed to sync projects to localStorage:', err);
       }
@@ -10834,7 +10936,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return updatedProj;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
@@ -10867,7 +10969,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return updatedProj;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
+        safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
@@ -11109,6 +11211,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         employeeSalaryConfigs,
         addOrUpdateEmployeeSalaryConfig,
         addOrUpdateMultipleEmployeeSalaryConfigs,
+        syncAllEmployeeSalaryConfigsToDefault,
         deleteEmployeeSalaryConfig,
         resetEmployeeSalaryConfigsToDefault,
         getEmployeeSalaryConfigForYear,

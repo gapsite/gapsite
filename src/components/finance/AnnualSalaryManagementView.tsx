@@ -24,6 +24,8 @@ import {
   AlertTriangle,
   Building2,
   Calculator,
+  Zap,
+  Loader2,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { EmployeeAnnualSalaryConfig, UserRole } from '../../types';
@@ -44,6 +46,7 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
     employeeSalaryConfigs,
     deleteEmployeeSalaryConfig,
     resetEmployeeSalaryConfigsToDefault,
+    syncAllEmployeeSalaryConfigsToDefault,
     currentUser,
     isMasterAdmin,
     hasPermission,
@@ -68,6 +71,30 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
   const [selectedForDetail, setSelectedForDetail] = useState<EmployeeAnnualSalaryConfig | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isSyncingConfigs, setIsSyncingConfigs] = useState(false);
+  const [configSyncNotice, setConfigSyncNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleSyncAllUnconfigured = async () => {
+    const yr = Number(selectedYearFilter) || new Date().getFullYear();
+    setIsSyncingConfigs(true);
+    setConfigSyncNotice(null);
+    try {
+      const res = await syncAllEmployeeSalaryConfigsToDefault(yr);
+      setConfigSyncNotice({
+        type: res.success ? 'success' : 'error',
+        message: res.message,
+      });
+      setTimeout(() => setConfigSyncNotice(null), 8000);
+    } catch (err: any) {
+      setConfigSyncNotice({
+        type: 'error',
+        message: 'Gagal sinkronisasi gaji: ' + (err?.message || 'Error tidak diketahui'),
+      });
+      setTimeout(() => setConfigSyncNotice(null), 8000);
+    } finally {
+      setIsSyncingConfigs(false);
+    }
+  };
 
   // Distinct years available in data
   const availableYears = useMemo(() => {
@@ -407,12 +434,55 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
               </div>
             </div>
           </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleSyncAllUnconfigured}
+              disabled={isSyncingConfigs}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+              title="Sinkronkan standar gaji otomatis sesuai acuan remunerasi jabatan resmi"
+            >
+              {isSyncingConfigs ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Zap className="w-3.5 h-3.5" />
+              )}
+              <span>⚡ Sinkronkan Semua Otomatis</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenNew()}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-xs shadow-xs cursor-pointer"
+            >
+              + Tetapkan Manual
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Notification Banner */}
+      {configSyncNotice && (
+        <div
+          className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-3 shadow-xs ${
+            configSyncNotice.type === 'success'
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+              : 'bg-rose-50 border-rose-300 text-rose-950'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {configSyncNotice.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span>{configSyncNotice.message}</span>
+          </div>
           <button
             type="button"
-            onClick={() => handleOpenNew()}
-            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-xs shrink-0 shadow-xs cursor-pointer"
+            onClick={() => setConfigSyncNotice(null)}
+            className="text-slate-400 hover:text-slate-700 font-bold px-1.5 cursor-pointer"
           >
-            + Tetapkan Sekarang
+            &times;
           </button>
         </div>
       )}

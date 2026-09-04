@@ -28,6 +28,7 @@ import {
   RefreshCw,
   UserCheck,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { PayrollPayment, PayrollStatus } from '../../types';
@@ -82,11 +83,14 @@ export const PayrollManagement: React.FC = () => {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSyncingLedger, setIsSyncingLedger] = useState(false);
+  const [syncErrorMsg, setSyncErrorMsg] = useState<string | null>(null);
   const [syncFeedback, setSyncFeedback] = useState<{
     show: boolean;
     syncedCount: number;
     createdCount: number;
     updatedCount: number;
+    removedDuplicatesCount: number;
+    taxSyncedCount: number;
     totalAmountIDR: number;
   } | null>(null);
 
@@ -117,7 +121,7 @@ export const PayrollManagement: React.FC = () => {
     });
 
     const difference = totalPaidPayrollIDR - totalLedgerPayrollIDR;
-    const isMatched = unlinkedRecords.length === 0 && (paidRecords.length === 0 || payrollTransactions.length >= paidRecords.length);
+    const isMatched = unlinkedRecords.length === 0 && Math.abs(difference) < 1;
 
     return {
       paidCount: paidRecords.length,
@@ -130,20 +134,27 @@ export const PayrollManagement: React.FC = () => {
     };
   }, [payrollRecords, transactions]);
 
-  const handleSyncToFinance = () => {
+  const handleSyncToFinance = async () => {
     setIsSyncingLedger(true);
+    setSyncErrorMsg(null);
     try {
-      const res = syncAllPayrollToFinance();
+      const res = await syncAllPayrollToFinance();
       setSyncFeedback({
         show: true,
         syncedCount: res.syncedCount,
         createdCount: res.createdCount,
         updatedCount: res.updatedCount,
+        removedDuplicatesCount: res.removedDuplicatesCount || 0,
+        taxSyncedCount: res.taxSyncedCount || 0,
         totalAmountIDR: res.totalAmountIDR,
       });
       setTimeout(() => {
         setSyncFeedback((prev) => (prev ? { ...prev, show: false } : null));
-      }, 7000);
+      }, 8000);
+    } catch (err: any) {
+      console.error('Sync payroll error:', err);
+      setSyncErrorMsg(err?.message || 'Terjadi kesalahan saat menyinkronkan data gaji ke modul keuangan.');
+      setTimeout(() => setSyncErrorMsg(null), 8000);
     } finally {
       setIsSyncingLedger(false);
     }
@@ -517,13 +528,33 @@ export const PayrollManagement: React.FC = () => {
                 <strong>Sinkronisasi Berhasil:</strong> {syncFeedback.syncedCount} slip gaji lunas ({formatIDR(syncFeedback.totalAmountIDR)}) diperiksa.
                 {syncFeedback.createdCount > 0 ? ` Menambahkan ${syncFeedback.createdCount} transaksi baru ke Buku Kas & Arus Kas.` : ''}
                 {syncFeedback.updatedCount > 0 ? ` Menyesuaikan ${syncFeedback.updatedCount} transaksi agar nominal dan statusnya akurat.` : ''}
-                {syncFeedback.createdCount === 0 && syncFeedback.updatedCount === 0 ? ' Seluruh transaksi telah 100% cocok dan terhubung.' : ''}
+                {syncFeedback.removedDuplicatesCount > 0 ? ` Membersihkan ${syncFeedback.removedDuplicatesCount} transaksi duplikat.` : ''}
+                {syncFeedback.taxSyncedCount > 0 ? ` Menyelaraskan ${syncFeedback.taxSyncedCount} kewajiban PPh 21 ke Menu Pajak.` : ''}
+                {syncFeedback.createdCount === 0 && syncFeedback.updatedCount === 0 && syncFeedback.removedDuplicatesCount === 0 ? ' Seluruh transaksi telah 100% cocok dan terhubung.' : ''}
               </span>
             </div>
             <button
               type="button"
               onClick={() => setSyncFeedback(null)}
               className="text-slate-400 hover:text-slate-700 font-bold px-2 py-1 text-xs cursor-pointer"
+            >
+              &times;
+            </button>
+          </div>
+        )}
+
+        {syncErrorMsg && (
+          <div className="mt-3.5 p-3 bg-rose-50 rounded-xl border border-rose-300 shadow-xs flex items-center justify-between gap-3 text-xs text-rose-950">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>
+                <strong>Gagal Sinkronisasi:</strong> {syncErrorMsg}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSyncErrorMsg(null)}
+              className="text-rose-400 hover:text-rose-700 font-bold px-2 py-1 text-xs cursor-pointer"
             >
               &times;
             </button>

@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState } from 'react';
 import { ProjectProvider, useProjects } from './context/ProjectContext';
 import { Sidebar, MainTabType } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -7,81 +7,33 @@ import { FilterBar } from './components/FilterBar';
 import { ProjectTable } from './components/ProjectTable';
 import { LoginView } from './components/LoginView';
 import { RealtimeRoleToast } from './components/RealtimeRoleToast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   ConsultingProject,
   JobDisposition,
   TeamMember,
 } from './types';
 
-// Dynamic imports (React.lazy) for heavy modules and views to optimize bundle chunking
-const ProjectKanban = React.lazy(() =>
-  import('./components/ProjectKanban').then((m) => ({ default: m.ProjectKanban }))
-);
-const ProjectGanttChart = React.lazy(() =>
-  import('./components/ProjectGanttChart').then((m) => ({ default: m.ProjectGanttChart }))
-);
-const ProjectDetailModal = React.lazy(() =>
-  import('./components/ProjectDetailModal').then((m) => ({ default: m.ProjectDetailModal }))
-);
-const JobDispositionModal = React.lazy(() =>
-  import('./components/JobDispositionModal').then((m) => ({ default: m.JobDispositionModal }))
-);
-const JobDispositionBoard = React.lazy(() =>
-  import('./components/JobDispositionBoard').then((m) => ({ default: m.JobDispositionBoard }))
-);
-const DocumentManager = React.lazy(() =>
-  import('./components/DocumentManager').then((m) => ({ default: m.DocumentManager }))
-);
-const TkdnCalculatorModal = React.lazy(() =>
-  import('./components/TkdnCalculatorModal').then((m) => ({ default: m.TkdnCalculatorModal }))
-);
-const NewProjectModal = React.lazy(() =>
-  import('./components/NewProjectModal').then((m) => ({ default: m.NewProjectModal }))
-);
-const TeamWorkloadView = React.lazy(() =>
-  import('./components/TeamWorkloadView').then((m) => ({ default: m.TeamWorkloadView }))
-);
-const ExportReportModal = React.lazy(() =>
-  import('./components/ExportReportModal').then((m) => ({ default: m.ExportReportModal }))
-);
-const FinancialManagement = React.lazy(() =>
-  import('./components/finance/FinancialManagement').then((m) => ({ default: m.FinancialManagement }))
-);
-const FinancialReportGenerator = React.lazy(() =>
-  import('./components/finance/FinancialReportGenerator').then((m) => ({ default: m.FinancialReportGenerator }))
-);
-const RoleManagerModal = React.lazy(() =>
-  import('./components/RoleManagerModal').then((m) => ({ default: m.RoleManagerModal }))
-);
-const ServiceTypeManagerModal = React.lazy(() =>
-  import('./components/ServiceTypeManagerModal').then((m) => ({ default: m.ServiceTypeManagerModal }))
-);
-const DocumentTypeManagerModal = React.lazy(() =>
-  import('./components/DocumentTypeManagerModal').then((m) => ({ default: m.DocumentTypeManagerModal }))
-);
-const UserProfileModal = React.lazy(() =>
-  import('./components/UserProfileModal').then((m) => ({ default: m.UserProfileModal }))
-);
-const CompanyLetterheadModal = React.lazy(() =>
-  import('./components/CompanyLetterheadModal').then((m) => ({ default: m.CompanyLetterheadModal }))
-);
-const TransactionCategoryManagerModal = React.lazy(() =>
-  import('./components/finance/TransactionCategoryManagerModal').then((m) => ({
-    default: m.TransactionCategoryManagerModal,
-  }))
-);
-const PaymentChannelManagerModal = React.lazy(() =>
-  import('./components/finance/PaymentChannelManagerModal').then((m) => ({
-    default: m.PaymentChannelManagerModal,
-  }))
-);
-
-const ModuleLoadingFallback: React.FC = () => (
-  <div className="flex flex-col items-center justify-center p-12 text-slate-500 min-h-[300px] animate-in fade-in duration-200">
-    <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mb-3" />
-    <span className="text-xs font-medium text-slate-500">Memuat modul antarmuka...</span>
-  </div>
-);
+// Direct static imports for instant zero-latency view switching
+import { ProjectKanban } from './components/ProjectKanban';
+import { ProjectGanttChart } from './components/ProjectGanttChart';
+import { ProjectDetailModal } from './components/ProjectDetailModal';
+import { JobDispositionModal } from './components/JobDispositionModal';
+import { JobDispositionBoard } from './components/JobDispositionBoard';
+import { DocumentManager } from './components/DocumentManager';
+import { TkdnCalculatorModal } from './components/TkdnCalculatorModal';
+import { NewProjectModal } from './components/NewProjectModal';
+import { TeamWorkloadView } from './components/TeamWorkloadView';
+import { ExportReportModal } from './components/ExportReportModal';
+import { FinancialManagement } from './components/finance/FinancialManagement';
+import { FinancialReportGenerator } from './components/finance/FinancialReportGenerator';
+import { RoleManagerModal } from './components/RoleManagerModal';
+import { ServiceTypeManagerModal } from './components/ServiceTypeManagerModal';
+import { DocumentTypeManagerModal } from './components/DocumentTypeManagerModal';
+import { UserProfileModal } from './components/UserProfileModal';
+import { CompanyLetterheadModal } from './components/CompanyLetterheadModal';
+import { TransactionCategoryManagerModal } from './components/finance/TransactionCategoryManagerModal';
+import { PaymentChannelManagerModal } from './components/finance/PaymentChannelManagerModal';
 
 const DashboardContent: React.FC = () => {
   const { selectedProject, setSelectedProjectId, isAuthenticated, hasPermission } = useProjects();
@@ -195,7 +147,7 @@ const DashboardContent: React.FC = () => {
 
         {/* Main Workspace Body */}
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0 print:m-0 print:max-w-none">
-          <Suspense fallback={<ModuleLoadingFallback />}>
+          <ErrorBoundary fallbackTitle="Gagal Memuat Modul Antarmuka">
             {/* TAB 1: PROJECTS CRM DASHBOARD */}
           {activeTab === 'projects' && (
             <div className="space-y-4 animate-in fade-in duration-150">
@@ -391,7 +343,7 @@ const DashboardContent: React.FC = () => {
               <TeamWorkloadView onAssignToMember={handleAssignToTeamMember} />
             </div>
           )}
-          </Suspense>
+          </ErrorBoundary>
         </main>
 
         {/* Admin Footer */}
@@ -403,7 +355,7 @@ const DashboardContent: React.FC = () => {
       </div>
 
       {/* MODALS */}
-      <Suspense fallback={null}>
+      <ErrorBoundary fallbackTitle="Gagal Memuat Dialog Modal">
         {/* 1. Project Detail Workspace Modal */}
         {selectedProject && (
           <ProjectDetailModal
@@ -486,7 +438,7 @@ const DashboardContent: React.FC = () => {
           isOpen={isPaymentChannelManagerOpen}
           onClose={() => setIsPaymentChannelManagerOpen(false)}
         />
-      </Suspense>
+      </ErrorBoundary>
     </div>
   );
 };
