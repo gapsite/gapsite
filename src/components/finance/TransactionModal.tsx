@@ -36,6 +36,7 @@ import {
   TransactionCategoryDefinition,
   PaymentChannelDefinition,
   LoanFacilityType,
+  ConsultingProject,
 } from '../../types';
 import {
   getTransactionCategoryLabel,
@@ -50,6 +51,7 @@ interface TransactionModalProps {
   initialType?: TransactionType;
   editingTransaction?: FinancialTransaction | null;
   defaultProjectId?: string;
+  initialProject?: ConsultingProject | null;
 }
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
@@ -67,6 +69,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   initialType = 'INCOME',
   editingTransaction = null,
   defaultProjectId,
+  initialProject,
 }) => {
   const {
     projects,
@@ -90,7 +93,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [amountInput, setAmountInput] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [clientOrVendorName, setClientOrVendorName] = useState<string>('');
-  const [projectId, setProjectId] = useState<string>(defaultProjectId || '');
+  const [projectId, setProjectId] = useState<string>(defaultProjectId || initialProject?.id || '');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER_BCA');
   const [referenceNumber, setReferenceNumber] = useState<string>('');
   const [status, setStatus] = useState<TransactionStatus>('CLEARED');

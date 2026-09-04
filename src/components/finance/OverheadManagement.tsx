@@ -172,7 +172,7 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
     requestedBy: 'Staff Operasional',
     approvedBy: 'Finance Manager',
     hasTax: false,
-    taxType: 'PPH_23' as 'PPH_23' | 'PPH_4_2' | 'PPN',
+    taxType: 'PPH_23' as 'PPH_23' | 'PPH_4_2' | 'PPN_11' | 'PPN' | 'NONE',
     taxRatePercent: 2,
     notes: '',
     receiptAttachment: '',

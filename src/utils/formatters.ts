@@ -169,10 +169,10 @@ export const getStatusBadge = (status: ProjectStatus) => {
 
 export const getDocTypeName = (
   type: DocumentType,
-  customDocTypes?: DocumentTypeDefinition[]
+  customDocTypes?: DocumentTypeDefinition[] | unknown
 ): string => {
-  if (customDocTypes && customDocTypes.length > 0) {
-    const found = customDocTypes.find((d) => d.id === type);
+  if (Array.isArray(customDocTypes) && customDocTypes.length > 0) {
+    const found = (customDocTypes as DocumentTypeDefinition[]).find((d) => d.id === type);
     if (found) return found.name;
   }
   const defaultFound = DEFAULT_DOCUMENT_TYPES.find((d) => d.id === type);

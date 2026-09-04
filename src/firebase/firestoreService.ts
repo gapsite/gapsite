@@ -7,7 +7,8 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  onSnapshot
+  onSnapshot,
+  writeBatch,
 } from './config';
 import {
   ConsultingProject,
@@ -45,6 +46,7 @@ export const FirestoreCollections = {
   GOVERNMENT_PROJECTS: 'government_projects',
   RETAIL_PROJECTS: 'retail_projects',
   OVERHEAD: 'overhead_expenses',
+  OVERHEAD_EXPENSES: 'overhead_expenses',
   OFFICE_RENTS: 'office_rent_contracts',
 };
 
@@ -210,14 +212,107 @@ export const deleteTransactionFromFirestore = async (transactionId: string): Pro
   }
 };
 
-// Sync Settings (Service Types / Roles)
-export const saveSettingsToFirestore = async (key: string, data: any): Promise<void> => {
-  try {
-    const docRef = doc(db, FirestoreCollections.SETTINGS, key);
-    await setDoc(docRef, sanitizeForFirestore({ data, updatedAt: new Date().toISOString() }), { merge: true });
-  } catch (error) {
-    console.error(`Firestore save settings (${key}) error:`, error);
+// Batched writes helper: commits documents in safe chunks of up to 400 operations
+export const commitBatchOperations = async (
+  operations: Array<{
+    type: 'set' | 'delete';
+    collectionName: string;
+    docId: string;
+    data?: any;
+    merge?: boolean;
+  }>
+): Promise<void> => {
+  if (!operations || operations.length === 0) return;
+  const CHUNK_SIZE = 400;
+  for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+    const chunk = operations.slice(i, i + CHUNK_SIZE);
+    const batch = writeBatch(db);
+    for (const op of chunk) {
+      const docRef = doc(db, op.collectionName, op.docId);
+      if (op.type === 'delete') {
+        batch.delete(docRef);
+      } else {
+        batch.set(docRef, sanitizeForFirestore(op.data), { merge: op.merge ?? true });
+      }
+    }
+    await batch.commit();
   }
+};
+
+// Batch save entities into Firestore
+export const saveBatchEntitiesToFirestore = async (
+  collectionName: string,
+  items: Array<{ id: string; [key: string]: any }>,
+  merge: boolean = true
+): Promise<void> => {
+  if (!items || items.length === 0) return;
+  const ops = items.map((item) => ({
+    type: 'set' as const,
+    collectionName,
+    docId: item.id,
+    data: {
+      ...item,
+      updatedAt: item.updatedAt || new Date().toISOString(),
+    },
+    merge,
+  }));
+  await commitBatchOperations(ops);
+};
+
+// Sync Settings (Service Types / Roles) with debouncing to prevent hotspotting and write-stream exhaustion
+const settingsWriteDebounceTimers = new Map<string, NodeJS.Timeout>();
+const pendingSettingsPayloads = new Map<string, any>();
+const pendingSettingsResolvers = new Map<string, Array<() => void>>();
+
+export const saveSettingsToFirestore = async (key: string, data: any): Promise<void> => {
+  // Collections like transactions have their own Firestore collections and must never be stored in app_settings
+  if (key === 'transactions') {
+    return;
+  }
+
+  pendingSettingsPayloads.set(key, data);
+
+  return new Promise<void>((resolve) => {
+    if (!pendingSettingsResolvers.has(key)) {
+      pendingSettingsResolvers.set(key, []);
+    }
+    pendingSettingsResolvers.get(key)!.push(resolve);
+
+    const existingTimer = settingsWriteDebounceTimers.get(key);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(async () => {
+      settingsWriteDebounceTimers.delete(key);
+      const latestData = pendingSettingsPayloads.get(key);
+      pendingSettingsPayloads.delete(key);
+      const resolvers = pendingSettingsResolvers.get(key) || [];
+      pendingSettingsResolvers.delete(key);
+
+      try {
+        // Guard against Firestore 1MB single document size limit
+        const serialized = JSON.stringify(latestData || '');
+        if (serialized.length > 900000) {
+          console.warn(`Firestore save settings (${key}) skipped: payload size (${serialized.length} bytes) exceeds 900KB safe threshold for 1MB document limit.`);
+          return;
+        }
+
+        const docRef = doc(db, FirestoreCollections.SETTINGS, key);
+        await setDoc(
+          docRef,
+          sanitizeForFirestore({ data: latestData, updatedAt: new Date().toISOString() }),
+          { merge: true }
+        );
+      } catch (error) {
+        console.error(`Firestore save settings (${key}) error:`, error);
+      } finally {
+        resolvers.forEach((r) => r());
+      }
+    }, 350);
+
+    settingsWriteDebounceTimers.set(key, timer);
+  });
 };
 
 // Real-time Listeners
@@ -354,11 +449,14 @@ export const subscribeToTransactions = (onUpdate: (transactions: FinancialTransa
   return onSnapshot(
     colRef,
     (snapshot) => {
+      const seen = new Set<string>();
       const loaded: FinancialTransaction[] = [];
       snapshot.forEach((d) => {
         const data = d.data() as FinancialTransaction;
-        if (data && data.id) {
-          loaded.push(data);
+        const id = data?.id || d.id;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          loaded.push({ ...data, id });
         }
       });
       onUpdate(loaded);
@@ -958,6 +1056,10 @@ export const subscribeToSettings = (key: string, onUpdate: (data: any) => void) 
   );
 };
 
+// In-memory and session latch to prevent multiple seed runs
+let hasInitialSeededInSession = false;
+let isSeedingInProgress = false;
+
 // Ensure critical baseline documents and Master Admin account exist in Firestore
 export const ensureInitialFirestoreSeed = async (
   masterAdmin: TeamMember,
@@ -982,6 +1084,13 @@ export const ensureInitialFirestoreSeed = async (
   defaultTermSchemes?: any[],
   defaultOfficeRents?: any[]
 ): Promise<void> => {
+  if (hasInitialSeededInSession || isSeedingInProgress) return;
+  if (typeof window !== 'undefined' && sessionStorage.getItem('firestore_initial_seed_completed') === 'true') {
+    hasInitialSeededInSession = true;
+    return;
+  }
+  isSeedingInProgress = true;
+
   try {
     // 1. Ensure master admin root user exists in Firestore
     const masterDocRef = doc(db, FirestoreCollections.USERS, masterAdmin.id);
@@ -1017,16 +1126,16 @@ export const ensureInitialFirestoreSeed = async (
       getDeletedSet('deleted_payroll_ids'),
     ]);
 
-    // 2. Ensure initial users exist if collection is empty
+    // 2. Ensure initial users exist if collection is empty (batched)
     if (defaultTeamMembers && defaultTeamMembers.length > 0) {
       const usersSnap = await getDocs(collection(db, FirestoreCollections.USERS));
       if (usersSnap.empty) {
-        await Promise.all(
-          defaultTeamMembers.map((u) => {
-            const uRef = doc(db, FirestoreCollections.USERS, u.id);
-            return setDoc(uRef, sanitizeForFirestore(u));
-          })
-        );
+        const batch = writeBatch(db);
+        defaultTeamMembers.forEach((u) => {
+          const uRef = doc(db, FirestoreCollections.USERS, u.id);
+          batch.set(uRef, sanitizeForFirestore(u), { merge: true });
+        });
+        await batch.commit();
       }
     }
 
@@ -1044,82 +1153,104 @@ export const ensureInitialFirestoreSeed = async (
       await setDoc(rolesRef, sanitizeForFirestore({ data: defaultRoles, updatedAt: new Date().toISOString() }));
     }
 
-    // 5. Ensure master document types exist ONLY IF NEVER SEEDED BEFORE
+    // 5. Ensure master document types exist (batched)
     const docTypesSeedRef = doc(db, FirestoreCollections.SETTINGS, 'doc_types_seed_meta');
     const docTypesSeedSnap = await getDoc(docTypesSeedRef);
     if (!docTypesSeedSnap.exists()) {
       if (defaultDocTypes && defaultDocTypes.length > 0) {
-        await Promise.all(
-          defaultDocTypes.map((dt) => {
-            const dRef = doc(db, FirestoreCollections.DOCUMENT_TYPES, dt.id);
-            return setDoc(dRef, sanitizeForFirestore({ ...dt, updatedAt: new Date().toISOString() }));
-          })
-        );
+        const batch = writeBatch(db);
+        defaultDocTypes.forEach((dt) => {
+          const dRef = doc(db, FirestoreCollections.DOCUMENT_TYPES, dt.id);
+          batch.set(dRef, sanitizeForFirestore({ ...dt, updatedAt: new Date().toISOString() }), { merge: true });
+        });
+        batch.set(docTypesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        await batch.commit();
+      } else {
+        await setDoc(docTypesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(docTypesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 6. Ensure master document categories exist ONLY IF NEVER SEEDED BEFORE
+    // 6. Ensure master document categories exist (batched)
     const docCategoriesSeedRef = doc(db, FirestoreCollections.SETTINGS, 'doc_categories_seed_meta');
     const docCategoriesSeedSnap = await getDoc(docCategoriesSeedRef);
     if (!docCategoriesSeedSnap.exists()) {
       if (defaultCategories && defaultCategories.length > 0) {
-        await Promise.all(
-          defaultCategories.map((dc) => {
-            const cRef = doc(db, FirestoreCollections.DOCUMENT_CATEGORIES, dc.id);
-            return setDoc(cRef, sanitizeForFirestore({ ...dc, updatedAt: new Date().toISOString() }));
-          })
-        );
+        const batch = writeBatch(db);
+        defaultCategories.forEach((dc) => {
+          const cRef = doc(db, FirestoreCollections.DOCUMENT_CATEGORIES, dc.id);
+          batch.set(cRef, sanitizeForFirestore({ ...dc, updatedAt: new Date().toISOString() }), { merge: true });
+        });
+        batch.set(docCategoriesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        await batch.commit();
+      } else {
+        await setDoc(docCategoriesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(docCategoriesSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 7. Ensure projects exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted projects on refresh!)
+    // 7. Ensure projects exist ONLY IF NEVER SEEDED BEFORE (batched)
     const projectsSeedRef = doc(db, FirestoreCollections.SETTINGS, 'projects_seed_meta');
     const projectsSeedSnap = await getDoc(projectsSeedRef);
     if (!projectsSeedSnap.exists()) {
       if (defaultProjects && defaultProjects.length > 0) {
         const toSeed = defaultProjects.filter((p) => !deletedProjects.has(p.id));
-        await Promise.all(
-          toSeed.map((p) => {
+        if (toSeed.length > 0) {
+          const batch = writeBatch(db);
+          toSeed.forEach((p) => {
             const pRef = doc(db, FirestoreCollections.PROJECTS, p.id);
-            return setDoc(pRef, sanitizeForFirestore(p));
-          })
-        );
+            batch.set(pRef, sanitizeForFirestore(p), { merge: true });
+          });
+          batch.set(projectsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+          await batch.commit();
+        } else {
+          await setDoc(projectsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        }
+      } else {
+        await setDoc(projectsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(projectsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 8. Ensure dispositions exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted dispositions on refresh!)
+    // 8. Ensure dispositions exist ONLY IF NEVER SEEDED BEFORE (batched)
     const dispSeedRef = doc(db, FirestoreCollections.SETTINGS, 'dispositions_seed_meta');
     const dispSeedSnap = await getDoc(dispSeedRef);
     if (!dispSeedSnap.exists()) {
       if (defaultDispositions && defaultDispositions.length > 0) {
         const toSeed = defaultDispositions.filter((d) => !deletedDispositions.has(d.id));
-        await Promise.all(
-          toSeed.map((d) => {
+        if (toSeed.length > 0) {
+          const batch = writeBatch(db);
+          toSeed.forEach((d) => {
             const dRef = doc(db, FirestoreCollections.DISPOSITIONS, d.id);
-            return setDoc(dRef, sanitizeForFirestore(d));
-          })
-        );
+            batch.set(dRef, sanitizeForFirestore(d), { merge: true });
+          });
+          batch.set(dispSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+          await batch.commit();
+        } else {
+          await setDoc(dispSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        }
+      } else {
+        await setDoc(dispSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(dispSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 9. Ensure transactions exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted transactions on refresh!)
+    // 9. Ensure transactions exist ONLY IF NEVER SEEDED BEFORE (batched)
     const trxsSeedRef = doc(db, FirestoreCollections.SETTINGS, 'transactions_seed_meta');
     const trxsSeedSnap = await getDoc(trxsSeedRef);
     if (!trxsSeedSnap.exists()) {
       if (defaultTransactions && defaultTransactions.length > 0) {
         const toSeed = defaultTransactions.filter((t) => !deletedTransactions.has(t.id));
-        await Promise.all(
-          toSeed.map((t) => {
+        if (toSeed.length > 0) {
+          const batch = writeBatch(db);
+          toSeed.forEach((t) => {
             const tRef = doc(db, FirestoreCollections.TRANSACTIONS, t.id);
-            return setDoc(tRef, sanitizeForFirestore(t));
-          })
-        );
+            batch.set(tRef, sanitizeForFirestore(t), { merge: true });
+          });
+          batch.set(trxsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+          await batch.commit();
+        } else {
+          await setDoc(trxsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        }
+      } else {
+        await setDoc(trxsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(trxsSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
     // 10. Ensure transaction categories exist in settings
@@ -1140,22 +1271,28 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 12. Ensure tax obligations exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted tax obligations on refresh!)
+    // 12. Ensure tax obligations exist ONLY IF NEVER SEEDED BEFORE (batched)
     const taxSeedRef = doc(db, FirestoreCollections.SETTINGS, 'tax_seed_meta');
     const taxSeedSnap = await getDoc(taxSeedRef);
     if (!taxSeedSnap.exists()) {
       if (defaultTaxObligations !== undefined && defaultTaxObligations.length > 0) {
         const toSeed = defaultTaxObligations.filter((t) => !deletedTaxObligations.has(t.id));
-        await Promise.all(
-          toSeed.map((t) => {
+        if (toSeed.length > 0) {
+          const batch = writeBatch(db);
+          toSeed.forEach((t) => {
             const tRef = doc(db, FirestoreCollections.TAX_OBLIGATIONS, t.id);
-            return setDoc(tRef, sanitizeForFirestore(t));
-          })
-        );
-        const taxSettingsRef = doc(db, FirestoreCollections.SETTINGS, 'tax_obligations');
-        await setDoc(taxSettingsRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
+            batch.set(tRef, sanitizeForFirestore(t), { merge: true });
+          });
+          const taxSettingsRef = doc(db, FirestoreCollections.SETTINGS, 'tax_obligations');
+          batch.set(taxSettingsRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
+          batch.set(taxSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+          await batch.commit();
+        } else {
+          await setDoc(taxSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        }
+      } else {
+        await setDoc(taxSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(taxSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
     // 13. Ensure bank loans exist in settings if not present
@@ -1176,38 +1313,50 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 15. Ensure receivables exist ONLY IF NEVER SEEDED BEFORE (Never resurrect deleted receivables on refresh!)
+    // 15. Ensure receivables exist ONLY IF NEVER SEEDED BEFORE (batched)
     const recSeedRef = doc(db, FirestoreCollections.SETTINGS, 'receivables_seed_meta');
     const recSeedSnap = await getDoc(recSeedRef);
     if (!recSeedSnap.exists()) {
       if (defaultReceivables && defaultReceivables.length > 0) {
         const toSeed = defaultReceivables.filter((r) => !deletedReceivables.has(r.id));
-        await Promise.all(
-          toSeed.map((r) => {
+        if (toSeed.length > 0) {
+          const batch = writeBatch(db);
+          toSeed.forEach((r) => {
             const rRef = doc(db, FirestoreCollections.RECEIVABLES, r.id);
-            return setDoc(rRef, sanitizeForFirestore(r));
-          })
-        );
+            batch.set(rRef, sanitizeForFirestore(r), { merge: true });
+          });
+          batch.set(recSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+          await batch.commit();
+        } else {
+          await setDoc(recSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        }
+      } else {
+        await setDoc(recSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(recSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
-    // 16. Ensure payroll records exist in Firestore collection & settings ONLY IF NEVER SEEDED BEFORE
+    // 16. Ensure payroll records exist in Firestore collection & settings ONLY IF NEVER SEEDED BEFORE (batched)
     const payrollSeedRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_seed_meta');
     const payrollSeedSnap = await getDoc(payrollSeedRef);
     if (!payrollSeedSnap.exists()) {
       if (defaultPayrollRecords && defaultPayrollRecords.length > 0) {
         const toSeed = defaultPayrollRecords.filter((p) => !deletedPayroll.has(p.id));
-        await Promise.all(
-          toSeed.map((p) => {
+        if (toSeed.length > 0) {
+          const batch = writeBatch(db);
+          toSeed.forEach((p) => {
             const pRef = doc(db, FirestoreCollections.PAYROLL, p.id);
-            return setDoc(pRef, sanitizeForFirestore(p));
-          })
-        );
-        const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
-        await setDoc(payrollRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
+            batch.set(pRef, sanitizeForFirestore(p), { merge: true });
+          });
+          const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
+          batch.set(payrollRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
+          batch.set(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+          await batch.commit();
+        } else {
+          await setDoc(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        }
+      } else {
+        await setDoc(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
       }
-      await setDoc(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
     }
 
     // 17. Ensure company letterhead exists in settings if not present
@@ -1254,8 +1403,17 @@ export const ensureInitialFirestoreSeed = async (
         await setDoc(rentRef, sanitizeForFirestore({ data: defaultOfficeRents, updatedAt: new Date().toISOString() }));
       }
     }
+
+    hasInitialSeededInSession = true;
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('firestore_initial_seed_completed', 'true');
+      } catch {}
+    }
   } catch (err) {
     console.warn('Firestore initial baseline check notice:', err);
+  } finally {
+    isSeedingInProgress = false;
   }
 };
 

@@ -4916,14 +4916,45 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                       B. ARUS KAS KELUAR UNTUK OPERASIONAL (CASH OUTFLOWS)
                     </td>
                   </tr>
-                  <tr>
-                    <td className="py-2.5 px-6 text-slate-700 border-b border-slate-200">
-                      Pembayaran Kas Operasional, Honor Konsultan, Biaya LVI & Audit (Cleared Outflows)
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-semibold text-rose-700 border-b border-slate-200">
-                      ({formatIDR(metrics.clearedExpense)})
-                    </td>
-                  </tr>
+                  {(() => {
+                    const payrollCleared = filteredTransactions
+                      .filter((t) => t.type === 'EXPENSE' && t.category === 'GAJI_KARYAWAN' && t.status === 'CLEARED')
+                      .reduce((sum, t) => sum + (t.amountIDR || 0), 0);
+                    const otherCleared = metrics.clearedExpense - payrollCleared;
+
+                    return (
+                      <>
+                        {payrollCleared > 0 && (
+                          <tr>
+                            <td className="py-2.5 px-6 text-slate-700 border-b border-slate-200">
+                              &bull; Pembayaran Gaji Karyawan &amp; Kompensasi (Payroll Cleared)
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-semibold text-rose-700 border-b border-slate-200">
+                              ({formatIDR(payrollCleared)})
+                            </td>
+                          </tr>
+                        )}
+                        <tr>
+                          <td className="py-2.5 px-6 text-slate-700 border-b border-slate-200">
+                            {payrollCleared > 0 ? '&bull; ' : ''}Beban Operasional Kantor, Utilitas &amp; Honor Proyek (Cleared Outflows)
+                          </td>
+                          <td className="py-2.5 px-4 text-right font-mono font-semibold text-rose-700 border-b border-slate-200">
+                            ({formatIDR(payrollCleared > 0 ? otherCleared : metrics.clearedExpense)})
+                          </td>
+                        </tr>
+                        {payrollCleared > 0 && (
+                          <tr className="bg-slate-50/70 font-semibold text-xs text-slate-700">
+                            <td className="py-2 px-6 border-b border-slate-200">
+                              Subtotal Kas Keluar Operasional Terealisasi
+                            </td>
+                            <td className="py-2 px-4 text-right font-mono font-bold text-rose-800 border-b border-slate-200">
+                              ({formatIDR(metrics.clearedExpense)})
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })()}
                   <tr>
                     <td className="py-2.5 px-6 text-slate-500 border-b border-slate-200">
                       Beban Tertunggak / Pending Settlement

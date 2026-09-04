@@ -146,7 +146,7 @@ const ALL_PERMISSIONS: { id: UserPermission; label: string; description: string;
   },
 ];
 
-const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, UserPermission[]> = {
+const ROLE_DEFAULT_PERMISSIONS: Partial<Record<UserRole, UserPermission[]>> = {
   MASTER_ADMIN: [
     'MANAGE_USERS_ROLES',
     'VERIFY_NEW_USERS',
@@ -218,7 +218,7 @@ const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, UserPermission[]> = {
   ],
 };
 
-const ROLE_DETAILS: Record<UserRole, { title: string; color: string; desc: string }> = {
+const ROLE_DETAILS: Partial<Record<UserRole, { title: string; color: string; desc: string }>> = {
   MASTER_ADMIN: {
     title: 'Chief Role Master & System SuperAdmin',
     color: 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300',
@@ -1842,7 +1842,8 @@ export const RoleManagerModal: React.FC<{
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(Object.keys(roleDefinitions) as UserRole[]).map((roleKey) => {
-                  const role = roleDefinitions[roleKey] || ROLE_DETAILS[roleKey];
+                  const role: Partial<RoleDefinition> & { title?: string; color?: string; desc?: string } =
+                    roleDefinitions[roleKey] || ROLE_DETAILS[roleKey] || {};
                   const userCount = teamMembers.filter((m) => m.role === roleKey).length;
                   const perms = role.defaultPermissions || ROLE_DEFAULT_PERMISSIONS[roleKey] || [];
 

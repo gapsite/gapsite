@@ -22,15 +22,17 @@ import { useProjects } from '../context/ProjectContext';
 import { sendResetPasswordEmail } from '../firebase/config';
 import { TeamMember, UserRole, UserPermission } from '../types';
 
-const ROLE_PRESETS: Record<
-  UserRole,
-  {
-    title: string;
-    department: string;
-    badgeColor: string;
-    desc: string;
-    defaultPermissions: UserPermission[];
-  }
+const ROLE_PRESETS: Partial<
+  Record<
+    UserRole,
+    {
+      title: string;
+      department: string;
+      badgeColor: string;
+      desc: string;
+      defaultPermissions: UserPermission[];
+    }
+  >
 > = {
   MASTER_ADMIN: {
     title: 'Chief Role Master & System SuperAdmin',

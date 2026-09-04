@@ -207,6 +207,7 @@ export interface ProjectDocument {
     signatureVerified?: boolean;
     qrCodeVerified?: boolean;
     checksum?: string;
+    [key: string]: any;
   };
   
   // Categorization & Financial / Offer Metadata
@@ -347,6 +348,8 @@ export interface ConsultingProject {
   code: string;
   clientName: string;
   productOrServiceName: string;
+  name?: string;
+  title?: string;
   companyType: CompanyType;
   projectCategory?: EngagementCategory;
   industry: string;
@@ -401,7 +404,13 @@ export type UserRole =
   | 'TECHNICAL_CONSULTANT'
   | 'SURVEYOR_LIAISON'
   | 'FINANCE_OFFICER'
-  | 'CLIENT_VIEWER';
+  | 'CLIENT_VIEWER'
+  | 'ADMIN'
+  | 'SUPER_ADMIN'
+  | 'ADMIN_MASTER'
+  | 'FINANCE'
+  | 'FINANCE_ADMIN'
+  | (string & {});
 
 export interface RoleDefinition {
   role: UserRole;
@@ -421,7 +430,7 @@ export interface RoleDefinition {
   };
 }
 
-export type RoleDefinitionsMap = Record<UserRole, RoleDefinition>;
+export type RoleDefinitionsMap = Record<string, RoleDefinition>;
 
 export interface RoleGovernanceMeta {
   title: string;
@@ -443,7 +452,9 @@ export type UserPermission =
   | 'SIGNOFF_MILESTONES'
   | 'MANAGE_DISPOSITIONS'
   | 'MANAGE_FINANCE'
-  | 'EXPORT_AUDIT_REPORTS';
+  | 'EXPORT_AUDIT_REPORTS'
+  | 'MANAGE_SETTINGS'
+  | (string & {});
 
 export interface AppUser {
   id: string;
@@ -553,9 +564,12 @@ export interface LoanRenewalRecord {
   adendumNumber?: string; // Nomor Surat Perjanjian Kredit / Adendum PK
   provisionFee?: number; // Biaya provisi perpanjangan / administrasi bank
   provisionFeeRecordedToLedger?: boolean;
+  provisionRecordedInLedger?: boolean;
   provisionFeeTransactionId?: string;
+  totalTenureAfter?: number;
   notes?: string;
   approvedBy?: string;
+  renewedBy?: string;
   createdAt: string;
 }
 
@@ -591,14 +605,14 @@ export interface BankLoan {
   startDate: string;
   paymentChannelId?: string;
   interestType?: 'FLAT' | 'EFFECTIVE';
-  monthlyPrincipal: number;
-  monthlyInterest: number;
-  monthlyInstallment: number;
-  totalInterest: number;
-  totalPayment: number;
-  remainingPrincipal: number;
-  paidPrincipal: number;
-  paidInterest: number;
+  monthlyPrincipal?: number;
+  monthlyInterest?: number;
+  monthlyInstallment?: number;
+  totalInterest?: number;
+  totalPayment?: number;
+  remainingPrincipal?: number;
+  paidPrincipal?: number;
+  paidInterest?: number;
   status: 'ACTIVE' | 'PAID_OFF' | 'DRAFT';
   isDisbursed: boolean;
   disbursedAt?: string;
@@ -734,19 +748,19 @@ export type OverheadCategory =
 
 export interface OverheadExpense {
   id: string;
-  overheadNumber: string; // e.g. "OVH-2026-001"
+  overheadNumber?: string; // e.g. "OVH-2026-001"
   date: string; // YYYY-MM-DD
   category: OverheadCategory;
   title: string; // Deskripsi kebutuhan operasional kantor
   vendorOrMerchant: string; // PLN, Pengelola Gedung, Catering, Pertamina, dsb
   amountIDR: number; // Nilai kotor / tagihan
   paymentChannelId: string; // e.g. BANK_TRANSFER_BCA, PETTY_CASH, dsb
-  paymentMethod: string;
+  paymentMethod?: string;
   referenceNumber?: string; // No. Struk / Kwitansi / Ref Transfer
   status: 'PAID' | 'PENDING' | 'SCHEDULED';
   paidDate?: string;
   hasTax: boolean; // Apakah ada potongan/pungutan pajak
-  taxType?: 'PPH_23' | 'PPH_4_2' | 'PPN_11' | 'NONE';
+  taxType?: 'PPH_23' | 'PPH_4_2' | 'PPN_11' | 'PPN' | 'NONE';
   taxRatePercent?: number; // 2% for PPh 23, 10% for PPh 4(2), 11% for PPN
   taxAmountIDR?: number;
   netPaymentIDR: number; // Nilai bersih yang dibayar
@@ -787,6 +801,7 @@ export interface PaymentChannelDefinition {
   accountNumber?: string; // e.g. '0206-01-002980-30-5'
   accountHolder?: string; // e.g. 'PT GAP CONSULTING INDONESIA'
   category?: PaymentChannelCategory;
+  type?: string;
   description?: string;
   isDefault?: boolean;
   status: 'ACTIVE' | 'INACTIVE';
@@ -933,6 +948,7 @@ export type ReceivableCategory =
 export type ReceivableStatus =
   | 'BELUM_DIBAYAR' // Unpaid (0% paid)
   | 'DIBAYAR_SEBAGIAN' // Partially Paid (>0% and <100%)
+  | 'SEBAGIAN' // Alias
   | 'LUNAS' // Fully Paid (100%)
   | 'JATUH_TEMPO' // Overdue
   | 'BATAL'; // Cancelled / Bad Debt
@@ -967,6 +983,8 @@ export interface Receivable {
   projectId?: string;
   projectCode?: string;
   milestoneTitle?: string; // e.g. "Termin 1 (DP 30%)", "Termin 2 (Audit LVI 40%)", "Pelunasan 30%"
+  milestoneTermin?: string;
+  poNumber?: string;
   
   // Financial amounts
   totalAmountIDR: number; // Nilai Total Tagihan
@@ -1135,7 +1153,7 @@ export interface EmployeeAnnualSalaryConfig {
   // Legalitas & Riwayat Penetapan
   skNumber?: string; // Nomor SK Direksi / Surat Keputusan (e.g. SK-DIR/001/SAL/2026)
   effectiveDate?: string; // Tanggal Mulai Berlaku (YYYY-MM-DD)
-  status: 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
+  status?: 'ACTIVE' | 'ARCHIVED' | 'DRAFT';
   notes?: string;
 
   createdAt?: string;
@@ -1306,6 +1324,7 @@ export interface GovernmentProject {
   // Linked standard CRM project (optional)
   linkedCrmProjectId?: string;
   
+  pphType?: 'PPH_22' | 'PPH_23' | 'PPH_FINAL' | 'NONE';
   notes?: string;
   createdAt: string;
   createdBy: string;
@@ -1376,15 +1395,19 @@ export interface RetailMilestone {
   percentage: number; // e.g. 30
   grossAmountIDR: number; // Nominal Bruto Tagihan Termin
   pricingType?: RetailPricingType;
-  dppAmountIDR: number; // Dasar Pengenaan Pajak (DPP)
+  dppAmountIDR?: number; // Dasar Pengenaan Pajak (DPP)
   ppnRatePercent?: number; // Persentase PPN
-  ppnAmountIDR: number; // PPN Keluaran 11% Faktur Pajak Standar
+  ppnAmountIDR?: number; // PPN Keluaran 11% Faktur Pajak Standar
   pphType?: RetailPphType; // Jenis PPh (PPH_23 / PPH_FINAL_UMKM / NON_PPH)
   pphRatePercent?: number; // Persentase PPh
-  pphAmountIDR: number; // Potongan PPh 23 (2%) oleh Klien Swasta
-  netDisbursementIDR: number; // Kas Bersih Masuk Rekening (Gross - PPh 23)
+  pphAmountIDR?: number; // Potongan PPh 23 (2%) oleh Klien Swasta
+  netDisbursementIDR?: number; // Kas Bersih Masuk Rekening (Gross - PPh 23)
   targetDate: string; // Target tanggal jatuh tempo (YYYY-MM-DD)
   status: RetailMilestoneStatus;
+  name?: string; // Alias for title
+  paidDate?: string; // Alias for paymentDate
+  paymentReferenceNumber?: string; // Alias for referenceNumber
+  invoiceDueDate?: string; // Alias for targetDate
 
   // Invoice & Perpajakan
   invoiceNumber?: string;
@@ -1411,7 +1434,7 @@ export interface RetailMilestone {
 
 export interface RetailProject {
   id: string;
-  projectCode: string; // e.g. "PR-2026-001"
+  projectCode?: string; // e.g. "PR-2026-001"
   projectName: string; // Nama Proyek / Konsultansi Retail
   clientName: string; // Nama Perusahaan / Klien Retail
   clientContactPerson?: string; // Kontak PIC Klien
@@ -1433,22 +1456,22 @@ export interface RetailProject {
 
   // Formulasi Nilai Keuangan & Pajak
   totalContractValueIDR: number; // Nilai Kontrak Kesepakatan
-  dppAmountIDR: number; // Dasar Pengenaan Pajak (DPP)
-  ppnRatePercent: number; // 11% (atau 0% jika Non-PKP)
-  ppnAmountIDR: number; // PPN Keluaran
-  pphType: RetailPphType; // PPH_23 (2%), PPH_FINAL_UMKM (0.5%), NONE
-  pphRatePercent: number; // 2% / 0.5% / 0%
-  pphAmountIDR: number; // Estimasi Potongan PPh oleh Klien
-  netCashExpectedIDR: number; // Kas Bersih yang Masuk Rekening Perusahaan
+  dppAmountIDR?: number; // Dasar Pengenaan Pajak (DPP)
+  ppnRatePercent?: number; // 11% (atau 0% jika Non-PKP)
+  ppnAmountIDR?: number; // PPN Keluaran
+  pphType?: RetailPphType; // PPH_23 (2%), PPH_FINAL_UMKM (0.5%), NONE
+  pphRatePercent?: number; // 2% / 0.5% / 0%
+  pphAmountIDR?: number; // Estimasi Potongan PPh oleh Klien
+  netCashExpectedIDR?: number; // Kas Bersih yang Masuk Rekening Perusahaan
 
   // Skema Pembayaran & Termin
   paymentScheme: RetailPaymentScheme;
   milestones: RetailMilestone[];
 
   // Agregasi Finansial
-  totalBilledAmountIDR: number; // Sudah diterbitkan Invoice / Masuk Piutang
-  totalReceivedAmountIDR: number; // Pembayaran cair ke Kas & Bank
-  totalOutstandingAmountIDR: number; // Sisa piutang yang belum dilunasi
+  totalBilledAmountIDR?: number; // Sudah diterbitkan Invoice / Masuk Piutang
+  totalReceivedAmountIDR?: number; // Pembayaran cair ke Kas & Bank
+  totalOutstandingAmountIDR?: number; // Sisa piutang yang belum dilunasi
 
   // Terhubung ke Project CRM Utama (Opsional)
   linkedCrmProjectId?: string;

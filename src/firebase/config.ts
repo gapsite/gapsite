@@ -29,6 +29,7 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import { purgeStaleStorage } from '../utils/storage';
@@ -122,6 +123,7 @@ export {
   where,
   orderBy,
   serverTimestamp,
+  writeBatch,
   onAuthStateChanged
 };
 export type { FirebaseUser };
