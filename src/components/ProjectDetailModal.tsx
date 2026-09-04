@@ -1096,7 +1096,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
           {/* TAB 5: FINANCE & DIRECT BILLINGS */}
           {activeTab === 'finance' && (() => {
-            const projectTrx = transactions.filter((t) => t.projectId === project.id);
+            const rawProjectTrx = transactions.filter((t) => t.projectId === project.id);
+            const seenTrxIds = new Set<string>();
+            const projectTrx = rawProjectTrx.filter((t) => {
+              if (!t || !t.id) return false;
+              const cleanId = String(t.id).trim();
+              if (!cleanId || seenTrxIds.has(cleanId)) return false;
+              seenTrxIds.add(cleanId);
+              return true;
+            });
             const totalProjectIncome = projectTrx
               .filter((t) => t.type === 'INCOME')
               .reduce((sum, t) => sum + t.amountIDR, 0);
@@ -1215,10 +1223,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                           </td>
                         </tr>
                       ) : (
-                        projectTrx.map((t) => {
+                        projectTrx.map((t, idx) => {
                           const badge = getTransactionStatusBadge(t.status);
                           return (
-                            <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                            <tr key={`prj-trx-${t.id}-${idx}`} className="hover:bg-slate-50 transition-colors">
                               <td className="py-2.5 px-3 whitespace-nowrap font-mono">
                                 <div className="font-bold text-slate-900">{t.date}</div>
                                 <div className="text-[10px] text-slate-400">{t.transactionNumber}</div>

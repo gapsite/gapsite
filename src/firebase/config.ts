@@ -17,6 +17,7 @@ import {
   getFirestore,
   initializeFirestore,
   memoryLocalCache,
+  setLogLevel,
   collection,
   doc,
   getDocs,
@@ -61,6 +62,11 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
+// Suppress non-fatal Firestore streaming connection retry logs and configure logging level
+try {
+  setLogLevel('error');
+} catch {}
+
 const rawDbId = (firebaseConfigJson as Record<string, any>).firestoreDatabaseId;
 const databaseId = rawDbId && rawDbId !== '(default)'
   ? rawDbId
@@ -70,6 +76,7 @@ let firestoreInstance;
 try {
   firestoreInstance = initializeFirestore(app, {
     localCache: memoryLocalCache(),
+    experimentalForceLongPolling: true,
     ...(databaseId ? { databaseId } : {})
   });
 } catch (e) {

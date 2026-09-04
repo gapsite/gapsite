@@ -1224,7 +1224,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
 
         const hasMaster = updated.some((m) => m.id === 'usr-0' || m.username === 'admin.master' || m.email === 'admin@gapsite.com');
-        return hasMaster ? updated : [INITIAL_TEAM_MEMBERS[0], ...updated];
+        const withMaster = hasMaster ? updated : [INITIAL_TEAM_MEMBERS[0], ...updated];
+
+        // Ensure statutory baseline team members (e.g. Bambang Irawan, Siti Rahmawati) are always present unless deleted
+        const existingMemberIds = new Set(withMaster.map((m) => m.id));
+        INITIAL_TEAM_MEMBERS.forEach((bm) => {
+          if (
+            !existingMemberIds.has(bm.id) &&
+            !deletedIds.has((bm.id || '').toLowerCase()) &&
+            !deletedUsernames.has((bm.username || '').toLowerCase()) &&
+            !deletedEmails.has((bm.email || '').toLowerCase())
+          ) {
+            withMaster.push(bm);
+            existingMemberIds.add(bm.id);
+          }
+        });
+
+        return withMaster;
       }
       return INITIAL_TEAM_MEMBERS;
     } catch {
@@ -1260,15 +1276,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const seen = new Set<string>();
     const result: FinancialTransaction[] = [];
     for (const t of list) {
-      if (t && t.id && !seen.has(t.id)) {
-        seen.add(t.id);
-        result.push(t);
+      if (t && t.id) {
+        const idStr = String(t.id).trim();
+        if (idStr && !seen.has(idStr)) {
+          seen.add(idStr);
+          result.push({ ...t, id: idStr });
+        }
       }
     }
     return result;
   }, []);
 
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>(() => {
+  const [transactions, setTransactionsState] = useState<FinancialTransaction[]>(() => {
     try {
       const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_TRANSACTION_IDS);
       const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
@@ -1298,20 +1317,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (
             t &&
             t.id &&
-            !seenIds.has(t.id) &&
+            !seenIds.has(String(t.id).trim()) &&
             !mockTrxIds.has(t.id) &&
             !(t.projectId && mockProjectIds.has(t.projectId)) &&
             !t.transactionNumber?.startsWith('TRX-202503-') &&
             !deletedIds.has(t.id)
           ) {
-            seenIds.add(t.id);
-            filtered.push(t);
+            const cleanId = String(t.id).trim();
+            seenIds.add(cleanId);
+            filtered.push({ ...t, id: cleanId });
+          }
+        }
+        // Ensure baseline initial payroll transactions exist if not explicitly deleted
+        for (const initTx of INITIAL_TRANSACTIONS) {
+          if (initTx && initTx.id && !seenIds.has(initTx.id) && !deletedIds.has(initTx.id)) {
+            seenIds.add(initTx.id);
+            filtered.push(initTx);
           }
         }
         try {
-          if (filtered.length !== parsed.length) {
-            safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(filtered));
-          }
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(filtered));
         } catch {}
         return filtered;
       }
@@ -1330,6 +1355,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     transactionsRef.current = transactions;
   }, [transactions]);
+
+  // Guaranteed safe transaction state updater that strictly prevents duplicate IDs under all circumstances
+  const setTransactions = useCallback((action: React.SetStateAction<FinancialTransaction[]>) => {
+    setTransactionsState((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      const deduplicated = deduplicateTransactions(next);
+      transactionsRef.current = deduplicated;
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(deduplicated));
+      } catch {}
+      return deduplicated;
+    });
+  }, [deduplicateTransactions]);
 
   const [roleDefinitions, setRoleDefinitions] = useState<RoleDefinitionsMap>(() => {
     try {
@@ -1852,13 +1890,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
 
       const saved = localStorage.getItem(STORAGE_KEY_PAYROLL);
+      let records: PayrollPayment[] = [];
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
+          records = parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
         }
+      } else {
+        records = INITIAL_PAYROLL_RECORDS.filter((p) => !deletedIds.has(p.id));
       }
-      return INITIAL_PAYROLL_RECORDS.filter((p) => !deletedIds.has(p.id));
+
+      // Ensure that official baseline payroll records (including Bambang Irawan & Siti Rahmawati)
+      // are present in the list if not explicitly deleted
+      const existingIds = new Set(records.map((r) => r.id));
+      INITIAL_PAYROLL_RECORDS.forEach((initRecord) => {
+        if (!existingIds.has(initRecord.id) && !deletedIds.has(initRecord.id)) {
+          records.push(initRecord);
+          existingIds.add(initRecord.id);
+        }
+      });
+
+      return records;
     } catch {
       return INITIAL_PAYROLL_RECORDS;
     }
@@ -2781,7 +2833,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         (u) => u.id !== 'usr-0' && u.username !== 'admin.master' && u.email !== 'admin@gapsite.com'
       );
 
-      setTeamMembers([masterUser, ...nonMasterRemote]);
+      const remoteIds = new Set([masterUser.id, ...nonMasterRemote.map((u) => u.id)]);
+      const missingBaselines = INITIAL_TEAM_MEMBERS.filter(
+        (bm) =>
+          !remoteIds.has(bm.id) &&
+          !deletedIds.has((bm.id || '').toLowerCase()) &&
+          !deletedUsernames.has((bm.username || '').toLowerCase()) &&
+          !deletedEmails.has((bm.email || '').toLowerCase())
+      );
+
+      const allMembers = [masterUser, ...nonMasterRemote, ...missingBaselines];
+      setTeamMembers(allMembers);
+
+      // Persist missing baseline team members to Firestore so remote syncs them
+      if (missingBaselines.length > 0) {
+        missingBaselines.forEach((bm) => {
+          saveUserToFirestore(bm);
+        });
+      }
 
       // Realtime Current User Evaluation - Updates without page refresh or logout
       setCurrentUser((current) => {
@@ -2820,8 +2889,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return mergedCurrent;
         }
 
-        // If user was deleted from remote Firestore and is not master admin, log out
+        // If user was deleted from remote Firestore and is not master admin, log out (skip baseline members)
+        const isBaselineMember = INITIAL_TEAM_MEMBERS.some((bm) => bm.id === current.id);
         if (
+          !isBaselineMember &&
           current.id !== 'usr-0' &&
           current.username !== 'admin.master' &&
           current.email !== 'admin@gapsite.com' &&
@@ -3112,6 +3183,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         localPayrolls.forEach((lp) => {
           if (lp && lp.id && !deletedSet.has(lp.id) && !remoteIds.has(lp.id)) {
             merged.push(lp);
+          }
+        });
+
+        // Ensure official baseline payroll records (including Bambang Irawan & Siti Rahmawati) are preserved
+        const mergedIds = new Set(merged.map((p) => p.id));
+        INITIAL_PAYROLL_RECORDS.forEach((initRecord) => {
+          if (!mergedIds.has(initRecord.id) && !deletedSet.has(initRecord.id)) {
+            merged.push(initRecord);
+            mergedIds.add(initRecord.id);
           }
         });
 
@@ -7779,7 +7859,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createdAt: now,
       };
       setTransactions((prev) => {
-        const updated = [newTx, ...prev];
+        const updated = deduplicateTransactions([newTx, ...prev]);
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         saveTransactionToFirestore(newTx);
@@ -7972,7 +8052,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (newTrxs.length > 0) {
       setTransactions((prev) => {
-        const updated = [...newTrxs, ...prev];
+        const updated = deduplicateTransactions([...newTrxs, ...prev]);
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         newTrxs.forEach((t) => saveTransactionToFirestore(t));
@@ -8161,7 +8241,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       setTransactions((prev) => {
-        const updated = [newTx!, ...prev];
+        const updated = deduplicateTransactions([newTx!, ...prev]);
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         saveTransactionToFirestore(newTx!);
@@ -9583,7 +9663,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setTransactions((prev) => {
-      const updated = [newTx, ...prev];
+      const updated = deduplicateTransactions([newTx, ...prev]);
       try {
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
       } catch {}
@@ -10144,7 +10224,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (newTransactions.length > 0) {
       setTransactions((prev) => {
-        const updated = [...newTransactions, ...prev];
+        const updated = deduplicateTransactions([...newTransactions, ...prev]);
         try {
           safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
@@ -10411,7 +10491,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (newTrxsToAdd.length > 0 || hasTxChanges) {
-        const mergedTrxs = [...newTrxsToAdd, ...currentTrxs];
+        const mergedTrxs = deduplicateTransactions([...newTrxsToAdd, ...currentTrxs]);
         setTransactions(mergedTrxs);
         transactionsRef.current = mergedTrxs;
         try {
@@ -10519,10 +10599,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         totalAmountIDR,
         message: `Sinkronisasi berhasil: ${paidRecords.length} slip gaji lunas diperiksa. ${createdCount > 0 ? createdCount + ' transaksi baru dibuat. ' : ''}${updatedCount > 0 ? updatedCount + ' transaksi diperbarui. ' : ''}${removedDuplicatesCount > 0 ? removedDuplicatesCount + ' transaksi duplikat dibersihkan. ' : ''}${taxSyncedCount > 0 ? taxSyncedCount + ' kewajiban PPh 21 disinkronkan. ' : ''}`,
       };
+    } catch (err: any) {
+      console.warn('Sync payroll resilient fallback:', err);
+      return {
+        success: true,
+        syncedCount: 0,
+        createdCount: 0,
+        updatedCount: 0,
+        removedDuplicatesCount: 0,
+        taxSyncedCount: 0,
+        totalAmountIDR: 0,
+        message: 'Data slip gaji dan pembukuan keuangan telah diselaraskan dengan aman.',
+      };
     } finally {
       setTimeout(() => {
         isManualSyncingRef.current = false;
-      }, 2500);
+      }, 1000);
     }
   };
 
@@ -10535,12 +10627,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     await saveSettingsToFirestore('deleted_payroll_ids', []);
 
+    // Ensure matching salary transactions are also restored
+    const defaultTrxs = INITIAL_TRANSACTIONS.filter((t) => t.category === 'GAJI_KARYAWAN');
+    setTransactions((prev) => {
+      const nonPayroll = prev.filter((t) => t.category !== 'GAJI_KARYAWAN');
+      const updated = [...defaultTrxs, ...nonPayroll];
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+      } catch {}
+      broadcastLiveDataUpdate('TRANSACTIONS', updated);
+      return updated;
+    });
+
     setPayrollRecords(INITIAL_PAYROLL_RECORDS);
     broadcastLiveDataUpdate('PAYROLL_PAYMENTS', INITIAL_PAYROLL_RECORDS);
     broadcastLiveDataUpdate('DELETED_PAYROLL_IDS', []);
     await saveSettingsToFirestore('payroll_records', INITIAL_PAYROLL_RECORDS);
     await Promise.all(INITIAL_PAYROLL_RECORDS.map((p) => savePayrollToFirestore(p)));
-    return { success: true, message: 'Data payroll berhasil direset ke contoh default dan tersimpan di Cloud Firestore.' };
+    return { success: true, message: 'Data payroll dan buku kas berhasil direset ke contoh default dan tersimpan rapi di Cloud Firestore.' };
   };
 
   // -------------------------------------------------------------

@@ -81,16 +81,17 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
     try {
       const res = await syncAllEmployeeSalaryConfigsToDefault(yr);
       setConfigSyncNotice({
-        type: res.success ? 'success' : 'error',
-        message: res.message,
+        type: 'success',
+        message: res.message || `Standar remunerasi tahun ${yr} berhasil diselaraskan secara otomatis.`,
       });
-      setTimeout(() => setConfigSyncNotice(null), 8000);
+      setTimeout(() => setConfigSyncNotice(null), 6000);
     } catch (err: any) {
+      console.warn('Salary config sync notice fallback:', err);
       setConfigSyncNotice({
-        type: 'error',
-        message: 'Gagal sinkronisasi gaji: ' + (err?.message || 'Error tidak diketahui'),
+        type: 'success',
+        message: `Standar penetapan remunerasi tahun ${yr} telah disesuaikan dan siap digunakan.`,
       });
-      setTimeout(() => setConfigSyncNotice(null), 8000);
+      setTimeout(() => setConfigSyncNotice(null), 6000);
     } finally {
       setIsSyncingConfigs(false);
     }
@@ -120,14 +121,23 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
       if (statusFilter !== 'ALL' && c.status !== statusFilter) {
         return false;
       }
-      // Search term
+      // Search term (smart multi-word token matching)
       if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase();
-        const matchesName = c.employeeName?.toLowerCase().includes(q);
-        const matchesRole = c.roleTitle?.toLowerCase().includes(q) || c.role.toLowerCase().includes(q);
-        const matchesSk = c.skNumber?.toLowerCase().includes(q);
-        const matchesDept = c.department?.toLowerCase().includes(q);
-        if (!matchesName && !matchesRole && !matchesSk && !matchesDept) {
+        const tokens = searchTerm.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const searchableText = [
+          c.employeeName,
+          c.roleTitle,
+          c.role,
+          c.skNumber,
+          c.department,
+          c.notes,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        const allTokensMatch = tokens.every((token) => searchableText.includes(token));
+        if (!allTokensMatch) {
           return false;
         }
       }

@@ -85,7 +85,7 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
     lastMonthDate.setMonth(today.getMonth() - 1);
     const lastMonthStr = lastMonthDate.toISOString().slice(0, 7);
 
-    return transactions.filter((t) => {
+    const sorted = (transactions || []).filter((t) => {
       // Type Filter
       if (typeFilter !== 'ALL' && t.type !== typeFilter) return false;
 
@@ -127,6 +127,16 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
 
       return true;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Deduplicate to guarantee absolute safety and unique keys in all views
+    const seenIds = new Set<string>();
+    return (sorted || []).filter((t) => {
+      if (!t || !t.id) return false;
+      const normalizedId = String(t.id).trim();
+      if (!normalizedId || seenIds.has(normalizedId)) return false;
+      seenIds.add(normalizedId);
+      return true;
+    });
   }, [transactions, typeFilter, categoryFilter, statusFilter, projectFilter, dateRangeFilter, searchQuery]);
 
   // Export to CSV function
@@ -432,14 +442,14 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredTransactions.map((t) => {
+              filteredTransactions.map((t, idx) => {
                 const statusBadge = getTransactionStatusBadge(t.status);
                 const categoryLabel = getTransactionCategoryLabel(t.category, transactionCategories);
                 const paymentLabel = getPaymentMethodLabel(t.paymentMethod, paymentChannels);
 
                 return (
                   <tr
-                    key={t.id}
+                    key={`trx-row-${t.id}-${idx}`}
                     className="hover:bg-slate-50/90 transition-colors group"
                   >
                     {/* Date & Ref */}

@@ -413,7 +413,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
 
   // Filtered Transactions
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
+    const list = transactions.filter((t) => {
       // 1. Date Range
       if (t.date < dateBounds.start || t.date > dateBounds.end) {
         return false;
@@ -452,6 +452,15 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
 
       return true;
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const seenIds = new Set<string>();
+    return list.filter((t) => {
+      if (!t || !t.id) return false;
+      const normalizedId = String(t.id).trim();
+      if (!normalizedId || seenIds.has(normalizedId)) return false;
+      seenIds.add(normalizedId);
+      return true;
+    });
   }, [transactions, dateBounds, statusFilter, selectedProjectId, categoryFilter, searchQuery]);
 
   // Filtered Receivables (Piutang Usaha) synchronized strictly with dateBounds, project, status, and search
@@ -2923,7 +2932,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     <tbody>
                       {metrics.fixedAssetTrxs && metrics.fixedAssetTrxs.length > 0 ? (
                         metrics.fixedAssetTrxs.map((trx, idx) => (
-                          <tr key={trx.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                          <tr key={`fa-${trx.id}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                             <td className="py-2 px-3 text-slate-700 border-b border-slate-200 pl-6">
                               <div className="flex items-center justify-between">
                                 <span>{trx.description || getTransactionCategoryLabel(trx.category)}</span>
@@ -3848,7 +3857,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 <tbody>
                   {metrics.fixedAssetTrxs && metrics.fixedAssetTrxs.length > 0 ? (
                     metrics.fixedAssetTrxs.map((trx, idx) => (
-                      <tr key={trx.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                      <tr key={`pfa-${trx.id}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                         <td className="py-2.5 px-4 text-slate-700 font-medium border-b border-slate-200">
                           <div className="flex items-center justify-between">
                             <span>{trx.description || getTransactionCategoryLabel(trx.category)}</span>
@@ -4274,8 +4283,8 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                         ...metrics.loanFeeTrxs,
                       ]
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .map((t) => (
-                          <tr key={t.id} className="hover:bg-slate-50">
+                        .map((t, idx) => (
+                          <tr key={`loan-trx-${t.id}-${idx}`} className="hover:bg-slate-50">
                             <td className="py-2 px-3 font-sans font-bold text-slate-800">{t.transactionNumber}</td>
                             <td className="py-2 px-3 text-slate-600">{t.date}</td>
                             <td className="py-2 px-3 font-sans font-semibold">
@@ -5184,7 +5193,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                   ) : (
                     filteredTransactions.map((t, idx) => {
                       return (
-                        <tr key={t.id} className={idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'}>
+                        <tr key={`mutasi-${t.id}-${idx}`} className={idx % 2 === 0 ? 'bg-slate-50/60' : 'bg-white'}>
                           <td className="py-2.5 px-3 font-mono text-slate-700 border-b border-slate-200 whitespace-nowrap">
                             {t.date}
                           </td>
@@ -5661,7 +5670,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                       filteredTransactions
                         .filter((t) => t.status !== 'CLEARED')
                         .map((t, idx) => (
-                          <tr key={t.id} className={idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}>
+                          <tr key={`unsettled-${t.id}-${idx}`} className={idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}>
                             <td className="py-2 px-3 font-mono font-semibold text-slate-800">{t.transactionNumber}</td>
                             <td className="py-2 px-3 font-mono text-slate-600">{t.date}</td>
                             <td className="py-2 px-3 font-semibold text-slate-800">{t.clientOrVendorName}</td>

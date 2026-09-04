@@ -704,13 +704,20 @@ export const RoleManagerModal: React.FC<{
   const filteredUsers = teamMembers.filter((u) => {
     if (roleFilter !== 'ALL' && u.role !== roleFilter) return false;
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        (u.username && u.username.toLowerCase().includes(q)) ||
-        (u.clientCompany && u.clientCompany.toLowerCase().includes(q))
-      );
+      const tokens = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const searchable = [
+        u.name,
+        u.email,
+        u.username,
+        u.roleTitle,
+        u.department,
+        u.nik,
+        u.clientCompany,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return tokens.every((token) => searchable.includes(token));
     }
     return true;
   });

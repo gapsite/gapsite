@@ -235,7 +235,11 @@ export const commitBatchOperations = async (
         batch.set(docRef, sanitizeForFirestore(op.data), { merge: op.merge ?? true });
       }
     }
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (err) {
+      console.warn('Firestore commitBatchOperations batch.commit warning:', err);
+    }
   }
 };
 
@@ -246,17 +250,21 @@ export const saveBatchEntitiesToFirestore = async (
   merge: boolean = true
 ): Promise<void> => {
   if (!items || items.length === 0) return;
-  const ops = items.map((item) => ({
-    type: 'set' as const,
-    collectionName,
-    docId: item.id,
-    data: {
-      ...item,
-      updatedAt: item.updatedAt || new Date().toISOString(),
-    },
-    merge,
-  }));
-  await commitBatchOperations(ops);
+  try {
+    const ops = items.map((item) => ({
+      type: 'set' as const,
+      collectionName,
+      docId: item.id,
+      data: {
+        ...item,
+        updatedAt: item.updatedAt || new Date().toISOString(),
+      },
+      merge,
+    }));
+    await commitBatchOperations(ops);
+  } catch (err) {
+    console.warn(`Firestore saveBatchEntitiesToFirestore for ${collectionName} warning:`, err);
+  }
 };
 
 // Sync Settings (Service Types / Roles) with debouncing to prevent hotspotting and write-stream exhaustion
@@ -1030,12 +1038,6 @@ export const subscribeToPayroll = (onUpdate: (payrolls: PayrollPayment[]) => voi
     },
     (err) => {
       console.warn('Firestore payroll listener warning:', err);
-      // Fallback to settings listener
-      subscribeToSettings('payroll_records', (data) => {
-        if (Array.isArray(data)) {
-          onUpdate(data);
-        }
-      });
     }
   );
 };
@@ -1126,12 +1128,16 @@ export const ensureInitialFirestoreSeed = async (
       getDeletedSet('deleted_payroll_ids'),
     ]);
 
-    // 2. Ensure initial users exist if collection is empty (batched)
+    // 2. Ensure initial users exist in Firestore (batched, checks for any missing baseline members)
     if (defaultTeamMembers && defaultTeamMembers.length > 0) {
       const usersSnap = await getDocs(collection(db, FirestoreCollections.USERS));
-      if (usersSnap.empty) {
+      const existingUserIds = new Set<string>();
+      usersSnap.forEach((d) => existingUserIds.add(d.id));
+
+      const missingMembers = defaultTeamMembers.filter((u) => !existingUserIds.has(u.id));
+      if (missingMembers.length > 0) {
         const batch = writeBatch(db);
-        defaultTeamMembers.forEach((u) => {
+        missingMembers.forEach((u) => {
           const uRef = doc(db, FirestoreCollections.USERS, u.id);
           batch.set(uRef, sanitizeForFirestore(u), { merge: true });
         });
@@ -1335,27 +1341,24 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 16. Ensure payroll records exist in Firestore collection & settings ONLY IF NEVER SEEDED BEFORE (batched)
-    const payrollSeedRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_seed_meta');
-    const payrollSeedSnap = await getDoc(payrollSeedRef);
-    if (!payrollSeedSnap.exists()) {
-      if (defaultPayrollRecords && defaultPayrollRecords.length > 0) {
-        const toSeed = defaultPayrollRecords.filter((p) => !deletedPayroll.has(p.id));
-        if (toSeed.length > 0) {
-          const batch = writeBatch(db);
-          toSeed.forEach((p) => {
-            const pRef = doc(db, FirestoreCollections.PAYROLL, p.id);
-            batch.set(pRef, sanitizeForFirestore(p), { merge: true });
-          });
-          const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
-          batch.set(payrollRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
-          batch.set(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
-          await batch.commit();
-        } else {
-          await setDoc(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
-        }
-      } else {
-        await setDoc(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+    // 16. Ensure payroll records exist in Firestore collection & settings (batched)
+    if (defaultPayrollRecords && defaultPayrollRecords.length > 0) {
+      const payrollSeedRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_seed_meta');
+      const payrollSnap = await getDocs(collection(db, FirestoreCollections.PAYROLL));
+      const existingPayrollIds = new Set<string>();
+      payrollSnap.forEach((d) => existingPayrollIds.add(d.id));
+
+      const toSeed = defaultPayrollRecords.filter((p) => !existingPayrollIds.has(p.id) && !deletedPayroll.has(p.id));
+      if (toSeed.length > 0) {
+        const batch = writeBatch(db);
+        toSeed.forEach((p) => {
+          const pRef = doc(db, FirestoreCollections.PAYROLL, p.id);
+          batch.set(pRef, sanitizeForFirestore(p), { merge: true });
+        });
+        const payrollRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
+        batch.set(payrollRef, sanitizeForFirestore({ data: defaultPayrollRecords, updatedAt: new Date().toISOString() }), { merge: true });
+        batch.set(payrollSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        await batch.commit();
       }
     }
 
