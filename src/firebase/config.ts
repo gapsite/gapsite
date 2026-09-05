@@ -15,13 +15,12 @@ import {
 } from 'firebase/auth';
 import {
   getFirestore,
-  initializeFirestore,
-  memoryLocalCache,
   setLogLevel,
   collection,
   doc,
   getDocs,
   getDoc,
+  getDocFromServer,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -62,9 +61,9 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-// Suppress non-fatal Firestore streaming connection retry logs and configure logging level
+// Suppress non-fatal Firestore internal connection retry logs and configure logging level to silent
 try {
-  setLogLevel('error');
+  setLogLevel('silent');
 } catch {}
 
 const rawDbId = (firebaseConfigJson as Record<string, any>).firestoreDatabaseId;
@@ -72,18 +71,9 @@ const databaseId = rawDbId && rawDbId !== '(default)'
   ? rawDbId
   : undefined;
 
-let firestoreInstance;
-try {
-  firestoreInstance = initializeFirestore(app, {
-    localCache: memoryLocalCache(),
-    experimentalForceLongPolling: true,
-    ...(databaseId ? { databaseId } : {})
-  });
-} catch (e) {
-  firestoreInstance = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
-}
-
-export const db = firestoreInstance;
+// Export Firestore database instance conforming to standard Firebase Skill specification:
+// export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
 
 // Authentication Helpers
 export const signInWithGoogle = async () => {
@@ -122,6 +112,7 @@ export {
   doc,
   getDocs,
   getDoc,
+  getDocFromServer,
   setDoc,
   updateDoc,
   deleteDoc,

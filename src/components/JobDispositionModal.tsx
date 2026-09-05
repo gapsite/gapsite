@@ -20,6 +20,7 @@ import {
   ChecklistItem,
   JobDisposition,
 } from '../types';
+import { generateUniqueId } from '../utils/idGenerator';
 
 interface JobDispositionModalProps {
   isOpen: boolean;
@@ -87,8 +88,8 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
       setDueDate(in7Days.toISOString().slice(0, 10));
       setInstructions('');
       setChecklist([
-        { id: `chk-${Date.now()}-1`, text: 'Review raw materials Bill of Materials (BOM) sheet', done: false },
-        { id: `chk-${Date.now()}-2`, text: 'Validate domestic supplier NPWP & Kemenperin TKDN Certificate', done: false },
+        { id: generateUniqueId('chk'), text: 'Review raw materials Bill of Materials (BOM) sheet', done: false },
+        { id: generateUniqueId('chk'), text: 'Validate domestic supplier NPWP & Kemenperin TKDN Certificate', done: false },
       ]);
     }
   }, [isOpen, initialProject, editingDisposition, projects, teamMembers]);
@@ -102,7 +103,7 @@ export const JobDispositionModal: React.FC<JobDispositionModalProps> = ({
     if (!newChecklistText.trim()) return;
     setChecklist((prev) => [
       ...prev,
-      { id: `chk-${Date.now()}`, text: newChecklistText.trim(), done: false },
+      { id: generateUniqueId('chk'), text: newChecklistText.trim(), done: false },
     ]);
     setNewChecklistText('');
   };

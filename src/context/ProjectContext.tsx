@@ -59,6 +59,7 @@ import {
   ensureInitialFirestoreSeed,
   saveBatchEntitiesToFirestore,
   sanitizeFirestoreDocId,
+  testConnection,
   FirestoreCollections
 } from '../firebase/firestoreService';
 import {
@@ -151,7 +152,14 @@ import { DEFAULT_DOCUMENT_TYPES, DEFAULT_DOCUMENT_CATEGORIES } from '../data/doc
 import { DEFAULT_TRANSACTION_CATEGORIES } from '../data/transactionCategoriesData';
 import { DEFAULT_PAYMENT_CHANNELS } from '../data/paymentChannelsData';
 import { DEFAULT_ROLE_COMPENSATION } from '../utils/payrollCalculations';
-import { safeLocalStorage, purgeStaleStorage } from '../utils/storage';
+import {
+  safeLocalStorage,
+  purgeStaleStorage,
+  isPurgedDummyName,
+  PURGED_DUMMY_USER_IDS,
+  PURGED_DUMMY_USERNAMES,
+  PURGED_DUMMY_EMAILS,
+} from '../utils/storage';
 import { CERTIFICATION_MILESTONE_TEMPLATES } from '../utils/checklistGenerator';
 import { getServiceTypeName, getServiceTypeBadgeColor } from '../utils/formatters';
 import { calculateMemberWorkload } from '../utils/workload';
@@ -163,6 +171,26 @@ import {
   uploadFileToGoogleDrive,
   loadGsiScript,
 } from '../utils/googleDriveService';
+import {
+  generateUniqueId,
+  generateTransactionId,
+  generateTransactionNumber,
+  generateProjectId,
+  generateGovProjectId,
+  generateGovMilestoneId,
+  generateRetailProjectId,
+  generateRetailMilestoneId,
+  generateReceivableId,
+  generateReceivablePaymentId,
+  generatePayrollId,
+  generateTaxObligationId,
+  generateOverheadId,
+  generateOfficeRentId,
+  generateBankLoanId,
+  generateDispositionId,
+  generateDocumentId,
+  deduplicateById,
+} from '../utils/idGenerator';
 
 interface FilterState {
   searchQuery: string;
@@ -402,7 +430,7 @@ interface ProjectContextType {
   // Tax & Tax Liabilities Management (PPN, PPh 21, PPh 23, PPh 4(2), PPh Final/Badan Terhutang)
   taxObligations: TaxObligation[];
   addTaxObligation: (
-    taxData: Omit<TaxObligation, 'id' | 'createdAt' | 'createdBy'>
+    taxData: Omit<TaxObligation, 'id' | 'createdAt' | 'createdBy'> & { id?: string }
   ) => { success: boolean; taxObligation?: TaxObligation; message?: string };
   updateTaxObligation: (
     id: string,
@@ -997,162 +1025,6 @@ const INITIAL_TAX_OBLIGATIONS: TaxObligation[] = [
     createdBy: 'Finance Officer',
   },
   {
-    id: 'tax-pay-202608-02',
-    taxType: 'PPH_21',
-    taxPeriod: 'Agustus 2026',
-    taxYear: 2026,
-    taxMonth: 8,
-    title: 'PPh 21 Karyawan: Bambang Irawan, S.T., M.T. (Agustus 2026)',
-    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 21.650.000 (Lead Assessor / Senior Consultant) - Slip PAY/2026/08/EMP-002. Terintegrasi otomatis dari modul Payroll.',
-    taxableBaseAmount: 21650000,
-    taxRatePercent: 5.0,
-    taxAmount: 1082500,
-    paidAmount: 0,
-    remainingAmount: 1082500,
-    status: 'TERHUTANG',
-    dueDate: '2026-09-15',
-    billingCode: '718392019485721',
-    taxInvoiceNumber: 'BUPOT-21/2026/08/0002',
-    counterpartyName: 'Bambang Irawan / KPP Pratama',
-    payrollId: 'pay-202608-02',
-    payrollNumber: 'PAY/2026/08/EMP-002',
-    employeeId: 'usr-lead-01',
-    employeeName: 'Bambang Irawan, S.T., M.T.',
-    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-002. Mencegah double input di Menu Pajak.',
-    createdAt: '2026-08-28T09:15:00.000Z',
-    createdBy: 'Finance Officer',
-  },
-  {
-    id: 'tax-pay-202608-03',
-    taxType: 'PPH_21',
-    taxPeriod: 'Agustus 2026',
-    taxYear: 2026,
-    taxMonth: 8,
-    title: 'PPh 21 Karyawan: Siti Rahmawati, S.Kom. (Agustus 2026)',
-    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 15.900.000 (Technical Consultant / BOM Specialist) - Slip PAY/2026/08/EMP-003. Terintegrasi otomatis dari modul Payroll.',
-    taxableBaseAmount: 15900000,
-    taxRatePercent: 4.0,
-    taxAmount: 636000,
-    paidAmount: 0,
-    remainingAmount: 636000,
-    status: 'TERHUTANG',
-    dueDate: '2026-09-15',
-    billingCode: '718482019485910',
-    taxInvoiceNumber: 'BUPOT-21/2026/08/0003',
-    counterpartyName: 'Siti Rahmawati / KPP Pratama',
-    payrollId: 'pay-202608-03',
-    payrollNumber: 'PAY/2026/08/EMP-003',
-    employeeId: 'usr-tech-01',
-    employeeName: 'Siti Rahmawati, S.Kom.',
-    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-003. Mencegah double input di Menu Pajak.',
-    createdAt: '2026-08-28T09:30:00.000Z',
-    createdBy: 'Finance Officer',
-  },
-  {
-    id: 'tax-pay-202608-04',
-    taxType: 'PPH_21',
-    taxPeriod: 'Agustus 2026',
-    taxYear: 2026,
-    taxMonth: 8,
-    title: 'PPh 21 Karyawan: Hendra Wijaya, S.T. (Agustus 2026)',
-    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 13.400.000 (Surveyor Liaison & Field Auditor) - Slip PAY/2026/08/EMP-004. Terintegrasi otomatis dari modul Payroll.',
-    taxableBaseAmount: 13400000,
-    taxRatePercent: 3.0,
-    taxAmount: 402000,
-    paidAmount: 0,
-    remainingAmount: 402000,
-    status: 'TERHUTANG',
-    dueDate: '2026-09-15',
-    billingCode: '718593019486021',
-    taxInvoiceNumber: 'BUPOT-21/2026/08/0004',
-    counterpartyName: 'Hendra Wijaya / KPP Pratama',
-    payrollId: 'pay-202608-04',
-    payrollNumber: 'PAY/2026/08/EMP-004',
-    employeeId: 'usr-survey-01',
-    employeeName: 'Hendra Wijaya, S.T.',
-    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-004. Mencegah double input di Menu Pajak.',
-    createdAt: '2026-08-28T09:45:00.000Z',
-    createdBy: 'Finance Officer',
-  },
-  {
-    id: 'tax-pay-202608-05',
-    taxType: 'PPH_21',
-    taxPeriod: 'Agustus 2026',
-    taxYear: 2026,
-    taxMonth: 8,
-    title: 'PPh 21 Karyawan: Dewi Lestari, S.E. (Agustus 2026)',
-    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 13.300.000 (Finance & Tax Officer) - Slip PAY/2026/08/EMP-005. Terintegrasi otomatis dari modul Payroll.',
-    taxableBaseAmount: 13300000,
-    taxRatePercent: 3.0,
-    taxAmount: 399000,
-    paidAmount: 0,
-    remainingAmount: 399000,
-    status: 'TERHUTANG',
-    dueDate: '2026-09-15',
-    billingCode: '718604019486132',
-    taxInvoiceNumber: 'BUPOT-21/2026/08/0005',
-    counterpartyName: 'Dewi Lestari / KPP Pratama',
-    payrollId: 'pay-202608-05',
-    payrollNumber: 'PAY/2026/08/EMP-005',
-    employeeId: 'usr-fin-01',
-    employeeName: 'Dewi Lestari, S.E.',
-    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-005. Mencegah double input di Menu Pajak.',
-    createdAt: '2026-08-28T10:00:00.000Z',
-    createdBy: 'Finance Officer',
-  },
-  {
-    id: 'tax-pay-202607-02',
-    taxType: 'PPH_21',
-    taxPeriod: 'Juli 2026',
-    taxYear: 2026,
-    taxMonth: 7,
-    title: 'PPh 21 Karyawan: Bambang Irawan, S.T., M.T. (Juli 2026)',
-    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 20.150.000 (Lead Assessor / Senior Consultant) - Slip PAY/2026/07/EMP-002. Terintegrasi otomatis dari modul Payroll.',
-    taxableBaseAmount: 20150000,
-    taxRatePercent: 5.0,
-    taxAmount: 1007500,
-    paidAmount: 0,
-    remainingAmount: 1007500,
-    status: 'TERHUTANG',
-    dueDate: '2026-08-15',
-    billingCode: '718715019486243',
-    taxInvoiceNumber: 'BUPOT-21/2026/07/0002',
-    counterpartyName: 'Bambang Irawan / KPP Pratama',
-    payrollId: 'pay-202607-02',
-    payrollNumber: 'PAY/2026/07/EMP-002',
-    employeeId: 'usr-lead-01',
-    employeeName: 'Bambang Irawan, S.T., M.T.',
-    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/07/EMP-002. Mencegah double input di Menu Pajak.',
-    createdAt: '2026-07-28T09:15:00.000Z',
-    createdBy: 'Finance Officer',
-  },
-  {
-    id: 'tax-pay-202607-03',
-    taxType: 'PPH_21',
-    taxPeriod: 'Juli 2026',
-    taxYear: 2026,
-    taxMonth: 7,
-    title: 'PPh 21 Karyawan: Siti Rahmawati, S.Kom. (Juli 2026)',
-    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 14.800.000 (Technical Consultant / BOM Specialist) - Slip PAY/2026/07/EMP-003. Terintegrasi otomatis dari modul Payroll.',
-    taxableBaseAmount: 14800000,
-    taxRatePercent: 4.0,
-    taxAmount: 592000,
-    paidAmount: 0,
-    remainingAmount: 592000,
-    status: 'TERHUTANG',
-    dueDate: '2026-08-15',
-    billingCode: '718826019486354',
-    taxInvoiceNumber: 'BUPOT-21/2026/07/0003',
-    counterpartyName: 'Siti Rahmawati / KPP Pratama',
-    payrollId: 'pay-202607-03',
-    payrollNumber: 'PAY/2026/07/EMP-003',
-    employeeId: 'usr-tech-01',
-    employeeName: 'Siti Rahmawati, S.Kom.',
-    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/07/EMP-003. Mencegah double input di Menu Pajak.',
-    createdAt: '2026-07-28T09:30:00.000Z',
-    createdBy: 'Finance Officer',
-  },
-  {
     id: 'tax-1004',
     taxType: 'PPH_4_2',
     taxPeriod: 'Masa Juli 2026',
@@ -1297,7 +1169,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const saved = localStorage.getItem(STORAGE_KEY_MEMBERS);
       if (saved) {
         const parsed: TeamMember[] = JSON.parse(saved);
-        const mockMemberIds = new Set(['usr-1', 'usr-2', 'usr-3', 'usr-4', 'usr-5', 'usr-6', 'usr-pending-1']);
+        const mockMemberIds = new Set([
+          'usr-1',
+          'usr-2',
+          'usr-3',
+          'usr-4',
+          'usr-5',
+          'usr-6',
+          'usr-pending-1',
+          ...PURGED_DUMMY_USER_IDS,
+        ]);
         const realMembers = parsed.filter(
           (m) =>
             !mockMemberIds.has(m.id) &&
@@ -1305,7 +1186,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             !m.email?.includes('@suryadayanusantara.com') &&
             !deletedIds.has((m.id || '').toLowerCase()) &&
             !deletedUsernames.has((m.username || '').toLowerCase()) &&
-            !deletedEmails.has((m.email || '').toLowerCase())
+            !deletedEmails.has((m.email || '').toLowerCase()) &&
+            !isPurgedDummyName(m.name) &&
+            !isPurgedDummyName(m.username)
         );
 
         // Ensure Master Admin root account (Adryan kelvianto) has statutory credentials while preserving other members and their custom assigned roles
@@ -1339,14 +1222,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const hasMaster = updated.some((m) => m.id === 'usr-0' || m.username === 'admin.master' || m.email === 'admin@gapsite.com');
         const withMaster = hasMaster ? updated : [INITIAL_TEAM_MEMBERS[0], ...updated];
 
-        // Ensure statutory baseline team members (e.g. Bambang Irawan, Siti Rahmawati) are always present unless deleted
+        // Ensure baseline team members are present unless deleted or purged
         const existingMemberIds = new Set(withMaster.map((m) => m.id));
         INITIAL_TEAM_MEMBERS.forEach((bm) => {
           if (
             !existingMemberIds.has(bm.id) &&
+            !mockMemberIds.has(bm.id) &&
             !deletedIds.has((bm.id || '').toLowerCase()) &&
             !deletedUsernames.has((bm.username || '').toLowerCase()) &&
-            !deletedEmails.has((bm.email || '').toLowerCase())
+            !deletedEmails.has((bm.email || '').toLowerCase()) &&
+            !isPurgedDummyName(bm.name) &&
+            !isPurgedDummyName(bm.username)
           ) {
             withMaster.push(bm);
             existingMemberIds.add(bm.id);
@@ -2014,17 +1900,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          records = parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
+          records = parsed.filter(
+            (p) =>
+              p &&
+              p.id &&
+              !deletedIds.has(p.id) &&
+              !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
+              !isPurgedDummyName(p.employeeName)
+          );
         }
       } else {
-        records = INITIAL_PAYROLL_RECORDS.filter((p) => !deletedIds.has(p.id));
+        records = INITIAL_PAYROLL_RECORDS.filter(
+          (p) =>
+            !deletedIds.has(p.id) &&
+            !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
+            !isPurgedDummyName(p.employeeName)
+        );
       }
 
-      // Ensure that official baseline payroll records (including Bambang Irawan & Siti Rahmawati)
-      // are present in the list if not explicitly deleted
+      // Ensure that official baseline payroll records are present if not deleted or purged
       const existingIds = new Set(records.map((r) => r.id));
       INITIAL_PAYROLL_RECORDS.forEach((initRecord) => {
-        if (!existingIds.has(initRecord.id) && !deletedIds.has(initRecord.id)) {
+        if (
+          !existingIds.has(initRecord.id) &&
+          !deletedIds.has(initRecord.id) &&
+          !PURGED_DUMMY_USER_IDS.includes(initRecord.employeeId) &&
+          !isPurgedDummyName(initRecord.employeeName)
+        ) {
           records.push(initRecord);
           existingIds.add(initRecord.id);
         }
@@ -2032,7 +1934,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       return records;
     } catch {
-      return INITIAL_PAYROLL_RECORDS;
+      return INITIAL_PAYROLL_RECORDS.filter(
+        (p) => !PURGED_DUMMY_USER_IDS.includes(p.employeeId) && !isPurgedDummyName(p.employeeName)
+      );
     }
   });
 
@@ -2055,12 +1959,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.filter(
+            (s: EmployeeAnnualSalaryConfig) =>
+              s &&
+              !PURGED_DUMMY_USER_IDS.includes(s.employeeId) &&
+              !isPurgedDummyName(s.employeeName)
+          );
         }
       }
-      return DEFAULT_EMPLOYEE_SALARY_CONFIGS;
+      return DEFAULT_EMPLOYEE_SALARY_CONFIGS.filter(
+        (s) => !PURGED_DUMMY_USER_IDS.includes(s.employeeId) && !isPurgedDummyName(s.employeeName)
+      );
     } catch {
-      return DEFAULT_EMPLOYEE_SALARY_CONFIGS;
+      return DEFAULT_EMPLOYEE_SALARY_CONFIGS.filter(
+        (s) => !PURGED_DUMMY_USER_IDS.includes(s.employeeId) && !isPurgedDummyName(s.employeeName)
+      );
     }
   });
 
@@ -2856,6 +2769,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Firestore Real-Time Subscriptions & Baseline Initialization
   useEffect(() => {
+    // Validate connection to Firestore per Firebase Skill mandate
+    testConnection().catch(() => {});
+
     // Ensure initial baseline documents and root Master Admin account exist in Firestore
     ensureInitialFirestoreSeed(
       INITIAL_TEAM_MEMBERS[0],
@@ -2945,6 +2861,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const deletedUsernames = new Set(deletedList.map((d) => (d.username || '').toLowerCase()));
       const deletedEmails = new Set(deletedList.map((d) => (d.email || '').toLowerCase()));
 
+      // Cleanse any dummy users from Firestore if present
+      remoteUsers.forEach((u) => {
+        if (
+          u.id !== 'usr-0' &&
+          (PURGED_DUMMY_USER_IDS.includes(u.id) ||
+            isPurgedDummyName(u.name) ||
+            isPurgedDummyName(u.username))
+        ) {
+          deleteUserFromFirestore(u.id);
+        }
+      });
+
       const validRemote = remoteUsers.filter(
         (u) =>
           u.id === 'usr-0' ||
@@ -2952,7 +2880,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           u.email === 'admin@gapsite.com' ||
           (!deletedIds.has((u.id || '').toLowerCase()) &&
             !deletedUsernames.has((u.username || '').toLowerCase()) &&
-            !deletedEmails.has((u.email || '').toLowerCase()))
+            !deletedEmails.has((u.email || '').toLowerCase()) &&
+            !PURGED_DUMMY_USER_IDS.includes(u.id) &&
+            !isPurgedDummyName(u.name) &&
+            !isPurgedDummyName(u.username))
       );
 
       const masterUser =
@@ -2967,6 +2898,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const missingBaselines = INITIAL_TEAM_MEMBERS.filter(
         (bm) =>
           !remoteIds.has(bm.id) &&
+          !PURGED_DUMMY_USER_IDS.includes(bm.id) &&
+          !isPurgedDummyName(bm.name) &&
           !deletedIds.has((bm.id || '').toLowerCase()) &&
           !deletedUsernames.has((bm.username || '').toLowerCase()) &&
           !deletedEmails.has((bm.email || '').toLowerCase())
@@ -3078,7 +3011,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (isManualSyncingRef.current) return;
       if (Array.isArray(remoteTrxs)) {
         const deletedSet = deletedTransactionIdsRef.current;
-        const valid = remoteTrxs.filter((t) => t && t.id && !deletedSet.has(t.id));
+        // Cleanse any dummy transactions from Firestore if present
+        remoteTrxs.forEach((t) => {
+          if (
+            ['trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id) ||
+            isPurgedDummyName(t.clientOrVendorName) ||
+            isPurgedDummyName(t.description)
+          ) {
+            deleteTransactionFromFirestore(t.id);
+          }
+        });
+
+        const valid = remoteTrxs.filter(
+          (t) =>
+            t &&
+            t.id &&
+            !deletedSet.has(t.id) &&
+            !['trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id) &&
+            !isPurgedDummyName(t.clientOrVendorName) &&
+            !isPurgedDummyName(t.description)
+        );
 
         // Preserve and reconcile any transactions linked to active payroll records so payroll is never lost and nominals match
         const txMap = new Map<string, FinancialTransaction>();
@@ -3087,7 +3039,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const claimedTxIds = new Set<string>();
         const missingTrxsToPersist: FinancialTransaction[] = [];
 
-        const allPayrollRecords = ((payrollRecordsRef.current && payrollRecordsRef.current.length > 0 ? payrollRecordsRef.current : INITIAL_PAYROLL_RECORDS) || []).filter((p) => p && p.id);
+        const allPayrollRecords = ((payrollRecordsRef.current && payrollRecordsRef.current.length > 0 ? payrollRecordsRef.current : INITIAL_PAYROLL_RECORDS) || []).filter(
+          (p) =>
+            p &&
+            p.id &&
+            !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
+            !isPurgedDummyName(p.employeeName)
+        );
         allPayrollRecords.forEach((p) => {
           let matchingTx: FinancialTransaction | undefined = undefined;
           if (p.transactionId && txMap.has(p.transactionId) && !claimedTxIds.has(p.transactionId)) {
@@ -3230,8 +3188,32 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (isManualSyncingRef.current) return;
       if (Array.isArray(data)) {
         const deletedSet = deletedTaxIdsRef.current;
+        // Cleanse any dummy tax obligations from Firestore if present
+        data.forEach((tax: any) => {
+          if (
+            tax &&
+            (PURGED_DUMMY_USER_IDS.includes(tax.employeeId) ||
+              isPurgedDummyName(tax.employeeName) ||
+              isPurgedDummyName(tax.counterpartyName) ||
+              isPurgedDummyName(tax.title) ||
+              ['tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03'].includes(tax.id))
+          ) {
+            deleteTaxObligationFromFirestore(tax.id);
+          }
+        });
+
         const valid = data
-          .filter((t: any) => t && t.id && !deletedSet.has(t.id))
+          .filter(
+            (t: any) =>
+              t &&
+              t.id &&
+              !deletedSet.has(t.id) &&
+              !PURGED_DUMMY_USER_IDS.includes(t.employeeId) &&
+              !isPurgedDummyName(t.employeeName) &&
+              !isPurgedDummyName(t.counterpartyName) &&
+              !isPurgedDummyName(t.title) &&
+              !['tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03'].includes(t.id)
+          )
           .map(syncTaxObligationDescription);
         setTaxObligations(valid);
         taxObligationsRef.current = valid;
@@ -3324,10 +3306,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (isManualSyncingRef.current) return;
       if (Array.isArray(remotePayrolls) && remotePayrolls.length > 0) {
         const deletedSet = deletedPayrollIdsRef.current;
-        const valid = remotePayrolls.filter((p) => p && p.id && !deletedSet.has(p.id));
+        // Cleanse any dummy payroll records from Firestore if present
+        remotePayrolls.forEach((p) => {
+          if (
+            PURGED_DUMMY_USER_IDS.includes(p.employeeId) ||
+            isPurgedDummyName(p.employeeName) ||
+            ['pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id)
+          ) {
+            deletePayrollFromFirestore(p.id);
+          }
+        });
+
+        const valid = remotePayrolls.filter(
+          (p) =>
+            p &&
+            p.id &&
+            !deletedSet.has(p.id) &&
+            !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
+            !isPurgedDummyName(p.employeeName) &&
+            !['pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id)
+        );
 
         // Preserve transactionId and pph21ObligationId from local state if remote does not have them yet
-        const localPayrolls = payrollRecordsRef.current || [];
+        const localPayrolls = (payrollRecordsRef.current || []).filter(
+          (lp) =>
+            !PURGED_DUMMY_USER_IDS.includes(lp.employeeId) &&
+            !isPurgedDummyName(lp.employeeName)
+        );
         const merged = valid.map((remoteP) => {
           const localP = localPayrolls.find((lp) => lp.id === remoteP.id);
           if (!localP) return remoteP;
@@ -3346,10 +3351,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         });
 
-        // Ensure official baseline payroll records (including Bambang Irawan & Siti Rahmawati) are preserved
+        // Ensure official baseline payroll records are preserved if not deleted or purged
         const mergedIds = new Set(merged.map((p) => p.id));
         INITIAL_PAYROLL_RECORDS.forEach((initRecord) => {
-          if (!mergedIds.has(initRecord.id) && !deletedSet.has(initRecord.id)) {
+          if (
+            !mergedIds.has(initRecord.id) &&
+            !deletedSet.has(initRecord.id) &&
+            !PURGED_DUMMY_USER_IDS.includes(initRecord.employeeId) &&
+            !isPurgedDummyName(initRecord.employeeName)
+          ) {
             merged.push(initRecord);
             mergedIds.add(initRecord.id);
           }
@@ -5617,7 +5627,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const newLoan: BankLoan = {
       ...loanData,
-      id: `loan-${Date.now()}`,
+      id: generateBankLoanId(),
       facilityType,
       principalAmount: p,
       annualInterestRate: rate,
@@ -5638,7 +5648,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setBankLoans((prev) => {
-      const updated = [newLoan, ...prev];
+      const updated = deduplicateById([newLoan, ...prev]);
       broadcastLiveDataUpdate('BANK_LOANS', updated);
       saveSettingsToFirestore('bank_loans', updated);
       return updated;
@@ -6363,7 +6373,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Tax Obligations & Tax Liabilities (PPN & PPh Terhutang) Methods
   const addTaxObligation = (
-    taxData: Omit<TaxObligation, 'id' | 'createdAt' | 'createdBy'>
+    taxData: Omit<TaxObligation, 'id' | 'createdAt' | 'createdBy'> & { id?: string }
   ): { success: boolean; taxObligation?: TaxObligation; message?: string } => {
     if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
       return { success: false, message: 'Akses Ditolak: Hanya Tim Finance / Master Admin yang dapat mencatat kewajiban pajak.' };
@@ -6376,7 +6386,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const newTax: TaxObligation = syncTaxObligationDescription({
       ...taxData,
-      id: `tax-${Date.now()}`,
+      id: taxData.id || generateTaxObligationId(taxData.taxType),
       paidAmount: taxData.paidAmount || 0,
       remainingAmount: calculatedRemaining,
       status: taxData.status || (calculatedRemaining <= 0 ? 'PAID' : 'TERHUTANG'),
@@ -6385,7 +6395,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     setTaxObligations((prev) => {
-      const updated = [newTax, ...prev];
+      const updated = deduplicateById([newTax, ...prev]);
       broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
       saveSettingsToFirestore('tax_obligations', updated);
       return updated;
@@ -6668,7 +6678,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   ): { success: boolean; receivable?: Receivable; message?: string } => {
     const now = new Date().toISOString();
-    const id = `rec-${Date.now()}`;
+    const id = generateReceivableId();
     const totalAmount = Math.max(0, Number(data.totalAmountIDR) || 0);
     const initialPaid = Math.max(0, Number(data.initialPaidAmountIDR) || 0);
     const remaining = Math.max(0, totalAmount - initialPaid);
@@ -6677,7 +6687,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let linkedTxId: string | undefined;
 
     if (initialPaid > 0) {
-      const paymentId = `pay-${Date.now()}`;
+      const paymentId = generateReceivablePaymentId();
       if (data.syncToCashLedger !== false) {
         const tx = addTransaction({
           date: data.issueDate || now.slice(0, 10),
@@ -6751,7 +6761,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setReceivables((prev) => {
-      const updated = [newReceivable, ...prev];
+      const updated = deduplicateById([newReceivable, ...prev]);
       broadcastLiveDataUpdate('RECEIVABLES', updated);
       saveReceivableToFirestore(newReceivable);
       return updated;
@@ -6889,7 +6899,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const now = new Date().toISOString();
-    const paymentId = `pay-${Date.now()}`;
+    const paymentId = generateReceivablePaymentId();
     let linkedTxId: string | undefined;
 
     // Record into Cash Ledger / Financial Transactions if sync is enabled
@@ -7008,7 +7018,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     data: Omit<GovernmentProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
   ): { success: boolean; project?: GovernmentProject; message?: string } => {
     const now = new Date().toISOString();
-    const id = `gov-${Date.now()}`;
+    const id = generateGovProjectId();
 
     // Calculate milestone financials & totals
     const milestones: GovMilestone[] = (data.milestones || []).map((m, idx) => {
@@ -7023,7 +7033,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       return {
         ...m,
-        id: m.id || `gov-m-${Date.now()}-${idx + 1}`,
+        id: m.id || generateGovMilestoneId(id, idx + 1),
         projectId: id,
         termNumber: m.termNumber || idx + 1,
         grossAmountIDR: gross,
@@ -7061,7 +7071,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setGovernmentProjects((prev) => {
-      const updated = [newProject, ...prev];
+      const updated = deduplicateById([newProject, ...prev]);
       broadcastLiveDataUpdate('GOVERNMENT_PROJECTS', updated);
       saveGovernmentProjectToFirestore(newProject);
       return updated;
@@ -7367,7 +7377,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const newMilestone: GovMilestone = {
       ...milestone,
-      id: `gov-m-${Date.now()}`,
+      id: generateGovMilestoneId(projectId, milestone.termNumber),
       projectId,
       grossAmountIDR: gross,
       pphType: milestone.pphType || project.pphType || 'PPH_22',
@@ -7445,7 +7455,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     data: Omit<RetailProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
   ): { success: boolean; project?: RetailProject; message?: string } => {
     const now = new Date().toISOString();
-    const id = `ret-${Date.now()}`;
+    const id = generateRetailProjectId();
 
     // Calculate milestone financials & totals
     const milestones: RetailMilestone[] = (data.milestones || []).map((m, idx) => {
@@ -7474,7 +7484,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       return {
         ...m,
-        id: m.id || `ret-m-${Date.now()}-${idx + 1}`,
+        id: m.id || generateRetailMilestoneId(id, idx + 1),
         projectId: id,
         termNumber: m.termNumber || idx + 1,
         grossAmountIDR: gross,
@@ -7517,7 +7527,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setRetailProjects((prev) => {
-      const updated = [newProject, ...prev];
+      const updated = deduplicateById([newProject, ...prev]);
       broadcastLiveDataUpdate('RETAIL_PROJECTS', updated);
       saveRetailProjectToFirestore(newProject);
       return updated;
@@ -7855,7 +7865,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const newMilestone: RetailMilestone = {
       ...milestone,
-      id: `ret-m-${Date.now()}`,
+      id: generateRetailMilestoneId(projectId, milestone.termNumber || project.milestones.length + 1),
       projectId,
       termNumber: milestone.termNumber || project.milestones.length + 1,
       grossAmountIDR: gross,
@@ -8074,10 +8084,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   ): { success: boolean; expense?: OverheadExpense; message?: string } => {
     const now = new Date().toISOString();
     const dateObj = new Date(data.date || new Date());
-    const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-    const seq = Math.floor(100 + Math.random() * 900);
-    const newId = `ovh-${Date.now()}-${seq}`;
-    const autoNumber = data.overheadNumber || `OVH/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${seq}`;
+    const newId = generateOverheadId();
+    const autoNumber = data.overheadNumber || generateTransactionNumber('OVH', data.date);
 
     let taxAmount = data.taxAmountIDR || 0;
     if (data.hasTax && data.taxRatePercent && data.taxRatePercent > 0 && !data.taxAmountIDR) {
@@ -8090,8 +8098,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (data.status === 'PAID') {
       const newTx: FinancialTransaction = {
-        id: `trx-${newId}`,
-        transactionNumber: `TRX-${yyyymm}-${seq}`,
+        id: generateTransactionId('trx-ovh', newId),
+        transactionNumber: generateTransactionNumber('TRX-OVH', data.paidDate || data.date),
         type: 'EXPENSE',
         category: 'OPERATIONAL_OFFICE',
         amountIDR: data.amountIDR,
@@ -8116,7 +8124,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       if (data.hasTax && taxAmount > 0) {
         const newTax: TaxObligation = {
-          id: `tax-${newId}`,
+          id: generateTaxObligationId(data.taxType || 'tax', newId),
           taxType: data.taxType === 'PPH_23' ? 'PPH_23' : data.taxType === 'PPH_4_2' ? 'PPH_4_2' : 'PPN',
           taxPeriod: data.date.slice(0, 7),
           taxYear: dateObj.getFullYear(),
@@ -8131,7 +8139,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           createdBy: currentUser.name || 'Finance Officer',
         };
         setTaxObligations((prev) => {
-          const updated = [newTax, ...prev];
+          const updated = deduplicateById([newTax, ...prev]);
           safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
           broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
           saveSettingsToFirestore('tax_obligations', updated);
@@ -8155,7 +8163,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setOverheadExpenses((prev) => {
-      const updated = [newExpense, ...prev];
+      const updated = deduplicateById([newExpense, ...prev]);
       broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
       saveOverheadExpenseToFirestore(newExpense);
       return updated;
@@ -8345,7 +8353,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   ): { success: boolean; contract?: OfficeRentContract; message?: string } => {
     const now = new Date().toISOString();
-    const newId = `rent-${data.year}-${Date.now()}`;
+    const newId = generateOfficeRentId(data.year);
     const contractNum = data.contractNumber || `SPK-SEWA/JKT/${data.year}/${Math.floor(100 + Math.random() * 900)}`;
 
     const annualRent = data.annualRentAmountIDR ?? data.annualBaseRentIDR ?? 0;
@@ -8381,7 +8389,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setOfficeRentContracts((prev) => {
-      const updated = [newContract, ...prev];
+      const updated = deduplicateById([newContract, ...prev]);
       broadcastLiveDataUpdate('OFFICE_RENTS', updated);
       saveOfficeRentContractToFirestore(newContract);
       return updated;
@@ -9190,7 +9198,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   ): ConsultingProject => {
     const nextNum = projects.length + 101;
     const code = `PRJ-${new Date().getFullYear()}-${String(nextNum).padStart(3, '0')}`;
-    const id = `prj-${Date.now()}`;
+    const id = generateProjectId();
     const newProject: ConsultingProject = {
       ...projData,
       id,
@@ -9199,7 +9207,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       documents: [],
       activities: [
         {
-          id: `act-${Date.now()}`,
+          id: generateUniqueId('act'),
           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
           actor: currentUser.name,
           action: 'Project Initialized',
@@ -9210,7 +9218,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setProjects((prev) => {
-      const updated = [newProject, ...prev];
+      const updated = deduplicateById([newProject, ...prev]);
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
     });
@@ -9451,7 +9459,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addDisposition = (
     dispData: Omit<JobDisposition, 'id' | 'assignedDate'>
   ): JobDisposition => {
-    const id = `dsp-${Date.now()}`;
+    const id = generateDispositionId();
     const newDisp: JobDisposition = {
       ...dispData,
       id,
@@ -9459,7 +9467,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setDispositions((prev) => {
-      const updated = [newDisp, ...prev];
+      const updated = deduplicateById([newDisp, ...prev]);
       broadcastLiveDataUpdate('DISPOSITIONS', updated);
       return updated;
     });
@@ -9616,7 +9624,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newDoc: ProjectDocument = {
       ...docData,
       ...driveMeta,
-      id: `doc-${Date.now()}`,
+      id: generateDocumentId(),
       uploadDate: new Date().toISOString().slice(0, 10),
       version: docData.version || 'v1.0',
     };
@@ -9626,7 +9634,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (p.id !== projectId) return p;
         const updatedProj = {
           ...p,
-          documents: [newDoc, ...p.documents],
+          documents: deduplicateById([newDoc, ...p.documents]),
         };
         saveProjectToFirestore(updatedProj);
         return updatedProj;
@@ -10046,7 +10054,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addPayrollPayment = (
     data: Omit<PayrollPayment, 'id' | 'payrollNumber' | 'createdAt'>
   ): { success: boolean; payroll?: PayrollPayment; message?: string } => {
-    const id = `pay-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const id = generatePayrollId(data.period);
     const count = payrollRecords.length + 1;
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -10117,7 +10125,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     setPayrollRecords((prev) => {
-      const updated = [newRecord, ...prev];
+      const updated = deduplicateById([newRecord, ...prev]);
       broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
       saveSettingsToFirestore('payroll_records', updated);
       return updated;
@@ -10406,12 +10414,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     for (const data of records) {
       runningCount++;
-      const id = `pay-${Date.now()}-${runningCount}-${Math.floor(100 + Math.random() * 900)}`;
+      const id = generatePayrollId(data.period);
       const payrollNumber = `PAY/${year}/${month}/EMP-${String(runningCount).padStart(3, '0')}`;
 
       let createdTxId: string | undefined = undefined;
       if (data.status === 'PAID') {
-        const txId = `trx-pay-${id}`;
+        const txId = generateTransactionId('trx-pay', id);
         createdTxId = txId;
         const payDate = data.paymentDate || new Date().toISOString().slice(0, 10);
         const dateObj = new Date(payDate);
@@ -10492,7 +10500,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     setPayrollRecords((prev) => {
-      const updated = [...newPayments, ...prev];
+      const updated = deduplicateById([...newPayments, ...prev]);
       broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
       saveSettingsToFirestore('payroll_records', updated);
       return updated;

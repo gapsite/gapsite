@@ -19,6 +19,7 @@ import {
 import { useProjects } from '../../context/ProjectContext';
 import { TermDistributionSchemeDefinition, TermMilestoneTemplateItem } from '../../types';
 import { validateSchemePercentageSum } from '../../utils/governmentProjectCalculations';
+import { generateUniqueId } from '../../utils/idGenerator';
 
 interface TermDistributionSchemeManagerModalProps {
   isOpen: boolean;
@@ -218,7 +219,7 @@ export const TermDistributionSchemeManagerModal: React.FC<TermDistributionScheme
         setFeedback({ type: 'error', message: res.message || 'Gagal memperbarui skema termin.' });
       }
     } else {
-      const generatedId = `SCHEME_${payloadTerms.length}_TERMIN_${Date.now()}`;
+      const generatedId = generateUniqueId(`SCHEME_${payloadTerms.length}_TERMIN`);
       const res = addTermDistributionScheme({
         id: generatedId,
         name: formName.trim(),

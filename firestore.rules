@@ -65,6 +65,42 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    // Government Projects
+    match /government_projects/{projectId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Retail Projects
+    match /retail_projects/{projectId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Overhead Expenses
+    match /overhead_expenses/{expenseId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Office Rent Contracts
+    match /office_rent_contracts/{contractId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Activity Logs
+    match /activity_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Connection Health Check
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if true;
+    }
     
     // Catch-all
     match /{document=**} {

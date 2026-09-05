@@ -1417,7 +1417,7 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                     type="text"
                     name="clientPicName"
                     defaultValue={editingProject?.clientPicName || ''}
-                    placeholder="Contoh: Bpk. Hendra Wijaya"
+                    placeholder="Contoh: Bpk. Ahmad Fauzi"
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
                   />
                 </div>

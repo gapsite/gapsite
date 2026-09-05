@@ -12,7 +12,7 @@ export const INITIAL_GOVERNMENT_PROJECTS: GovernmentProject[] = [
     sourceOfFunds: 'APBN',
     ppkName: 'Drs. Hendra Gunawan, M.Si',
     ppkNip: '197805142003121002',
-    treasurerName: 'Siti Rahmawati, S.E. (Bendahara Pengeluaran)',
+    treasurerName: 'Nurul Hidayati, S.E. (Bendahara Pengeluaran)',
     treasurerPhone: '+62 812-9844-3120',
     agencyAddress: 'Gedung Kemenperin Lt. 14, Jl. Gatot Subroto Kav. 52-53, Jakarta Selatan',
     totalContractValueIDR: 1_450_000_000,

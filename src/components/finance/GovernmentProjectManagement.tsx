@@ -43,6 +43,7 @@ import {
 } from '../../types';
 import { formatIDR } from '../../utils/formatters';
 import { InstitutionTypeManagerModal } from './InstitutionTypeManagerModal';
+import { generateGovMilestoneId } from '../../utils/idGenerator';
 import { TermDistributionSchemeManagerModal } from './TermDistributionSchemeManagerModal';
 
 interface GovernmentProjectManagementProps {
@@ -1610,7 +1611,7 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
         }
 
         return {
-          id: `gov-m-${Date.now()}-${idx + 1}`,
+          id: generateGovMilestoneId('gov', idx + 1),
           projectId: '',
           termNumber: t.termNumber || idx + 1,
           title: t.title,

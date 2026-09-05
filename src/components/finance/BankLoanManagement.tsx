@@ -1186,7 +1186,7 @@ export const BankLoanManagement: React.FC = () => {
                     onChange={(e) => setBankName(e.target.value)}
                     placeholder={
                       facilityType === 'OTHER'
-                        ? 'Contoh: Bpk. Hendra Wijaya (Direksi / Pemegang Saham)'
+                        ? 'Contoh: Bpk. Gunawan Pratama (Direksi / Pemegang Saham)'
                         : 'Contoh: Bank BRI / Bank Mandiri / Bank BNI'
                     }
                     className="w-full text-xs bg-white border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"

@@ -1,9 +1,11 @@
 import {
   db,
+  auth,
   collection,
   doc,
   getDocs,
   getDoc,
+  getDocFromServer,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -49,6 +51,79 @@ export const FirestoreCollections = {
   OVERHEAD_EXPENSES: 'overhead_expenses',
   OFFICE_RENTS: 'office_rent_contracts',
 };
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMessage = error instanceof Error ? error.message : String(error);
+  const isUnavailableOrOffline =
+    errMessage.includes('unavailable') ||
+    errMessage.includes('offline') ||
+    (error && typeof error === 'object' && 'code' in error && (error as any).code === 'unavailable');
+
+  if (isUnavailableOrOffline) {
+    // Non-fatal offline/transient connectivity notice; client gracefully operates in offline cache mode
+    return;
+  }
+
+  const errInfo: FirestoreErrorInfo = {
+    error: errMessage,
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo:
+        auth.currentUser?.providerData?.map((provider) => ({
+          providerId: provider.providerId,
+          email: provider.email,
+        })) || [],
+    },
+    operationType,
+    path,
+  };
+
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// Validation connection test helper per Firebase Integration Skill
+export async function testConnection(): Promise<boolean> {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    return true;
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
+      // Normal offline state before connection establishes
+    }
+    return false;
+  }
+}
 
 // Deeply sanitize objects so no `undefined` values are ever sent to Firestore (which causes setDoc to fail)
 export const sanitizeForFirestore = <T>(obj: T): T => {
