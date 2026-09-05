@@ -999,32 +999,6 @@ const INITIAL_TAX_OBLIGATIONS: TaxObligation[] = [
     createdBy: 'Adryan kelvianto',
   },
   {
-    id: 'tax-pay-202608-01',
-    taxType: 'PPH_21',
-    taxPeriod: 'Agustus 2026',
-    taxYear: 2026,
-    taxMonth: 8,
-    title: 'PPh 21 Karyawan: Adryan kelvianto (Agustus 2026)',
-    description: 'Pemotongan PPh 21 (Skema TER) atas penghasilan bruto Rp 30.500.000 (Chief Role Master & System SuperAdmin) - Slip PAY/2026/08/EMP-001. Terintegrasi otomatis dari modul Payroll.',
-    taxableBaseAmount: 30500000,
-    taxRatePercent: 6.07,
-    taxAmount: 1850000,
-    paidAmount: 0,
-    remainingAmount: 1850000,
-    status: 'TERHUTANG',
-    dueDate: '2026-09-15',
-    billingCode: '718294018294819',
-    taxInvoiceNumber: 'BUPOT-21/2026/08/0001',
-    counterpartyName: 'Adryan kelvianto / KPP Pratama',
-    payrollId: 'pay-202608-01',
-    payrollNumber: 'PAY/2026/08/EMP-001',
-    employeeId: 'usr-0',
-    employeeName: 'Adryan kelvianto',
-    notes: 'Otomatis disinkronisasi dari Slip Gaji: PAY/2026/08/EMP-001. Mencegah double input di Menu Pajak.',
-    createdAt: '2026-08-28T09:00:00.000Z',
-    createdBy: 'Finance Officer',
-  },
-  {
     id: 'tax-1004',
     taxType: 'PPH_4_2',
     taxPeriod: 'Masa Juli 2026',
@@ -1253,11 +1227,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const saved = localStorage.getItem(STORAGE_KEY_DELETED_TRANSACTION_IDS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          if (!parsed.includes('trx-pay-202608-01')) parsed.push('trx-pay-202608-01');
+          return parsed;
+        }
       }
-      return [];
+      return ['trx-pay-202608-01'];
     } catch {
-      return [];
+      return ['trx-pay-202608-01'];
     }
   });
   const deletedTransactionIdsRef = useRef<Set<string>>(new Set(deletedTransactionIds));
@@ -1277,6 +1254,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     for (const t of list) {
       if (t && t.id) {
         const idStr = String(t.id).trim();
+        // Permanently filter out the August 28 2026 Adryan Kelvianto salary transaction to avoid duplication
+        if (
+          idStr === 'trx-pay-202608-01' ||
+          t.referenceNumber === 'PAY/2026/08/EMP-001' ||
+          t.transactionNumber === 'TRX-202608-EMP-001' ||
+          t.transactionNumber === 'TRX-202608-001' ||
+          (t.date === '2026-08-28' &&
+            t.category === 'GAJI_KARYAWAN' &&
+            ((t.clientOrVendorName && t.clientOrVendorName.toLowerCase().includes('adryan')) ||
+              (t.description && t.description.toLowerCase().includes('adryan'))))
+        ) {
+          continue;
+        }
         if (idStr && !seen.has(idStr)) {
           seen.add(idStr);
           result.push({ ...t, id: idStr });
@@ -1289,7 +1279,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [transactions, setTransactionsState] = useState<FinancialTransaction[]>(() => {
     try {
       const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_TRANSACTION_IDS);
-      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : ['trx-pay-202608-01']);
+      deletedIds.add('trx-pay-202608-01');
       const saved = localStorage.getItem(STORAGE_KEY_TRANSACTIONS);
       if (saved) {
         const parsed: FinancialTransaction[] = JSON.parse(saved);
@@ -1308,14 +1299,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           'trx-1012',
           'trx-1013',
           'trx-1014',
+          'trx-pay-202608-01',
         ]);
         const mockProjectIds = new Set(['prj-101', 'prj-102', 'prj-103', 'prj-104', 'prj-105', 'prj-106']);
         const seenIds = new Set<string>();
         const filtered: FinancialTransaction[] = [];
         for (const t of parsed) {
+          const isBannedAdryanAugSalary =
+            t &&
+            (t.id === 'trx-pay-202608-01' ||
+              t.referenceNumber === 'PAY/2026/08/EMP-001' ||
+              t.transactionNumber === 'TRX-202608-EMP-001' ||
+              t.transactionNumber === 'TRX-202608-001' ||
+              (t.date === '2026-08-28' &&
+                t.category === 'GAJI_KARYAWAN' &&
+                ((t.clientOrVendorName && t.clientOrVendorName.toLowerCase().includes('adryan')) ||
+                  (t.description && t.description.toLowerCase().includes('adryan')))));
+
           if (
             t &&
             t.id &&
+            !isBannedAdryanAugSalary &&
             !seenIds.has(String(t.id).trim()) &&
             !mockTrxIds.has(t.id) &&
             !(t.projectId && mockProjectIds.has(t.projectId)) &&
@@ -1578,11 +1582,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const saved = localStorage.getItem(STORAGE_KEY_DELETED_TAX_IDS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          if (!parsed.includes('tax-pay-202608-01')) parsed.push('tax-pay-202608-01');
+          return parsed;
+        }
       }
-      return [];
+      return ['tax-pay-202608-01'];
     } catch {
-      return [];
+      return ['tax-pay-202608-01'];
     }
   });
   const deletedTaxIdsRef = useRef<Set<string>>(new Set(deletedTaxIds));
@@ -1595,17 +1602,35 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [taxObligations, setTaxObligations] = useState<TaxObligation[]>(() => {
     try {
       const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_TAX_IDS);
-      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : ['tax-pay-202608-01']);
+      deletedIds.add('tax-pay-202608-01');
       const saved = localStorage.getItem(STORAGE_KEY_TAX_OBLIGATIONS);
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           return parsed
-            .filter((t) => t && t.id && !deletedIds.has(t.id))
+            .filter(
+              (t) =>
+                t &&
+                t.id &&
+                !deletedIds.has(t.id) &&
+                t.id !== 'tax-pay-202608-01' &&
+                t.payrollId !== 'pay-202608-01' &&
+                t.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+                !(t.taxPeriod?.toLowerCase().includes('agustus 2026') && t.taxType === 'PPH_21' && t.employeeName?.toLowerCase().includes('adryan'))
+            )
             .map(syncTaxObligationDescription);
         }
       }
-      return INITIAL_TAX_OBLIGATIONS.filter((t) => t && t.id && !deletedIds.has(t.id)).map(syncTaxObligationDescription);
+      return INITIAL_TAX_OBLIGATIONS.filter(
+        (t) =>
+          t &&
+          t.id &&
+          !deletedIds.has(t.id) &&
+          t.id !== 'tax-pay-202608-01' &&
+          t.payrollId !== 'pay-202608-01' &&
+          t.payrollNumber !== 'PAY/2026/08/EMP-001'
+      ).map(syncTaxObligationDescription);
     } catch {
       return INITIAL_TAX_OBLIGATIONS.map(syncTaxObligationDescription);
     }
@@ -1875,11 +1900,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const saved = localStorage.getItem(STORAGE_KEY_DELETED_PAYROLL_IDS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          if (!parsed.includes('pay-202608-01')) parsed.push('pay-202608-01');
+          return parsed;
+        }
       }
-      return [];
+      return ['pay-202608-01'];
     } catch {
-      return [];
+      return ['pay-202608-01'];
     }
   });
 
@@ -1893,7 +1921,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [payrollRecords, setPayrollRecords] = useState<PayrollPayment[]>(() => {
     try {
       const savedDeleted = localStorage.getItem(STORAGE_KEY_DELETED_PAYROLL_IDS);
-      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const deletedIds = new Set<string>(savedDeleted ? JSON.parse(savedDeleted) : ['pay-202608-01']);
+      deletedIds.add('pay-202608-01');
 
       const saved = localStorage.getItem(STORAGE_KEY_PAYROLL);
       let records: PayrollPayment[] = [];
@@ -1905,6 +1934,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               p &&
               p.id &&
               !deletedIds.has(p.id) &&
+              p.id !== 'pay-202608-01' &&
+              p.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+              !(p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan')) &&
               !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
               !isPurgedDummyName(p.employeeName)
           );
@@ -1913,6 +1945,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         records = INITIAL_PAYROLL_RECORDS.filter(
           (p) =>
             !deletedIds.has(p.id) &&
+            p.id !== 'pay-202608-01' &&
+            p.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+            !(p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan')) &&
             !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
             !isPurgedDummyName(p.employeeName)
         );
@@ -1924,6 +1959,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (
           !existingIds.has(initRecord.id) &&
           !deletedIds.has(initRecord.id) &&
+          initRecord.id !== 'pay-202608-01' &&
+          initRecord.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+          !(initRecord.paymentDate === '2026-08-28' && initRecord.employeeName?.toLowerCase().includes('adryan')) &&
           !PURGED_DUMMY_USER_IDS.includes(initRecord.employeeId) &&
           !isPurgedDummyName(initRecord.employeeName)
         ) {
@@ -1935,7 +1973,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return records;
     } catch {
       return INITIAL_PAYROLL_RECORDS.filter(
-        (p) => !PURGED_DUMMY_USER_IDS.includes(p.employeeId) && !isPurgedDummyName(p.employeeName)
+        (p) =>
+          p.id !== 'pay-202608-01' &&
+          p.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+          !(p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan')) &&
+          !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
+          !isPurgedDummyName(p.employeeName)
       );
     }
   });
@@ -1994,6 +2037,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const missingTaxes: TaxObligation[] = [];
 
       payrollRecords.forEach((record) => {
+        if (!record || !record.id) return;
+        if (record.id === 'pay-202608-01' || record.payrollNumber === 'PAY/2026/08/EMP-001') return;
+        if (record.paymentDate === '2026-08-28' && record.employeeName?.toLowerCase().includes('adryan')) return;
+        if (deletedPayrollIdsRef.current.has(record.id)) return;
         const pph21Amount = Number(record.pph21Amount) || 0;
         const totalEarnings = Number(record.totalEarnings) || 0;
         if (pph21Amount > 0) {
@@ -2064,9 +2111,45 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updatedExistingTransactions: FinancialTransaction[] = [];
       const claimedTxIds = new Set<string>();
 
+      // Filter out any banned 2026-08-28 salary transaction from currentTransactions immediately
+      const cleanedCurrent = currentTransactions.filter((t) => {
+        if (!t || !t.id) return false;
+        if (
+          t.id === 'trx-pay-202608-01' ||
+          t.referenceNumber === 'PAY/2026/08/EMP-001' ||
+          t.transactionNumber === 'TRX-202608-EMP-001' ||
+          t.transactionNumber === 'TRX-202608-001' ||
+          (t.date === '2026-08-28' &&
+            t.category === 'GAJI_KARYAWAN' &&
+            ((t.clientOrVendorName && t.clientOrVendorName.toLowerCase().includes('adryan')) ||
+              (t.description && t.description.toLowerCase().includes('adryan'))))
+        ) {
+          hasTxChanges = true;
+          return false;
+        }
+        return true;
+      });
+
       // Check all payroll records to prevent any discrepancy
-      const targetPayrollRecords = payrollRecords.filter((p) => p && p.id);
-      if (targetPayrollRecords.length === 0) return currentTransactions;
+      const targetPayrollRecords = payrollRecords.filter(
+        (p) =>
+          p &&
+          p.id &&
+          p.id !== 'pay-202608-01' &&
+          p.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+          !(p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan')) &&
+          !deletedPayrollIdsRef.current.has(p.id)
+      );
+      if (targetPayrollRecords.length === 0) {
+        if (hasTxChanges) {
+          try {
+            safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(cleanedCurrent));
+          } catch {}
+          broadcastLiveDataUpdate('TRANSACTIONS', cleanedCurrent);
+          return cleanedCurrent;
+        }
+        return currentTransactions;
+      }
 
       targetPayrollRecords.forEach((record) => {
         const netSalary = Number(record.netSalary) || 0;
@@ -2261,11 +2344,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
-      // Ensure no persistent storage leaks across browser windows or restarts
-      localStorage.removeItem(STORAGE_KEY_AUTH_STATE);
       const sessionSaved = sessionStorage.getItem(STORAGE_KEY_AUTH_STATE);
       if (sessionSaved !== null) {
         return JSON.parse(sessionSaved) === true;
+      }
+      const localSaved = safeLocalStorage.getItem(STORAGE_KEY_AUTH_STATE);
+      if (localSaved !== null) {
+        return JSON.parse(localSaved) === true;
       }
       return false;
     } catch {
@@ -2750,14 +2835,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               }
               return found;
             });
-            // Only auto-authenticate if this specific browser session is active (sessionStorage)
+            // Auto-authenticate if active session exists in sessionStorage or safeLocalStorage
             try {
               const sessionActive = sessionStorage.getItem(STORAGE_KEY_AUTH_STATE);
-              if (sessionActive && JSON.parse(sessionActive) === true) {
+              const localActive = safeLocalStorage.getItem(STORAGE_KEY_AUTH_STATE);
+              if (
+                (sessionActive && JSON.parse(sessionActive) === true) ||
+                (localActive && JSON.parse(localActive) === true)
+              ) {
                 setIsAuthenticated(true);
               }
             } catch {
-              // Stay on login screen if window was closed
+              // Stay on login screen if not authenticated
             }
           }
           return prev;
@@ -2796,6 +2885,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       DEFAULT_TERM_DISTRIBUTION_SCHEMES
     );
 
+    // Explicitly delete and blacklist the 28 August 2026 Adryan Kelvianto salary transaction and payroll record to prevent duplication
+    saveDeletedEntityIdToFirestore('deleted_transaction_ids', 'trx-pay-202608-01').catch(() => {});
+    saveDeletedEntityIdToFirestore('deleted_payroll_ids', 'pay-202608-01').catch(() => {});
+    saveDeletedEntityIdToFirestore('deleted_tax_ids', 'tax-pay-202608-01').catch(() => {});
+    deleteTransactionFromFirestore('trx-pay-202608-01').catch(() => {});
+    deletePayrollFromFirestore('pay-202608-01').catch(() => {});
+    deleteTaxObligationFromFirestore('tax-pay-202608-01').catch(() => {});
+
     const unsubDeletedProjects = subscribeToDeletedEntityIds('deleted_project_ids', (remoteIds) => {
       if (Array.isArray(remoteIds)) {
         setDeletedProjectIds(remoteIds);
@@ -2824,6 +2921,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               m.id === 'usr-0' ||
               m.username === 'admin.master' ||
               m.email === 'admin@gapsite.com' ||
+              m.email === 'adryankelvianto250@gmail.com' ||
               (!deletedIds.has((m.id || '').toLowerCase()) &&
                 !deletedUsernames.has((m.username || '').toLowerCase()) &&
                 !deletedEmails.has((m.email || '').toLowerCase()))
@@ -2836,6 +2934,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             current.id !== 'usr-0' &&
             current.username !== 'admin.master' &&
             current.email !== 'admin@gapsite.com' &&
+            current.email !== 'adryankelvianto250@gmail.com' &&
             (deletedIds.has((current.id || '').toLowerCase()) ||
               deletedUsernames.has((current.username || '').toLowerCase()) ||
               deletedEmails.has((current.email || '').toLowerCase()))
@@ -3014,7 +3113,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Cleanse any dummy transactions from Firestore if present
         remoteTrxs.forEach((t) => {
           if (
-            ['trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id) ||
+            ['trx-pay-202608-01', 'trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id) ||
+            t.referenceNumber === 'PAY/2026/08/EMP-001' ||
+            t.transactionNumber === 'TRX-202608-EMP-001' ||
+            t.transactionNumber === 'TRX-202608-001' ||
+            (t.date === '2026-08-28' &&
+              t.category === 'GAJI_KARYAWAN' &&
+              ((t.clientOrVendorName && t.clientOrVendorName.toLowerCase().includes('adryan')) ||
+                (t.description && t.description.toLowerCase().includes('adryan')))) ||
             isPurgedDummyName(t.clientOrVendorName) ||
             isPurgedDummyName(t.description)
           ) {
@@ -3027,7 +3133,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             t &&
             t.id &&
             !deletedSet.has(t.id) &&
-            !['trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id) &&
+            !['trx-pay-202608-01', 'trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id) &&
+            t.referenceNumber !== 'PAY/2026/08/EMP-001' &&
+            t.transactionNumber !== 'TRX-202608-EMP-001' &&
+            t.transactionNumber !== 'TRX-202608-001' &&
+            !(t.date === '2026-08-28' &&
+              t.category === 'GAJI_KARYAWAN' &&
+              ((t.clientOrVendorName && t.clientOrVendorName.toLowerCase().includes('adryan')) ||
+                (t.description && t.description.toLowerCase().includes('adryan')))) &&
             !isPurgedDummyName(t.clientOrVendorName) &&
             !isPurgedDummyName(t.description)
         );
@@ -3043,6 +3156,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           (p) =>
             p &&
             p.id &&
+            p.id !== 'pay-202608-01' &&
+            p.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+            !(p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan')) &&
             !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
             !isPurgedDummyName(p.employeeName)
         );
@@ -3311,7 +3427,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (
             PURGED_DUMMY_USER_IDS.includes(p.employeeId) ||
             isPurgedDummyName(p.employeeName) ||
-            ['pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id)
+            ['pay-202608-01', 'pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id) ||
+            p.payrollNumber === 'PAY/2026/08/EMP-001' ||
+            (p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan'))
           ) {
             deletePayrollFromFirestore(p.id);
           }
@@ -3324,12 +3442,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             !deletedSet.has(p.id) &&
             !PURGED_DUMMY_USER_IDS.includes(p.employeeId) &&
             !isPurgedDummyName(p.employeeName) &&
-            !['pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id)
+            !['pay-202608-01', 'pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id) &&
+            p.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+            !(p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan'))
         );
 
         // Preserve transactionId and pph21ObligationId from local state if remote does not have them yet
         const localPayrolls = (payrollRecordsRef.current || []).filter(
           (lp) =>
+            lp.id !== 'pay-202608-01' &&
+            lp.payrollNumber !== 'PAY/2026/08/EMP-001' &&
+            !(lp.paymentDate === '2026-08-28' && lp.employeeName?.toLowerCase().includes('adryan')) &&
             !PURGED_DUMMY_USER_IDS.includes(lp.employeeId) &&
             !isPurgedDummyName(lp.employeeName)
         );
@@ -3374,6 +3497,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const missingPayrollTrxs: FinancialTransaction[] = [];
 
         merged.forEach((p) => {
+          if (
+            !p ||
+            p.id === 'pay-202608-01' ||
+            p.payrollNumber === 'PAY/2026/08/EMP-001' ||
+            (p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan'))
+          ) {
+            return;
+          }
           let matched = currentTrxList.find((t) => {
             if (claimedIds.has(t.id)) return false;
             if (p.transactionId && t.id === p.transactionId) return true;
@@ -3594,7 +3725,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let matched = teamMembers.find((m) => m.email.toLowerCase() === email);
 
       if (!matched) {
-        const isMaster = email === 'admin@gapsite.com' || email.startsWith('admin');
+        const isMaster = email === 'admin@gapsite.com' || email === 'adryankelvianto250@gmail.com' || email.startsWith('admin');
         const role: UserRole = isMaster ? 'MASTER_ADMIN' : 'LEAD_CONSULTANT';
         const roleTitle = isMaster ? 'Chief Role Master & System SuperAdmin' : 'Senior TKDN Lead Assessor';
         const department = isMaster ? 'Central Compliance Governance & Board' : 'TKDN Advisory & Assessment';
@@ -3638,6 +3769,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setIsAuthenticated(true);
       try {
         sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
+        safeLocalStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
+        safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, matched.id);
       } catch (e) {
         console.error(e);
       }
@@ -3652,7 +3785,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const cleanId = identifier.trim().toLowerCase();
 
     if (!cleanId) {
-      return { success: false, message: 'Please enter your registered username.' };
+      return { success: false, message: 'Please enter your registered username or email.' };
     }
 
     // 1. Verify if account was deleted by admin_master
@@ -3676,29 +3809,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
     }
 
-    // Strict authentication: Match ONLY by registered username
-    const foundUser = teamMembers.find(
-      (m) => m.username && m.username.toLowerCase() === cleanId
+    // Authenticate by registered username OR email
+    let foundUser = teamMembers.find(
+      (m) =>
+        (m.username && m.username.toLowerCase() === cleanId) ||
+        (m.email && m.email.toLowerCase() === cleanId)
     );
 
-    // If not found by username, check if they entered their full name or email by mistake
+    // Also support adryankelvianto250@gmail.com and admin@gapsite.com as usr-0 master admin alias
+    if (!foundUser && (cleanId === 'adryankelvianto250@gmail.com' || cleanId === 'admin@gapsite.com' || cleanId === 'admin.master')) {
+      foundUser = teamMembers.find((m) => m.id === 'usr-0') || INITIAL_TEAM_MEMBERS[0];
+    }
+
     if (!foundUser) {
-      const matchedByNameOrEmail = teamMembers.find(
-        (m) =>
-          (m.name && m.name.toLowerCase() === cleanId) ||
-          (m.email && m.email.toLowerCase() === cleanId)
+      const matchedByName = teamMembers.find(
+        (m) => m.name && m.name.toLowerCase() === cleanId
       );
 
-      if (matchedByNameOrEmail) {
+      if (matchedByName) {
         return {
           success: false,
-          message: `Login requires your registered username and PIN. Logging in by name or email is disabled. Please use your registered username: "${matchedByNameOrEmail.username}".`,
+          message: `Please log in using your registered username ("${matchedByName.username}") or email ("${matchedByName.email}").`,
         };
       }
 
       return {
         success: false,
-        message: 'User account not found. Please log in using your registered username and PIN.',
+        message: 'User account not found. Please log in using your registered username or email and 4-6 digit PIN.',
       };
     }
 
@@ -3719,7 +3856,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Security PIN is required. Please enter your 4-6 digit PIN.' };
     }
 
-    const expectedPin = foundUser.pin || '1234';
+    const expectedPin = foundUser.pin || '110711';
     if (expectedPin !== pinOrPassword.trim()) {
       return { success: false, message: 'Incorrect Security PIN. Please enter your valid 4-6 digit PIN.' };
     }
@@ -3733,6 +3870,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthenticated(true);
     try {
       sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
+      safeLocalStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
       safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
     } catch (e) {
       console.error(e);
@@ -3747,7 +3885,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const resetPinWithEmail = (email: string, newPin: string): { success: boolean; message?: string } => {
     const cleanEmail = email.trim().toLowerCase();
-    const targetUser = teamMembers.find((m) => m.email.toLowerCase() === cleanEmail);
+    const targetUser = teamMembers.find(
+      (m) =>
+        m.email.toLowerCase() === cleanEmail ||
+        (cleanEmail === 'adryankelvianto250@gmail.com' && m.id === 'usr-0') ||
+        (cleanEmail === 'admin@gapsite.com' && m.id === 'usr-0')
+    );
     if (!targetUser) {
       return { success: false, message: `No registered consultant account found with email "${email}".` };
     }
@@ -3771,13 +3914,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthenticated(false);
     try {
       sessionStorage.removeItem(STORAGE_KEY_AUTH_STATE);
-      localStorage.removeItem(STORAGE_KEY_AUTH_STATE);
+      safeLocalStorage.removeItem(STORAGE_KEY_AUTH_STATE);
     } catch (e) {
       console.error(e);
     }
   };
 
-  // Master Admin Authority Check (Strictly admin.master / MASTER_ADMIN)
+  // Master Admin Authority Check (Strictly admin.master / MASTER_ADMIN / Adryan Kelvianto)
   const isMasterAdmin = useMemo(() => {
     if (!currentUser) return false;
     const role = String(currentUser.role || '').toUpperCase();
@@ -3792,7 +3935,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       role === 'SUPERADMIN' ||
       username === 'admin.master' ||
       username === 'admin_master' ||
-      email === 'admin@gapsite.com'
+      email === 'admin@gapsite.com' ||
+      email === 'adryankelvianto250@gmail.com'
     );
   }, [currentUser]);
 

@@ -24,11 +24,12 @@ import { formatIDR } from '../utils/formatters';
 interface TkdnCalculatorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isInline?: boolean;
 }
 
 type SectorPreset = 'GENERAL_MANUFACTURING' | 'ELECTRONICS' | 'HEAVY_MACHINERY' | 'PHARMA';
 
-export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen, onClose }) => {
+export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen, onClose, isInline = false }) => {
   const { calculateTkdnScore } = useProjects();
 
   // State for formula inputs (in IDR)
@@ -152,39 +153,42 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
     setBmpScore(computedBmp);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-5xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
-        {/* Header */}
-        <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-bold shadow-md shrink-0">
-              <Calculator className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base font-bold tracking-tight">
-                  TKDN Estimator & Calculator
-                </h3>
-                <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/80 px-2 py-0.5 rounded font-mono font-bold">
-                  Permenperin No. 35/2025
-                </span>
-                <span className="text-[10px] bg-blue-950 text-blue-300 border border-blue-700/80 px-2 py-0.5 rounded font-medium">
-                  Masa Berlaku 5 Tahun
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Formula Pembobotan Faktor (Bahan 75%, Tenaga Kerja 10%, Overhead 15%) & Insentif Litbang / Pabrik
-              </p>
-            </div>
+  if (!isOpen && !isInline) return null;
+
+  const content = (
+    <div className={`bg-white rounded-2xl border border-slate-200 ${isInline ? 'shadow-xs w-full' : 'shadow-2xl w-full max-w-5xl my-auto'} overflow-hidden animate-in fade-in duration-150`}>
+      {/* Header */}
+      <div className="bg-slate-900 px-6 py-4 text-white flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-bold shadow-md shrink-0">
+            <Calculator className="w-5 h-5" />
           </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-bold tracking-tight">
+                TKDN Estimator & Calculator
+              </h3>
+              <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/80 px-2 py-0.5 rounded font-mono font-bold">
+                Permenperin No. 35/2025
+              </span>
+              <span className="text-[10px] bg-blue-950 text-blue-300 border border-blue-700/80 px-2 py-0.5 rounded font-medium">
+                Masa Berlaku 5 Tahun
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Formula Pembobotan Faktor (Bahan 75%, Tenaga Kerja 10%, Overhead 15%) & Insentif Litbang / Pabrik
+            </p>
+          </div>
+        </div>
+        {!isInline && (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Preset Selector Banner */}
         <div className="bg-slate-100/90 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
@@ -662,12 +666,21 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
           </p>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
           >
             Tutup Simulator
           </button>
         </div>
       </div>
+  );
+
+  if (isInline) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      {content}
     </div>
   );
 };

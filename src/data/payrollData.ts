@@ -1,45 +1,4 @@
 import { PayrollPayment } from '../types';
 
-export const INITIAL_PAYROLL_RECORDS: PayrollPayment[] = [
-  {
-    id: 'pay-202608-01',
-    payrollNumber: 'PAY/2026/08/EMP-001',
-    period: 'Agustus 2026',
-    paymentDate: '2026-08-28',
-    employeeId: 'usr-0',
-    employeeName: 'Adryan kelvianto',
-    employeeEmail: 'admin@gapsite.com',
-    employeePhone: '+62 811-9988-7711',
-    employeeNik: '3171012304920001',
-    roleTitle: 'Chief Role Master & System SuperAdmin',
-    department: 'Central Compliance Governance & Board',
-    bankName: 'Bank Mandiri',
-    bankAccountNumber: '122-00-983100-2',
-    bankAccountHolder: 'Adryan kelvianto',
-    basicSalary: 18_000_000,
-    positionAllowance: 4_500_000,
-    transportAllowance: 1_500_000,
-    mealAllowance: 1_000_000,
-    projectBonus: 5_000_000, // Insentif Keberhasilan Verifikasi TKDN Proyek
-    overtimeAmount: 0,
-    otherAllowances: 500_000,
-    totalEarnings: 30_500_000,
-    bpjsKesehatan: 120_000,
-    bpjsKetenagakerjaan: 360_000,
-    pph21Amount: 1_850_000,
-    cashAdvanceDeduction: 0,
-    otherDeductions: 0,
-    totalDeductions: 2_330_000,
-    netSalary: 28_170_000,
-    paymentMethod: 'BANK_TRANSFER_MANDIRI',
-    paymentChannelId: 'BANK_TRANSFER_MANDIRI',
-    status: 'PAID',
-    transactionId: 'trx-pay-202608-01',
-    pph21ObligationId: 'tax-pay-202608-01',
-    notes: 'Gaji Pokok + Insentif Sign-off Verifikasi TKDN Kemenperin Masa Agustus 2026',
-    recordedBy: 'Finance Officer',
-    paidAt: '2026-08-28',
-    createdAt: '2026-08-28T09:00:00.000Z',
-  },
-];
+export const INITIAL_PAYROLL_RECORDS: PayrollPayment[] = [];
 

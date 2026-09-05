@@ -10,10 +10,8 @@ export const purgeStaleStorage = (): void => {
       const key = localStorage.key(i);
       if (!key) continue;
 
-      // Purge Firestore multi-tab client state mutations & zombie client IDs
+      // Purge only orphaned multi-tab mutations & zombie client IDs (preserve firebase auth session)
       if (
-        key.startsWith('firestore_') ||
-        key.startsWith('firebase:') ||
         key.startsWith('firestore_mutations_') ||
         key.startsWith('firestore_clients_')
       ) {
@@ -98,7 +96,9 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
             if (isPurgedDummyName(p.employeeName)) return false;
             if (isPurgedDummyName(p.bankAccountHolder)) return false;
             if (p.employeeEmail && bannedEmails.has(p.employeeEmail.toLowerCase())) return false;
-            if (['pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id)) return false;
+            if (['pay-202608-01', 'pay-202608-02', 'pay-202608-03', 'pay-202608-04', 'pay-202608-05', 'pay-202607-02', 'pay-202607-03'].includes(p.id)) return false;
+            if (p.payrollNumber === 'PAY/2026/08/EMP-001') return false;
+            if (p.paymentDate === '2026-08-28' && p.employeeName && p.employeeName.toLowerCase().includes('adryan')) return false;
             return true;
           });
           localStorage.setItem('verix_crm_payroll_v1', JSON.stringify(cleaned));
@@ -131,7 +131,10 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
         if (Array.isArray(list)) {
           const cleaned = list.filter((t: any) => {
             if (!t) return false;
-            if (['trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id)) return false;
+            if (['trx-pay-202608-01', 'trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id)) return false;
+            if (t.referenceNumber === 'PAY/2026/08/EMP-001') return false;
+            if (t.transactionNumber === 'TRX-202608-EMP-001' || t.transactionNumber === 'TRX-202608-001') return false;
+            if (t.date === '2026-08-28' && t.category === 'GAJI_KARYAWAN' && ((t.clientOrVendorName && t.clientOrVendorName.toLowerCase().includes('adryan')) || (t.description && t.description.toLowerCase().includes('adryan')))) return false;
             if (isPurgedDummyName(t.clientOrVendorName)) return false;
             if (isPurgedDummyName(t.description)) return false;
             return true;
@@ -149,7 +152,9 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
         if (Array.isArray(list)) {
           const cleaned = list.filter((tax: any) => {
             if (!tax) return false;
-            if (['tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03'].includes(tax.id)) return false;
+            if (['tax-pay-202608-01', 'tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03'].includes(tax.id)) return false;
+            if (tax.payrollId === 'pay-202608-01' || tax.payrollNumber === 'PAY/2026/08/EMP-001') return false;
+            if (tax.taxPeriod?.toLowerCase().includes('agustus 2026') && tax.taxType === 'PPH_21' && tax.employeeName?.toLowerCase().includes('adryan')) return false;
             if (bannedIds.has(tax.employeeId)) return false;
             if (isPurgedDummyName(tax.employeeName)) return false;
             if (isPurgedDummyName(tax.counterpartyName)) return false;

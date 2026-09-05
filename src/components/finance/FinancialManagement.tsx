@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   DollarSign,
   Plus,
-  ArrowUpRight,
-  ArrowDownRight,
   Download,
   Calendar,
   Wallet,
@@ -166,22 +164,6 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
             >
               <Users className="w-4 h-4 text-emerald-400" />
               <span>Gaji Karyawan</span>
-            </button>
-
-            <button
-              onClick={() => handleOpenNewTransaction('EXPENSE')}
-              className="px-4 py-2 bg-rose-600/90 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-950/40 transition-all hover:scale-[1.02]"
-            >
-              <ArrowDownRight className="w-4 h-4 stroke-[2.5]" />
-              <span>Record Expense</span>
-            </button>
-
-            <button
-              onClick={() => handleOpenNewTransaction('INCOME')}
-              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/40 transition-all hover:scale-[1.02]"
-            >
-              <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-              <span>Record Income</span>
             </button>
           </div>
         </div>

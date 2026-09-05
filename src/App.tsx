@@ -331,9 +331,7 @@ const DashboardContent: React.FC = () => {
           {/* TAB 5: TKDN ESTIMATOR (Inline view) */}
           {activeTab === 'calculator' && (
             <div className="animate-in fade-in duration-150">
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-                <TkdnCalculatorModal isOpen={true} onClose={() => setActiveTab('projects')} />
-              </div>
+              <TkdnCalculatorModal isOpen={true} isInline={true} onClose={() => setActiveTab('projects')} />
             </div>
           )}
 

@@ -207,7 +207,7 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
     role: 'MASTER_ADMIN',
     roleTitle: 'Chief Role Master & System SuperAdmin',
     department: 'Central Compliance Governance & Board',
-    email: 'admin@gapsite.com',
+    email: 'adryankelvianto250@gmail.com',
     phone: '+62 811-9988-7711',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     status: 'ACTIVE',
@@ -246,24 +246,7 @@ export const INITIAL_PROJECTS: ConsultingProject[] = [];
 
 export const INITIAL_DISPOSITIONS: JobDisposition[] = [];
 
-export const INITIAL_TRANSACTIONS: FinancialTransaction[] = [
-  {
-    id: 'trx-pay-202608-01',
-    transactionNumber: 'TRX-202608-001',
-    date: '2026-08-28',
-    type: 'EXPENSE',
-    category: 'GAJI_KARYAWAN',
-    amountIDR: 28_170_000,
-    description: 'Gaji Karyawan: Adryan kelvianto (Chief Role Master & System SuperAdmin) - Periode Agustus 2026',
-    clientOrVendorName: 'Adryan kelvianto',
-    paymentMethod: 'BANK_TRANSFER_MANDIRI',
-    referenceNumber: 'PAY/2026/08/EMP-001',
-    status: 'CLEARED',
-    notes: 'Slip: PAY/2026/08/EMP-001 | Bruto: Rp 30.500.000 | Potongan: Rp 2.330.000 | Net THP: Rp 28.170.000 | Gaji Pokok + Insentif Sign-off Verifikasi TKDN Kemenperin Masa Agustus 2026',
-    recordedBy: 'Finance Officer',
-    createdAt: '2026-08-28T09:00:00.000Z',
-  },
-];
+export const INITIAL_TRANSACTIONS: FinancialTransaction[] = [];
 
 export const INITIAL_RECEIVABLES: Receivable[] = [];
 
