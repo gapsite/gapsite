@@ -58,6 +58,7 @@ import {
   subscribeToSettings,
   ensureInitialFirestoreSeed,
   saveBatchEntitiesToFirestore,
+  sanitizeFirestoreDocId,
   FirestoreCollections
 } from '../firebase/firestoreService';
 import {
@@ -3083,13 +3084,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const txMap = new Map<string, FinancialTransaction>();
         valid.forEach((t) => txMap.set(t.id, t));
 
+        const claimedTxIds = new Set<string>();
+        const missingTrxsToPersist: FinancialTransaction[] = [];
+
         const allPayrollRecords = ((payrollRecordsRef.current && payrollRecordsRef.current.length > 0 ? payrollRecordsRef.current : INITIAL_PAYROLL_RECORDS) || []).filter((p) => p && p.id);
         allPayrollRecords.forEach((p) => {
           let matchingTx: FinancialTransaction | undefined = undefined;
-          if (p.transactionId && txMap.has(p.transactionId)) {
+          if (p.transactionId && txMap.has(p.transactionId) && !claimedTxIds.has(p.transactionId)) {
             matchingTx = txMap.get(p.transactionId);
           } else {
             for (const t of txMap.values()) {
+              if (claimedTxIds.has(t.id)) continue;
               if (
                 (p.payrollNumber && t.referenceNumber === p.payrollNumber) ||
                 (p.payrollNumber && t.notes?.includes(p.payrollNumber)) ||
@@ -3108,6 +3113,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
 
           if (matchingTx) {
+            claimedTxIds.add(matchingTx.id);
             // Strictly enforce exact nominal THP & cleared status
             if (matchingTx.amountIDR !== p.netSalary || matchingTx.status !== 'CLEARED' || matchingTx.category !== 'GAJI_KARYAWAN') {
               matchingTx.amountIDR = p.netSalary;
@@ -3119,13 +3125,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               }
             }
           } else {
-            const txId = p.transactionId || `trx-pay-${p.id}`;
+            const safePayId = sanitizeFirestoreDocId(p.id);
+            let txId = p.transactionId ? sanitizeFirestoreDocId(p.transactionId) : '';
+            if (!txId || claimedTxIds.has(txId) || deletedSet.has(txId) || txMap.has(txId)) {
+              txId = `trx-pay-${safePayId}`;
+            }
+            if (claimedTxIds.has(txId) || txMap.has(txId)) {
+              txId = `trx-pay-${safePayId}-${Date.now().toString(36)}-${Math.floor(100 + Math.random() * 900)}`;
+            }
+            claimedTxIds.add(txId);
+
             const payDate = p.paymentDate || p.paidAt || (p.createdAt ? p.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
             const dateObj = new Date(payDate);
             const yyyymm = !isNaN(dateObj.getFullYear())
               ? `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`
               : new Date().toISOString().slice(0, 7).replace('-', '');
-            const numPart = (p.payrollNumber && p.payrollNumber.split('/').pop()) || Math.floor(100 + Math.random() * 900);
+            const numPart = (p.payrollNumber && sanitizeFirestoreDocId(p.payrollNumber.split('/').pop())) || Math.floor(100 + Math.random() * 900);
             const txNum = `TRX-${yyyymm}-${numPart}`;
 
             const payrollTx: FinancialTransaction = {
@@ -3146,6 +3161,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             };
 
             txMap.set(txId, payrollTx);
+            missingTrxsToPersist.push(payrollTx);
           }
         });
 
@@ -3155,6 +3171,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(merged));
         } catch {}
+        if (missingTrxsToPersist.length > 0) {
+          saveBatchEntitiesToFirestore(FirestoreCollections.TRANSACTIONS, missingTrxsToPersist);
+        }
       }
     });
 
@@ -3338,6 +3357,93 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         setPayrollRecords(merged);
         payrollRecordsRef.current = merged;
+
+        // Automatically ensure Buku Kas (transactions) has corresponding records for all active payroll slips
+        const currentTrxList = transactionsRef.current || [];
+        const claimedIds = new Set<string>();
+        const missingPayrollTrxs: FinancialTransaction[] = [];
+
+        merged.forEach((p) => {
+          let matched = currentTrxList.find((t) => {
+            if (claimedIds.has(t.id)) return false;
+            if (p.transactionId && t.id === p.transactionId) return true;
+            if (p.payrollNumber && t.referenceNumber === p.payrollNumber) return true;
+            if (p.payrollNumber && t.notes && t.notes.includes(p.payrollNumber)) return true;
+            if (t.id === `trx-pay-${p.id}`) return true;
+            if (
+              t.category === 'GAJI_KARYAWAN' &&
+              p.employeeName &&
+              t.clientOrVendorName &&
+              t.clientOrVendorName.toLowerCase().trim() === p.employeeName.toLowerCase().trim() &&
+              p.period &&
+              t.description &&
+              t.description.toLowerCase().includes(p.period.toLowerCase())
+            ) {
+              return true;
+            }
+            return false;
+          });
+
+          if (matched) {
+            claimedIds.add(matched.id);
+          } else {
+            const safePayId = sanitizeFirestoreDocId(p.id);
+            let txId = p.transactionId ? sanitizeFirestoreDocId(p.transactionId) : '';
+            if (
+              !txId ||
+              claimedIds.has(txId) ||
+              deletedTransactionIdsRef.current.has(txId) ||
+              currentTrxList.some((t) => t.id === txId) ||
+              missingPayrollTrxs.some((t) => t.id === txId)
+            ) {
+              txId = `trx-pay-${safePayId}`;
+            }
+            if (
+              claimedIds.has(txId) ||
+              currentTrxList.some((t) => t.id === txId) ||
+              missingPayrollTrxs.some((t) => t.id === txId)
+            ) {
+              txId = `trx-pay-${safePayId}-${Date.now().toString(36)}-${Math.floor(100 + Math.random() * 900)}`;
+            }
+            claimedIds.add(txId);
+
+            const payDate = p.paymentDate || p.paidAt || (p.createdAt ? p.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+            const dateObj = new Date(payDate);
+            const yyyymm = !isNaN(dateObj.getFullYear())
+              ? `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`
+              : new Date().toISOString().slice(0, 7).replace('-', '');
+            const numPart = (p.payrollNumber && sanitizeFirestoreDocId(p.payrollNumber.split('/').pop())) || Math.floor(100 + Math.random() * 900);
+            const txNum = `TRX-${yyyymm}-${numPart}`;
+
+            const newTx: FinancialTransaction = {
+              id: txId,
+              transactionNumber: txNum,
+              date: payDate,
+              type: 'EXPENSE',
+              category: 'GAJI_KARYAWAN',
+              amountIDR: p.netSalary,
+              description: `Gaji Karyawan: ${p.employeeName} (${p.roleTitle || 'Pegawai'}) - Periode ${p.period}`,
+              clientOrVendorName: p.employeeName,
+              paymentMethod: p.paymentMethod || 'BANK_TRANSFER_MANDIRI',
+              referenceNumber: p.payrollNumber,
+              status: 'CLEARED',
+              notes: `Slip: ${p.payrollNumber} | Bruto: Rp ${p.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${p.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${p.netSalary.toLocaleString('id-ID')}${p.notes ? ' | ' + p.notes : ''}`,
+              recordedBy: p.recordedBy || 'System Payroll Sync',
+              createdAt: p.createdAt || new Date().toISOString(),
+            };
+            missingPayrollTrxs.push(newTx);
+          }
+        });
+
+        if (missingPayrollTrxs.length > 0) {
+          const augmentedTrxs = deduplicateTransactions([...missingPayrollTrxs, ...currentTrxList]);
+          setTransactions(augmentedTrxs);
+          transactionsRef.current = augmentedTrxs;
+          try {
+            safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(augmentedTrxs));
+          } catch {}
+          saveBatchEntitiesToFirestore(FirestoreCollections.TRANSACTIONS, missingPayrollTrxs);
+        }
       }
     });
 
@@ -10573,18 +10679,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         } else {
           // Missing transaction: automatically create it!
-          createdCount++;
-          hasTxChanges = true;
-          const txId = record.transactionId && !deletedTransactionIdsRef.current.has(record.transactionId)
-            ? record.transactionId
-            : `trx-pay-${record.id}`;
+          const safePayId = sanitizeFirestoreDocId(record.id);
+          let txId = record.transactionId ? sanitizeFirestoreDocId(record.transactionId) : '';
+          if (
+            !txId ||
+            claimedTxIds.has(txId) ||
+            deletedTransactionIdsRef.current.has(txId) ||
+            currentTrxs.some((t) => t.id === txId) ||
+            newTrxsToAdd.some((t) => t.id === txId)
+          ) {
+            txId = `trx-pay-${safePayId}`;
+          }
+          if (
+            claimedTxIds.has(txId) ||
+            currentTrxs.some((t) => t.id === txId) ||
+            newTrxsToAdd.some((t) => t.id === txId)
+          ) {
+            txId = `trx-pay-${safePayId}-${Date.now().toString(36)}-${Math.floor(100 + Math.random() * 900)}`;
+          }
+
+          claimedTxIds.add(txId);
 
           const payDate = record.paymentDate || record.paidAt || (record.createdAt ? record.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
           const dateObj = new Date(payDate);
           const yyyymm = !isNaN(dateObj.getFullYear())
             ? `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`
             : new Date().toISOString().slice(0, 7).replace('-', '');
-          const numPart = (record.payrollNumber && record.payrollNumber.split('/').pop()) || Math.floor(100 + Math.random() * 900);
+          const numPart = (record.payrollNumber && sanitizeFirestoreDocId(record.payrollNumber.split('/').pop())) || Math.floor(100 + Math.random() * 900);
           const txNum = `TRX-${yyyymm}-${numPart}`;
 
           const createdTx: FinancialTransaction = {
@@ -10604,8 +10725,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             createdAt: record.createdAt || new Date().toISOString(),
           };
 
-          claimedTxIds.add(txId);
           newTrxsToAdd.push(createdTx);
+          createdCount++;
+          hasTxChanges = true;
 
           // Ensure this txId is unbanned from deletedTransactionIds
           if (deletedTransactionIdsRef.current.has(txId)) {
@@ -10628,22 +10750,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         extraPayrollTrxs.forEach((extra) => {
           const isDuplicateOfClaimed = Array.from(claimedTxIds).some((claimedId) => {
             const claimedTx = [...newTrxsToAdd, ...currentTrxs].find((t) => t.id === claimedId);
-            if (!claimedTx) return false;
-            const sameRef = extra.referenceNumber && claimedTx.referenceNumber && extra.referenceNumber === claimedTx.referenceNumber;
-            const sameSlipInNotes = extra.notes && claimedTx.referenceNumber && extra.notes.includes(claimedTx.referenceNumber);
-            const sameAmountAndEmp = extra.amountIDR === claimedTx.amountIDR &&
+            if (!claimedTx || claimedTx.id === extra.id) return false;
+            const sameRef = Boolean(extra.referenceNumber && claimedTx.referenceNumber && extra.referenceNumber === claimedTx.referenceNumber);
+            const sameSlipInNotes = Boolean(extra.notes && claimedTx.referenceNumber && extra.notes.includes(claimedTx.referenceNumber));
+            const sameAmountAndEmp = Boolean(
+              extra.amountIDR === claimedTx.amountIDR &&
               extra.clientOrVendorName && claimedTx.clientOrVendorName &&
               extra.clientOrVendorName.toLowerCase().trim() === claimedTx.clientOrVendorName.toLowerCase().trim() &&
               extra.description && claimedTx.description &&
-              extra.description.toLowerCase().trim() === claimedTx.description.toLowerCase().trim();
+              extra.description.toLowerCase().trim() === claimedTx.description.toLowerCase().trim()
+            );
             return Boolean(sameRef || sameSlipInNotes || sameAmountAndEmp);
           });
 
-          // Check if extra is an orphaned slip transaction (only if not belonging to ANY of the payroll records)
-          const isOrphanedSlip = (extra.referenceNumber?.startsWith('PAY/') || extra.notes?.includes('Slip: PAY/')) &&
-            !currentPayrolls.some((p) => p.payrollNumber && (p.payrollNumber === extra.referenceNumber || extra.notes?.includes(p.payrollNumber)));
-
-          if (isDuplicateOfClaimed || isOrphanedSlip) {
+          if (isDuplicateOfClaimed) {
             duplicateTrxIds.add(extra.id);
             deletedTransactionIdsRef.current.add(extra.id);
             setDeletedTransactionIds((prev) => Array.from(new Set([...prev, extra.id])));
@@ -10769,21 +10889,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         message: `Sinkronisasi berhasil: seluruh ${currentPayrolls.length} slip gaji (Total THP: Rp ${totalAmountIDR.toLocaleString('id-ID')}) telah 100% tersinkronkan dan seimbang dengan Buku Kas / Arus Kas Harian. ${createdCount > 0 ? createdCount + ' transaksi baru berhasil dibukukan. ' : ''}${updatedCount > 0 ? updatedCount + ' transaksi nominal disesuaikan. ' : ''}${removedDuplicatesCount > 0 ? removedDuplicatesCount + ' duplikasi dibersihkan. ' : ''}${taxSyncedCount > 0 ? taxSyncedCount + ' kewajiban PPh 21 disinkronkan. ' : ''}Data Gaji Karyawan dan Arus Kas kini 100% seimbang dan cocok tanpa selisih!`,
       };
     } catch (err: any) {
-      console.warn('Sync payroll resilient fallback:', err);
+      console.error('Sync payroll error details:', err);
       return {
-        success: true,
+        success: false,
         syncedCount: 0,
         createdCount: 0,
         updatedCount: 0,
         removedDuplicatesCount: 0,
         taxSyncedCount: 0,
         totalAmountIDR: 0,
-        message: 'Data slip gaji dan pembukuan keuangan telah diselaraskan dengan aman.',
+        message: `Terjadi kendala saat menyinkronkan data: ${err?.message || 'Gagal memproses transaksi.'}`,
       };
     } finally {
       setTimeout(() => {
         isManualSyncingRef.current = false;
-      }, 1000);
+      }, 4000);
     }
   };
 

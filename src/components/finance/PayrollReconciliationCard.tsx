@@ -76,7 +76,7 @@ export const PayrollReconciliationCard: React.FC<PayrollReconciliationCardProps>
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Transparansi perbandingan antara <strong>Beban Bruto</strong> (Menu Gaji) dan <strong>Kas Keluar THP</strong> (Buku Kas &amp; Arus Kas)
+              Transparansi perbandingan antara <strong>Beban Bruto</strong> (Menu Gaji) dan <strong>Kas Keluar THP</strong> (Buku Kas)
             </p>
           </div>
         </div>
@@ -146,7 +146,7 @@ export const PayrollReconciliationCard: React.FC<PayrollReconciliationCardProps>
         }`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
-              Kas Keluar THP (Arus Kas)
+              Kas Keluar THP (Buku Kas)
             </span>
             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
               Buku Kas Riil
@@ -244,9 +244,9 @@ export const PayrollReconciliationCard: React.FC<PayrollReconciliationCardProps>
             )}
             <tr className="bg-emerald-50/60 font-bold border-t border-emerald-300">
               <td className="py-2.5 px-3.5 text-emerald-950 flex items-center justify-between">
-                <span>= Total Kas Bersih Ditransfer Tercatat di Buku Kas / Arus Kas</span>
+                <span>= Total Kas Bersih Ditransfer Tercatat di Buku Kas</span>
                 <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-900">
-                  Cash Flow
+                  Buku Kas
                 </span>
               </td>
               <td className="py-2.5 px-3.5 text-right font-mono font-black text-emerald-900 text-sm w-44">
@@ -267,7 +267,7 @@ export const PayrollReconciliationCard: React.FC<PayrollReconciliationCardProps>
               &bull; <strong>Di Menu Gaji Karyawan:</strong> Angka <span className="font-mono font-bold text-slate-900">{formatIDR(data.totalGrossEarnings)}</span> adalah <strong>Total Beban Bruto (Gross Earnings)</strong> sebelum potongan pajak &amp; BPJS. Nilai ini merupakan biaya kompensasi tenaga kerja komprehensif bagi perusahaan (Standar Akuntansi SAK Laba Rugi).
             </span>
             <span className="block mt-0.5">
-              &bull; <strong>Di Buku Kas &amp; Arus Kas:</strong> Angka <span className="font-mono font-bold text-emerald-800">{formatIDR(data.totalLedgerNetIDR)}</span> adalah <strong>Arus Kas Keluar Riil (Net Take Home Pay)</strong> yang keluar dari rekening bank perusahaan ke rekening karyawan.
+              &bull; <strong>Di Buku Kas:</strong> Angka <span className="font-mono font-bold text-emerald-800">{formatIDR(data.totalLedgerNetIDR)}</span> adalah <strong>Kas Keluar Riil (Net Take Home Pay)</strong> yang keluar dari rekening bank perusahaan ke rekening karyawan.
             </span>
             <span className="block mt-0.5">
               &bull; <strong>Pajak PPh 21 &amp; BPJS:</strong> Potongan sebesar <span className="font-mono font-bold text-amber-800">{formatIDR(data.totalDeductions)}</span> ditampung sebagai <strong>Kewajiban Lancar (Utang Pajak PPh 21 &amp; BPJS)</strong> di Neraca hingga tanggal penyetoran resmi ke Kas Negara.

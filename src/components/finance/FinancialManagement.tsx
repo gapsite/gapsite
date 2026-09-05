@@ -53,8 +53,7 @@ interface FinancialManagementProps {
     | 'RECEIVABLES'
     | 'BANK_LOANS'
     | 'TAX_MANAGEMENT'
-    | 'PAYROLL'
-    | 'ANALYTICS';
+    | 'PAYROLL';
   onSelectProject?: (projectId: string) => void;
   onOpenReports?: () => void;
 }
@@ -89,7 +88,6 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
     | 'BANK_LOANS'
     | 'TAX_MANAGEMENT'
     | 'PAYROLL'
-    | 'ANALYTICS'
   >(initialTab);
 
   useEffect(() => {
@@ -363,18 +361,6 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
             </span>
           )}
         </button>
-
-        <button
-          onClick={() => setActiveTab('ANALYTICS')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'ANALYTICS'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span>Analitik & Arus Kas</span>
-        </button>
       </div>
 
       {/* Tab 1: Ledger & Summary */}
@@ -443,14 +429,6 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
       {/* Tab 5: Employee Salary & Payroll Management */}
       {activeTab === 'PAYROLL' && (
         <PayrollManagement />
-      )}
-
-      {/* Tab 4: Detailed Analytics & Cashflow Chart */}
-      {activeTab === 'ANALYTICS' && (
-        <div className="space-y-6">
-          <FinancialStatsCards transactions={transactions} />
-          <DailyCashFlowChart transactions={transactions} projects={projects} />
-        </div>
       )}
 
       {/* Add / Edit Transaction Modal */}

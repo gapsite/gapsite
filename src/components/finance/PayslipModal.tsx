@@ -452,7 +452,7 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
         {/* Modal Bottom Actions (Hidden on Print) */}
         <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between print:hidden">
           <span className="text-xs text-slate-500">
-            Terhubung langsung dengan Laporan Arus Kas & Laba Rugi
+            Terhubung langsung dengan Buku Kas & Laba Rugi
           </span>
           <div className="flex items-center gap-2">
             <button

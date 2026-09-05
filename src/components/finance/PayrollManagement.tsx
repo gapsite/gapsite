@@ -360,7 +360,7 @@ export const PayrollManagement: React.FC = () => {
   const handleDelete = async (id: string, name: string) => {
     if (
       window.confirm(
-        `Apakah Anda yakin ingin menghapus slip gaji ${name}? Semua data yang terintegrasi (transaksi pengeluaran kas di Arus Kas/Buku Kas dan kewajiban PPh 21 di Menu Pajak) akan otomatis ikut terhapus secara permanen dari Cloud Firestore dan tersimpan realtime ke seluruh role.`
+        `Apakah Anda yakin ingin menghapus slip gaji ${name}? Semua data yang terintegrasi (transaksi pengeluaran kas di Buku Kas dan kewajiban PPh 21 di Menu Pajak) akan otomatis ikut terhapus secara permanen dari Cloud Firestore dan tersimpan realtime ke seluruh role.`
       )
     ) {
       setDeletingId(id);
@@ -472,7 +472,7 @@ export const PayrollManagement: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-emerald-100 max-w-3xl leading-relaxed">
-            Data tersimpan aman di <strong>Cloud Firestore</strong> dan terupdate secara realtime ke seluruh peran/role. Setiap pembayaran gaji yang diproses otomatis mengurangi saldo kas di <strong>Arus Kas Harian</strong> (<code className="bg-emerald-950/60 px-1 py-0.5 rounded font-mono text-emerald-300">GAJI_KARYAWAN</code>), dan pemotongan <strong>PPh 21 (Skema TER)</strong> langsung tersinkronisasi otomatis ke <strong>Menu Pajak (Tax Management)</strong> serta <strong>Laporan Keuangan</strong>.
+            Data tersimpan aman di <strong>Cloud Firestore</strong> dan terupdate secara realtime ke seluruh peran/role. Setiap pembayaran gaji yang diproses otomatis mengurangi saldo kas di <strong>Buku Kas Harian</strong> (<code className="bg-emerald-950/60 px-1 py-0.5 rounded font-mono text-emerald-300">GAJI_KARYAWAN</code>), dan pemotongan <strong>PPh 21 (Skema TER)</strong> langsung tersinkronisasi otomatis ke <strong>Menu Pajak (Tax Management)</strong> serta <strong>Laporan Keuangan</strong>.
           </p>
         </div>
 
@@ -542,7 +542,7 @@ export const PayrollManagement: React.FC = () => {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-bold tracking-tight text-slate-900">
-                  Status Rekonsiliasi Gaji Karyawan &harr; Arus Kas &amp; Buku Kas
+                  Status Rekonsiliasi Gaji Karyawan &harr; Buku Kas
                 </h3>
                 {financeIntegrationStats.isMatched ? (
                   <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider bg-emerald-200/90 text-emerald-900 border border-emerald-300 flex items-center gap-1">
@@ -558,8 +558,8 @@ export const PayrollManagement: React.FC = () => {
               </div>
               <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
                 {financeIntegrationStats.isMatched
-                  ? `Seluruh ${financeIntegrationStats.totalSlipsCount} slip gaji (${formatIDR(financeIntegrationStats.totalSlipsAmountIDR)}) tercatat 1-ke-1 di Arus Kas dan PPh 21 tersinkronisasi otomatis.`
-                  : `Terdapat ${financeIntegrationStats.totalSlipsCount} slip gaji (${formatIDR(financeIntegrationStats.totalSlipsAmountIDR)}) namun baru tercatat ${financeIntegrationStats.ledgerCount} transaksi di Arus Kas (${formatIDR(financeIntegrationStats.totalLedgerPayrollIDR)}). Klik tombol "Sinkronkan & Samakan ke Arus Kas" di samping untuk menyamakan 100% secara otomatis.`}
+                  ? `Seluruh ${financeIntegrationStats.totalSlipsCount} slip gaji (${formatIDR(financeIntegrationStats.totalSlipsAmountIDR)}) tercatat 1-ke-1 di Buku Kas dan PPh 21 tersinkronisasi otomatis.`
+                  : `Terdapat ${financeIntegrationStats.totalSlipsCount} slip gaji (${formatIDR(financeIntegrationStats.totalSlipsAmountIDR)}) namun tercatat ${financeIntegrationStats.ledgerCount} transaksi di Buku Kas (${formatIDR(financeIntegrationStats.totalLedgerPayrollIDR)}). Klik tombol "Sinkronkan & Samakan ke Buku Kas" di samping untuk menyamakan 100% secara otomatis.`}
               </p>
             </div>
           </div>
@@ -577,7 +577,7 @@ export const PayrollManagement: React.FC = () => {
               </div>
 
               <div className="bg-white/80 border border-slate-200 px-3 py-1.5 rounded-xl">
-                <span className="text-[10px] uppercase font-mono text-slate-500 block">Di Arus Kas</span>
+                <span className="text-[10px] uppercase font-mono text-slate-500 block">Di Buku Kas</span>
                 <span className={`font-bold font-mono ${financeIntegrationStats.isMatched ? 'text-emerald-800' : 'text-amber-800'}`}>
                   {financeIntegrationStats.ledgerCount} Transaksi
                 </span>
@@ -598,7 +598,7 @@ export const PayrollManagement: React.FC = () => {
                       ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
                       : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-700 shadow-md ring-2 ring-emerald-400/40 animate-bounce'
                   }`}
-                  title="Sinkronkan dan samakan seluruh slip gaji ke Arus Kas"
+                  title="Sinkronkan dan samakan seluruh slip gaji ke Buku Kas"
                 >
                   {isSyncingLedger ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -610,7 +610,7 @@ export const PayrollManagement: React.FC = () => {
                       ? 'Menyelaraskan Data...'
                       : financeIntegrationStats.isMatched
                       ? 'Cek Integritas Data'
-                      : 'Sinkronkan & Samakan ke Arus Kas'}
+                      : 'Sinkronkan & Samakan ke Buku Kas'}
                   </span>
                 </button>
               </div>
@@ -624,7 +624,7 @@ export const PayrollManagement: React.FC = () => {
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
                 <strong>Sinkronisasi Berhasil:</strong> {syncFeedback.syncedCount} slip gaji lunas ({formatIDR(syncFeedback.totalAmountIDR)}) diperiksa.
-                {syncFeedback.createdCount > 0 ? ` Menambahkan ${syncFeedback.createdCount} transaksi baru ke Buku Kas & Arus Kas.` : ''}
+                {syncFeedback.createdCount > 0 ? ` Menambahkan ${syncFeedback.createdCount} transaksi baru ke Buku Kas.` : ''}
                 {syncFeedback.updatedCount > 0 ? ` Menyesuaikan ${syncFeedback.updatedCount} transaksi agar nominal dan statusnya akurat.` : ''}
                 {syncFeedback.removedDuplicatesCount > 0 ? ` Membersihkan ${syncFeedback.removedDuplicatesCount} transaksi duplikat.` : ''}
                 {syncFeedback.taxSyncedCount > 0 ? ` Menyelaraskan ${syncFeedback.taxSyncedCount} kewajiban PPh 21 ke Menu Pajak.` : ''}
@@ -808,7 +808,7 @@ export const PayrollManagement: React.FC = () => {
         isSyncing={isSyncingLedger}
         syncFeedbackMessage={
           syncFeedback && syncFeedback.show
-            ? `Berhasil menyinkronkan ${syncFeedback.syncedCount} slip gaji (${formatIDR(syncFeedback.totalAmountIDR)}) ke Arus Kas.`
+            ? `Berhasil menyinkronkan ${syncFeedback.syncedCount} slip gaji (${formatIDR(syncFeedback.totalAmountIDR)}) ke Buku Kas.`
             : null
         }
       />

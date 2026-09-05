@@ -212,6 +212,15 @@ export const deleteTransactionFromFirestore = async (transactionId: string): Pro
   }
 };
 
+// Deeply sanitize document IDs so no invalid path characters, slashes, or empty strings break Firestore doc references
+export const sanitizeFirestoreDocId = (id: string | number | undefined | null): string => {
+  if (!id) return `doc-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const str = String(id).trim();
+  // Replace slashes, backslashes, whitespace, and URI-unsafe characters with hyphens
+  const safe = str.replace(/[\/\\\s#?]+/g, '-').replace(/[^a-zA-Z0-9_\-]/g, '');
+  return safe || `doc-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+};
+
 // Batched writes helper: commits documents in safe chunks of up to 400 operations
 export const commitBatchOperations = async (
   operations: Array<{
@@ -228,11 +237,17 @@ export const commitBatchOperations = async (
     const chunk = operations.slice(i, i + CHUNK_SIZE);
     const batch = writeBatch(db);
     for (const op of chunk) {
-      const docRef = doc(db, op.collectionName, op.docId);
-      if (op.type === 'delete') {
-        batch.delete(docRef);
-      } else {
-        batch.set(docRef, sanitizeForFirestore(op.data), { merge: op.merge ?? true });
+      try {
+        const safeDocId = sanitizeFirestoreDocId(op.docId);
+        const docRef = doc(db, op.collectionName, safeDocId);
+        if (op.type === 'delete') {
+          batch.delete(docRef);
+        } else {
+          const payload = op.data ? { ...op.data, id: safeDocId } : { id: safeDocId };
+          batch.set(docRef, sanitizeForFirestore(payload), { merge: op.merge ?? true });
+        }
+      } catch (opErr) {
+        console.warn(`Firestore commitBatchOperations op error for ${op.collectionName}/${op.docId}:`, opErr);
       }
     }
     try {
@@ -251,16 +266,20 @@ export const saveBatchEntitiesToFirestore = async (
 ): Promise<void> => {
   if (!items || items.length === 0) return;
   try {
-    const ops = items.map((item) => ({
-      type: 'set' as const,
-      collectionName,
-      docId: item.id,
-      data: {
-        ...item,
-        updatedAt: item.updatedAt || new Date().toISOString(),
-      },
-      merge,
-    }));
+    const ops = items.map((item) => {
+      const safeId = sanitizeFirestoreDocId(item.id);
+      return {
+        type: 'set' as const,
+        collectionName,
+        docId: safeId,
+        data: {
+          ...item,
+          id: safeId,
+          updatedAt: item.updatedAt || new Date().toISOString(),
+        },
+        merge,
+      };
+    });
     await commitBatchOperations(ops);
   } catch (err) {
     console.warn(`Firestore saveBatchEntitiesToFirestore for ${collectionName} warning:`, err);
@@ -1027,11 +1046,14 @@ export const subscribeToPayroll = (onUpdate: (payrolls: PayrollPayment[]) => voi
   return onSnapshot(
     colRef,
     (snapshot) => {
+      const seen = new Set<string>();
       const loaded: PayrollPayment[] = [];
       snapshot.forEach((d) => {
         const data = d.data() as PayrollPayment;
-        if (data && data.id) {
-          loaded.push(data);
+        const id = data?.id || d.id;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          loaded.push({ ...data, id });
         }
       });
       onUpdate(loaded);

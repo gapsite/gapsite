@@ -351,11 +351,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
                   } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
-                  title="Finance, Cash Flow & Disbursements"
+                  title="Finance, Buku Kas & Jurnal Transaksi"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <Wallet className={`w-4 h-4 shrink-0 ${activeTab === 'finance' ? 'text-slate-950' : 'text-emerald-400'}`} />
-                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Finance & Cash Flow</span>}
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Finance & Buku Kas</span>}
                   </div>
                   {(!isCollapsed || isMobileOpen) && (
                     <span

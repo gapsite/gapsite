@@ -236,7 +236,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
                 Proses Penggajian Masal (Batch Payroll)
               </h3>
               <p className="text-xs text-slate-400">
-                Pencairan serentak bulanan • Otomatis masuk ke Buku Kas & Arus Kas Harian
+                Pencairan serentak bulanan • Otomatis masuk ke Buku Kas Harian
               </p>
             </div>
           </div>
@@ -477,7 +477,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
               className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-950/40 transition-colors cursor-pointer disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Cairkan & Catat Semua ke Buku Kas & Arus Kas</span>
+              <span>Cairkan & Catat Semua ke Buku Kas</span>
             </button>
           </div>
         </div>

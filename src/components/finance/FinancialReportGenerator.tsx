@@ -2141,18 +2141,6 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
           </button>
 
           <button
-            onClick={() => setReportType('CASH_FLOW')}
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              reportType === 'CASH_FLOW'
-                ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Wallet className="w-4 h-4" />
-            <span>Arus Kas (Cash Flow)</span>
-          </button>
-
-          <button
             onClick={() => setReportType('PROJECT_PROFITABILITY')}
             className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               reportType === 'PROJECT_PROFITABILITY'
