@@ -64,6 +64,7 @@ import { calculateReceivablesAgingSummary, getAgingBucket } from '../../utils/re
 import { getTaxTypeBadge, TAX_TYPE_CONFIGS } from '../../utils/taxCalculations';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
+import { PayrollReconciliationCard, PayrollReconciliationData } from './PayrollReconciliationCard';
 
 export type FinancialReportType =
   | 'ASSETS'
@@ -142,6 +143,8 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     taxObligations,
     receivables,
     companyLetterhead,
+    payrollRecords,
+    syncAllPayrollToFinance,
   } = useProjects();
 
   // Active Report Type
@@ -155,6 +158,13 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
   const [selectedProjectId, setSelectedProjectId] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Payroll Accounting Basis & Synchronization State
+  // ACCRUAL_GROSS: Beban Bruto Gaji (Standar Akuntansi SAK Laba Rugi = Rp 1.977.150.000)
+  // CASH_NET: Kas Bersih THP yang dicairkan ke rekening bank (Buku Kas & Arus Kas = Rp 905.526.000)
+  const [payrollAccountingBasis, setPayrollAccountingBasis] = useState<'ACCRUAL_GROSS' | 'CASH_NET'>('ACCRUAL_GROSS');
+  const [isSyncingPayrollLedger, setIsSyncingPayrollLedger] = useState<boolean>(false);
+  const [syncPayrollFeedback, setSyncPayrollFeedback] = useState<string | null>(null);
 
   // Report Customization Options
   const [showLetterhead, setShowLetterhead] = useState<boolean>(true);
@@ -568,6 +578,118 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     });
   }, [bankLoans, dateBounds, searchQuery]);
 
+  // Filtered Payroll Records synchronized with dateBounds, status, and search
+  const filteredPayrollRecords = useMemo(() => {
+    return (payrollRecords || []).filter((p) => {
+      if (!p) return false;
+      const pDate = p.paymentDate || p.paidAt || (p.createdAt ? p.createdAt.slice(0, 10) : '');
+      if (pDate && (pDate < dateBounds.start || pDate > dateBounds.end)) {
+        return false;
+      }
+      if (statusFilter === 'CLEARED_ONLY' && p.status !== 'PAID') {
+        return false;
+      }
+      if (statusFilter === 'PENDING_OVERDUE' && p.status === 'PAID') {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = p.employeeName?.toLowerCase().includes(q);
+        const matchesRole = p.roleTitle?.toLowerCase().includes(q);
+        const matchesPeriod = p.period?.toLowerCase().includes(q);
+        const matchesNum = p.payrollNumber?.toLowerCase().includes(q);
+        if (!matchesName && !matchesRole && !matchesPeriod && !matchesNum) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [payrollRecords, dateBounds, statusFilter, searchQuery]);
+
+  // Comprehensive Payroll Reconciliation Data
+  const payrollReconciliation: PayrollReconciliationData = useMemo(() => {
+    let totalGrossEarnings = 0;
+    let totalNetSalary = 0;
+    let totalPaidNet = 0;
+    let totalPendingNet = 0;
+    let totalDeductions = 0;
+    let totalPph21 = 0;
+    let totalBpjs = 0;
+    let totalOtherDeductions = 0;
+    let paidSlipsCount = 0;
+    let pendingSlipsCount = 0;
+
+    filteredPayrollRecords.forEach((r) => {
+      const gross = Number(r.totalEarnings) || 0;
+      const net = Number(r.netSalary) || 0;
+      const deductions = Number(r.totalDeductions) || 0;
+      const pph = Number(r.pph21Amount) || 0;
+      const bpjs = (Number(r.bpjsKesehatan) || 0) + (Number(r.bpjsKetenagakerjaan) || 0);
+      const other = (Number(r.cashAdvanceDeduction) || 0) + (Number(r.otherDeductions) || 0);
+
+      totalGrossEarnings += gross;
+      totalNetSalary += net;
+      totalDeductions += deductions;
+      totalPph21 += pph;
+      totalBpjs += bpjs;
+      totalOtherDeductions += other;
+
+      if (r.status === 'PAID') {
+        totalPaidNet += net;
+        paidSlipsCount++;
+      } else {
+        totalPendingNet += net;
+        pendingSlipsCount++;
+      }
+    });
+
+    const payrollLedgerTrxs = filteredTransactions.filter(
+      (t) => t.type === 'EXPENSE' && t.category === 'GAJI_KARYAWAN'
+    );
+    const totalLedgerNetIDR = payrollLedgerTrxs.reduce((sum, t) => sum + (Number(t.amountIDR) || 0), 0);
+    const clearedLedgerNetIDR = payrollLedgerTrxs
+      .filter((t) => t.status === 'CLEARED' || !t.status)
+      .reduce((sum, t) => sum + (Number(t.amountIDR) || 0), 0);
+
+    const grossVsLedgerDiff = totalGrossEarnings - totalLedgerNetIDR;
+
+    return {
+      totalSlipsCount: filteredPayrollRecords.length,
+      totalGrossEarnings,
+      totalNetSalary,
+      totalPaidNet,
+      totalPendingNet,
+      totalDeductions,
+      totalPph21,
+      totalBpjs,
+      totalOtherDeductions,
+      paidSlipsCount,
+      pendingSlipsCount,
+      ledgerTrxCount: payrollLedgerTrxs.length,
+      totalLedgerNetIDR,
+      clearedLedgerNetIDR,
+      grossVsLedgerDiff,
+    };
+  }, [filteredPayrollRecords, filteredTransactions]);
+
+  const handleSyncPayrollToFinance = async () => {
+    setIsSyncingPayrollLedger(true);
+    setSyncPayrollFeedback(null);
+    try {
+      const res = await syncAllPayrollToFinance({ forceSyncAll: true, markAllAsPaid: true });
+      setSyncPayrollFeedback(
+        res.message || `Berhasil menyinkronkan ${res.syncedCount} slip gaji ke Buku Kas (${formatIDR(res.totalAmountIDR)}).`
+      );
+      setTimeout(() => {
+        setSyncPayrollFeedback(null);
+      }, 7000);
+    } catch (err: any) {
+      setSyncPayrollFeedback(err?.message || 'Gagal menyinkronkan slip gaji ke Buku Kas.');
+    } finally {
+      setIsSyncingPayrollLedger(false);
+    }
+  };
+
   // Financial KPI Metrics
   const metrics = useMemo(() => {
     let totalIncome = 0;
@@ -673,6 +795,22 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
         }
       }
     });
+
+    // Adjust GAJI_KARYAWAN according to Payroll Accounting Basis:
+    // - ACCRUAL_GROSS: Beban Bruto Gaji Karyawan (Standar Akuntansi SAK / P&L = Rp 1.977.150.000)
+    // - CASH_NET: Kas Bersih THP yang dicairkan = Rp 905.526.000
+    const rawLedgerPayrollExpense = expenseByCategory['GAJI_KARYAWAN'] || 0;
+    const grossPayrollExpense = payrollReconciliation.totalGrossEarnings;
+    const payrollAccrualDifference = grossPayrollExpense - rawLedgerPayrollExpense;
+
+    if (payrollAccountingBasis === 'ACCRUAL_GROSS' && grossPayrollExpense > 0) {
+      expenseByCategory['GAJI_KARYAWAN'] = grossPayrollExpense;
+      totalExpense += payrollAccrualDifference;
+      if (payrollReconciliation.totalPaidNet > rawLedgerPayrollExpense) {
+        clearedExpense += (payrollReconciliation.totalPaidNet - rawLedgerPayrollExpense);
+      }
+      pendingExpense += (grossPayrollExpense - (payrollReconciliation.totalPaidNet || rawLedgerPayrollExpense));
+    }
 
     // Calculate net profits for projects
     Object.values(projectFinancials).forEach((pf) => {
@@ -1328,6 +1466,12 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       allTaxObligationsPaid,
       allTaxObligationsPayable,
       filteredTaxObligationsCount: filteredTaxObligations.length,
+      // Payroll & Reconciliation Metrics
+      rawLedgerPayrollExpense,
+      grossPayrollExpense,
+      payrollAccrualDifference,
+      payrollAccountingBasis,
+      payrollReconciliation,
     };
   }, [
     filteredTransactions,
@@ -1343,6 +1487,8 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     periodFilter,
     selectedProjectId,
     searchQuery,
+    payrollAccountingBasis,
+    payrollReconciliation,
   ]);
 
   // Export CSV Handler
@@ -2183,6 +2329,52 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500 text-slate-800 placeholder:text-slate-400"
               />
+            </div>
+          </div>
+
+          {/* Basis Beban Gaji Karyawan Switcher & Rekonsiliasi Card */}
+          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Scale className="w-3.5 h-3.5 text-indigo-600" />
+                Basis Beban Gaji:
+              </span>
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setPayrollAccountingBasis('ACCRUAL_GROSS')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                    payrollAccountingBasis === 'ACCRUAL_GROSS'
+                      ? 'bg-white text-indigo-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Standar Akrual SAK: Mengakui Beban Bruto Gaji (Rp 1.977.150.000)"
+                >
+                  Akrual SAK (Bruto: {formatIDR(payrollReconciliation.totalGrossEarnings)})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayrollAccountingBasis('CASH_NET')}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
+                    payrollAccountingBasis === 'CASH_NET'
+                      ? 'bg-white text-emerald-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                  title="Basis Kas Riil: Mengakui Kas Keluar Bersih THP (Rp 905.526.000)"
+                >
+                  Kas Riil (THP: {formatIDR(payrollReconciliation.totalLedgerNetIDR)})
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-[11px] text-slate-500">
+              <span>
+                Selisih Potongan &amp; Akrual:{' '}
+                <strong className="font-mono text-amber-800 font-bold">
+                  {formatIDR(Math.abs(payrollReconciliation.grossVsLedgerDiff))}
+                </strong>{' '}
+                (PPh 21, BPJS &amp; Kasbon)
+              </span>
             </div>
           </div>
 
@@ -3427,7 +3619,18 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                           <tr key={cat} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                             <td className="py-2.5 px-4 text-slate-700 font-medium border-b border-slate-200">
                               <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-900">{getTransactionCategoryLabel(cat)}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-slate-900">{getTransactionCategoryLabel(cat)}</span>
+                                  {cat === 'GAJI_KARYAWAN' && (
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono uppercase tracking-wider ${
+                                      payrollAccountingBasis === 'ACCRUAL_GROSS'
+                                        ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                    }`}>
+                                      {payrollAccountingBasis === 'ACCRUAL_GROSS' ? 'Standar SAK: Beban Bruto' : 'Basis Kas: Net THP'}
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-[11px] text-slate-400 font-mono">Porsi: {pct.toFixed(1)}%</span>
                               </div>
                             </td>
@@ -3448,6 +3651,18 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     </tr>
                   </tbody>
                 </table>
+              </div>
+
+              {/* Jembatan Rekonsiliasi Gaji Karyawan di Seksi Laba Rugi */}
+              <div className="px-4 pb-4 print:p-2">
+                <PayrollReconciliationCard
+                  data={payrollReconciliation}
+                  payrollAccountingBasis={payrollAccountingBasis}
+                  onBasisChange={setPayrollAccountingBasis}
+                  onSyncPayroll={handleSyncPayrollToFinance}
+                  isSyncing={isSyncingPayrollLedger}
+                  syncFeedbackMessage={syncPayrollFeedback}
+                />
               </div>
             </div>
 
@@ -4593,6 +4808,18 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 </tbody>
               </table>
             </div>
+
+            {/* Jembatan Rekonsiliasi Gaji Karyawan di Ringkasan Beban */}
+            <div className="mt-4">
+              <PayrollReconciliationCard
+                data={payrollReconciliation}
+                payrollAccountingBasis={payrollAccountingBasis}
+                onBasisChange={setPayrollAccountingBasis}
+                onSyncPayroll={handleSyncPayrollToFinance}
+                isSyncing={isSyncingPayrollLedger}
+                syncFeedbackMessage={syncPayrollFeedback}
+              />
+            </div>
           </div>
         )}
 
@@ -4833,7 +5060,18 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                         <tr key={cat} className={idx % 2 === 0 ? 'bg-slate-50/70' : 'bg-white'}>
                           <td className="py-2.5 px-4 text-slate-700 font-medium border-b border-slate-200">
                             <div className="flex items-center justify-between">
-                              <span>{getTransactionCategoryLabel(cat)}</span>
+                              <div className="flex items-center gap-2">
+                                <span>{getTransactionCategoryLabel(cat)}</span>
+                                {cat === 'GAJI_KARYAWAN' && (
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono uppercase tracking-wider ${
+                                    payrollAccountingBasis === 'ACCRUAL_GROSS'
+                                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  }`}>
+                                    {payrollAccountingBasis === 'ACCRUAL_GROSS' ? 'Standar SAK: Beban Bruto' : 'Basis Kas: Net THP'}
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[11px] text-slate-400 font-mono">({pct.toFixed(1)}%)</span>
                             </div>
                           </td>
@@ -4855,6 +5093,18 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                   </tr>
                 </tbody>
               </table>
+
+              {/* Jembatan Rekonsiliasi Gaji Karyawan di Beban Operasional */}
+              <div className="mt-4">
+                <PayrollReconciliationCard
+                  data={payrollReconciliation}
+                  payrollAccountingBasis={payrollAccountingBasis}
+                  onBasisChange={setPayrollAccountingBasis}
+                  onSyncPayroll={handleSyncPayrollToFinance}
+                  isSyncing={isSyncingPayrollLedger}
+                  syncFeedbackMessage={syncPayrollFeedback}
+                />
+              </div>
             </div>
 
             {/* Section 3: Laba Bersih Operasional */}
@@ -4936,7 +5186,12 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                         {payrollCleared > 0 && (
                           <tr>
                             <td className="py-2.5 px-6 text-slate-700 border-b border-slate-200">
-                              &bull; Pembayaran Gaji Karyawan &amp; Kompensasi (Payroll Cleared)
+                              <div className="flex items-center justify-between">
+                                <span>&bull; Pembayaran Gaji Karyawan &amp; Kompensasi (Kas Keluar THP)</span>
+                                <span className="text-[11px] text-slate-400 font-mono">
+                                  Beban Bruto di Laba Rugi: {formatIDR(payrollReconciliation.totalGrossEarnings)}
+                                </span>
+                              </div>
                             </td>
                             <td className="py-2.5 px-4 text-right font-mono font-semibold text-rose-700 border-b border-slate-200">
                               ({formatIDR(payrollCleared)})

@@ -38,6 +38,7 @@ import { PayslipModal } from './PayslipModal';
 import { PayrollPaymentModal } from './PayrollPaymentModal';
 import { BatchPayrollModal } from './BatchPayrollModal';
 import { AnnualSalaryManagementView } from './AnnualSalaryManagementView';
+import { PayrollReconciliationCard, PayrollReconciliationData } from './PayrollReconciliationCard';
 
 export const PayrollManagement: React.FC = () => {
   const {
@@ -278,6 +279,70 @@ export const PayrollManagement: React.FC = () => {
   const summary = useMemo(() => {
     return calculatePayrollSummary(payrollRecords, periodFilter);
   }, [payrollRecords, periodFilter]);
+
+  // Comprehensive Payroll Reconciliation Data for Ledger & Financial Report Bridge
+  const payrollReconciliationData: PayrollReconciliationData = useMemo(() => {
+    let totalGrossEarnings = 0;
+    let totalNetSalary = 0;
+    let totalPaidNet = 0;
+    let totalPendingNet = 0;
+    let totalDeductions = 0;
+    let totalPph21 = 0;
+    let totalBpjs = 0;
+    let totalOtherDeductions = 0;
+    let paidSlipsCount = 0;
+    let pendingSlipsCount = 0;
+
+    payrollRecords.forEach((r) => {
+      const gross = Number(r.totalEarnings) || 0;
+      const net = Number(r.netSalary) || 0;
+      const deductions = Number(r.totalDeductions) || 0;
+      const pph = Number(r.pph21Amount) || 0;
+      const bpjs = (Number(r.bpjsKesehatan) || 0) + (Number(r.bpjsKetenagakerjaan) || 0);
+      const other = (Number(r.cashAdvanceDeduction) || 0) + (Number(r.otherDeductions) || 0);
+
+      totalGrossEarnings += gross;
+      totalNetSalary += net;
+      totalDeductions += deductions;
+      totalPph21 += pph;
+      totalBpjs += bpjs;
+      totalOtherDeductions += other;
+
+      if (r.status === 'PAID') {
+        totalPaidNet += net;
+        paidSlipsCount++;
+      } else {
+        totalPendingNet += net;
+        pendingSlipsCount++;
+      }
+    });
+
+    const payrollTransactions = transactions.filter((t) => t.category === 'GAJI_KARYAWAN');
+    const totalLedgerNetIDR = payrollTransactions.reduce((sum, t) => sum + (Number(t.amountIDR) || 0), 0);
+    const clearedLedgerNetIDR = payrollTransactions
+      .filter((t) => t.status === 'CLEARED' || !t.status)
+      .reduce((sum, t) => sum + (Number(t.amountIDR) || 0), 0);
+
+    const grossVsLedgerDiff = totalGrossEarnings - totalLedgerNetIDR;
+
+    return {
+      totalSlipsCount: payrollRecords.length,
+      totalGrossEarnings,
+      totalNetSalary,
+      totalPaidNet,
+      totalPendingNet,
+      totalDeductions,
+      totalPph21,
+      totalBpjs,
+      totalOtherDeductions,
+      paidSlipsCount,
+      pendingSlipsCount,
+      ledgerTrxCount: payrollTransactions.length,
+      totalLedgerNetIDR,
+      clearedLedgerNetIDR,
+      grossVsLedgerDiff,
+    };
+  }, [payrollRecords, transactions]);
 
   // View Payslip
   const handleOpenPayslip = (payroll: PayrollPayment) => {
@@ -735,6 +800,18 @@ export const PayrollManagement: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Jembatan Rekonsiliasi Gaji Karyawan (Gross Payroll vs Realized Cash / Buku Kas) */}
+      <PayrollReconciliationCard
+        data={payrollReconciliationData}
+        onSyncPayroll={() => handleSyncToFinance(true)}
+        isSyncing={isSyncingLedger}
+        syncFeedbackMessage={
+          syncFeedback && syncFeedback.show
+            ? `Berhasil menyinkronkan ${syncFeedback.syncedCount} slip gaji (${formatIDR(syncFeedback.totalAmountIDR)}) ke Arus Kas.`
+            : null
+        }
+      />
 
       {/* Filter, Search & Export Bar */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3 overflow-hidden">
