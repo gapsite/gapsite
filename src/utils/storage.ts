@@ -51,6 +51,59 @@ export const isPurgedDummyName = (str?: string | null): boolean => {
   return PURGED_DUMMY_NAMES_LOWER.some((name) => lower.includes(name));
 };
 
+export const isPurgedDummyGovProject = (p: any): boolean => {
+  if (!p) return false;
+  const name = (p.projectName || '').trim().toLowerCase();
+  const spk = (p.contractNumber || '').trim().toLowerCase();
+  const agency = (p.governmentAgency || '').trim().toLowerCase();
+  const val = Number(p.totalContractValueIDR) || 0;
+  if (val === 11111111111) return true;
+  if (name === 'a' || spk === 'a' || agency === 'a') return true;
+  if (name === 'test' || spk === 'test' || name === 'dummy' || spk === 'dummy') return true;
+  if (name.length <= 2 && (spk.length <= 2 || spk === 'a')) return true;
+  return false;
+};
+
+export const isPurgedDummyGovTransaction = (t: any): boolean => {
+  if (!t) return false;
+  const amount = Number(t.amountIDR) || 0;
+  if (amount === 2188888889) return true;
+  const client = (t.clientOrVendorName || '').trim().toLowerCase();
+  const desc = (t.description || '').trim().toLowerCase();
+  const notes = (t.notes || '').trim().toLowerCase();
+  if (t.category === 'GOVERNMENT_PROJECT_INCOME') {
+    if (client === 'a') return true;
+    if (desc.endsWith(' - a (a)') || desc.includes(' - a (') || desc.includes('(a)') || desc.includes('tagihan termin 1: a')) return true;
+    if (notes.includes('11.111.111.111') || notes.includes('spk: a') || notes.includes('spk no. a')) return true;
+  }
+  return false;
+};
+
+export const isPurgedDummyGovReceivable = (r: any): boolean => {
+  if (!r) return false;
+  const amount = Number(r.totalAmountIDR) || 0;
+  if (amount === 2222222222) return true;
+  const client = (r.clientName || '').trim().toLowerCase();
+  const title = (r.title || '').trim().toLowerCase();
+  const notes = (r.notes || '').trim().toLowerCase();
+  if (client === 'a') return true;
+  if (title.endsWith(' - a') || title.includes(' - a (')) return true;
+  if (notes.includes('11.111.111.111') || notes.includes('spk no. a')) return true;
+  return false;
+};
+
+export const isPurgedDummyGovTax = (tax: any): boolean => {
+  if (!tax) return false;
+  const amount = Number(tax.taxAmount) || 0;
+  if (amount === 33333333 || amount === 244444444) return true;
+  const payer = (tax.withholdingTaxPayerName || tax.counterpartyName || '').trim().toLowerCase();
+  const title = (tax.title || '').trim().toLowerCase();
+  if (payer === 'a') return true;
+  if (title.includes(' - sp2d ') && (title.endsWith('(a)') || title.includes('(a)'))) return true;
+  if (title.includes(' - a (') || title.endsWith(' (a)')) return true;
+  return false;
+};
+
 export const scrubBannedDummyDataFromLocalStorage = (): void => {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
@@ -137,6 +190,7 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
             if (t.date === '2026-08-28' && t.category === 'GAJI_KARYAWAN' && ((t.clientOrVendorName && t.clientOrVendorName.toLowerCase().includes('adryan')) || (t.description && t.description.toLowerCase().includes('adryan')))) return false;
             if (isPurgedDummyName(t.clientOrVendorName)) return false;
             if (isPurgedDummyName(t.description)) return false;
+            if (isPurgedDummyGovTransaction(t)) return false;
             return true;
           });
           localStorage.setItem('verix_crm_transactions_v1', JSON.stringify(cleaned));
@@ -160,6 +214,7 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
             if (isPurgedDummyName(tax.counterpartyName)) return false;
             if (isPurgedDummyName(tax.title)) return false;
             if (isPurgedDummyName(tax.description)) return false;
+            if (isPurgedDummyGovTax(tax)) return false;
             return true;
           });
           localStorage.setItem('verix_crm_tax_obligations_v1', JSON.stringify(cleaned));
@@ -248,6 +303,76 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
       if (!deletedTaxesList.includes(txid)) deletedTaxesList.push(txid);
     });
     localStorage.setItem('verix_crm_deleted_tax_ids_v1', JSON.stringify(deletedTaxesList));
+
+    // 12. Scrub Government Projects
+    const govRaw = localStorage.getItem('verix_crm_government_projects_v1');
+    const purgedGovIds: string[] = [];
+    if (govRaw) {
+      try {
+        const list = JSON.parse(govRaw);
+        if (Array.isArray(list)) {
+          const cleaned = list.filter((p: any) => {
+            if (!p) return false;
+            if (isPurgedDummyGovProject(p)) {
+              if (p.id) purgedGovIds.push(p.id);
+              return false;
+            }
+            return true;
+          });
+          localStorage.setItem('verix_crm_government_projects_v1', JSON.stringify(cleaned));
+        }
+      } catch {}
+    }
+
+    // 13. Scrub Receivables (Piutang Usaha)
+    const recRaw = localStorage.getItem('verix_crm_receivables_v1');
+    const purgedRecIds: string[] = [];
+    if (recRaw) {
+      try {
+        const list = JSON.parse(recRaw);
+        if (Array.isArray(list)) {
+          const cleaned = list.filter((r: any) => {
+            if (!r) return false;
+            if (isPurgedDummyGovReceivable(r) || (r.projectId && purgedGovIds.includes(r.projectId))) {
+              if (r.id) purgedRecIds.push(r.id);
+              return false;
+            }
+            return true;
+          });
+          localStorage.setItem('verix_crm_receivables_v1', JSON.stringify(cleaned));
+        }
+      } catch {}
+    }
+
+    // 14. Blacklist deleted government project IDs
+    if (purgedGovIds.length > 0) {
+      const deletedGovRaw = localStorage.getItem('verix_crm_deleted_gov_project_ids_v1');
+      let deletedGovList: string[] = [];
+      if (deletedGovRaw) {
+        try {
+          deletedGovList = JSON.parse(deletedGovRaw) || [];
+        } catch {}
+      }
+      purgedGovIds.forEach((gid) => {
+        if (!deletedGovList.includes(gid)) deletedGovList.push(gid);
+      });
+      localStorage.setItem('verix_crm_deleted_gov_project_ids_v1', JSON.stringify(deletedGovList));
+    }
+
+    // 15. Blacklist deleted receivable IDs
+    if (purgedRecIds.length > 0) {
+      const deletedRecRaw = localStorage.getItem('verix_crm_deleted_receivable_ids_v1');
+      let deletedRecList: string[] = [];
+      if (deletedRecRaw) {
+        try {
+          deletedRecList = JSON.parse(deletedRecRaw) || [];
+        } catch {}
+      }
+      purgedRecIds.forEach((rid) => {
+        if (!deletedRecList.includes(rid)) deletedRecList.push(rid);
+      });
+      localStorage.setItem('verix_crm_deleted_receivable_ids_v1', JSON.stringify(deletedRecList));
+    }
   } catch (e) {
     console.warn('[storage] Note during dummy data scrub:', e);
   }

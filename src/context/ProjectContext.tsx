@@ -159,6 +159,10 @@ import {
   PURGED_DUMMY_USER_IDS,
   PURGED_DUMMY_USERNAMES,
   PURGED_DUMMY_EMAILS,
+  isPurgedDummyGovProject,
+  isPurgedDummyGovTransaction,
+  isPurgedDummyGovReceivable,
+  isPurgedDummyGovTax,
 } from '../utils/storage';
 import { CERTIFICATION_MILESTONE_TEMPLATES } from '../utils/checklistGenerator';
 import { getServiceTypeName, getServiceTypeBadgeColor } from '../utils/formatters';
@@ -1320,6 +1324,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             t &&
             t.id &&
             !isBannedAdryanAugSalary &&
+            !isPurgedDummyGovTransaction(t) &&
             !seenIds.has(String(t.id).trim()) &&
             !mockTrxIds.has(t.id) &&
             !(t.projectId && mockProjectIds.has(t.projectId)) &&
@@ -1614,6 +1619,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 t &&
                 t.id &&
                 !deletedIds.has(t.id) &&
+                !isPurgedDummyGovTax(t) &&
                 t.id !== 'tax-pay-202608-01' &&
                 t.payrollId !== 'pay-202608-01' &&
                 t.payrollNumber !== 'PAY/2026/08/EMP-001' &&
@@ -1673,12 +1679,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((r) => r && r.id && !deletedIds.has(r.id));
+          return parsed.filter((r) => r && r.id && !deletedIds.has(r.id) && !isPurgedDummyGovReceivable(r));
         }
       }
-      return INITIAL_RECEIVABLES.filter((r) => r && r.id && !deletedIds.has(r.id));
+      return INITIAL_RECEIVABLES.filter((r) => r && r.id && !deletedIds.has(r.id) && !isPurgedDummyGovReceivable(r));
     } catch {
-      return INITIAL_RECEIVABLES;
+      return INITIAL_RECEIVABLES.filter((r) => !isPurgedDummyGovReceivable(r));
     }
   });
 
@@ -1710,12 +1716,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
+          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id) && !isPurgedDummyGovProject(p));
         }
       }
-      return INITIAL_GOVERNMENT_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id));
+      return INITIAL_GOVERNMENT_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id) && !isPurgedDummyGovProject(p));
     } catch {
-      return INITIAL_GOVERNMENT_PROJECTS;
+      return INITIAL_GOVERNMENT_PROJECTS.filter((p) => !isPurgedDummyGovProject(p));
     }
   });
 
@@ -2892,6 +2898,32 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     deleteTransactionFromFirestore('trx-pay-202608-01').catch(() => {});
     deletePayrollFromFirestore('pay-202608-01').catch(() => {});
     deleteTaxObligationFromFirestore('tax-pay-202608-01').catch(() => {});
+
+    // Explicitly purge and blacklist dummy government projects and cascaded dummy entities
+    governmentProjects.forEach((p) => {
+      if (p && p.id && isPurgedDummyGovProject(p)) {
+        deleteGovernmentProjectFromFirestore(p.id).catch(() => {});
+        saveDeletedEntityIdToFirestore('deleted_gov_project_ids', p.id).catch(() => {});
+      }
+    });
+    transactions.forEach((t) => {
+      if (t && t.id && isPurgedDummyGovTransaction(t)) {
+        deleteTransactionFromFirestore(t.id).catch(() => {});
+        saveDeletedEntityIdToFirestore('deleted_transaction_ids', t.id).catch(() => {});
+      }
+    });
+    receivables.forEach((r) => {
+      if (r && r.id && isPurgedDummyGovReceivable(r)) {
+        deleteReceivableFromFirestore(r.id).catch(() => {});
+        saveDeletedEntityIdToFirestore('deleted_receivable_ids', r.id).catch(() => {});
+      }
+    });
+    taxObligations.forEach((tax) => {
+      if (tax && tax.id && isPurgedDummyGovTax(tax)) {
+        deleteTaxObligationFromFirestore(tax.id).catch(() => {});
+        saveDeletedEntityIdToFirestore('deleted_tax_ids', tax.id).catch(() => {});
+      }
+    });
 
     const unsubDeletedProjects = subscribeToDeletedEntityIds('deleted_project_ids', (remoteIds) => {
       if (Array.isArray(remoteIds)) {
