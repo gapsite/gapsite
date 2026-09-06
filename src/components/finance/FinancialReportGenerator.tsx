@@ -151,6 +151,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
   const [reportType, setReportType] = useState<FinancialReportType>('COMPREHENSIVE');
 
   // Filter States
+  const [selectedYear, setSelectedYear] = useState<number | 'ALL'>(new Date().getFullYear());
   const [periodFilter, setPeriodFilter] = useState<DatePeriodFilter>('THIS_YEAR');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
@@ -377,37 +378,104 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     return `${y}-${m}-${dt}`;
   };
 
+  // Dynamically extract available years across all financial data
+  const availableYears = useMemo(() => {
+    const yearSet = new Set<number>();
+    const currentYear = new Date().getFullYear();
+    yearSet.add(currentYear);
+    yearSet.add(currentYear - 1);
+    yearSet.add(currentYear - 2);
+    yearSet.add(currentYear + 1);
+
+    (transactions || []).forEach((t) => {
+      if (t.date && t.date.length >= 4) {
+        const y = parseInt(t.date.slice(0, 4), 10);
+        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+      }
+    });
+
+    (taxObligations || []).forEach((t) => {
+      if (t.taxYear && t.taxYear >= 2000 && t.taxYear <= 2100) {
+        yearSet.add(t.taxYear);
+      }
+      if (t.dueDate && t.dueDate.length >= 4) {
+        const y = parseInt(t.dueDate.slice(0, 4), 10);
+        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+      }
+    });
+
+    (receivables || []).forEach((r) => {
+      const d = r.issueDate || r.createdAt;
+      if (d && d.length >= 4) {
+        const y = parseInt(d.slice(0, 4), 10);
+        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+      }
+    });
+
+    (payrollRecords || []).forEach((p) => {
+      const d = p.paymentDate || p.paidAt || p.createdAt;
+      if (d && d.length >= 4) {
+        const y = parseInt(d.slice(0, 4), 10);
+        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+      }
+    });
+
+    (bankLoans || []).forEach((l) => {
+      const d = l.startDate || l.createdAt;
+      if (d && d.length >= 4) {
+        const y = parseInt(d.slice(0, 4), 10);
+        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+      }
+    });
+
+    return Array.from(yearSet).sort((a, b) => b - a);
+  }, [transactions, taxObligations, receivables, payrollRecords, bankLoans]);
+
   // Helper date ranges
   const dateBounds = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
+    const targetYear = selectedYear === 'ALL' ? currentYear : selectedYear;
     const currentMonth = now.getMonth(); // 0-11
 
     if (periodFilter === 'THIS_MONTH') {
-      const start = formatLocalDate(currentYear, currentMonth, 1);
-      const end = formatLocalDate(currentYear, currentMonth + 1, 0);
-      return { start, end, label: `Bulan Ini (${now.toLocaleString('id-ID', { month: 'long', year: 'numeric' })})` };
+      const monthToUse = targetYear === currentYear ? currentMonth : 11;
+      const start = formatLocalDate(targetYear, monthToUse, 1);
+      const end = formatLocalDate(targetYear, monthToUse + 1, 0);
+      const monthLabel = new Date(targetYear, monthToUse, 1).toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+      return { start, end, label: `Bulan Ini (${monthLabel})` };
     }
 
     if (periodFilter === 'LAST_MONTH') {
-      const start = formatLocalDate(currentYear, currentMonth - 1, 1);
-      const end = formatLocalDate(currentYear, currentMonth, 0);
-      const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
-      return { start, end, label: `Bulan Lalu (${lastMonthDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' })})` };
+      const monthToUse = targetYear === currentYear ? currentMonth - 1 : 10;
+      const start = formatLocalDate(targetYear, monthToUse, 1);
+      const end = formatLocalDate(targetYear, monthToUse + 1, 0);
+      const lastMonthDate = new Date(targetYear, monthToUse, 1);
+      const monthLabel = lastMonthDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+      return { start, end, label: `Bulan Lalu (${monthLabel})` };
     }
 
     if (periodFilter === 'THIS_QUARTER') {
-      const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
-      const start = formatLocalDate(currentYear, quarterStartMonth, 1);
-      const end = formatLocalDate(currentYear, quarterStartMonth + 3, 0);
-      const qNum = Math.floor(currentMonth / 3) + 1;
-      return { start, end, label: `Kuartal ${qNum} (Q${qNum} ${currentYear})` };
+      const quarterStartMonth = targetYear === currentYear ? Math.floor(currentMonth / 3) * 3 : 9;
+      const start = formatLocalDate(targetYear, quarterStartMonth, 1);
+      const end = formatLocalDate(targetYear, quarterStartMonth + 3, 0);
+      const qNum = Math.floor(quarterStartMonth / 3) + 1;
+      return { start, end, label: `Kuartal ${qNum} (Q${qNum} ${targetYear})` };
     }
 
     if (periodFilter === 'THIS_YEAR') {
-      const start = `${currentYear}-01-01`;
-      const end = `${currentYear}-12-31`;
-      return { start, end, label: `Tahun ${currentYear} (YTD)` };
+      if (selectedYear === 'ALL') {
+        return { start: '1970-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi (Seluruh Tahun)' };
+      }
+      const start = `${selectedYear}-01-01`;
+      const end = `${selectedYear}-12-31`;
+      return {
+        start,
+        end,
+        label: selectedYear === currentYear
+          ? `Tahun ${selectedYear} (YTD / Buku Aktif)`
+          : `Tahun Pembukuan ${selectedYear} (1 Jan - 31 Des ${selectedYear})`
+      };
     }
 
     if (periodFilter === 'CUSTOM' && (customStartDate || customEndDate)) {
@@ -418,8 +486,29 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       };
     }
 
+    if (periodFilter === 'ALL') {
+      if (selectedYear !== 'ALL') {
+        const start = `${selectedYear}-01-01`;
+        const end = `${selectedYear}-12-31`;
+        return {
+          start,
+          end,
+          label: `Tahun Pembukuan ${selectedYear} (1 Jan - 31 Des ${selectedYear})`
+        };
+      }
+      return { start: '1970-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi (Seluruh Tahun)' };
+    }
+
+    if (selectedYear !== 'ALL') {
+      return {
+        start: `${selectedYear}-01-01`,
+        end: `${selectedYear}-12-31`,
+        label: `Tahun Pembukuan ${selectedYear} (1 Jan - 31 Des ${selectedYear})`
+      };
+    }
+
     return { start: '1970-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi' };
-  }, [periodFilter, customStartDate, customEndDate]);
+  }, [periodFilter, selectedYear, customStartDate, customEndDate]);
 
   // Filtered Transactions
   const filteredTransactions = useMemo(() => {
@@ -2182,6 +2271,35 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             {/* Filter Group: Periode & Status */}
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* Kolom Filter Tahun (Format Persis Seperti di Menu Pajak) */}
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 dark:text-slate-400 font-medium text-xs">
+                  {reportType === 'TAX_AND_SETTLEMENT' ? 'Tahun Pajak:' : 'Tahun Laporan:'}
+                </span>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => {
+                    const val = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value);
+                    setSelectedYear(val);
+                    if (periodFilter !== 'CUSTOM') {
+                      setPeriodFilter('THIS_YEAR');
+                    }
+                  }}
+                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-medium text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500 shadow-xs cursor-pointer hover:border-slate-300 transition-colors"
+                  id="filter-tahun-laporan"
+                  title="Pilih tahun untuk memfilter laporan keuangan per tahun"
+                >
+                  <option value="ALL">Semua Tahun</option>
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="h-4 w-px bg-slate-200 mx-0.5 hidden sm:block" />
+
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
                 <Filter className="w-3.5 h-3.5 text-slate-400" />
                 <span>Periode:</span>
@@ -2192,11 +2310,11 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 onChange={(e) => setPeriodFilter(e.target.value as DatePeriodFilter)}
                 className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="ALL">Semua Waktu</option>
+                <option value="THIS_YEAR">Satu Tahun Penuh ({selectedYear !== 'ALL' ? selectedYear : 'Tahun Berjalan'})</option>
                 <option value="THIS_MONTH">Bulan Ini</option>
                 <option value="LAST_MONTH">Bulan Lalu</option>
                 <option value="THIS_QUARTER">Kuartal Berjalan</option>
-                <option value="THIS_YEAR">Tahun Berjalan (YTD)</option>
+                <option value="ALL">Semua Waktu</option>
                 <option value="CUSTOM">Rentang Tanggal Khusus...</option>
               </select>
 
@@ -2291,16 +2409,17 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
               </select>
 
               {/* Reset filter button */}
-              {(periodFilter !== 'THIS_YEAR' || statusFilter !== 'ALL' || selectedProjectId !== 'ALL' || categoryFilter !== 'ALL' || searchQuery) && (
+              {(selectedYear !== new Date().getFullYear() || periodFilter !== 'THIS_YEAR' || statusFilter !== 'ALL' || selectedProjectId !== 'ALL' || categoryFilter !== 'ALL' || searchQuery) && (
                 <button
                   onClick={() => {
+                    setSelectedYear(new Date().getFullYear());
                     setPeriodFilter('THIS_YEAR');
                     setStatusFilter('ALL');
                     setSelectedProjectId('ALL');
                     setCategoryFilter('ALL');
                     setSearchQuery('');
                   }}
-                  className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 ml-1"
+                  className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 ml-1 cursor-pointer"
                 >
                   Reset Filter
                 </button>

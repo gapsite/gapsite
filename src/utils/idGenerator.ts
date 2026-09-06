@@ -1,8 +1,9 @@
 /**
- * Guaranteed Collision-Free Unique ID Generator
+ * Guaranteed Collision-Free Unique ID and Code Generators
  * 
- * Provides collision-free ID generation for all CRM, Finance, Tax, Payroll,
- * Project, and Operational modules.
+ * Provides collision-free ID and official code generation for all CRM, Finance,
+ * Tax, Payroll, Project, and Operational modules. Ensures deleted items do not
+ * result in sequence number collisions ("bentrok").
  */
 
 let counter = 0;
@@ -17,6 +18,143 @@ export function generateUniqueId(prefix: string = 'id'): string {
   const counterStr = counter.toString().padStart(4, '0');
   const randomStr = Math.random().toString(36).substring(2, 8);
   return `${prefix}-${timestamp}-${counterStr}-${randomStr}`;
+}
+
+/**
+ * Calculates the next collision-free Project Code (e.g. PRJ-2026-106).
+ * Analyzes all existing and deleted project codes to prevent ID reuse and collision.
+ */
+export function generateNextProjectCode(
+  existingProjects: Array<{ code?: string }>,
+  deletedCodes?: Set<string> | string[]
+): string {
+  const currentYear = new Date().getFullYear();
+  const deletedSet = new Set(
+    Array.isArray(deletedCodes) ? deletedCodes : deletedCodes ? Array.from(deletedCodes) : []
+  );
+
+  let maxNum = 100;
+  const regex = new RegExp(`^PRJ-${currentYear}-(\\d+)$`, 'i');
+  const anyPrjRegex = /^PRJ-\d{4}-(\\d+)$/i;
+
+  // Scan current active projects
+  for (const p of existingProjects) {
+    if (!p?.code) continue;
+    const match = p.code.match(regex) || p.code.match(anyPrjRegex);
+    if (match && match[1]) {
+      const parsed = parseInt(match[1], 10);
+      if (!isNaN(parsed) && parsed > maxNum) {
+        maxNum = parsed;
+      }
+    }
+  }
+
+  // Scan deleted project codes if available
+  deletedSet.forEach((code) => {
+    const match = code.match(regex) || code.match(anyPrjRegex);
+    if (match && match[1]) {
+      const parsed = parseInt(match[1], 10);
+      if (!isNaN(parsed) && parsed > maxNum) {
+        maxNum = parsed;
+      }
+    }
+  });
+
+  const existingCodesSet = new Set(
+    existingProjects.map((p) => (p.code || '').toUpperCase())
+  );
+
+  let candidateNum = maxNum + 1;
+  let candidateCode = `PRJ-${currentYear}-${String(candidateNum).padStart(3, '0')}`;
+
+  // Ensure candidate code does not clash with ANY existing or deleted code
+  while (
+    existingCodesSet.has(candidateCode.toUpperCase()) ||
+    deletedSet.has(candidateCode.toUpperCase())
+  ) {
+    candidateNum++;
+    candidateCode = `PRJ-${currentYear}-${String(candidateNum).padStart(3, '0')}`;
+  }
+
+  return candidateCode;
+}
+
+/**
+ * Calculates the next collision-free Transaction Number (e.g. TRX-202609-0015).
+ * Inspects all existing transactions to guarantee continuous uniqueness.
+ */
+export function generateNextTransactionNumber(
+  existingTransactions: Array<{ transactionNumber?: string }>,
+  prefix: string = 'TRX',
+  dateStr?: string
+): string {
+  const cleanDate = dateStr && /^\d{4}-\d{2}/.test(dateStr) ? dateStr : new Date().toISOString().slice(0, 10);
+  const yearMonth = cleanDate.slice(0, 7).replace(/-/g, '');
+  const cleanPrefix = (prefix || 'TRX').toUpperCase();
+
+  const prefixPattern = `${cleanPrefix}-${yearMonth}-`;
+  let maxSeq = 0;
+
+  for (const t of existingTransactions) {
+    if (t?.transactionNumber && t.transactionNumber.startsWith(prefixPattern)) {
+      const suffix = t.transactionNumber.slice(prefixPattern.length);
+      const parsed = parseInt(suffix, 10);
+      if (!isNaN(parsed) && parsed > maxSeq) {
+        maxSeq = parsed;
+      }
+    }
+  }
+
+  const existingNumbers = new Set(
+    existingTransactions.map((t) => (t.transactionNumber || '').toUpperCase())
+  );
+
+  let candidateSeq = maxSeq + 1;
+  let candidateNumber = `${cleanPrefix}-${yearMonth}-${String(candidateSeq).padStart(4, '0')}`;
+
+  while (existingNumbers.has(candidateNumber.toUpperCase())) {
+    candidateSeq++;
+    candidateNumber = `${cleanPrefix}-${yearMonth}-${String(candidateSeq).padStart(4, '0')}`;
+  }
+
+  return candidateNumber;
+}
+
+/**
+ * Calculates the next collision-free Overhead Number (e.g. OVH-202609-0005).
+ */
+export function generateNextOverheadNumber(
+  existingExpenses: Array<{ overheadNumber?: string }>,
+  dateStr?: string
+): string {
+  const cleanDate = dateStr && /^\d{4}-\d{2}/.test(dateStr) ? dateStr : new Date().toISOString().slice(0, 10);
+  const yearMonth = cleanDate.slice(0, 7).replace(/-/g, '');
+  const prefixPattern = `OVH-${yearMonth}-`;
+
+  let maxSeq = 0;
+  for (const e of existingExpenses) {
+    if (e?.overheadNumber && e.overheadNumber.startsWith(prefixPattern)) {
+      const suffix = e.overheadNumber.slice(prefixPattern.length);
+      const parsed = parseInt(suffix, 10);
+      if (!isNaN(parsed) && parsed > maxSeq) {
+        maxSeq = parsed;
+      }
+    }
+  }
+
+  const existingNumbers = new Set(
+    existingExpenses.map((e) => (e.overheadNumber || '').toUpperCase())
+  );
+
+  let candidateSeq = maxSeq + 1;
+  let candidateNumber = `OVH-${yearMonth}-${String(candidateSeq).padStart(4, '0')}`;
+
+  while (existingNumbers.has(candidateNumber.toUpperCase())) {
+    candidateSeq++;
+    candidateNumber = `OVH-${yearMonth}-${String(candidateSeq).padStart(4, '0')}`;
+  }
+
+  return candidateNumber;
 }
 
 /**

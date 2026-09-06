@@ -14,10 +14,14 @@ import {
   Building,
   Tag,
   Trash2,
+  CheckSquare,
+  Square,
+  X,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { ConsultingProject, ProjectStage } from '../types';
 import {
+  formatIDR,
   formatIDRShort,
   getStageName,
   getStageColor,
@@ -26,6 +30,7 @@ import {
   getPriorityBadge,
   getStatusBadge,
 } from '../utils/formatters';
+import { BatchDeleteConfirmModal, BatchDeleteItem } from './common/BatchDeleteConfirmModal';
 
 interface ProjectTableProps {
   onSelectProject: (project: ConsultingProject) => void;
@@ -36,8 +41,11 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
   onSelectProject,
   onOpenDispositionForProject,
 }) => {
-  const { filteredProjects, dispositions, changeProjectStage, deleteProject, consultingServices, isMasterAdmin, hasPermission } = useProjects();
+  const { filteredProjects, dispositions, changeProjectStage, deleteProject, deleteMultipleProjects, consultingServices, isMasterAdmin, hasPermission } = useProjects();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
 
   const stagesList: ProjectStage[] = [
     'INQUIRY',
@@ -47,6 +55,26 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
     'MINISTRY_REVIEW',
     'CERTIFICATE_ISSUED',
   ];
+
+  const isAllSelected = filteredProjects.length > 0 && filteredProjects.every((p) => selectedProjectIds.includes(p.id));
+  const isIndeterminate = selectedProjectIds.length > 0 && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedProjectIds([]);
+    } else {
+      setSelectedProjectIds(filteredProjects.map((p) => p.id));
+    }
+  };
+
+  const handleToggleProject = (id: string) => {
+    setSelectedProjectIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectedProjects = filteredProjects.filter((p) => selectedProjectIds.includes(p.id));
+  const totalSelectedContractValue = selectedProjects.reduce((sum, p) => sum + (p.contractValueIDR || 0), 0);
 
   if (filteredProjects.length === 0) {
     return (
@@ -64,10 +92,67 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      {/* Batch Actions Banner */}
+      {selectedProjectIds.length > 0 && (
+        <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-xs font-bold">
+              <CheckSquare className="w-3.5 h-3.5" />
+              <span>{selectedProjectIds.length} Proyek Terpilih</span>
+            </div>
+            <span className="text-xs text-slate-300 hidden sm:inline">
+              Total Kontrak: <strong className="text-white font-mono">{formatIDR(totalSelectedContractValue)}</strong>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isAllSelected && (
+              <button
+                type="button"
+                onClick={handleToggleSelectAll}
+                className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 cursor-pointer"
+              >
+                Pilih Semua ({filteredProjects.length})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedProjectIds([])}
+              className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 cursor-pointer flex items-center gap-1"
+            >
+              <X className="w-3 h-3" />
+              <span>Batal</span>
+            </button>
+            {isMasterAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsBatchDeleteModalOpen(true)}
+                className="px-3 py-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus {selectedProjectIds.length} Proyek Bersamaan</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px] text-center">
+              <th className="py-3.5 px-3 text-center w-10">
+                <input
+                  type="checkbox"
+                  aria-label="Pilih Semua Proyek"
+                  checked={isAllSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = isIndeterminate;
+                  }}
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4"
+                />
+              </th>
               <th className="py-3.5 px-4 text-center">Engagement Code & Client</th>
               <th className="py-3.5 px-3 text-center">Service & KBLI</th>
               <th className="py-3.5 px-3 text-center min-w-[190px]">Stage & Progress</th>
@@ -95,9 +180,22 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
               return (
                 <tr
                   key={project.id}
-                  className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                  className={`hover:bg-slate-50/70 transition-colors group cursor-pointer ${
+                    selectedProjectIds.includes(project.id) ? 'bg-emerald-50/40' : ''
+                  }`}
                   onClick={() => onSelectProject(project)}
                 >
+                  {/* Selection Checkbox */}
+                  <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Pilih proyek ${project.code}`}
+                      checked={selectedProjectIds.includes(project.id)}
+                      onChange={() => handleToggleProject(project.id)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4"
+                    />
+                  </td>
+
                   {/* Code & Client */}
                   <td className="py-3 px-4">
                     <div className="flex items-start gap-2.5">
@@ -294,6 +392,31 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Batch Delete Confirmation Modal */}
+      <BatchDeleteConfirmModal
+        isOpen={isBatchDeleteModalOpen}
+        onClose={() => setIsBatchDeleteModalOpen(false)}
+        onConfirm={() => {
+          setIsDeletingBatch(true);
+          deleteMultipleProjects(selectedProjectIds);
+          setSelectedProjectIds([]);
+          setIsBatchDeleteModalOpen(false);
+          setIsDeletingBatch(false);
+        }}
+        entityName="Proyek Konsultasi"
+        warningMessage={`Menghapus ${selectedProjects.length} proyek secara bersamaan akan menghapus seluruh data proyek terkait, riwayat tugas disposisi, berkas dokumen verifikasi, dan invoice piutang terkait secara permanen.`}
+        totalAmountText={formatIDR(totalSelectedContractValue)}
+        isDeleting={isDeletingBatch}
+        items={selectedProjects.map((p) => ({
+          id: p.id,
+          title: `${p.code} - ${p.clientName}`,
+          subtitle: `${getServiceTypeName(p.serviceType, consultingServices)} • Progress: ${p.progressPercentage}%`,
+          badge: getStageName(p.stage),
+          badgeColor: getStageColor(p.stage),
+          amount: formatIDR(p.contractValueIDR),
+        }))}
+      />
     </div>
   );
 };

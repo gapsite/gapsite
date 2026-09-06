@@ -74,6 +74,7 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
     officeRentContracts,
     updateTransaction,
     deleteTransaction,
+    deleteMultipleTransactions,
   } = useProjects();
 
   const [activeTab, setActiveTab] = useState<
@@ -361,6 +362,7 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
             onOpenNewTransaction={handleOpenNewTransaction}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={deleteTransaction}
+            onDeleteMultipleTransactions={deleteMultipleTransactions}
             onUpdateTransactionStatus={handleUpdateStatus}
             onSelectProject={onSelectProject}
           />

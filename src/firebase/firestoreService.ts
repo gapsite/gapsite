@@ -1073,7 +1073,11 @@ export const subscribeToDeletedPayrollIds = (onUpdate: (ids: string[]) => void) 
 };
 
 // Generic deleted entity ID helpers for comprehensive cross-module deletion persistence
-export const saveDeletedEntityIdToFirestore = async (settingKey: string, entityId: string): Promise<void> => {
+export const saveMultipleDeletedEntityIdsToFirestore = async (
+  settingKey: string,
+  entityIds: string[]
+): Promise<void> => {
+  if (!entityIds || entityIds.length === 0) return;
   try {
     const docRef = doc(db, FirestoreCollections.SETTINGS, settingKey);
     const snap = await getDoc(docRef);
@@ -1081,13 +1085,71 @@ export const saveDeletedEntityIdToFirestore = async (settingKey: string, entityI
     if (snap.exists() && Array.isArray(snap.data()?.data)) {
       currentIds = snap.data().data;
     }
-    if (!currentIds.includes(entityId)) {
-      const updated = [...currentIds, entityId];
-      await setDoc(docRef, sanitizeForFirestore({ data: updated, updatedAt: new Date().toISOString() }));
+    const merged = Array.from(new Set([...currentIds, ...entityIds]));
+    if (merged.length !== currentIds.length) {
+      await setDoc(
+        docRef,
+        sanitizeForFirestore({ data: merged, updatedAt: new Date().toISOString() })
+      );
     }
   } catch (err) {
-    console.error(`Failed to save deleted ID (${settingKey}) to Firestore:`, err);
+    console.error(`Failed to batch save deleted IDs (${settingKey}) to Firestore:`, err);
   }
+};
+
+export const saveDeletedEntityIdToFirestore = async (settingKey: string, entityId: string): Promise<void> => {
+  return saveMultipleDeletedEntityIdsToFirestore(settingKey, [entityId]);
+};
+
+/**
+ * Executes high-performance atomic chunked batch deletion across any Firestore collection.
+ * Prevents network timeouts, rate limit throttling, and orphan document remnants.
+ */
+export const deleteBatchEntitiesFromFirestore = async (
+  collectionName: string,
+  entityIds: string[]
+): Promise<void> => {
+  if (!entityIds || entityIds.length === 0) return;
+  try {
+    const CHUNK_SIZE = 400; // safe chunk well below Firestore's 500-op batch limit
+    for (let i = 0; i < entityIds.length; i += CHUNK_SIZE) {
+      const chunk = entityIds.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      chunk.forEach((id) => {
+        if (id) {
+          const docRef = doc(db, collectionName, id);
+          batch.delete(docRef);
+        }
+      });
+      await batch.commit();
+    }
+  } catch (err) {
+    console.error(`Failed to batch delete documents from collection (${collectionName}):`, err);
+  }
+};
+
+export const deleteBatchProjectsFromFirestore = async (ids: string[]): Promise<void> => {
+  return deleteBatchEntitiesFromFirestore(FirestoreCollections.PROJECTS, ids);
+};
+
+export const deleteBatchTransactionsFromFirestore = async (ids: string[]): Promise<void> => {
+  return deleteBatchEntitiesFromFirestore(FirestoreCollections.TRANSACTIONS, ids);
+};
+
+export const deleteBatchDispositionsFromFirestore = async (ids: string[]): Promise<void> => {
+  return deleteBatchEntitiesFromFirestore(FirestoreCollections.DISPOSITIONS, ids);
+};
+
+export const deleteBatchReceivablesFromFirestore = async (ids: string[]): Promise<void> => {
+  return deleteBatchEntitiesFromFirestore(FirestoreCollections.RECEIVABLES, ids);
+};
+
+export const deleteBatchTaxObligationsFromFirestore = async (ids: string[]): Promise<void> => {
+  return deleteBatchEntitiesFromFirestore(FirestoreCollections.TAX_OBLIGATIONS, ids);
+};
+
+export const deleteBatchOverheadExpensesFromFirestore = async (ids: string[]): Promise<void> => {
+  return deleteBatchEntitiesFromFirestore(FirestoreCollections.OVERHEAD, ids);
 };
 
 export const removeDeletedEntityIdFromFirestore = async (settingKey: string, entityId: string): Promise<void> => {

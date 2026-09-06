@@ -166,7 +166,7 @@ export const AccountSwitchModal: React.FC<AccountSwitchModalProps> = ({
                 autoFocus
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                placeholder="Enter 4-6 digit PIN (e.g. 1234 or 110711)"
+                placeholder="Enter 4-6 digit Security PIN"
                 className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-hidden focus:border-blue-500 focus:bg-white transition-all tracking-wider"
               />
               <button
@@ -178,9 +178,7 @@ export const AccountSwitchModal: React.FC<AccountSwitchModalProps> = ({
               </button>
             </div>
             <p className="text-[10px] text-slate-400 mt-1">
-              {isMasterTarget
-                ? 'Master Admin default PIN: 110711'
-                : 'Standard consultant default PIN: 1234'}
+              Enter the registered security PIN to authorize the account switch.
             </p>
           </div>
 

@@ -29,10 +29,12 @@ import {
   ChevronDown,
   Printer,
   Check,
+  CheckSquare,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { OverheadExpense, OverheadCategory } from '../../types';
 import { formatIDR } from '../../utils/formatters';
+import { BatchDeleteConfirmModal } from '../common/BatchDeleteConfirmModal';
 
 interface OverheadManagementProps {
   onOpenReports?: () => void;
@@ -141,10 +143,16 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
     addOverheadExpense,
     updateOverheadExpense,
     deleteOverheadExpense,
+    deleteMultipleOverheadExpenses,
     syncAllOverheadToFinance,
     resetOverheadExpensesToDefault,
     paymentChannels,
   } = useProjects();
+
+  // Selection & Batch Delete State
+  const [selectedExpenseIds, setSelectedExpenseIds] = useState<string[]>([]);
+  const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
 
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,6 +226,34 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
       return matchesSearch && matchesCategory && matchesStatus && matchesTax && matchesMonth;
     });
   }, [overheadExpenses, searchQuery, categoryFilter, statusFilter, taxFilter, monthFilter]);
+
+  const isAllSelected =
+    filteredExpenses.length > 0 &&
+    filteredExpenses.every((e) => selectedExpenseIds.includes(e.id));
+  const isIndeterminate = selectedExpenseIds.length > 0 && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedExpenseIds([]);
+    } else {
+      setSelectedExpenseIds(filteredExpenses.map((e) => e.id));
+    }
+  };
+
+  const handleToggleExpense = (id: string) => {
+    setSelectedExpenseIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectedExpenses = filteredExpenses.filter((e) =>
+    selectedExpenseIds.includes(e.id)
+  );
+  const selectedGrossTotal = selectedExpenses.reduce((s, e) => s + (e.amountIDR || 0), 0);
+  const selectedNetTotal = selectedExpenses.reduce(
+    (s, e) => s + (e.netPaymentIDR ?? e.amountIDR ?? 0),
+    0
+  );
 
   // Aggregate KPI metrics
   const stats = useMemo(() => {
@@ -727,10 +763,66 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
           </div>
         </div>
 
+        {/* Batch Actions Banner */}
+        {selectedExpenseIds.length > 0 && (
+          <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2.5 py-1 rounded-lg text-xs font-bold">
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>{selectedExpenseIds.length} Overhead Terpilih</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-3 text-xs font-mono">
+                <span>Bruto: <strong className="text-amber-400 font-bold">{formatIDR(selectedGrossTotal)}</strong></span>
+                <span>Net: <strong className="text-emerald-400 font-bold">{formatIDR(selectedNetTotal)}</strong></span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {!isAllSelected && (
+                <button
+                  type="button"
+                  onClick={handleToggleSelectAll}
+                  className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 cursor-pointer"
+                >
+                  Pilih Semua ({filteredExpenses.length})
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedExpenseIds([])}
+                className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 cursor-pointer flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                <span>Batal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsBatchDeleteModalOpen(true)}
+                className="px-3 py-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus {selectedExpenseIds.length} Overhead Bersamaan</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse" id="overhead-data-table">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                <th className="py-3 px-3 text-center w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Pilih Semua Overhead"
+                    checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = isIndeterminate;
+                    }}
+                    onChange={handleToggleSelectAll}
+                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer w-4 h-4"
+                  />
+                </th>
                 <th className="py-3 px-4">No. Ref / Tanggal</th>
                 <th className="py-3 px-4">Kategori & Keperluan</th>
                 <th className="py-3 px-4">Vendor / Penerima</th>
@@ -746,7 +838,7 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {filteredExpenses.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={11} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Zap className="w-8 h-8 text-slate-300" />
                       <p className="text-sm font-medium text-slate-500">Tidak ada data pengeluaran overhead yang sesuai filter.</p>
@@ -765,7 +857,23 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
                   const IconComponent = cfg.icon;
 
                   return (
-                    <tr key={exp.id} className="hover:bg-slate-50/80 transition-colors" id={`row-overhead-${exp.id}`}>
+                    <tr
+                      key={exp.id}
+                      className={`hover:bg-slate-50/80 transition-colors ${
+                        selectedExpenseIds.includes(exp.id) ? 'bg-amber-50/40' : ''
+                      }`}
+                      id={`row-overhead-${exp.id}`}
+                    >
+                      {/* Selection Checkbox */}
+                      <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Pilih overhead ${exp.title}`}
+                          checked={selectedExpenseIds.includes(exp.id)}
+                          onChange={() => handleToggleExpense(exp.id)}
+                          className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer w-4 h-4"
+                        />
+                      </td>
                       {/* Ref & Date */}
                       <td className="py-3 px-4">
                         <div className="font-mono font-bold text-slate-900 text-xs">{exp.overheadNumber}</div>
@@ -901,6 +1009,33 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
           </table>
         </div>
       </div>
+
+      {/* Batch Delete Confirmation Modal */}
+      <BatchDeleteConfirmModal
+        isOpen={isBatchDeleteModalOpen}
+        onClose={() => setIsBatchDeleteModalOpen(false)}
+        onConfirm={() => {
+          setIsDeletingBatch(true);
+          deleteMultipleOverheadExpenses(selectedExpenseIds);
+          setSelectedExpenseIds([]);
+          setIsBatchDeleteModalOpen(false);
+          setIsDeletingBatch(false);
+        }}
+        entityName="Pengeluaran Overhead"
+        warningMessage={`Menghapus ${selectedExpenses.length} pengeluaran overhead secara bersamaan akan menghapus pencatatan biaya operasional dan transaksi kas buku besar yang tersinkronisasi.`}
+        totalAmountText={formatIDR(selectedGrossTotal)}
+        isDeleting={isDeletingBatch}
+        items={selectedExpenses.map((exp) => ({
+          id: exp.id,
+          title: `${exp.overheadNumber || 'OH'} - ${exp.title}`,
+          subtitle: `${exp.date} • ${exp.vendorOrMerchant || '-'} • ${exp.division || 'Operasional'}`,
+          badge: CATEGORY_CONFIG[exp.category]?.label || exp.category,
+          badgeColor:
+            CATEGORY_CONFIG[exp.category]?.badgeBg ||
+            'bg-slate-100 text-slate-800 border-slate-200',
+          amount: formatIDR(exp.amountIDR),
+        }))}
+      />
 
       {/* Add / Edit Overhead Modal */}
       {isModalOpen && (

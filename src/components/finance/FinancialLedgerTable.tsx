@@ -22,6 +22,7 @@ import {
   Layers,
   X,
   FileCheck,
+  CheckSquare,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import {
@@ -33,10 +34,12 @@ import {
 import {
   getTransactionCategoryLabel,
   getPaymentMethodLabel,
+  formatIDR,
   formatIDRShort,
 } from '../../utils/formatters';
 import { TransactionCategoryManagerModal } from './TransactionCategoryManagerModal';
 import { PaymentChannelManagerModal } from './PaymentChannelManagerModal';
+import { BatchDeleteConfirmModal } from '../common/BatchDeleteConfirmModal';
 import { Settings, Landmark } from 'lucide-react';
 
 interface FinancialLedgerTableProps {
@@ -45,6 +48,7 @@ interface FinancialLedgerTableProps {
   onOpenNewTransaction?: (type: TransactionType) => void;
   onEditTransaction: (transaction: FinancialTransaction) => void;
   onDeleteTransaction: (id: string) => void;
+  onDeleteMultipleTransactions?: (ids: string[]) => void;
   onUpdateTransactionStatus?: (id: string, newStatus: TransactionStatus) => void;
   onSelectProject?: (projectId: string) => void;
 }
@@ -55,10 +59,11 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
   onOpenNewTransaction,
   onEditTransaction,
   onDeleteTransaction,
+  onDeleteMultipleTransactions,
   onUpdateTransactionStatus,
   onSelectProject,
 }) => {
-  const { isMasterAdmin, transactionCategories, paymentChannels } = useProjects();
+  const { isMasterAdmin, transactionCategories, paymentChannels, deleteMultipleTransactions } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
@@ -67,6 +72,9 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
   const [selectedReceipt, setSelectedReceipt] = useState<FinancialTransaction | null>(null);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [isPaymentChannelManagerOpen, setIsPaymentChannelManagerOpen] = useState(false);
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([]);
+  const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
 
   // Date filtering logic
   const filteredTransactions = useMemo(() => {
@@ -133,6 +141,36 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
       return true;
     });
   }, [transactions, typeFilter, categoryFilter, projectFilter, dateRangeFilter, searchQuery]);
+
+  const isAllSelected =
+    filteredTransactions.length > 0 &&
+    filteredTransactions.every((t) => selectedTransactionIds.includes(t.id));
+  const isIndeterminate = selectedTransactionIds.length > 0 && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedTransactionIds([]);
+    } else {
+      setSelectedTransactionIds(filteredTransactions.map((t) => t.id));
+    }
+  };
+
+  const handleToggleTransaction = (id: string) => {
+    setSelectedTransactionIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectedTransactions = filteredTransactions.filter((t) =>
+    selectedTransactionIds.includes(t.id)
+  );
+  const selectedIncomeTotal = selectedTransactions
+    .filter((t) => t.type === 'INCOME')
+    .reduce((s, t) => s + t.amountIDR, 0);
+  const selectedExpenseTotal = selectedTransactions
+    .filter((t) => t.type === 'EXPENSE')
+    .reduce((s, t) => s + t.amountIDR, 0);
+  const selectedNet = selectedIncomeTotal - selectedExpenseTotal;
 
   // Export to CSV function
   const handleExportCSV = () => {
@@ -391,9 +429,68 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
 
       {/* Ledger Table */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white">
+        {/* Batch Actions Banner */}
+        {selectedTransactionIds.length > 0 && (
+          <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-xs font-bold">
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>{selectedTransactionIds.length} Transaksi Terpilih</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-3 text-xs font-mono">
+                <span>Inflow: <strong className="text-emerald-400 font-bold">+{formatIDRShort(selectedIncomeTotal)}</strong></span>
+                <span>Outflow: <strong className="text-rose-400 font-bold">-{formatIDRShort(selectedExpenseTotal)}</strong></span>
+                <span>Net: <strong className={selectedNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                  {selectedNet >= 0 ? '+' : '-'}{formatIDRShort(Math.abs(selectedNet))}
+                </strong></span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {!isAllSelected && (
+                <button
+                  type="button"
+                  onClick={handleToggleSelectAll}
+                  className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 cursor-pointer"
+                >
+                  Pilih Semua ({filteredTransactions.length})
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedTransactionIds([])}
+                className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 cursor-pointer flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                <span>Batal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsBatchDeleteModalOpen(true)}
+                className="px-3 py-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus {selectedTransactionIds.length} Transaksi Bersamaan</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <table className="w-full text-left border-collapse min-w-[780px]">
           <thead>
             <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50">
+              <th className="py-3 px-3 text-center w-10">
+                <input
+                  type="checkbox"
+                  aria-label="Pilih Semua Transaksi"
+                  checked={isAllSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = isIndeterminate;
+                  }}
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4"
+                />
+              </th>
               <th className="py-3 px-2.5 text-left w-[110px]">Date & Ref</th>
               <th className="py-3 px-2.5 text-left min-w-[150px]">Description & Project</th>
               <th className="py-3 px-2.5 text-left w-[130px]">Party & Channel</th>
@@ -405,7 +502,7 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
           <tbody className="divide-y divide-slate-100 text-xs">
             {filteredTransactions.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-400">
+                <td colSpan={7} className="py-12 text-center text-slate-400">
                   <FileSpreadsheet className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                   <p className="font-semibold text-slate-600">Tidak ada transaksi yang cocok dengan filter</p>
                   <p className="text-xs text-slate-400 mt-0.5 max-w-lg mx-auto">
@@ -421,8 +518,20 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
                 return (
                   <tr
                     key={`trx-row-${t.id}-${idx}`}
-                    className="hover:bg-slate-50/90 transition-colors group"
+                    className={`hover:bg-slate-50/90 transition-colors group ${
+                      selectedTransactionIds.includes(t.id) ? 'bg-emerald-50/40' : ''
+                    }`}
                   >
+                    {/* Selection Checkbox */}
+                    <td className="py-2.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Pilih transaksi ${t.transactionNumber}`}
+                        checked={selectedTransactionIds.includes(t.id)}
+                        onChange={() => handleToggleTransaction(t.id)}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4"
+                      />
+                    </td>
                     {/* Date & Ref */}
                     <td className="py-2.5 px-2.5 whitespace-nowrap">
                       <div className="font-mono font-bold text-slate-900">{t.date}</div>
@@ -540,6 +649,38 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Batch Delete Confirmation Modal */}
+      <BatchDeleteConfirmModal
+        isOpen={isBatchDeleteModalOpen}
+        onClose={() => setIsBatchDeleteModalOpen(false)}
+        onConfirm={() => {
+          setIsDeletingBatch(true);
+          if (onDeleteMultipleTransactions) {
+            onDeleteMultipleTransactions(selectedTransactionIds);
+          } else {
+            deleteMultipleTransactions(selectedTransactionIds);
+          }
+          setSelectedTransactionIds([]);
+          setIsBatchDeleteModalOpen(false);
+          setIsDeletingBatch(false);
+        }}
+        entityName="Transaksi Keuangan"
+        warningMessage={`Menghapus ${selectedTransactions.length} transaksi secara bersamaan akan menghapus mutasi kas dari buku besar, dan saldo arus kas akan dikalkulasi ulang secara otomatis.`}
+        totalAmountText={`Net: ${selectedNet >= 0 ? '+' : '-'}${formatIDR(Math.abs(selectedNet))} (Inflow: +${formatIDR(selectedIncomeTotal)}, Outflow: -${formatIDR(selectedExpenseTotal)})`}
+        isDeleting={isDeletingBatch}
+        items={selectedTransactions.map((t) => ({
+          id: t.id,
+          title: `${t.transactionNumber} - ${t.description}`,
+          subtitle: `${t.date} • ${t.clientOrVendorName || 'General'} • ${t.projectCode || 'Overhead'}`,
+          badge: t.type === 'INCOME' ? 'Pemasukan' : 'Pengeluaran',
+          badgeColor:
+            t.type === 'INCOME'
+              ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+              : 'bg-rose-100 text-rose-800 border-rose-200',
+          amount: `${t.type === 'INCOME' ? '+' : '-'}${formatIDR(t.amountIDR)}`,
+        }))}
+      />
 
       {/* Receipt Slip Preview Modal */}
       {selectedReceipt && (

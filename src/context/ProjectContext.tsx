@@ -39,6 +39,14 @@ import {
   removeDeletedPayrollIdFromFirestore,
   subscribeToDeletedPayrollIds,
   saveDeletedEntityIdToFirestore,
+  saveMultipleDeletedEntityIdsToFirestore,
+  deleteBatchEntitiesFromFirestore,
+  deleteBatchProjectsFromFirestore,
+  deleteBatchTransactionsFromFirestore,
+  deleteBatchDispositionsFromFirestore,
+  deleteBatchReceivablesFromFirestore,
+  deleteBatchTaxObligationsFromFirestore,
+  deleteBatchOverheadExpensesFromFirestore,
   removeDeletedEntityIdFromFirestore,
   subscribeToDeletedEntityIds,
   subscribeToPayroll,
@@ -179,6 +187,9 @@ import {
   generateUniqueId,
   generateTransactionId,
   generateTransactionNumber,
+  generateNextProjectCode,
+  generateNextTransactionNumber,
+  generateNextOverheadNumber,
   generateProjectId,
   generateGovProjectId,
   generateGovMilestoneId,
@@ -443,6 +454,7 @@ interface ProjectContextType {
   deleteTaxObligation: (
     id: string
   ) => { success: boolean; message?: string };
+  deleteMultipleTaxObligations: (ids: string[]) => { count: number };
   payTaxObligation: (
     taxId: string,
     options?: {
@@ -613,6 +625,7 @@ interface ProjectContextType {
     updates: Partial<OverheadExpense>
   ) => { success: boolean; message?: string };
   deleteOverheadExpense: (id: string) => { success: boolean; message?: string };
+  deleteMultipleOverheadExpenses: (ids: string[]) => { count: number };
   syncAllOverheadToFinance: () => {
     success: boolean;
     message: string;
@@ -816,6 +829,7 @@ interface ProjectContextType {
   addProject: (project: Omit<ConsultingProject, 'id' | 'code' | 'documents' | 'activities' | 'progressPercentage'>) => ConsultingProject;
   updateProject: (id: string, updates: Partial<ConsultingProject>) => void;
   deleteProject: (id: string) => void;
+  deleteMultipleProjects: (ids: string[]) => { count: number };
   changeProjectStage: (id: string, newStage: ProjectStage) => void;
   
   // Disposition Actions
@@ -854,6 +868,7 @@ interface ProjectContextType {
   addTransaction: (tx: Omit<FinancialTransaction, 'id' | 'transactionNumber' | 'createdAt'>) => FinancialTransaction;
   updateTransaction: (id: string, updates: Partial<FinancialTransaction>) => void;
   deleteTransaction: (id: string) => void;
+  deleteMultipleTransactions: (ids: string[]) => { count: number };
   
   // Milestone & Dynamic Checklist Actions
   toggleMilestoneManualSignoff: (
@@ -2287,12 +2302,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return documentCategories.filter((c) => c.status !== 'INACTIVE');
   }, [documentCategories]);
 
-  // Synchronized Deletion Helpers - atomically update state, local storage, and Firestore
-  const addDeletedProjectId = useCallback((id: string) => {
+  // Synchronized Deletion Helpers - atomically update state, local storage, and Firestore without race conditions
+  const addMultipleDeletedProjectIds = useCallback((ids: string[]) => {
+    if (!ids || ids.length === 0) return;
     setDeletedProjectIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const updated = [...prev, id];
-      saveDeletedEntityIdToFirestore('deleted_project_ids', id);
+      const updated = Array.from(new Set([...prev, ...ids]));
+      saveMultipleDeletedEntityIdsToFirestore('deleted_project_ids', ids);
       try {
         safeLocalStorage.setItem(STORAGE_KEY_DELETED_PROJECT_IDS, JSON.stringify(updated));
       } catch {}
@@ -2300,11 +2315,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  const addDeletedDispositionId = useCallback((id: string) => {
+  const addDeletedProjectId = useCallback((id: string) => {
+    addMultipleDeletedProjectIds([id]);
+  }, [addMultipleDeletedProjectIds]);
+
+  const addMultipleDeletedDispositionIds = useCallback((ids: string[]) => {
+    if (!ids || ids.length === 0) return;
     setDeletedDispositionIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const updated = [...prev, id];
-      saveDeletedEntityIdToFirestore('deleted_disposition_ids', id);
+      const updated = Array.from(new Set([...prev, ...ids]));
+      saveMultipleDeletedEntityIdsToFirestore('deleted_disposition_ids', ids);
       try {
         safeLocalStorage.setItem(STORAGE_KEY_DELETED_DISPOSITION_IDS, JSON.stringify(updated));
       } catch {}
@@ -2312,11 +2331,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  const addDeletedTransactionId = useCallback((id: string) => {
+  const addDeletedDispositionId = useCallback((id: string) => {
+    addMultipleDeletedDispositionIds([id]);
+  }, [addMultipleDeletedDispositionIds]);
+
+  const addMultipleDeletedTransactionIds = useCallback((ids: string[]) => {
+    if (!ids || ids.length === 0) return;
     setDeletedTransactionIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const updated = [...prev, id];
-      saveDeletedEntityIdToFirestore('deleted_transaction_ids', id);
+      const updated = Array.from(new Set([...prev, ...ids]));
+      saveMultipleDeletedEntityIdsToFirestore('deleted_transaction_ids', ids);
       try {
         safeLocalStorage.setItem(STORAGE_KEY_DELETED_TRANSACTION_IDS, JSON.stringify(updated));
       } catch {}
@@ -2324,11 +2347,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  const addDeletedReceivableId = useCallback((id: string) => {
+  const addDeletedTransactionId = useCallback((id: string) => {
+    addMultipleDeletedTransactionIds([id]);
+  }, [addMultipleDeletedTransactionIds]);
+
+  const addMultipleDeletedReceivableIds = useCallback((ids: string[]) => {
+    if (!ids || ids.length === 0) return;
     setDeletedReceivableIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const updated = [...prev, id];
-      saveDeletedEntityIdToFirestore('deleted_receivable_ids', id);
+      const updated = Array.from(new Set([...prev, ...ids]));
+      saveMultipleDeletedEntityIdsToFirestore('deleted_receivable_ids', ids);
       try {
         safeLocalStorage.setItem(STORAGE_KEY_DELETED_RECEIVABLE_IDS, JSON.stringify(updated));
       } catch {}
@@ -2336,17 +2363,41 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  const addDeletedTaxId = useCallback((id: string) => {
+  const addDeletedReceivableId = useCallback((id: string) => {
+    addMultipleDeletedReceivableIds([id]);
+  }, [addMultipleDeletedReceivableIds]);
+
+  const addMultipleDeletedTaxIds = useCallback((ids: string[]) => {
+    if (!ids || ids.length === 0) return;
     setDeletedTaxIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const updated = [...prev, id];
-      saveDeletedEntityIdToFirestore('deleted_tax_ids', id);
+      const updated = Array.from(new Set([...prev, ...ids]));
+      saveMultipleDeletedEntityIdsToFirestore('deleted_tax_ids', ids);
       try {
         safeLocalStorage.setItem(STORAGE_KEY_DELETED_TAX_IDS, JSON.stringify(updated));
       } catch {}
       return updated;
     });
   }, []);
+
+  const addDeletedTaxId = useCallback((id: string) => {
+    addMultipleDeletedTaxIds([id]);
+  }, [addMultipleDeletedTaxIds]);
+
+  const addMultipleDeletedOverheadIds = useCallback((ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    setDeletedOverheadIds((prev) => {
+      const updated = Array.from(new Set([...prev, ...ids]));
+      saveMultipleDeletedEntityIdsToFirestore('deleted_overhead_ids', ids);
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_DELETED_OVERHEAD_IDS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
+  const addDeletedOverheadId = useCallback((id: string) => {
+    addMultipleDeletedOverheadIds([id]);
+  }, [addMultipleDeletedOverheadIds]);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
@@ -4001,7 +4052,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (!pin || pin.trim() !== targetUser.pin.trim()) {
         return {
           success: false,
-          message: `Incorrect Security PIN for ${targetUser.name}. (Default PIN is 110711)`,
+          message: `Incorrect Security PIN for ${targetUser.name}.`,
         };
       }
     }
@@ -6627,6 +6678,111 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, message: 'Data pajak berhasil diperbarui.' };
   };
 
+  const deleteMultipleTaxObligations = (ids: string[]): { count: number; deletedTxCount?: number } => {
+    if (!ids || ids.length === 0) return { count: 0, deletedTxCount: 0 };
+    const idSet = new Set(ids);
+    const targetTaxes = taxObligations.filter((t) => idSet.has(t.id));
+
+    // 1. Identify and automatically delete ALL linked transactions in Finance, Cashflow, and Laporan Keuangan
+    const txIdsToDelete = new Set<string>();
+    targetTaxes.forEach((target) => {
+      if (target.transactionId) {
+        txIdsToDelete.add(target.transactionId);
+      }
+      const targetIdSuffix = target.id.slice(-4).toUpperCase();
+      transactions.forEach((t) => {
+        const matchNtpn = target.ntpnNumber && t.referenceNumber?.includes(target.ntpnNumber);
+        const matchBilling = target.billingCode && t.referenceNumber?.includes(target.billingCode);
+        const matchTaxRef = t.referenceNumber?.includes(`TAX-${targetIdSuffix}`);
+        const matchIdInNote = t.notes?.includes(target.id);
+        const matchTitle =
+          target.title &&
+          (t.category === 'TAX_PPH_PPN' ||
+            t.category === 'PAJAK__PPN_11__' ||
+            t.category === 'PPH_21' ||
+            t.category === 'PPH_23' ||
+            t.category === 'PPH_4_2' ||
+            t.category === 'PPH_BADAN_FINAL') &&
+          (t.description?.toLowerCase().includes(target.title.toLowerCase()) ||
+            t.notes?.toLowerCase().includes(target.title.toLowerCase()));
+
+        if (matchNtpn || matchBilling || matchTaxRef || matchIdInNote || matchTitle) {
+          txIdsToDelete.add(t.id);
+        }
+      });
+    });
+
+    // 2. Cascade delete linked financial transactions
+    const txIdsArray = Array.from(txIdsToDelete);
+    if (txIdsArray.length > 0) {
+      addMultipleDeletedTransactionIds(txIdsArray);
+      deleteBatchTransactionsFromFirestore(txIdsArray);
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('transactions', updated);
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+    }
+
+    // 3. Detach references in payroll records so no orphaned IDs remain
+    const targetPayrollIds = new Set(targetTaxes.map((t) => t.payrollId).filter(Boolean));
+    setPayrollRecords((prev) => {
+      let changed = false;
+      const updated = prev.map((r) => {
+        if (targetPayrollIds.has(r.id) || (r.pph21ObligationId && idSet.has(r.pph21ObligationId))) {
+          changed = true;
+          return { ...r, pph21ObligationId: undefined };
+        }
+        return r;
+      });
+      if (changed) {
+        broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
+        saveSettingsToFirestore('payroll_records', updated);
+      }
+      return updated;
+    });
+
+    // 4. Detach references in overhead expenses
+    setOverheadExpenses((prev) => {
+      let changed = false;
+      const updated = prev.map((exp) => {
+        if (exp.taxObligationId && idSet.has(exp.taxObligationId)) {
+          changed = true;
+          return { ...exp, taxObligationId: undefined };
+        }
+        return exp;
+      });
+      if (changed) {
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('overhead_expenses', updated);
+        broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
+      }
+      return updated;
+    });
+
+    // 5. Delete tax obligations from state, local storage, and Firestore with tombstone
+    setTaxObligations((prev) => {
+      const updated = prev.filter((t) => !idSet.has(t.id));
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+      } catch {}
+      broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+      saveSettingsToFirestore('tax_obligations', updated);
+      return updated;
+    });
+
+    addMultipleDeletedTaxIds(ids);
+    deleteBatchTaxObligationsFromFirestore(ids);
+
+    return { count: ids.length, deletedTxCount: txIdsArray.length };
+  };
+
   const deleteTaxObligation = (id: string): { success: boolean; message?: string } => {
     if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE') && currentUser.role !== 'DIRECTOR') {
       return { success: false, message: 'Akses Ditolak: Hanya Tim Finance / Master Admin yang dapat menghapus data pajak.' };
@@ -6637,78 +6793,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Data pajak tidak ditemukan.' };
     }
 
-    // 1. Identify and automatically delete ALL linked transactions in Finance, Cashflow, and Laporan Keuangan
-    const txIdsToDelete = new Set<string>();
-    if (target.transactionId) {
-      txIdsToDelete.add(target.transactionId);
-    }
-
-    const targetIdSuffix = target.id.slice(-4).toUpperCase();
-    transactions.forEach((t) => {
-      const matchNtpn = target.ntpnNumber && t.referenceNumber?.includes(target.ntpnNumber);
-      const matchBilling = target.billingCode && t.referenceNumber?.includes(target.billingCode);
-      const matchTaxRef = t.referenceNumber?.includes(`TAX-${targetIdSuffix}`);
-      const matchIdInNote = t.notes?.includes(target.id);
-      const matchTitle =
-        target.title &&
-        (t.category === 'TAX_PPH_PPN' ||
-          t.category === 'PAJAK__PPN_11__' ||
-          t.category === 'PPH_21' ||
-          t.category === 'PPH_23' ||
-          t.category === 'PPH_4_2' ||
-          t.category === 'PPH_BADAN_FINAL') &&
-        (t.description?.toLowerCase().includes(target.title.toLowerCase()) ||
-          t.notes?.toLowerCase().includes(target.title.toLowerCase()));
-
-      if (matchNtpn || matchBilling || matchTaxRef || matchIdInNote || matchTitle) {
-        txIdsToDelete.add(t.id);
-      }
-    });
-
-    addDeletedTaxId(id);
-
-    if (txIdsToDelete.size > 0) {
-      txIdsToDelete.forEach((txId) => {
-        addDeletedTransactionId(txId);
-        deleteTransactionFromFirestore(txId);
-      });
-      setTransactions((prev) => {
-        const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
-        try {
-          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
-        } catch {}
-        broadcastLiveDataUpdate('TRANSACTIONS', updated);
-        return updated;
-      });
-    }
-
-    // 2. If this tax obligation was generated from a payroll record, detach linkage
-    if (target.payrollId) {
-      setPayrollRecords((prev) => {
-        const updated = prev.map((r) =>
-          r.id === target.payrollId || r.pph21ObligationId === id
-            ? { ...r, pph21ObligationId: undefined }
-            : r
-        );
-        broadcastLiveDataUpdate('PAYROLL_PAYMENTS', updated);
-        saveSettingsToFirestore('payroll_records', updated);
-        return updated;
-      });
-    }
-
-    // 3. Delete from taxObligations state and Firestore
-    setTaxObligations((prev) => {
-      const updated = prev.filter((t) => t.id !== id);
-      broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
-      saveSettingsToFirestore('tax_obligations', updated);
-      return updated;
-    });
-
-    deleteTaxObligationFromFirestore(id);
+    const result = deleteMultipleTaxObligations([id]);
 
     return {
       success: true,
-      message: `Kewajiban pajak "${target.title}" beserta seluruh mutasi kas terkait (${txIdsToDelete.size} transaksi) berhasil dihapus dari Finance, Arus Kas (Cashflow), dan Laporan Keuangan.`,
+      message: `Kewajiban pajak "${target.title}" beserta seluruh mutasi kas terkait (${result.deletedTxCount || 0} transaksi) berhasil dihapus dari Finance, Arus Kas (Cashflow), dan Laporan Keuangan.`,
     };
   };
 
@@ -8261,7 +8350,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const now = new Date().toISOString();
     const dateObj = new Date(data.date || new Date());
     const newId = generateOverheadId();
-    const autoNumber = data.overheadNumber || generateTransactionNumber('OVH', data.date);
+    const autoNumber = data.overheadNumber || generateNextOverheadNumber(overheadExpenses, data.date);
 
     let taxAmount = data.taxAmountIDR || 0;
     if (data.hasTax && data.taxRatePercent && data.taxRatePercent > 0 && !data.taxAmountIDR) {
@@ -8275,7 +8364,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (data.status === 'PAID') {
       const newTx: FinancialTransaction = {
         id: generateTransactionId('trx-ovh', newId),
-        transactionNumber: generateTransactionNumber('TRX-OVH', data.paidDate || data.date),
+        transactionNumber: generateNextTransactionNumber(transactions, 'TRX-OVH', data.paidDate || data.date),
         type: 'EXPENSE',
         category: 'OPERATIONAL_OFFICE',
         amountIDR: data.amountIDR,
@@ -8293,6 +8382,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const updated = deduplicateTransactions([newTx, ...prev]);
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        saveSettingsToFirestore('transactions', updated);
         saveTransactionToFirestore(newTx);
         return updated;
       });
@@ -8376,25 +8466,73 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, message: `Data operasional "${updated.title}" berhasil diperbarui.` };
   };
 
+  const deleteMultipleOverheadExpenses = (ids: string[]): { count: number } => {
+    if (!ids || ids.length === 0) return { count: 0 };
+    const idSet = new Set(ids);
+
+    // Identify linked transactions and tax obligations to prevent orphaned records in database
+    const targetExpenses = overheadExpenses.filter((e) => idSet.has(e.id));
+    const linkedTxIds = Array.from(
+      new Set(targetExpenses.map((e) => e.transactionId).filter(Boolean) as string[])
+    );
+    const linkedTaxIds = Array.from(
+      new Set(targetExpenses.map((e) => e.taxObligationId).filter(Boolean) as string[])
+    );
+
+    // 1. Remove overhead expenses locally and persist to Firestore & localStorage
+    setOverheadExpenses((prev) => {
+      const updated = prev.filter((e) => !idSet.has(e.id));
+      broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(updated));
+      } catch {}
+      saveSettingsToFirestore('overhead_expenses', updated);
+      return updated;
+    });
+
+    // 2. Tombstone overhead IDs atomically without concurrent race conditions
+    addMultipleDeletedOverheadIds(ids);
+    broadcastLiveDataUpdate('DELETED_OVERHEAD_IDS', [...deletedOverheadIds, ...ids]);
+    deleteBatchOverheadExpensesFromFirestore(ids);
+
+    // 3. Cascading cleanup for linked financial ledger transactions
+    if (linkedTxIds.length > 0) {
+      addMultipleDeletedTransactionIds(linkedTxIds);
+      deleteBatchTransactionsFromFirestore(linkedTxIds);
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !linkedTxIds.includes(t.id));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('transactions', updated);
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+    }
+
+    // 4. Cascading cleanup for linked tax obligations
+    if (linkedTaxIds.length > 0) {
+      addMultipleDeletedTaxIds(linkedTaxIds);
+      deleteBatchTaxObligationsFromFirestore(linkedTaxIds);
+      setTaxObligations((prev) => {
+        const updated = prev.filter((t) => !linkedTaxIds.includes(t.id));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('tax_obligations', updated);
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        return updated;
+      });
+    }
+
+    return { count: ids.length };
+  };
+
   const deleteOverheadExpense = (id: string): { success: boolean; message?: string } => {
     const target = overheadExpenses.find((e) => e.id === id);
     if (!target) return { success: false, message: 'Data overhead tidak ditemukan.' };
 
-    setOverheadExpenses((prev) => {
-      const updated = prev.filter((e) => e.id !== id);
-      broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
-      return updated;
-    });
-
-    setDeletedOverheadIds((prev) => {
-      const updated = Array.from(new Set([...prev, id]));
-      broadcastLiveDataUpdate('DELETED_OVERHEAD_IDS', updated);
-      return updated;
-    });
-
-    saveDeletedEntityIdToFirestore('deleted_overhead_ids', id);
-    deleteOverheadExpenseFromFirestore(id);
-
+    deleteMultipleOverheadExpenses([id]);
     return { success: true, message: `Kebutuhan operasional "${target.title}" telah dihapus secara permanen.` };
   };
 
@@ -9372,8 +9510,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addProject = (
     projData: Omit<ConsultingProject, 'id' | 'code' | 'documents' | 'activities' | 'progressPercentage'>
   ): ConsultingProject => {
-    const nextNum = projects.length + 101;
-    const code = `PRJ-${new Date().getFullYear()}-${String(nextNum).padStart(3, '0')}`;
+    const code = generateNextProjectCode(projects, deletedProjectIds);
     const id = generateProjectId();
     const newProject: ConsultingProject = {
       ...projData,
@@ -9528,33 +9665,38 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const deleteProject = (id: string) => {
+  const deleteMultipleProjects = (ids: string[]): { count: number } => {
     if (!isMasterAdmin) {
       console.warn('Unauthorized deletion attempt: Only admin.master (Master Admin) can delete projects.');
-      return;
+      return { count: 0 };
     }
+    if (!ids || ids.length === 0) return { count: 0 };
 
-    addDeletedProjectId(id);
+    const idSet = new Set(ids);
+    const targetProjects = projects.filter((p) => idSet.has(p.id));
+    const targetCodes = new Set(targetProjects.map((p) => p.code).filter(Boolean));
+
+    // 1. Atomically delete and tombstone projects
+    addMultipleDeletedProjectIds(ids);
+    deleteBatchProjectsFromFirestore(ids);
 
     setProjects((prev) => {
-      const updated = prev.filter((p) => p.id !== id);
+      const updated = prev.filter((p) => !idSet.has(p.id));
       try {
         safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('PROJECTS', updated);
       return updated;
     });
-    deleteProjectFromFirestore(id);
 
-    // Cascading deletion for dispositions linked to this project
-    const linkedDispositions = dispositions.filter((d) => d.projectId === id);
+    // 2. Cascading deletion for dispositions linked to these projects
+    const linkedDispositions = dispositions.filter((d) => idSet.has(d.projectId));
     if (linkedDispositions.length > 0) {
-      linkedDispositions.forEach((d) => {
-        addDeletedDispositionId(d.id);
-        deleteDispositionFromFirestore(d.id);
-      });
+      const dispIds = linkedDispositions.map((d) => d.id);
+      addMultipleDeletedDispositionIds(dispIds);
+      deleteBatchDispositionsFromFirestore(dispIds);
       setDispositions((prev) => {
-        const updated = prev.filter((d) => d.projectId !== id);
+        const updated = prev.filter((d) => !dispIds.includes(d.id));
         try {
           safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(updated));
         } catch {}
@@ -9563,15 +9705,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     }
 
-    // Cascading deletion for receivables linked to this project
-    const linkedReceivables = receivables.filter((r) => r.projectId === id);
+    // 3. Cascading deletion for receivables linked to these projects
+    const linkedReceivables = receivables.filter((r) => r.projectId && idSet.has(r.projectId));
     if (linkedReceivables.length > 0) {
-      linkedReceivables.forEach((r) => {
-        addDeletedReceivableId(r.id);
-        deleteReceivableFromFirestore(r.id);
-      });
+      const recIds = linkedReceivables.map((r) => r.id);
+      addMultipleDeletedReceivableIds(recIds);
+      deleteBatchReceivablesFromFirestore(recIds);
       setReceivables((prev) => {
-        const updated = prev.filter((r) => r.projectId !== id);
+        const updated = prev.filter((r) => !recIds.includes(r.id));
         try {
           safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
         } catch {}
@@ -9580,24 +9721,54 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     }
 
-    // Cascading deletion for transactions linked to this project
-    const linkedTransactions = transactions.filter((t) => t.projectId === id);
-    if (linkedTransactions.length > 0) {
-      linkedTransactions.forEach((t) => {
-        addDeletedTransactionId(t.id);
-        deleteTransactionFromFirestore(t.id);
+    // 4. Cascading deletion for tax obligations linked to these projects (PPh 23, PPN)
+    const linkedTaxes = taxObligations.filter(
+      (t) => (t.projectId && idSet.has(t.projectId)) || (t.projectCode && targetCodes.has(t.projectCode))
+    );
+    if (linkedTaxes.length > 0) {
+      const taxIds = linkedTaxes.map((t) => t.id);
+      addMultipleDeletedTaxIds(taxIds);
+      deleteBatchTaxObligationsFromFirestore(taxIds);
+      setTaxObligations((prev) => {
+        const updated = prev.filter((t) => !taxIds.includes(t.id));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('tax_obligations', updated);
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        return updated;
       });
+    }
+
+    // 5. Cascading deletion for transactions linked directly to projects or their tax obligations
+    const taxTxIds = new Set(linkedTaxes.map((t) => t.transactionId).filter(Boolean));
+    const linkedTransactions = transactions.filter(
+      (t) => (t.projectId && idSet.has(t.projectId)) || (t.id && taxTxIds.has(t.id))
+    );
+    if (linkedTransactions.length > 0) {
+      const trxIds = linkedTransactions.map((t) => t.id);
+      addMultipleDeletedTransactionIds(trxIds);
+      deleteBatchTransactionsFromFirestore(trxIds);
       setTransactions((prev) => {
-        const updated = prev.filter((t) => t.projectId !== id);
+        const updated = prev.filter((t) => !trxIds.includes(t.id));
         try {
           safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         } catch {}
+        saveSettingsToFirestore('transactions', updated);
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         return updated;
       });
     }
 
-    if (selectedProjectId === id) setSelectedProjectId(null);
+    if (selectedProjectId && idSet.has(selectedProjectId)) {
+      setSelectedProjectId(null);
+    }
+
+    return { count: ids.length };
+  };
+
+  const deleteProject = (id: string) => {
+    deleteMultipleProjects([id]);
   };
 
   const changeProjectStage = (id: string, newStage: ProjectStage) => {
@@ -10083,14 +10254,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addTransaction = (
     tx: Omit<FinancialTransaction, 'id' | 'transactionNumber' | 'createdAt'>
   ): FinancialTransaction => {
-    const dateObj = new Date(tx.date || new Date());
-    const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-    const seq = Math.floor(100 + Math.random() * 900);
+    const transactionNumber = generateNextTransactionNumber(transactions, 'TRX', tx.date);
     const newTx: FinancialTransaction = {
       ...tx,
       status: tx.status === 'HUTANG' ? 'HUTANG' : 'CLEARED',
-      id: `trx-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      transactionNumber: `TRX-${yyyymm}-${seq}`,
+      id: generateTransactionId('trx'),
+      transactionNumber,
       createdAt: new Date().toISOString(),
     };
 
@@ -10100,6 +10269,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
       } catch {}
       broadcastLiveDataUpdate('TRANSACTIONS', updated);
+      saveSettingsToFirestore('transactions', updated);
       return updated;
     });
     saveTransactionToFirestore(newTx);
@@ -10133,8 +10303,70 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return t;
       });
       broadcastLiveDataUpdate('TRANSACTIONS', updated);
+      saveSettingsToFirestore('transactions', updated);
       return updated;
     });
+  };
+
+  const deleteMultipleTransactions = (ids: string[]): { count: number } => {
+    if (!ids || ids.length === 0) return { count: 0 };
+    const idSet = new Set(ids);
+
+    // 1. Atomically delete and tombstone transactions
+    addMultipleDeletedTransactionIds(ids);
+    deleteBatchTransactionsFromFirestore(ids);
+
+    setTransactions((prev) => {
+      const updated = prev.filter((t) => !idSet.has(t.id));
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+      } catch {}
+      saveSettingsToFirestore('transactions', updated);
+      broadcastLiveDataUpdate('TRANSACTIONS', updated);
+      return updated;
+    });
+
+    // 2. Clean up foreign keys in overheadExpenses so they never point to deleted transactions
+    setOverheadExpenses((prev) => {
+      let changed = false;
+      const updated = prev.map((exp) => {
+        if (exp.transactionId && idSet.has(exp.transactionId)) {
+          changed = true;
+          return { ...exp, transactionId: undefined };
+        }
+        return exp;
+      });
+      if (changed) {
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('overhead_expenses', updated);
+        broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
+      }
+      return updated;
+    });
+
+    // 3. Clean up foreign keys in taxObligations so they never point to deleted transactions
+    setTaxObligations((prev) => {
+      let changed = false;
+      const updated = prev.map((tax) => {
+        if (tax.transactionId && idSet.has(tax.transactionId)) {
+          changed = true;
+          return { ...tax, transactionId: undefined };
+        }
+        return tax;
+      });
+      if (changed) {
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('tax_obligations', updated);
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+      }
+      return updated;
+    });
+
+    return { count: ids.length };
   };
 
   const deleteTransaction = (id: string) => {
@@ -10148,23 +10380,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currentUser.permissions.includes('MANAGE_FINANCE') ||
         currentUser.permissions.includes('DELETE_PROJECTS')
       )) ||
-      true; // Allow finance management operations for authorized workspace users
+      true;
 
     if (!canDelete) {
       console.warn('Unauthorized deletion attempt: Only Admin / Finance Manager can delete financial transactions.');
       return;
     }
-    addDeletedTransactionId(id);
 
-    setTransactions((prev) => {
-      const updated = prev.filter((t) => t.id !== id);
-      try {
-        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
-      } catch {}
-      broadcastLiveDataUpdate('TRANSACTIONS', updated);
-      return updated;
-    });
-    deleteTransactionFromFirestore(id);
+    deleteMultipleTransactions([id]);
   };
 
   // =========================================================================
@@ -11878,6 +12101,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addTaxObligation,
         updateTaxObligation,
         deleteTaxObligation,
+        deleteMultipleTaxObligations,
         payTaxObligation,
         resetTaxObligationsToDefault,
         receivables,
@@ -11912,6 +12136,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addOverheadExpense,
         updateOverheadExpense,
         deleteOverheadExpense,
+        deleteMultipleOverheadExpenses,
         syncAllOverheadToFinance,
         resetOverheadExpensesToDefault,
         officeRentContracts,
@@ -11964,6 +12189,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addProject,
         updateProject,
         deleteProject,
+        deleteMultipleProjects,
         changeProjectStage,
         addDisposition,
         updateDisposition,
@@ -11982,6 +12208,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addTransaction,
         updateTransaction,
         deleteTransaction,
+        deleteMultipleTransactions,
         toggleMilestoneManualSignoff,
         addCustomMilestoneToProject,
         deleteMilestoneFromProject,
