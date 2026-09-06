@@ -1278,6 +1278,7 @@ export const ensureInitialFirestoreSeed = async (
       deletedTaxObligations,
       deletedReceivables,
       deletedPayroll,
+      deletedOfficeRents,
     ] = await Promise.all([
       getDeletedSet('deleted_project_ids'),
       getDeletedSet('deleted_disposition_ids'),
@@ -1285,6 +1286,7 @@ export const ensureInitialFirestoreSeed = async (
       getDeletedSet('deleted_tax_ids'),
       getDeletedSet('deleted_receivable_ids'),
       getDeletedSet('deleted_payroll_ids'),
+      getDeletedSet('deleted_office_rent_ids'),
     ]);
 
     // 2. Ensure initial users exist in Firestore (batched, checks for any missing baseline members)
@@ -1557,12 +1559,25 @@ export const ensureInitialFirestoreSeed = async (
       }
     }
 
-    // 21. Ensure office rent contracts exist in settings if not present
+    // 21. Ensure office rent contracts exist in Firestore collection & settings if not present
     if (defaultOfficeRents !== undefined && defaultOfficeRents.length > 0) {
-      const rentRef = doc(db, FirestoreCollections.SETTINGS, 'office_rents');
-      const rentSnap = await getDoc(rentRef);
-      if (!rentSnap.exists()) {
-        await setDoc(rentRef, sanitizeForFirestore({ data: defaultOfficeRents, updatedAt: new Date().toISOString() }));
+      const rentSeedRef = doc(db, FirestoreCollections.SETTINGS, 'office_rents_seed_meta');
+      const rentSeedSnap = await getDoc(rentSeedRef);
+      if (!rentSeedSnap.exists()) {
+        const toSeed = defaultOfficeRents.filter((c) => !deletedOfficeRents.has(c.id));
+        if (toSeed.length > 0) {
+          const batch = writeBatch(db);
+          toSeed.forEach((c) => {
+            const cRef = doc(db, FirestoreCollections.OFFICE_RENTS, c.id);
+            batch.set(cRef, sanitizeForFirestore(c), { merge: true });
+          });
+          const rentSettingsRef = doc(db, FirestoreCollections.SETTINGS, 'office_rent_contracts');
+          batch.set(rentSettingsRef, sanitizeForFirestore({ data: toSeed, updatedAt: new Date().toISOString() }));
+          batch.set(rentSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+          await batch.commit();
+        } else {
+          await setDoc(rentSeedRef, { seeded: true, initializedAt: new Date().toISOString() });
+        }
       }
     }
 

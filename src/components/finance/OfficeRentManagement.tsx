@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Building2,
   Calendar,
@@ -25,6 +25,7 @@ import {
   Layers,
   ChevronDown,
   Percent,
+  Zap,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { OfficeRentContract, RentMonthlyScheduleItem } from '../../types';
@@ -48,9 +49,16 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
   } = useProjects();
 
   // Selected active contract
-  const [selectedContractId, setSelectedContractId] = useState<string>(
-    officeRentContracts[0]?.id || 'rent-contract-2026'
-  );
+  const [selectedContractId, setSelectedContractId] = useState<string>(() => {
+    return officeRentContracts[0]?.id || 'rent-contract-2026';
+  });
+
+  // Ensure selectedContractId follows when contracts list updates
+  useEffect(() => {
+    if (officeRentContracts.length > 0 && !officeRentContracts.some((c) => c.id === selectedContractId)) {
+      setSelectedContractId(officeRentContracts[0].id);
+    }
+  }, [officeRentContracts, selectedContractId]);
 
   // Modal State: Add/Edit Contract
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
@@ -97,13 +105,29 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
 
   const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
-  // Current active contract
+  // Current active contract with normalized schedules
   const activeContract = useMemo(() => {
-    return (
+    const raw =
       officeRentContracts.find((c) => c.id === selectedContractId) ||
       officeRentContracts[0] ||
-      null
-    );
+      null;
+    if (!raw) return null;
+    const rawList = (raw.monthlySchedules && raw.monthlySchedules.length > 0)
+      ? raw.monthlySchedules
+      : (raw.schedules && raw.schedules.length > 0)
+        ? raw.schedules
+        : [];
+    const normalizedList: RentMonthlyScheduleItem[] = rawList.map((item, idx) => ({
+      ...item,
+      id: item.id || `${raw.id}-m${idx + 1}`,
+      monthIndex: item.monthIndex ?? (idx + 1),
+      month: item.month ?? item.monthIndex ?? (idx + 1),
+    }));
+    return {
+      ...raw,
+      schedules: normalizedList,
+      monthlySchedules: normalizedList,
+    };
   }, [officeRentContracts, selectedContractId]);
 
   // Aggregate KPI metrics across active contract
@@ -172,16 +196,20 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
   };
 
   const handleOpenPayModal = (schedule: RentMonthlyScheduleItem) => {
-    if (!activeContract) return;
+    const currentActive = activeContract || officeRentContracts[0];
+    if (!currentActive) {
+      alert('Kontrak sewa tidak ditemukan.');
+      return;
+    }
     setSelectedScheduleItem({
-      contractId: activeContract.id,
+      contractId: currentActive.id,
       schedule,
     });
     setPaymentForm({
       paidDate: new Date().toISOString().slice(0, 10),
       paymentChannelId: schedule.paymentChannelId || 'BANK_TRANSFER_BCA',
       referenceNumber: `SEWA-${schedule.periodMonthYear}-PAY`,
-      notes: `Pembayaran sewa kantor ${schedule.monthName} ${activeContract.year}`,
+      notes: `Pembayaran sewa kantor ${schedule.monthName} ${currentActive.year}`,
       syncToLedger: true,
       syncToTax: true,
     });
@@ -192,9 +220,20 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
     e.preventDefault();
     if (!selectedScheduleItem) return;
 
-    payOfficeRentScheduleItem(
-      selectedScheduleItem.contractId,
-      selectedScheduleItem.schedule.month,
+    const contractIdToUse = selectedScheduleItem.contractId || activeContract?.id || officeRentContracts[0]?.id;
+    const scheduleIdToUse =
+      selectedScheduleItem.schedule.id ||
+      selectedScheduleItem.schedule.monthIndex ||
+      selectedScheduleItem.schedule.month;
+
+    if (!contractIdToUse || scheduleIdToUse === undefined) {
+      alert('Data jadwal termin sewa tidak valid.');
+      return;
+    }
+
+    const res = payOfficeRentScheduleItem(
+      contractIdToUse,
+      scheduleIdToUse,
       {
         paidDate: paymentForm.paidDate,
         paymentChannelId: paymentForm.paymentChannelId,
@@ -206,10 +245,52 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
     );
 
     setIsPayModalOpen(false);
-    setSyncToast({
-      message: `Pembayaran sewa bulan ${selectedScheduleItem.schedule.monthName} berhasil dicatat dan disinkronkan ke Buku Kas & Pajak PPh 4(2)!`,
-      type: 'success',
-    });
+
+    if (res && res.success === false) {
+      setSyncToast({
+        message: res.message || 'Gagal memproses pembayaran sewa kantor.',
+        type: 'info',
+      });
+    } else {
+      setSyncToast({
+        message: res?.message || `Pembayaran sewa bulan ${selectedScheduleItem.schedule.monthName} berhasil dicatat dan disinkronkan ke Buku Kas & Pajak PPh 4(2)!`,
+        type: 'success',
+      });
+    }
+    setTimeout(() => setSyncToast(null), 5000);
+  };
+
+  const handleQuickPayMonth = (schedule: RentMonthlyScheduleItem) => {
+    const currentActive = activeContract || officeRentContracts[0];
+    if (!currentActive) return;
+
+    const scheduleIdToUse = schedule.id || schedule.monthIndex || schedule.month;
+    if (scheduleIdToUse === undefined) return;
+
+    const res = payOfficeRentScheduleItem(
+      currentActive.id,
+      scheduleIdToUse,
+      {
+        paidDate: new Date().toISOString().slice(0, 10),
+        paymentChannelId: schedule.paymentChannelId || 'BANK_TRANSFER_BCA',
+        referenceNumber: `SEWA-${schedule.periodMonthYear}-QUICK`,
+        notes: `Pembayaran cepat sewa kantor bulan ${schedule.monthName} ${currentActive.year}`,
+        syncToLedger: true,
+        syncToTax: true,
+      }
+    );
+
+    if (res && res.success === false) {
+      setSyncToast({
+        message: res.message || 'Gagal memproses pembayaran sewa.',
+        type: 'info',
+      });
+    } else {
+      setSyncToast({
+        message: res?.message || `Pembayaran sewa ${schedule.monthName} berhasil disetor dan disinkronkan!`,
+        type: 'success',
+      });
+    }
     setTimeout(() => setSyncToast(null), 5000);
   };
 
@@ -734,18 +815,32 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
                   {/* Action */}
                   <td className="py-3 px-4 text-center">
                     {item.status === 'PAID' ? (
-                      <div className="text-[10px] text-emerald-700 font-semibold flex items-center justify-center gap-1">
-                        <Check className="w-3.5 h-3.5" />
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-md text-xs font-semibold">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Sudah Disetor</span>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => handleOpenPayModal(item)}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
-                        id={`btn-pay-month-${item.month}`}
-                      >
-                        Bayar Bulan Ini
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPayModal(item)}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                          id={`btn-pay-month-${item.monthIndex || item.month}`}
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Bayar Bulan Ini</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickPayMonth(item)}
+                          className="px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                          title="Bayar Cepat (1-Klik otomatis sinkron ke Kas & Pajak)"
+                          id={`btn-quick-pay-month-${item.monthIndex || item.month}`}
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>1-Klik</span>
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

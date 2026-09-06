@@ -173,7 +173,7 @@ import {
   isPurgedDummyGovTax,
 } from '../utils/storage';
 import { CERTIFICATION_MILESTONE_TEMPLATES } from '../utils/checklistGenerator';
-import { getServiceTypeName, getServiceTypeBadgeColor } from '../utils/formatters';
+import { getServiceTypeName, getServiceTypeBadgeColor, formatIDR } from '../utils/formatters';
 import { calculateMemberWorkload } from '../utils/workload';
 import {
   getActiveAccessToken,
@@ -2673,6 +2673,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             setInstitutionTypes(payload);
           } else if (type === 'TERM_DISTRIBUTION_SCHEMES' && Array.isArray(payload)) {
             setTermDistributionSchemes(payload);
+          } else if (type === 'OFFICE_RENTS' && Array.isArray(payload)) {
+            setOfficeRentContracts(payload);
+          } else if (type === 'DELETED_OFFICE_RENT_IDS' && Array.isArray(payload)) {
+            setDeletedOfficeRentIds(payload);
+            setOfficeRentContracts((current) => current.filter((c) => !payload.includes(c.id)));
           }
         };
       }
@@ -2775,6 +2780,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (e.key === STORAGE_KEY_COMPANY_LETTERHEAD) {
           const parsed = JSON.parse(e.newValue);
           if (parsed) setCompanyLetterhead(parsed);
+        } else if (e.key === STORAGE_KEY_OFFICE_RENTS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setOfficeRentContracts(parsed);
+        } else if (e.key === STORAGE_KEY_DELETED_OFFICE_RENT_IDS) {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setDeletedOfficeRentIds(parsed);
+            setOfficeRentContracts((current) => current.filter((c) => !parsed.includes(c.id)));
+          }
         }
       } catch (err) {
         console.warn('Storage sync error:', err);
@@ -3499,10 +3513,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     const unsubOfficeRents = subscribeToOfficeRentContracts((remoteContracts) => {
-      if (Array.isArray(remoteContracts)) {
+      if (Array.isArray(remoteContracts) && remoteContracts.length > 0) {
         const deletedSet = deletedOfficeRentIdsRef.current;
         const valid = remoteContracts.filter((c) => c && c.id && !deletedSet.has(c.id));
-        setOfficeRentContracts(valid);
+        if (valid.length > 0) {
+          setOfficeRentContracts(valid);
+        }
       }
     });
 
@@ -8732,7 +8748,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     id: string,
     updates: Partial<OfficeRentContract>
   ): { success: boolean; message?: string } => {
-    const target = officeRentContracts.find((c) => c.id === id);
+    let target = officeRentContracts.find((c) => c.id === id);
+    if (!target && officeRentContracts.length > 0) {
+      target = officeRentContracts[0];
+      id = target.id;
+    }
     if (!target) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
 
     const rawSchedules = updates.schedules || updates.monthlySchedules || target.schedules || target.monthlySchedules;
@@ -8745,7 +8765,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setOfficeRentContracts((prev) => {
-      const list = prev.map((c) => (c.id === id ? updated : c));
+      const exists = prev.some((c) => c.id === id);
+      const list = exists ? prev.map((c) => (c.id === id ? updated : c)) : [updated, ...prev];
       safeLocalStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(list));
       broadcastLiveDataUpdate('OFFICE_RENTS', list);
       saveOfficeRentContractToFirestore(updated);
@@ -8792,13 +8813,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       syncToTax?: boolean;
     }
   ): { success: boolean; message?: string; transaction?: FinancialTransaction } => {
-    const contract = officeRentContracts.find((c) => c.id === contractId);
+    let contract = officeRentContracts.find((c) => c.id === contractId);
+    if (!contract && officeRentContracts.length > 0) {
+      contract = officeRentContracts[0];
+    }
     if (!contract) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
 
-    const schedList = contract.schedules || contract.monthlySchedules || [];
-    const schedIndex = schedList.findIndex(
-      (s) => s.id === scheduleId || String(s.monthIndex) === String(scheduleId) || String(s.month) === String(scheduleId)
-    );
+    const schedList = (contract.schedules && contract.schedules.length > 0)
+      ? contract.schedules
+      : (contract.monthlySchedules && contract.monthlySchedules.length > 0)
+        ? contract.monthlySchedules
+        : [];
+
+    const schedIndex = schedList.findIndex((s, idx) => {
+      if (scheduleId === undefined || scheduleId === null || scheduleId === '') return false;
+      if (s.id && String(s.id).toLowerCase() === String(scheduleId).toLowerCase()) return true;
+      if (s.monthIndex !== undefined && String(s.monthIndex) === String(scheduleId)) return true;
+      if (s.month !== undefined && String(s.month) === String(scheduleId)) return true;
+      if (String(idx + 1) === String(scheduleId)) return true;
+      return false;
+    });
+
     if (schedIndex === -1) return { success: false, message: 'Jadwal termin sewa kantor tidak ditemukan.' };
 
     const sched = schedList[schedIndex];
@@ -8818,7 +8853,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         date: paidDate,
         description: `Beban Sewa Kantor: Bulan ${sched.monthName} ${contract.year} - ${contract.officeName}`,
         clientOrVendorName: contract.landlordName,
-        paymentMethod: paymentData.paymentChannelId,
+        paymentMethod: paymentData.paymentChannelId || 'BANK_TRANSFER_BCA',
         referenceNumber: paymentData.referenceNumber || `SEWA-${sched.periodMonthYear}`,
         status: 'CLEARED',
         notes: `Pembayaran sewa kantor bulanan ke landlord: ${paymentData.notes || '-'}`,
@@ -8877,7 +8912,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       notes: paymentData.notes || `Pembayaran sewa kantor bulan ${sched.monthName} ${contract.year} telah disetor.`,
     };
 
-    updateOfficeRentContract(contractId, {
+    updateOfficeRentContract(contract.id, {
       schedules: updatedSchedules,
       monthlySchedules: updatedSchedules,
     });

@@ -65,6 +65,8 @@ import { getTaxTypeBadge, TAX_TYPE_CONFIGS } from '../../utils/taxCalculations';
 import { TransactionModal } from './TransactionModal';
 import { CompanyCapitalModal } from './CompanyCapitalModal';
 import { PayrollReconciliationCard, PayrollReconciliationData } from './PayrollReconciliationCard';
+import { ChannelTransactionsDrilldownModal } from './ChannelTransactionsDrilldownModal';
+import { resolveTransactionToChannelId } from '../../utils/paymentChannelUtils';
 
 export type FinancialReportType =
   | 'ASSETS'
@@ -145,6 +147,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     companyLetterhead,
     payrollRecords,
     syncAllPayrollToFinance,
+    updateTransaction,
   } = useProjects();
 
   // Active Report Type
@@ -159,6 +162,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
   const [selectedProjectId, setSelectedProjectId] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [drilldownChannel, setDrilldownChannel] = useState<any | null>(null);
 
   // Payroll Accounting Basis & Synchronization State
   // ACCRUAL_GROSS: Beban Bruto Gaji (Standar Akuntansi SAK Laba Rugi = Rp 1.977.150.000)
@@ -561,6 +565,16 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       return true;
     });
   }, [transactions, dateBounds, statusFilter, selectedProjectId, categoryFilter, searchQuery]);
+
+  // Transactions associated with selected drilldown bank channel
+  const drilldownTransactions = useMemo(() => {
+    if (!drilldownChannel) return [];
+    const channelsList = paymentChannels && paymentChannels.length > 0 ? paymentChannels : activePaymentChannels;
+    return filteredTransactions.filter((t) => {
+      const assignedId = resolveTransactionToChannelId(t, channelsList);
+      return assignedId === drilldownChannel.id;
+    });
+  }, [drilldownChannel, filteredTransactions, paymentChannels, activePaymentChannels]);
 
   // Filtered Receivables (Piutang Usaha) synchronized strictly with dateBounds, project, status, and search
   const filteredReceivables = useMemo(() => {
@@ -4080,38 +4094,78 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     </tr>
                   </thead>
                   <tbody>
-                    {metrics.channelSummary.map((ch, idx) => (
-                      <tr key={ch.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                        <td className="py-2.5 px-4 text-slate-700 font-medium border-b border-slate-200">
-                          <div className="font-semibold text-slate-900">{ch.name}</div>
-                          <div className="text-[11px] text-slate-500 font-mono">
-                            Rek: <strong className="text-slate-700">{ch.accountNumber}</strong> • {ch.accountHolder}
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-3 text-center border-b border-slate-200 font-sans">
-                          <span className="inline-flex items-center gap-1 font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                            {ch.count} Mutasi
-                          </span>
-                          <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
-                            +{ch.incomeCount} / -{ch.expenseCount}
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold text-emerald-700 border-b border-slate-200">
-                          {ch.clearedIncome > 0 ? formatIDR(ch.clearedIncome) : '-'}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold text-rose-700 border-b border-slate-200">
-                          {ch.clearedExpense > 0 ? `(${formatIDR(ch.clearedExpense)})` : '-'}
-                        </td>
-                        <td className={`py-2.5 px-3 text-right font-mono font-semibold border-b border-slate-200 ${
-                          ch.netCashFlow > 0 ? 'text-emerald-700' : ch.netCashFlow < 0 ? 'text-rose-700' : 'text-slate-500'
-                        }`}>
-                          {ch.netCashFlow !== 0 ? (ch.netCashFlow > 0 ? `+${formatIDR(ch.netCashFlow)}` : `(${formatIDR(Math.abs(ch.netCashFlow))})`) : 'Rp 0'}
-                        </td>
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 border-b border-slate-200">
-                          {ch.balance >= 0 ? formatIDR(ch.balance) : `(${formatIDR(Math.abs(ch.balance))})`}
-                        </td>
-                      </tr>
-                    ))}
+                    {metrics.channelSummary.map((ch, idx) => {
+                      const isUnassigned = ch.id === 'UNASSIGNED_OTHER';
+                      return (
+                        <tr
+                          key={ch.id}
+                          onClick={() => setDrilldownChannel(ch)}
+                          className={`cursor-pointer transition-all ${
+                            isUnassigned
+                              ? 'bg-amber-50/70 hover:bg-amber-100/80 border-l-4 border-l-amber-500'
+                              : idx % 2 === 0
+                              ? 'bg-white hover:bg-slate-50'
+                              : 'bg-slate-50/50 hover:bg-slate-100/70'
+                          }`}
+                          title={`Klik untuk melihat rincian ${ch.count} transaksi pada saluran ${ch.name}`}
+                        >
+                          <td className="py-2.5 px-4 text-slate-700 font-medium border-b border-slate-200">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-slate-900">{ch.name}</span>
+                                  {isUnassigned && (
+                                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                      ⚠️ Non-Rekening Khusus
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-500 font-mono">
+                                  Rek: <strong className="text-slate-700">{ch.accountNumber}</strong> • {ch.accountHolder}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDrilldownChannel(ch);
+                                }}
+                                className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer shadow-2xs ${
+                                  isUnassigned
+                                    ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300'
+                                    : 'bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200'
+                                }`}
+                              >
+                                <span>Lihat {ch.count} Transaksi</span>
+                                <span>&rarr;</span>
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-center border-b border-slate-200 font-sans">
+                            <span className="inline-flex items-center gap-1 font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                              {ch.count} Mutasi
+                            </span>
+                            <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                              +{ch.incomeCount} / -{ch.expenseCount}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-semibold text-emerald-700 border-b border-slate-200">
+                            {ch.clearedIncome > 0 ? formatIDR(ch.clearedIncome) : '-'}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-semibold text-rose-700 border-b border-slate-200">
+                            {ch.clearedExpense > 0 ? `(${formatIDR(ch.clearedExpense)})` : '-'}
+                          </td>
+                          <td className={`py-2.5 px-3 text-right font-mono font-semibold border-b border-slate-200 ${
+                            ch.netCashFlow > 0 ? 'text-emerald-700' : ch.netCashFlow < 0 ? 'text-rose-700' : 'text-slate-500'
+                          }`}>
+                            {ch.netCashFlow !== 0 ? (ch.netCashFlow > 0 ? `+${formatIDR(ch.netCashFlow)}` : `(${formatIDR(Math.abs(ch.netCashFlow))})`) : 'Rp 0'}
+                          </td>
+                          <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 border-b border-slate-200">
+                            {ch.balance >= 0 ? formatIDR(ch.balance) : `(${formatIDR(Math.abs(ch.balance))})`}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     <tr className="bg-emerald-50/70 font-bold border-b-2 border-emerald-500 text-slate-900">
                       <td className="py-2.5 px-4 uppercase text-emerald-950 font-bold">Subtotal Kas &amp; Saluran Bank</td>
                       <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800">
@@ -6492,6 +6546,16 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
       <CompanyCapitalModal
         isOpen={isCapitalModalOpen}
         onClose={() => setIsCapitalModalOpen(false)}
+      />
+
+      {/* Channel Transactions Drilldown & Batch Assign Modal */}
+      <ChannelTransactionsDrilldownModal
+        isOpen={!!drilldownChannel}
+        onClose={() => setDrilldownChannel(null)}
+        channel={drilldownChannel}
+        transactions={drilldownTransactions}
+        paymentChannels={paymentChannels && paymentChannels.length > 0 ? paymentChannels : activePaymentChannels}
+        onUpdateTransaction={updateTransaction}
       />
     </div>
   );

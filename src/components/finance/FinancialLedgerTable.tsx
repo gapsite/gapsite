@@ -40,7 +40,11 @@ import {
 import { TransactionCategoryManagerModal } from './TransactionCategoryManagerModal';
 import { PaymentChannelManagerModal } from './PaymentChannelManagerModal';
 import { BatchDeleteConfirmModal } from '../common/BatchDeleteConfirmModal';
-import { Settings, Landmark } from 'lucide-react';
+import { Settings, Landmark, AlertTriangle } from 'lucide-react';
+import {
+  resolveTransactionToChannelId,
+  isTransactionUnassigned,
+} from '../../utils/paymentChannelUtils';
 
 interface FinancialLedgerTableProps {
   transactions: FinancialTransaction[];
@@ -63,10 +67,11 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
   onUpdateTransactionStatus,
   onSelectProject,
 }) => {
-  const { isMasterAdmin, transactionCategories, paymentChannels, deleteMultipleTransactions } = useProjects();
+  const { isMasterAdmin, transactionCategories, paymentChannels, deleteMultipleTransactions, updateTransaction } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [channelFilter, setChannelFilter] = useState<string>('ALL');
   const [projectFilter, setProjectFilter] = useState<string>('ALL');
   const [dateRangeFilter, setDateRangeFilter] = useState<'ALL' | 'TODAY' | '7DAYS' | 'THIS_MONTH' | 'LAST_MONTH'>('ALL');
   const [selectedReceipt, setSelectedReceipt] = useState<FinancialTransaction | null>(null);
@@ -75,8 +80,18 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
   const [selectedTransactionIds, setSelectedTransactionIds] = useState<string[]>([]);
   const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+  const [isBatchAssignModalOpen, setIsBatchAssignModalOpen] = useState(false);
+  const [batchTargetChannel, setBatchTargetChannel] = useState<string>(() => {
+    return paymentChannels && paymentChannels.length > 0 ? paymentChannels[0].id : 'BANK_TRANSFER_BCA';
+  });
+  const [batchAssignSuccess, setBatchAssignSuccess] = useState<string | null>(null);
 
-  // Date filtering logic
+  // Count unassigned transactions across all transactions
+  const unassignedCount = useMemo(() => {
+    return (transactions || []).filter((t) => isTransactionUnassigned(t, paymentChannels)).length;
+  }, [transactions, paymentChannels]);
+
+  // Date and attribute filtering logic
   const filteredTransactions = useMemo(() => {
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
@@ -97,6 +112,16 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
 
       // Category Filter
       if (categoryFilter !== 'ALL' && t.category !== categoryFilter) return false;
+
+      // Bank / Payment Channel Filter
+      if (channelFilter !== 'ALL') {
+        if (channelFilter === 'UNASSIGNED') {
+          if (!isTransactionUnassigned(t, paymentChannels)) return false;
+        } else {
+          const assignedId = resolveTransactionToChannelId(t, paymentChannels);
+          if (assignedId !== channelFilter) return false;
+        }
+      }
 
       // Project Filter
       if (projectFilter !== 'ALL') {
@@ -140,7 +165,7 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
       seenIds.add(normalizedId);
       return true;
     });
-  }, [transactions, typeFilter, categoryFilter, projectFilter, dateRangeFilter, searchQuery]);
+  }, [transactions, typeFilter, categoryFilter, channelFilter, paymentChannels, projectFilter, dateRangeFilter, searchQuery]);
 
   const isAllSelected =
     filteredTransactions.length > 0 &&
@@ -171,6 +196,24 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
     .filter((t) => t.type === 'EXPENSE')
     .reduce((s, t) => s + t.amountIDR, 0);
   const selectedNet = selectedIncomeTotal - selectedExpenseTotal;
+
+  const handleBatchAssignChannels = () => {
+    if (selectedTransactionIds.length === 0) return;
+    const target = paymentChannels.find((c) => c.id === batchTargetChannel);
+    const targetLabel = target ? target.name : batchTargetChannel;
+
+    selectedTransactionIds.forEach((id) => {
+      updateTransaction(id, {
+        paymentMethod: batchTargetChannel as any,
+      });
+    });
+
+    const count = selectedTransactionIds.length;
+    setSelectedTransactionIds([]);
+    setIsBatchAssignModalOpen(false);
+    setBatchAssignSuccess(`Berhasil menautkan ${count} transaksi ke saluran ${targetLabel}.`);
+    setTimeout(() => setBatchAssignSuccess(null), 4000);
+  };
 
   // Export to CSV function
   const handleExportCSV = () => {
@@ -395,12 +438,37 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
             )}
           </select>
 
+          {/* Bank / Payment Channel Filter */}
+          <select
+            value={channelFilter}
+            onChange={(e) => setChannelFilter(e.target.value)}
+            className={`px-2.5 py-1.5 text-xs rounded-lg border font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none max-w-[260px] truncate transition-all ${
+              channelFilter === 'UNASSIGNED'
+                ? 'bg-amber-100 border-amber-400 text-amber-900 font-bold ring-1 ring-amber-400/50'
+                : 'bg-white border-slate-300 text-slate-700'
+            }`}
+            title="Filter berdasarkan Saluran Rekening Bank"
+          >
+            <option value="ALL">🏦 Semua Saluran Rekening</option>
+            <option value="UNASSIGNED" className="font-bold text-amber-800">
+              ⚠️ Belum Ada Saluran Bank ({unassignedCount})
+            </option>
+            <optgroup label="── Rekening Bank Terdaftar ──">
+              {paymentChannels.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.accountNumber ? `(${c.accountNumber})` : ''}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+
           {/* Reset Filters button if any are non-default */}
-          {(typeFilter !== 'ALL' || categoryFilter !== 'ALL' || projectFilter !== 'ALL' || dateRangeFilter !== 'ALL' || searchQuery) && (
+          {(typeFilter !== 'ALL' || categoryFilter !== 'ALL' || channelFilter !== 'ALL' || projectFilter !== 'ALL' || dateRangeFilter !== 'ALL' || searchQuery) && (
             <button
               onClick={() => {
                 setTypeFilter('ALL');
                 setCategoryFilter('ALL');
+                setChannelFilter('ALL');
                 setProjectFilter('ALL');
                 setDateRangeFilter('ALL');
                 setSearchQuery('');
@@ -425,6 +493,40 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
             </strong></span>
           </div>
         </div>
+
+        {/* Unassigned Warning Banner */}
+        {channelFilter === 'UNASSIGNED' && (
+          <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold text-amber-950">
+                  Menampilkan {filteredTransactions.length} Transaksi Non-Rekening Khusus (Belum Terhubung ke Saluran Bank)
+                </div>
+                <div className="text-[11px] text-amber-800">
+                  Transaksi ini masuk ke kategori <em>"Transaksi Kas / Saluran Lainnya"</em> di Laporan Keuangan. Centang transaksi di bawah lalu klik <strong>Tautkan Saluran Bank</strong> untuk memindahkannya ke rekening resmi (BCA, Mandiri, BRI, Kas Kecil, dll).
+                </div>
+              </div>
+            </div>
+            {filteredTransactions.length > 0 && selectedTransactionIds.length === 0 && (
+              <button
+                type="button"
+                onClick={handleToggleSelectAll}
+                className="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs font-bold shrink-0 transition-colors shadow-2xs"
+              >
+                Pilih Semua {filteredTransactions.length} Transaksi Ini
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Batch Feedback Notification */}
+        {batchAssignSuccess && (
+          <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-800 font-semibold flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{batchAssignSuccess}</span>
+          </div>
+        )}
       </div>
 
       {/* Ledger Table */}
@@ -463,6 +565,14 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
               >
                 <X className="w-3 h-3" />
                 <span>Batal</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsBatchAssignModalOpen(true)}
+                className="px-3 py-1 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Tautkan Saluran Bank ({selectedTransactionIds.length})</span>
               </button>
               <button
                 type="button"
@@ -812,6 +922,73 @@ export const FinancialLedgerTable: React.FC<FinancialLedgerTableProps> = ({
         isOpen={isPaymentChannelManagerOpen}
         onClose={() => setIsPaymentChannelManagerOpen(false)}
       />
+
+      {/* Batch Assign Bank Channel Modal */}
+      {isBatchAssignModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-100 text-amber-800 border border-amber-300">
+                  <CreditCard className="w-5 h-5 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Tautkan Saluran Rekening Bank</h3>
+                  <p className="text-[11px] text-slate-500">{selectedTransactionIds.length} transaksi terpilih</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBatchAssignModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-slate-600">
+                Pilih rekening bank tujuan. Semua transaksi yang Anda centang akan otomatis diubah saluran pembayarannya ke rekening ini:
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Rekening Bank / Saluran Pembayaran:
+                </label>
+                <select
+                  value={batchTargetChannel}
+                  onChange={(e) => setBatchTargetChannel(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                >
+                  {paymentChannels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.accountNumber ? `(Rek: ${c.accountNumber})` : ''} - {c.accountHolder || 'Aktif'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBatchAssignModalOpen(false)}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchAssignChannels}
+                className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Terapkan ke {selectedTransactionIds.length} Transaksi</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
