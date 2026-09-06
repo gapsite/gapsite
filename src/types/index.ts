@@ -684,6 +684,8 @@ export type RentMonthlyScheduleItem = OfficeRentMonthlyScheduleItem;
 
 export type OfficeRentStatus = 'ACTIVE' | 'EXTENDED' | 'TERMINATED' | 'DRAFT';
 
+export type OfficeRentPaymentScheme = 'MONTHLY' | 'LUMP_SUM_ANNUAL';
+
 export interface OfficeRentContract {
   id: string;
   contractNumber: string; // e.g. "SPK-SEWA/JKT/2025/001"
@@ -701,6 +703,19 @@ export interface OfficeRentContract {
   year: number; // Tahun Anggaran Sewa e.g. 2025, 2026
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
+  paymentScheme?: OfficeRentPaymentScheme; // 'MONTHLY' (default) | 'LUMP_SUM_ANNUAL'
+  // Lump Sum 1 Tahun Tracking
+  lumpSumStatus?: 'UNPAID' | 'PAID';
+  lumpSumPaidDate?: string;
+  lumpSumPaymentChannelId?: string;
+  lumpSumPaymentMethod?: string;
+  lumpSumReferenceNumber?: string;
+  lumpSumTransactionId?: string;
+  lumpSumTaxObligationId?: string;
+  lumpSumGrossTotalIDR?: number;
+  lumpSumPph42AmountIDR?: number;
+  lumpSumNetPaymentIDR?: number;
+  lumpSumNotes?: string;
   tenureMonths?: number; // Default 12
   annualRentAmountIDR?: number; // Harga Sewa Per Tahun
   annualBaseRentIDR?: number; // Alias for annualRentAmountIDR

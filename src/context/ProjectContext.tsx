@@ -661,6 +661,18 @@ interface ProjectContextType {
       syncToTax?: boolean;
     }
   ) => { success: boolean; message?: string; transaction?: FinancialTransaction };
+  payOfficeRentLumpSum: (
+    contractId: string,
+    paymentData: {
+      paidDate?: string;
+      paymentChannelId: string;
+      referenceNumber?: string;
+      notes?: string;
+      syncToLedger?: boolean;
+      syncToTax?: boolean;
+      includeServiceCharge?: boolean;
+    }
+  ) => { success: boolean; message?: string; transaction?: FinancialTransaction };
   syncAllOfficeRentToFinance: () => {
     success: boolean;
     message: string;
@@ -8723,15 +8735,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const target = officeRentContracts.find((c) => c.id === id);
     if (!target) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
 
+    const rawSchedules = updates.schedules || updates.monthlySchedules || target.schedules || target.monthlySchedules;
+
     const updated: OfficeRentContract = {
       ...target,
       ...updates,
+      ...(rawSchedules ? { schedules: rawSchedules, monthlySchedules: rawSchedules } : {}),
+      updatedAt: new Date().toISOString(),
     };
 
     setOfficeRentContracts((prev) => {
       const list = prev.map((c) => (c.id === id ? updated : c));
+      safeLocalStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(list));
       broadcastLiveDataUpdate('OFFICE_RENTS', list);
       saveOfficeRentContractToFirestore(updated);
+      saveSettingsToFirestore('office_rent_contracts', list);
       return list;
     });
 
@@ -8744,7 +8762,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setOfficeRentContracts((prev) => {
       const updated = prev.filter((c) => c.id !== id);
+      safeLocalStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(updated));
       broadcastLiveDataUpdate('OFFICE_RENTS', updated);
+      saveSettingsToFirestore('office_rent_contracts', updated);
       return updated;
     });
 
@@ -8783,9 +8803,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const sched = schedList[schedIndex];
     const paidDate = paymentData.paidDate || new Date().toISOString().split('T')[0];
-    const dateObj = new Date(paidDate);
-    const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-    const seq = Math.floor(100 + Math.random() * 900);
 
     let newTx: FinancialTransaction | undefined;
     let txId = sched.transactionId;
@@ -8793,8 +8810,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (paymentData.syncToLedger !== false) {
       newTx = {
-        id: `trx-sewa-${sched.id}`,
-        transactionNumber: `TRX-SEWA-${yyyymm}-${seq}`,
+        id: generateTransactionId('trx-sewa', sched.id),
+        transactionNumber: generateNextTransactionNumber(transactions, 'TRX-SEWA', paidDate),
         type: 'EXPENSE',
         category: 'OPERATIONAL_OFFICE',
         amountIDR: sched.grossTotalIDR,
@@ -8814,6 +8831,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         saveTransactionToFirestore(newTx!);
+        saveSettingsToFirestore('transactions', updated);
         return updated;
       });
       txId = newTx.id;
@@ -8846,7 +8864,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       taxId = newTax.id;
     }
 
-    const updatedSchedules = [...contract.schedules];
+    const updatedSchedules = [...schedList];
     updatedSchedules[schedIndex] = {
       ...sched,
       status: 'PAID',
@@ -8859,11 +8877,140 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       notes: paymentData.notes || `Pembayaran sewa kantor bulan ${sched.monthName} ${contract.year} telah disetor.`,
     };
 
-    updateOfficeRentContract(contractId, { schedules: updatedSchedules });
+    updateOfficeRentContract(contractId, {
+      schedules: updatedSchedules,
+      monthlySchedules: updatedSchedules,
+    });
 
     return {
       success: true,
       message: `Termin sewa kantor bulan ${sched.monthName} berhasil dibayar & tercatat ke Buku Kas dan Pajak PPh 4(2)!`,
+      transaction: newTx,
+    };
+  };
+
+  const payOfficeRentLumpSum = (
+    contractId: string,
+    paymentData: {
+      paidDate?: string;
+      paymentChannelId: string;
+      referenceNumber?: string;
+      notes?: string;
+      syncToLedger?: boolean;
+      syncToTax?: boolean;
+      includeServiceCharge?: boolean;
+    }
+  ): { success: boolean; message?: string; transaction?: FinancialTransaction } => {
+    const contract = officeRentContracts.find((c) => c.id === contractId);
+    if (!contract) return { success: false, message: 'Kontrak sewa kantor tidak ditemukan.' };
+
+    const paidDate = paymentData.paidDate || new Date().toISOString().split('T')[0];
+    const annualRent = contract.annualBaseRentIDR || contract.annualRentAmountIDR || 0;
+    const tenureMonths = contract.tenureMonths || 12;
+    const includeServiceCharge = paymentData.includeServiceCharge !== false;
+    const totalServiceCharge = includeServiceCharge ? (contract.monthlyServiceChargeIDR || 0) * tenureMonths : 0;
+    const grossTotal = annualRent + totalServiceCharge;
+    const pph42Rate = contract.pph42RatePercent ?? 10;
+    const pph42Amount = Math.round(grossTotal * (pph42Rate / 100));
+    const isSubjectToPpn = contract.isSubjectToPpn ?? contract.hasPpn ?? false;
+    const ppnRate = isSubjectToPpn ? (contract.ppnRatePercent || 11) : 0;
+    const ppnAmount = ppnRate > 0 ? Math.round(grossTotal * (ppnRate / 100)) : 0;
+    const netPayment = grossTotal - pph42Amount + ppnAmount;
+
+    let newTx: FinancialTransaction | undefined;
+    let txId = contract.lumpSumTransactionId;
+    let taxId = contract.lumpSumTaxObligationId;
+
+    if (paymentData.syncToLedger !== false) {
+      newTx = {
+        id: generateTransactionId('trx-sewa-lumpsum', contract.id),
+        transactionNumber: generateNextTransactionNumber(transactions, 'TRX-SEWA-LUMPSUM', paidDate),
+        type: 'EXPENSE',
+        category: 'OPERATIONAL_OFFICE',
+        amountIDR: grossTotal,
+        date: paidDate,
+        description: `Beban Sewa Kantor: Pelunasan Lump Sum 1 Tahun ${contract.year} - ${contract.officeName}`,
+        clientOrVendorName: contract.landlordName,
+        paymentMethod: paymentData.paymentChannelId,
+        referenceNumber: paymentData.referenceNumber || `SEWA-LUMPSUM-${contract.year}`,
+        status: 'CLEARED',
+        notes: `Pembayaran sewa kantor sekaligus 1 tahun (Lump Sum) dimuka: ${paymentData.notes || '-'}`,
+        recordedBy: currentUser.name || 'Finance Officer',
+        createdAt: new Date().toISOString(),
+      };
+
+      setTransactions((prev) => {
+        const updated = deduplicateTransactions([newTx!, ...prev]);
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        saveTransactionToFirestore(newTx!);
+        saveSettingsToFirestore('transactions', updated);
+        return updated;
+      });
+      txId = newTx.id;
+    }
+
+    if (paymentData.syncToTax !== false && pph42Amount > 0) {
+      const newTax: TaxObligation = {
+        id: `tax-pph42-lumpsum-${contract.id}`,
+        taxType: 'PPH_4_2',
+        taxPeriod: `${contract.year}-01`,
+        taxYear: contract.year,
+        title: `PPh Final Pasal 4(2) 10% Sewa Gedung Kantor (Lump Sum 1 Tahun) - ${contract.officeName} ${contract.year}`,
+        description: `Potongan PPh Final Pasal 4(2) 10% atas Pelunasan Sewa Kantor Tahunan (Lump Sum 1 Tahun) ${contract.officeName} Tahun ${contract.year}`,
+        taxAmount: pph42Amount,
+        paidAmount: 0,
+        remainingAmount: pph42Amount,
+        dueDate: `${contract.year}-02-15`,
+        status: 'TERHUTANG',
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser.name || 'Finance Officer',
+      };
+
+      setTaxObligations((prev) => {
+        const updated = [newTax, ...prev];
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        saveSettingsToFirestore('tax_obligations', updated);
+        return updated;
+      });
+      taxId = newTax.id;
+    }
+
+    // Mark all monthly schedules as PAID under this lump sum payment
+    const schedList = contract.schedules || contract.monthlySchedules || [];
+    const updatedSchedules = schedList.map((sched) => ({
+      ...sched,
+      status: 'PAID' as const,
+      paidDate,
+      paymentChannelId: paymentData.paymentChannelId,
+      paymentMethod: paymentData.paymentChannelId,
+      referenceNumber: paymentData.referenceNumber || `SEWA-LUMPSUM-${contract.year}`,
+      transactionId: txId,
+      taxObligationId: taxId,
+      notes: `Dilunasi sekaligus via Pembayaran Lump Sum 1 Tahun (${paidDate})`,
+    }));
+
+    updateOfficeRentContract(contractId, {
+      paymentScheme: 'LUMP_SUM_ANNUAL',
+      lumpSumStatus: 'PAID',
+      lumpSumPaidDate: paidDate,
+      lumpSumPaymentChannelId: paymentData.paymentChannelId,
+      lumpSumPaymentMethod: paymentData.paymentChannelId,
+      lumpSumReferenceNumber: paymentData.referenceNumber || `SEWA-LUMPSUM-${contract.year}`,
+      lumpSumTransactionId: txId,
+      lumpSumTaxObligationId: taxId,
+      lumpSumGrossTotalIDR: grossTotal,
+      lumpSumPph42AmountIDR: pph42Amount,
+      lumpSumNetPaymentIDR: netPayment,
+      lumpSumNotes: paymentData.notes || 'Pelunasan sewa kantor tahunan Lump Sum 1 Tahun.',
+      schedules: updatedSchedules,
+      monthlySchedules: updatedSchedules,
+    });
+
+    return {
+      success: true,
+      message: `Pelunasan sewa kantor Lump Sum 1 Tahun "${contract.officeName}" sebesar ${formatIDR(grossTotal)} berhasil dicatat ke Buku Kas & Pajak PPh 4(2)!`,
       transaction: newTx,
     };
   };
@@ -8887,7 +9034,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newTaxes: TaxObligation[] = [];
 
     officeRentContracts.forEach((contract) => {
-      contract.schedules.forEach((sched) => {
+      const schedList = contract.schedules || contract.monthlySchedules || [];
+      schedList.forEach((sched) => {
         if (sched.status === 'PAID') {
           totalAmountIDR += sched.grossTotalIDR;
           syncedCount++;
@@ -12144,6 +12292,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateOfficeRentContract,
         deleteOfficeRentContract,
         payOfficeRentScheduleItem,
+        payOfficeRentLumpSum,
         syncAllOfficeRentToFinance,
         resetOfficeRentContractsToDefault,
         institutionTypes,
