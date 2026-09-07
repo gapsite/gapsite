@@ -83,14 +83,19 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
       encodeURIComponent(JSON.stringify({ projects, dispositions, exportedAt: new Date().toISOString() }, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `VERIX_TKDN_CRM_Files_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `KCK_CRM_Data_Backup_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
   };
 
   const handlePrint = () => {
-    window.print();
+    if (onOpenFinancialReports) {
+      onOpenFinancialReports();
+      onClose();
+    } else {
+      window.print();
+    }
   };
 
   return (
@@ -218,10 +223,10 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-800">
-                    Print Executive Portfolio Report
+                    Print / Export PDF Official Report
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    Formats current dashboard view for physical printing or Save as PDF.
+                    Buka lembar cetak laporan resmi dan ekspor langsung ke dokumen file PDF (.pdf).
                   </p>
                 </div>
               </div>

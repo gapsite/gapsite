@@ -1,5 +1,5 @@
 {
-  "name": "TKDN & Legal Consulting CRM",
+  "name": "KCK CRM",
   "description": "Internal management dashboard for tracking consulting projects, licensing status, TKDN certification pipelines, financial income and expense ledger, employee payroll and salary disbursements, PPN & PPh tax liability obligations, bank credit facilities, document uploads, and team job dispositions.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   X,
   Printer,
@@ -16,11 +16,14 @@ import {
   Briefcase,
   Award,
   FileCheck,
+  FileDown,
+  RefreshCw,
 } from 'lucide-react';
 import { PayrollPayment } from '../../types';
 import { useProjects } from '../../context/ProjectContext';
 import { formatIDR } from '../../utils/formatters';
 import { terbilangRupiah } from '../../utils/payrollCalculations';
+import { exportElementToPdf, safePrintDocument } from '../../utils/pdfExport';
 
 interface PayslipModalProps {
   isOpen: boolean;
@@ -35,14 +38,38 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({
 }) => {
   const { paymentChannels, companyLetterhead } = useProjects();
   const [copied, setCopied] = React.useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen || !payroll) return null;
 
   const sourceChannel = paymentChannels?.find((c) => c.id === payroll.paymentMethod);
 
+  const handleExportPDF = async () => {
+    if (!printAreaRef.current) return;
+    setIsExporting(true);
+    try {
+      const cleanEmp = payroll.employeeName.replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `Slip_Gaji_${cleanEmp}_${payroll.period.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      await exportElementToPdf(printAreaRef.current, {
+        orientation: 'portrait',
+        filename,
+        scale: 2,
+      });
+    } catch (err) {
+      console.error('Gagal mengekspor PDF Slip Gaji:', err);
+      alert('Terjadi kendala saat mengekspor Slip Gaji ke PDF.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handlePrint = () => {
-    window.print();
+    if (printAreaRef.current) {
+      safePrintDocument('payslip-print-sheet');
+    } else {
+      window.print();
+    }
   };
 
   const handleCopySummary = () => {
@@ -130,11 +157,22 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
 
             <button
               type="button"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              title="Unduh Slip Gaji sebagai file PDF resmi"
+            >
+              {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+              <span>{isExporting ? 'Mengekspor...' : 'Ekspor PDF'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handlePrint}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Cetak / Simpan PDF</span>
+              <span>Cetak</span>
             </button>
 
             <button
@@ -149,7 +187,7 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
         </div>
 
         {/* Printable Payslip Body */}
-        <div ref={printAreaRef} className="p-6 sm:p-8 bg-white text-slate-900 space-y-6">
+        <div id="payslip-print-sheet" ref={printAreaRef} className="p-6 sm:p-8 bg-white text-slate-900 space-y-6">
           {/* Header Kop Surat Perusahaan */}
           <div className="border-b-2 border-slate-900 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -495,10 +533,19 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
             <button
               type="button"
               onClick={handlePrint}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-300 transition-colors cursor-pointer"
             >
-              <Printer className="w-4 h-4" />
-              <span>Cetak Slip Gaji</span>
+              <Printer className="w-4 h-4 text-slate-600" />
+              <span>Cetak</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            >
+              {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+              <span>{isExporting ? 'Mengekspor...' : 'Ekspor PDF'}</span>
             </button>
           </div>
         </div>

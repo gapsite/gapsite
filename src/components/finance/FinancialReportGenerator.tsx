@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   FileSpreadsheet,
   Printer,
@@ -67,6 +67,7 @@ import { CompanyCapitalModal } from './CompanyCapitalModal';
 import { PayrollReconciliationCard, PayrollReconciliationData } from './PayrollReconciliationCard';
 import { ChannelTransactionsDrilldownModal } from './ChannelTransactionsDrilldownModal';
 import { resolveTransactionToChannelId } from '../../utils/paymentChannelUtils';
+import { exportElementToPdf, safePrintDocument } from '../../utils/pdfExport';
 
 export type FinancialReportType =
   | 'ASSETS'
@@ -172,6 +173,13 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
   const [syncPayrollFeedback, setSyncPayrollFeedback] = useState<string | null>(null);
 
   // Report Customization Options
+  const reportSheetRef = useRef<HTMLDivElement>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<{ percent: number; step: string } | null>(null);
+  const [exportSuccessMessage, setExportSuccessMessage] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+
   const [showLetterhead, setShowLetterhead] = useState<boolean>(true);
   const [showSignatures, setShowSignatures] = useState<boolean>(true);
   const [showNotes, setShowNotes] = useState<boolean>(true);
@@ -1989,9 +1997,48 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     document.body.removeChild(link);
   };
 
-  // Print Handler
+  // Direct PDF Export Handler with orientation option
+  const handleExportPDF = async (orientation: 'portrait' | 'landscape' = 'portrait') => {
+    const sheet = reportSheetRef.current || document.getElementById('formal-financial-report-sheet');
+    if (!sheet) {
+      alert('Elemen laporan keuangan tidak ditemukan untuk diekspor.');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    setIsExportMenuOpen(false);
+    setExportError(null);
+    setExportProgress({ percent: 10, step: 'Mempersiapkan dokumen laporan...' });
+
+    const reportSlug = reportType.toLowerCase().replace(/_/g, '_');
+    const dateSlug = new Date().toISOString().slice(0, 10);
+    const filename = `KCK_Laporan_${reportSlug}_${dateSlug}.pdf`;
+
+    try {
+      await exportElementToPdf(sheet, {
+        orientation,
+        filename,
+        scale: 2,
+        onProgress: (status) => setExportProgress(status),
+      });
+
+      setExportSuccessMessage(`Laporan PDF "${filename}" berhasil diekspor dan diunduh ke perangkat Anda.`);
+      setTimeout(() => {
+        setExportSuccessMessage(null);
+      }, 5000);
+    } catch (err: any) {
+      console.error('Gagal mengekspor PDF:', err);
+      setExportError(err?.message || 'Terjadi kendala saat merender file PDF.');
+      setTimeout(() => setExportError(null), 6000);
+    } finally {
+      setIsExportingPdf(false);
+      setExportProgress(null);
+    }
+  };
+
+  // Safe Print Handler with Fallback
   const handlePrint = () => {
-    window.print();
+    safePrintDocument('formal-financial-report-sheet');
   };
 
   // Copy Executive Brief to Clipboard
@@ -2025,8 +2072,64 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
 
   return (
     <div className="space-y-6">
+      {/* Export PDF Progress Modal */}
+      {isExportingPdf && exportProgress && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 max-w-sm w-full space-y-4 text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-xs">
+              <FileDown className="w-7 h-7 animate-bounce" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Mengekspor Dokumen PDF</h3>
+              <p className="text-xs text-slate-500 mt-1">{exportProgress.step}</p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-emerald-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${exportProgress.percent}%` }}
+              />
+            </div>
+            <div className="text-[11px] font-mono text-slate-400">
+              {exportProgress.percent}% • Menyusun format resmi A4...
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP HEADER & REPORT CONTROLS (Hidden when printing) */}
       <div className="print:hidden space-y-4">
+        {/* Success Alert Banner */}
+        {exportSuccessMessage && (
+          <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl p-3.5 flex items-center justify-between shadow-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 text-xs font-semibold">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span>{exportSuccessMessage}</span>
+            </div>
+            <button
+              onClick={() => setExportSuccessMessage(null)}
+              className="text-emerald-700 hover:text-emerald-900 text-xs font-bold px-2 py-0.5"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
+
+        {/* Error Alert Banner */}
+        {exportError && (
+          <div className="bg-rose-50 border border-rose-300 text-rose-900 rounded-xl p-3.5 flex items-center justify-between shadow-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 text-xs font-semibold">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>{exportError}</span>
+            </div>
+            <button
+              onClick={() => setExportError(null)}
+              className="text-rose-700 hover:text-rose-900 text-xs font-bold px-2 py-0.5"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
+
         {/* Executive Banner & Title */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -2102,13 +2205,93 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
               <span>+ Catat Mutasi / Aset</span>
             </button>
 
+            {/* Direct PDF Export Action with Orientation Selector */}
+            <div className="relative">
+              <div className="inline-flex rounded-xl shadow-xs">
+                <button
+                  onClick={() => handleExportPDF('portrait')}
+                  disabled={isExportingPdf}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-l-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                  title="Unduh Laporan Keuangan Format PDF (A4 Portrait)"
+                >
+                  {isExportingPdf ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileDown className="w-4 h-4 stroke-[2.5]" />
+                  )}
+                  <span>{isExportingPdf ? 'Mengekspor...' : 'Ekspor PDF'}</span>
+                </button>
+                <button
+                  onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                  disabled={isExportingPdf}
+                  className="px-2 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-500 text-white rounded-r-xl border-l border-emerald-500/40 text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
+                  title="Pilihan Format & Orientasi Ekspor PDF"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExportMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+
+              {/* PDF Options Dropdown Menu */}
+              {isExportMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-20"
+                    onClick={() => setIsExportMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-30 p-1.5 animate-in fade-in zoom-in-95 duration-100 text-xs">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Opsi Ekspor Dokumen
+                    </div>
+                    <button
+                      onClick={() => handleExportPDF('portrait')}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-emerald-600" />
+                        <div>
+                          <div className="font-bold text-slate-800">PDF Portrait (A4 Tegak)</div>
+                          <div className="text-[10px] text-slate-500">Format standar laporan resmi</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">210mm</span>
+                    </button>
+                    <button
+                      onClick={() => handleExportPDF('landscape')}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+                        <div>
+                          <div className="font-bold text-slate-800">PDF Landscape (Mendatar)</div>
+                          <div className="text-[10px] text-slate-500">Direkomendasikan untuk tabel lebar</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">297mm</span>
+                    </button>
+                    <div className="border-t border-slate-100 my-1"></div>
+                    <button
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        handlePrint();
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 flex items-center gap-2 font-medium cursor-pointer transition-colors text-slate-700"
+                    >
+                      <Printer className="w-4 h-4 text-slate-500" />
+                      <span>Cetak via Dialog Browser</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Standalone Print Button */}
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-              title="Cetak Laporan / Simpan sebagai PDF Resmi Siap Dilaporkan"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-300 transition-all cursor-pointer"
+              title="Cetak Laporan Langsung ke Printer atau Dialog Browser"
             >
-              <Printer className="w-4 h-4 stroke-[2.5]" />
-              <span>Cetak / Export PDF</span>
+              <Printer className="w-4 h-4 text-slate-600" />
+              <span>Cetak</span>
             </button>
           </div>
         </div>
@@ -2906,7 +3089,11 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
       </div>
 
       {/* 5. FORMAL REPORT PAPER SHEET (Pristine Printable Layout) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-10 max-w-5xl mx-auto print:border-none print:shadow-none print:p-0 print:m-0 print:max-w-none">
+      <div
+        id="formal-financial-report-sheet"
+        ref={reportSheetRef}
+        className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-10 max-w-5xl mx-auto print:border-none print:shadow-none print:p-0 print:m-0 print:max-w-none"
+      >
         {/* Official Header / Letterhead */}
         {showLetterhead && (
           <div className="border-b-2 border-slate-800 pb-6 mb-8 print:pb-3 print:mb-4">
@@ -6579,6 +6766,36 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
           <span>{companyLetterhead.companyName} Financial Suite | Auto-generated Report</span>
           <span>Halaman 1 dari 1</span>
           <span>ID: {documentNumber}</span>
+        </div>
+      </div>
+
+      {/* Floating Bottom Quick Export Bar (Visible on screen, hidden on print) */}
+      <div className="print:hidden max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between p-4 bg-slate-900 text-white rounded-2xl shadow-xl gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+            <FileDown className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white">Laporan Keuangan Siap Dicetak &amp; Diekspor</h4>
+            <p className="text-[11px] text-slate-400">Unduh dokumen PDF A4 resmi lengkap dengan tanda tangan dan kop surat perusahaan.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button
+            onClick={() => handleExportPDF('portrait')}
+            disabled={isExportingPdf}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+          >
+            {isExportingPdf ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4 stroke-[2.2]" />}
+            <span>Ekspor PDF (A4)</span>
+          </button>
+          <button
+            onClick={handlePrint}
+            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-700"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Cetak</span>
+          </button>
         </div>
       </div>
 
