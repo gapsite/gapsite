@@ -9,6 +9,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   TrendingUp,
   FileSpreadsheet,
   Layers,
@@ -45,6 +46,12 @@ import {
   RetailPaymentScheme,
 } from '../../types';
 import { formatIDR } from '../../utils/formatters';
+import {
+  RETAIL_PAYMENT_TERMS_DAYS,
+  calculateRetailInvoiceDueDate,
+  evaluateRetailPaymentDelay,
+  getCalendarDaysDiff,
+} from '../../utils/retailPaymentTerms';
 
 interface RetailProjectManagementProps {
   onSelectProject?: (projectId: string) => void;
@@ -187,6 +194,9 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
     let totalPph23 = 0;
     let totalPpn = 0;
     let activeProjectsCount = 0;
+    let delayedPaymentsCount = 0;
+    let overdueInvoicesCount = 0;
+    const nowStr = new Date().toISOString().slice(0, 10);
 
     retailProjects.forEach((p) => {
       totalContractValue += p.totalContractValueIDR || 0;
@@ -199,8 +209,18 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
       }
 
       (p.milestones || []).forEach((m) => {
+        const effectiveDue = m.invoiceDueDate || m.targetDate || (m.invoiceDate ? calculateRetailInvoiceDueDate(m.invoiceDate, RETAIL_PAYMENT_TERMS_DAYS) : '');
         if (m.status === 'LUNAS') {
           totalPph23 += m.pphAmountIDR || 0;
+          const delayCheck = evaluateRetailPaymentDelay(m.invoiceDate, effectiveDue, m.paymentDate);
+          if (m.isOverduePayment || delayCheck.isDelayed) {
+            delayedPaymentsCount += 1;
+          }
+        }
+        if (m.status === 'INVOICE_TERBIT') {
+          if (effectiveDue && getCalendarDaysDiff(effectiveDue, nowStr) > 0) {
+            overdueInvoicesCount += 1;
+          }
         }
         if (m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN') {
           totalPpn += m.ppnAmountIDR || 0;
@@ -216,21 +236,23 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
       totalPph23,
       totalPpn,
       activeProjectsCount,
+      delayedPaymentsCount,
+      overdueInvoicesCount,
       totalProjects: retailProjects.length,
     };
   }, [retailProjects]);
 
-  // Handle Open Invoice Modal
+  // Handle Open Invoice Modal (Paten 7 hari kalender setelah invoice terbit)
   const handleOpenInvoiceModal = (project: RetailProject, milestone: RetailMilestone) => {
     setSelectedMilestoneForInvoice({ project, milestone });
     const nowStr = new Date().toISOString().slice(0, 10);
-    const dueDateCalc = new Date();
-    dueDateCalc.setDate(dueDateCalc.getDate() + (project.invoicePaymentTermDays || 14));
+    // Paten 7 hari kalender untuk proyek retail (Swasta)
+    const defaultDueDate = calculateRetailInvoiceDueDate(nowStr, RETAIL_PAYMENT_TERMS_DAYS);
 
     setInvoiceForm({
       invoiceNumber: milestone.invoiceNumber || `INV/RET/${new Date().getFullYear()}/${project.id.slice(-4)}/T${milestone.termNumber}`,
       issueDate: nowStr,
-      dueDate: milestone.targetDate || dueDateCalc.toISOString().slice(0, 10),
+      dueDate: defaultDueDate,
       fakturPajakNumber: milestone.fakturPajakNumber || '',
       syncPpnObligation: milestone.ppnAmountIDR > 0,
       notes: `Tagihan ${milestone.title} - ${project.projectName} (${project.clientName})`,
@@ -580,6 +602,52 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
         </div>
       </div>
 
+      {/* Policy & Delay Tracking Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-xl p-4 text-white border border-indigo-500/30 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center border border-indigo-400/30 shrink-0 mt-0.5 sm:mt-0">
+            <Clock className="w-5 h-5 text-indigo-300" />
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-white tracking-wide">
+                Aturan Paten Termin Proyek Retail (Swasta):
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+                Jatuh Tempo 7 Hari (Net 7)
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              Jatuh tempo invoice otomatis disetel <strong>7 hari kalender</strong> setelah invoice terbit. Pembayaran yang melebihi 7 hari otomatis diberi <strong>Catatan Keterlambatan Pembayaran</strong> ke Buku Kas & Piutang.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto shrink-0 flex-wrap">
+          <div className="px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs flex items-center gap-1.5 font-mono">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-slate-300">Term:</span>
+            <span className="font-bold text-emerald-300">7 Hari Paten</span>
+          </div>
+
+          {stats.delayedPaymentsCount > 0 && (
+            <div className="px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-500/40 text-xs flex items-center gap-1.5 font-mono">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-amber-200">Terlambat:</span>
+              <span className="font-bold text-amber-300">{stats.delayedPaymentsCount} Pembayaran</span>
+            </div>
+          )}
+
+          {stats.overdueInvoicesCount > 0 && (
+            <div className="px-3 py-1.5 rounded-lg bg-rose-950/60 border border-rose-500/40 text-xs flex items-center gap-1.5 font-mono">
+              <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+              <span className="text-rose-200">Lewat 7 Hari:</span>
+              <span className="font-bold text-rose-300">{stats.overdueInvoicesCount} Invoice</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="relative w-full md:w-80">
@@ -905,11 +973,21 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                               const isBilled = milestone.status === 'INVOICE_TERBIT';
                               const isUnbilled = milestone.status === 'BELUM_DITAGIH';
 
+                              const todayStr = new Date().toISOString().slice(0, 10);
+                              const effectiveDueDate = milestone.invoiceDueDate || milestone.targetDate || (milestone.invoiceDate ? calculateRetailInvoiceDueDate(milestone.invoiceDate, RETAIL_PAYMENT_TERMS_DAYS) : '');
+                              const delayAnalysis = evaluateRetailPaymentDelay(milestone.invoiceDate, effectiveDueDate, milestone.paymentDate);
+                              const isPaymentDelayed = milestone.isOverduePayment || delayAnalysis.isDelayed;
+                              const delayDays = milestone.delayDays || delayAnalysis.delayDays;
+                              const delayNotes = milestone.delayNotes || (isPaymentDelayed ? delayAnalysis.delayNotes : '');
+
+                              const isCurrentlyOverdue = isBilled && effectiveDueDate && getCalendarDaysDiff(effectiveDueDate, todayStr) > 0;
+                              const overdueDays = isCurrentlyOverdue ? getCalendarDaysDiff(effectiveDueDate, todayStr) : 0;
+
                               return (
                                 <tr
                                   key={milestone.id}
                                   className={`hover:bg-slate-50 transition-colors ${
-                                    isPaid ? 'bg-emerald-50/30' : isBilled ? 'bg-indigo-50/20' : ''
+                                    isPaid ? (isPaymentDelayed ? 'bg-amber-50/20' : 'bg-emerald-50/30') : isBilled ? (isCurrentlyOverdue ? 'bg-rose-50/20' : 'bg-indigo-50/20') : ''
                                   }`}
                                   id={`milestone-row-${milestone.id}`}
                                 >
@@ -921,10 +999,33 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                                       </span>
                                       <span>{milestone.title}</span>
                                     </div>
-                                    <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
-                                      <Calendar className="w-3 h-3 text-slate-400" />
-                                      Jatuh tempo: {milestone.targetDate || '-'}
-                                    </div>
+                                    {milestone.invoiceDate ? (
+                                      <div className="text-[10px] text-slate-600 mt-1 flex items-center flex-wrap gap-1 font-mono">
+                                        <span className="text-slate-500">Terbit:</span>
+                                        <span className="font-semibold text-slate-800">{milestone.invoiceDate}</span>
+                                        <span className="text-slate-400">•</span>
+                                        <span className="text-slate-500">Jatuh Tempo (7 Hari):</span>
+                                        <span className={`font-bold ${isCurrentlyOverdue ? 'text-rose-600 font-black' : 'text-indigo-700'}`}>
+                                          {effectiveDueDate || '-'}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
+                                        <Calendar className="w-3 h-3 text-slate-400" />
+                                        Target: {milestone.targetDate || '-'} (Net 7 otomatis saat invoice terbit)
+                                      </div>
+                                    )}
+
+                                    {/* Catatan Keterlambatan Pembayaran jika ada */}
+                                    {isPaymentDelayed && delayNotes && (
+                                      <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-start gap-1.5 animate-in fade-in">
+                                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                        <div>
+                                          <div className="font-bold text-amber-950">Catatan Keterlambatan Pembayaran ({delayDays} Hari):</div>
+                                          <div className="text-amber-800 mt-0.5 leading-snug">{delayNotes}</div>
+                                        </div>
+                                      </div>
+                                    )}
                                   </td>
 
                                   {/* Percentage */}
@@ -960,15 +1061,41 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                                   {/* Status */}
                                   <td className="py-3 px-3">
                                     {isPaid ? (
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                        LUNAS (KAS MASUK)
-                                      </span>
+                                      <div className="flex flex-col gap-1 items-start">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                          LUNAS (KAS MASUK)
+                                        </span>
+                                        {isPaymentDelayed ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title={delayNotes}>
+                                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                            Terlambat {delayDays} Hari
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            <Check className="w-3 h-3 text-emerald-600" />
+                                            Tepat Waktu (≤ 7 Hari)
+                                          </span>
+                                        )}
+                                      </div>
                                     ) : isBilled ? (
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-300">
-                                        <Receipt className="w-3 h-3 text-indigo-600" />
-                                        INVOICE TERBIT
-                                      </span>
+                                      <div className="flex flex-col gap-1 items-start">
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-300">
+                                          <Receipt className="w-3 h-3 text-indigo-600" />
+                                          INVOICE TERBIT
+                                        </span>
+                                        {isCurrentlyOverdue ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse" title={`Jatuh tempo 7 hari terlewati (${overdueDays} hari lalu)`}>
+                                            <AlertCircle className="w-3 h-3 text-rose-600" />
+                                            Lewat 7 Hari (+{overdueDays} Hari)
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                            <Clock className="w-3 h-3 text-blue-500" />
+                                            Masa Tagih 7 Hari
+                                          </span>
+                                        )}
+                                      </div>
                                     ) : (
                                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
                                         <Clock className="w-3 h-3 text-slate-500" />
@@ -1552,28 +1679,40 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Tanggal Terbit Invoice
+                    Tanggal Terbit Invoice <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={invoiceForm.issueDate}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, issueDate: e.target.value })}
+                    onChange={(e) => {
+                      const newIssueDate = e.target.value;
+                      const newDueDate = calculateRetailInvoiceDueDate(newIssueDate, RETAIL_PAYMENT_TERMS_DAYS);
+                      setInvoiceForm({ ...invoiceForm, issueDate: newIssueDate, dueDate: newDueDate });
+                    }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Tanggal Jatuh Tempo
+                    Jatuh Tempo (Paten 7 Hari) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={invoiceForm.dueDate}
                     onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-indigo-300 bg-indigo-50/30 font-bold font-mono text-indigo-900 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
+                </div>
+              </div>
+
+              {/* Informative Net 7 Rule Notice */}
+              <div className="p-2.5 bg-indigo-50/80 rounded-xl border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2">
+                <Clock className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <strong>Aturan Paten Jatuh Tempo Retail:</strong> 7 hari kalender setelah tanggal terbit invoice (Net 7). Jatuh tempo otomatis dihitung ke <strong>{invoiceForm.dueDate}</strong>.
                 </div>
               </div>
 
@@ -1706,7 +1845,7 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Tanggal Masuk Kas
+                    Tanggal Masuk Kas <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -1742,6 +1881,49 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                   </select>
                 </div>
               </div>
+
+              {/* Dynamic Delay Analysis for 7-Day Payment Term */}
+              {(() => {
+                const effectiveDue = selectedMilestoneForPayment.milestone.invoiceDueDate ||
+                  selectedMilestoneForPayment.milestone.targetDate ||
+                  (selectedMilestoneForPayment.milestone.invoiceDate
+                    ? calculateRetailInvoiceDueDate(selectedMilestoneForPayment.milestone.invoiceDate, RETAIL_PAYMENT_TERMS_DAYS)
+                    : '');
+                const delayCheck = evaluateRetailPaymentDelay(
+                  selectedMilestoneForPayment.milestone.invoiceDate,
+                  effectiveDue,
+                  paymentForm.paymentDate
+                );
+
+                if (delayCheck.isDelayed) {
+                  return (
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 text-xs space-y-1.5 animate-in fade-in">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Perhatian: Pembayaran Lebih dari 7 Hari (Terlambat {delayCheck.delayDays} Hari)</span>
+                      </div>
+                      <div className="text-[11px] text-amber-800">
+                        Invoice terbit: <span className="font-semibold">{selectedMilestoneForPayment.milestone.invoiceDate || '-'}</span> | Batas 7 hari: <span className="font-semibold">{effectiveDue || '-'}</span> | Tanggal masuk kas: <span className="font-semibold">{paymentForm.paymentDate}</span>
+                      </div>
+                      <div className="p-2 bg-amber-100/90 rounded-lg border border-amber-200 text-[11px] font-medium text-amber-950 font-mono">
+                        {delayCheck.delayNotes}
+                      </div>
+                      <p className="text-[10px] text-amber-700 italic">
+                        *Catatan keterlambatan pembayaran ini akan otomatis disimpan di rincian termin, mutasi kas, dan histori piutang.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-[11px]">
+                      Pembayaran tepat waktu dalam batas 7 hari kalender (Jatuh tempo: <strong>{effectiveDue || '-'}</strong>).
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1799,6 +1981,19 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                     </label>
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Catatan / Keterangan Pembayaran
+                </label>
+                <textarea
+                  rows={2}
+                  value={paymentForm.notes}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                  placeholder="Keterangan transfer atau alasan jika ada keterlambatan pembayaran..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
               </div>
 
               <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">

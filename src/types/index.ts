@@ -1442,6 +1442,12 @@ export interface RetailMilestone {
   taxObligationPpnId?: string; // Terhubung ke Modul Pajak (PPN Keluaran)
   taxObligationPphId?: string; // Terhubung ke Modul Pajak (Kredit Pajak PPh 23)
 
+  // Jatuh Tempo Paten 7 Hari & Keterlambatan Pembayaran
+  invoicePaymentTermDays?: number; // Paten 7 hari kalender dari tanggal terbit invoice
+  isOverduePayment?: boolean; // Menandakan apakah pembayaran diterima melebihi jatuh tempo 7 hari
+  delayDays?: number; // Jumlah hari keterlambatan pembayaran
+  delayNotes?: string; // Catatan resmi keterlambatan pembayaran
+
   notes?: string;
   createdAt: string;
   updatedAt?: string;
@@ -1465,7 +1471,7 @@ export interface RetailProject {
   contractNumber?: string; // No. Kontrak / SPK / Purchase Order
   contractDate: string; // Tanggal Kontrak / SPK (YYYY-MM-DD)
   targetCompletionDate: string; // Target Tanggal Selesai (YYYY-MM-DD)
-  invoicePaymentTermDays?: number; // Term of Payment (e.g. 14 or 30 days)
+  invoicePaymentTermDays?: number; // Term of Payment (Paten 7 hari kalender untuk proyek retail swasta)
   status: RetailProjectStatus;
   pricingType: RetailPricingType;
 

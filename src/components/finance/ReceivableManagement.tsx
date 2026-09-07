@@ -611,6 +611,15 @@ export const ReceivableManagement: React.FC = () => {
                         <span className="text-[11px] text-slate-500 block truncate">
                           {rec.projectCode ? `[${rec.projectCode}] ` : ''}{rec.title}
                         </span>
+                        {rec.notes && rec.notes.includes('KETERLAMBATAN PEMBAYARAN') && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-300 font-semibold bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-800 mt-1"
+                            title={rec.notes}
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                            Keterlambatan Pembayaran
+                          </span>
+                        )}
                       </td>
 
                       {/* Category & Milestone */}

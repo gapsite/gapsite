@@ -206,6 +206,12 @@ import {
   generateDocumentId,
   deduplicateById,
 } from '../utils/idGenerator';
+import {
+  RETAIL_PAYMENT_TERMS_DAYS,
+  calculateRetailInvoiceDueDate,
+  evaluateRetailPaymentDelay,
+  getCalendarDaysDiff,
+} from '../utils/retailPaymentTerms';
 
 interface FilterState {
   searchQuery: string;
@@ -7939,7 +7945,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const invYear = new Date().getFullYear();
     const invNum = invoiceData?.invoiceNumber || milestone.invoiceNumber || `INV/RET/${invYear}/${project.id.slice(-4)}/T${milestone.termNumber}`;
     const issueDt = invoiceData?.issueDate || now.slice(0, 10);
-    const dueDt = invoiceData?.dueDate || milestone.targetDate || issueDt;
+    // Paten jatuh tempo: 7 hari kalender setelah tanggal invoice terbit
+    const dueDt = invoiceData?.dueDate || calculateRetailInvoiceDueDate(issueDt, RETAIL_PAYMENT_TERMS_DAYS);
 
     const billingAmount = milestone.pricingType === 'EXCLUDE_PPN'
       ? milestone.grossAmountIDR + milestone.ppnAmountIDR
@@ -7957,7 +7964,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       dueDate: dueDt,
       taxIncluded: project.pricingType === 'INCLUDE_PPN',
       taxAmountIDR: milestone.ppnAmountIDR,
-      notes: invoiceData?.notes || `Klien: ${project.clientName} (NPWP: ${project.clientNpwp || '-'}). Kontrak No: ${project.contractNumber || '-'}. Termin ${milestone.termNumber}: ${milestone.title}. DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')}. PPN Keluaran 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')}. Estimasi Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}. Kas Bersih Diharapkan: Rp ${milestone.netDisbursementIDR.toLocaleString('id-ID')}. e-Faktur: ${invoiceData?.fakturPajakNumber || milestone.fakturPajakNumber || '-'}`,
+      notes: invoiceData?.notes || `Klien: ${project.clientName} (NPWP: ${project.clientNpwp || '-'}). Kontrak No: ${project.contractNumber || '-'}. Termin ${milestone.termNumber}: ${milestone.title}. Jatuh Tempo (SOP Paten 7 Hari): ${dueDt}. DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')}. PPN Keluaran 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')}. Estimasi Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}. Kas Bersih Diharapkan: Rp ${milestone.netDisbursementIDR.toLocaleString('id-ID')}. e-Faktur: ${invoiceData?.fakturPajakNumber || milestone.fakturPajakNumber || '-'}`,
       syncToCashLedger: false, // will sync when payment is actually received
     });
 
@@ -7984,7 +7991,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         paidAmount: 0,
         remainingAmount: milestone.ppnAmountIDR,
         status: 'TERHUTANG',
-        notes: `PPN Keluaran 11% atas Faktur Komersial No. ${invNum}. e-Faktur: ${invoiceData?.fakturPajakNumber || 'Draf'}. Klien: ${project.clientName}. DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')}.`,
+        notes: `PPN Keluaran 11% atas Faktur Komersial No. ${invNum}. Jatuh Tempo: ${dueDt}. e-Faktur: ${invoiceData?.fakturPajakNumber || 'Draf'}. Klien: ${project.clientName}. DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')}.`,
       });
 
       if (taxResult?.taxObligation?.id) {
@@ -7999,6 +8006,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status: 'INVOICE_TERBIT',
       invoiceNumber: invNum,
       invoiceDate: issueDt,
+      targetDate: dueDt,
+      invoiceDueDate: dueDt,
+      invoicePaymentTermDays: RETAIL_PAYMENT_TERMS_DAYS,
       fakturPajakNumber: invoiceData?.fakturPajakNumber || milestone.fakturPajakNumber,
       receivableId: receivableResult.receivable.id,
       taxObligationPpnId,
@@ -8009,7 +8019,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return {
       success: true,
       receivable: receivableResult.receivable,
-      message: `Invoice ${invNum} untuk Termin ${milestone.termNumber} berhasil diterbitkan dan otomatis tercatat pada Buku Piutang Usaha serta modul Perpajakan (PPN Keluaran)!`,
+      message: `Invoice ${invNum} untuk Termin ${milestone.termNumber} berhasil diterbitkan dengan jatuh tempo paten 7 hari (${dueDt}) dan otomatis tercatat pada Buku Piutang Usaha serta modul Perpajakan (PPN Keluaran)!`,
     };
   };
 
@@ -8038,6 +8048,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const amountReceived = paymentData.amountReceivedIDR ?? (milestone.netDisbursementIDR || milestone.grossAmountIDR);
     let linkedTx: FinancialTransaction | undefined;
 
+    // Evaluasi keterlambatan pembayaran terhadap jatuh tempo paten 7 hari
+    const effectiveDueDate = milestone.invoiceDueDate || milestone.targetDate || (milestone.invoiceDate ? calculateRetailInvoiceDueDate(milestone.invoiceDate, RETAIL_PAYMENT_TERMS_DAYS) : '');
+    const delayAnalysis = evaluateRetailPaymentDelay(milestone.invoiceDate, effectiveDueDate, payDate);
+
     // 1. Post to Cash Ledger (Finance & Cashflow) as RETAIL_PROJECT_INCOME
     if (paymentData.syncToCashLedger !== false) {
       linkedTx = addTransaction({
@@ -8052,7 +8066,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         referenceNumber: paymentData.referenceNumber,
         status: 'CLEARED',
         recordedBy: currentUser.name,
-        notes: `Pembayaran Klien Retail: ${project.clientName} | No. Inv: ${milestone.invoiceNumber || '-'} | Gross DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')} | PPN 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')} | Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')} | Kas Masuk: Rp ${amountReceived.toLocaleString('id-ID')}${paymentData.notes ? ` | Catatan: ${paymentData.notes}` : ''}`,
+        notes: `Pembayaran Klien Retail: ${project.clientName} | No. Inv: ${milestone.invoiceNumber || '-'} | Gross DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')} | PPN 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')} | Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')} | Kas Masuk: Rp ${amountReceived.toLocaleString('id-ID')}${paymentData.notes ? ` | Catatan: ${paymentData.notes}` : ''}${delayAnalysis.isDelayed ? ` | ${delayAnalysis.delayNotes}` : ''}`,
       });
     }
 
@@ -8067,7 +8081,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         paymentDate: payDate,
         paymentChannelId: paymentData.paymentChannelId,
         referenceNumber: paymentData.referenceNumber,
-        notes: `Pelunasan Pembayaran Retail via ${paymentData.paymentChannelId}. Kas Diterima: Rp ${amountReceived.toLocaleString('id-ID')}. Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}.`,
+        notes: `Pelunasan Pembayaran Retail via ${paymentData.paymentChannelId}. Kas Diterima: Rp ${amountReceived.toLocaleString('id-ID')}. Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}.${delayAnalysis.isDelayed ? ` ${delayAnalysis.delayNotes}` : ''}`,
         syncToCashLedger: false, // Already recorded in step 1!
       });
     }
@@ -8099,6 +8113,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 4. Update Milestone State
     const updatedMilestones = [...project.milestones];
+    const combinedNotes = [
+      milestone.notes,
+      paymentData.notes,
+      delayAnalysis.isDelayed ? delayAnalysis.delayNotes : null,
+    ].filter(Boolean).join(' | ');
+
     updatedMilestones[milestoneIndex] = {
       ...milestone,
       status: 'LUNAS',
@@ -8108,6 +8128,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       referenceNumber: paymentData.referenceNumber,
       bupotPphNumber: paymentData.bupotPphNumber,
       transactionId: linkedTx?.id,
+      invoiceDueDate: effectiveDueDate,
+      invoicePaymentTermDays: RETAIL_PAYMENT_TERMS_DAYS,
+      isOverduePayment: delayAnalysis.isDelayed,
+      delayDays: delayAnalysis.delayDays,
+      delayNotes: delayAnalysis.delayNotes || undefined,
+      notes: combinedNotes || undefined,
     };
 
     updateRetailProject(projectId, { milestones: updatedMilestones });
@@ -8115,14 +8141,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addActivity(
       project.linkedCrmProjectId || project.id,
       'Pembayaran Proyek Retail Diterima',
-      `Pembayaran Termin ${milestone.termNumber} Proyek Retail "${project.projectName}" telah masuk kas Rp ${amountReceived.toLocaleString('id-ID')} dan terintegrasi ke Piutang, Pajak, dan Arus Kas!`,
+      `Pembayaran Termin ${milestone.termNumber} Proyek Retail "${project.projectName}" telah masuk kas Rp ${amountReceived.toLocaleString('id-ID')} dan terintegrasi ke Piutang, Pajak, dan Arus Kas!${delayAnalysis.isDelayed ? ` (${delayAnalysis.delayNotes})` : ''}`,
       'STATUS_CHANGE'
     );
+
+    const delayMessageSuffix = delayAnalysis.isDelayed
+      ? ` ⚠️ PERHATIAN: Pembayaran tercatat terlambat ${delayAnalysis.delayDays} hari dari batas jatuh tempo 7 hari dan telah dibukukan catatan resmi keterlambatan.`
+      : '';
 
     return {
       success: true,
       transaction: linkedTx,
-      message: `Pembayaran Termin ${milestone.termNumber} berhasil dicatat! Kas bersih Rp ${amountReceived.toLocaleString('id-ID')} telah dibukukan ke Arus Kas, piutang dilunasi, dan kredit PPh 23 telah tercatat di modul Perpajakan.`,
+      message: `Pembayaran Termin ${milestone.termNumber} berhasil dicatat! Kas bersih Rp ${amountReceived.toLocaleString('id-ID')} telah dibukukan ke Arus Kas, piutang dilunasi, dan kredit PPh 23 telah tercatat di modul Perpajakan.${delayMessageSuffix}`,
     };
   };
 
