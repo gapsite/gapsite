@@ -3569,7 +3569,9 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                       <div className="text-[10px] text-slate-400 font-bold uppercase">Total Aset (Aktiva)</div>
                       <div className="text-xs font-mono font-bold text-emerald-400 mt-1">{formatIDR(metrics.totalAssets)}</div>
                       <div className="text-[9px] text-slate-400 font-mono mt-0.5">
-                        Kas/Bank {formatIDR(metrics.cashAndBankAsset)} + Aset Tetap {formatIDR(metrics.fixedAssets)}
+                        Kas/Bank {formatIDR(metrics.cashAndBankAsset)}
+                        {metrics.receivablesAsset > 0 && ` + Piutang ${formatIDR(metrics.receivablesAsset)}`}
+                        {` + Aset Tetap ${formatIDR(metrics.fixedAssets)}`}
                       </div>
                     </div>
                     <div className="flex items-center justify-center font-extrabold text-slate-400 text-base">
@@ -3593,9 +3595,40 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                       <span>Neraca Keuangan Valid &amp; Seimbang (Selisih Rp 0)</span>
                     </div>
                   ) : (
-                    <div className="mt-2 text-center text-[11px] text-amber-300 font-semibold flex items-center justify-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Neraca Belum Seimbang (Selisih: {formatIDR(metrics.balanceDiff)})</span>
+                    <div className="mt-2 text-[11px] text-amber-300 font-semibold flex flex-col items-center justify-center gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Neraca Belum Seimbang (Selisih: {formatIDR(metrics.balanceDiff)})</span>
+                      </div>
+                      <div className="text-[10px] text-amber-200/90 font-normal max-w-xl text-left bg-amber-900/50 p-2.5 rounded-lg border border-amber-700/60 mt-1 leading-relaxed">
+                        {metrics.totalPasiva > metrics.totalAssets ? (
+                          <>
+                            <div className="font-bold text-amber-200 mb-1 flex items-center gap-1">
+                              💡 Panduan Rekonsiliasi (Pasiva &gt; Aset sebesar {formatIDR(metrics.balanceDiff)}):
+                            </div>
+                            <ul className="list-disc list-inside space-y-1">
+                              <li>
+                                <strong>Alokasi Beban Pengeluaran:</strong> Tambahkan transaksi <em>Beban Pengeluaran Operasional / Jasa Ahli / Beban Pajak</em> tahun berjalan sebesar <strong>{formatIDR(metrics.balanceDiff)}</strong> untuk mengoreksi Laba Bersih &amp; Ekuitas agar pasiva turun setara aset.
+                              </li>
+                              <li>
+                                <strong>Penyelesaian Liabilitas:</strong> Periksa modul <em>Pajak &amp; Hutang</em> jika ada kewajiban senilai <strong>{formatIDR(metrics.balanceDiff)}</strong> yang sebenarnya sudah lunas / selesai.
+                              </li>
+                              <li>
+                                <strong>Alokasi Piutang Usaha:</strong> Jika ada invoice tagihan belum lunas senilai <strong>{formatIDR(metrics.balanceDiff)}</strong>, masukkan ke menu <em>Piutang Usaha</em> agar Aset Lancar bertambah.
+                              </li>
+                            </ul>
+                          </>
+                        ) : (
+                          <>
+                            <div className="font-bold text-amber-200 mb-1 flex items-center gap-1">
+                              💡 Panduan Rekonsiliasi (Aset &gt; Pasiva sebesar {formatIDR(metrics.balanceDiff)}):
+                            </div>
+                            <p>
+                              Tambahkan transaksi <strong>Pendapatan Operasional</strong> sebesar <strong>{formatIDR(metrics.balanceDiff)}</strong> di Buku Kas atau sesuaikan Modal Disetor di Ekuitas.
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -5133,16 +5166,26 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                 <span className="font-mono bg-emerald-200/70 text-emerald-900 px-2.5 py-1 rounded">Selisih: Rp 0</span>
               </div>
             ) : (
-              <div className="p-4 rounded-xl border border-amber-300 bg-amber-50/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 font-semibold">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                  <span>
-                    Neraca Keuangan Belum Seimbang (Unbalanced). Total Aktiva ({formatIDR(metrics.totalAssets)}) ≠ Total Pasiva ({formatIDR(metrics.totalPasiva)})
+              <div className="p-4 rounded-xl border border-amber-300 bg-amber-50/90 flex flex-col gap-2 text-xs text-amber-950 font-semibold">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                    <span>
+                      Neraca Keuangan Belum Seimbang (Unbalanced). Total Aktiva ({formatIDR(metrics.totalAssets)}) ≠ Total Pasiva ({formatIDR(metrics.totalPasiva)})
+                    </span>
+                  </div>
+                  <span className="font-mono bg-amber-200 text-amber-950 px-2.5 py-1 rounded shrink-0">
+                    Selisih: {formatIDR(metrics.balanceDiff)}
                   </span>
                 </div>
-                <span className="font-mono bg-amber-200 text-amber-950 px-2.5 py-1 rounded shrink-0">
-                  Selisih: {formatIDR(metrics.balanceDiff)}
-                </span>
+                <div className="text-[11px] font-normal text-amber-900 bg-amber-100/80 p-2.5 rounded-lg border border-amber-200 mt-1 leading-relaxed">
+                  <strong>Rekomendasi Rekonsiliasi Neraca:</strong> Total Pasiva saat ini lebih besar {formatIDR(metrics.balanceDiff)} dari Total Aktiva. Untuk menyamakan neraca menjadi Rp 0, Anda dapat:
+                  <ul className="list-disc list-inside mt-1 space-y-0.5 font-medium">
+                    <li>Mengalokasikan transaksi <strong>Beban Pengeluaran Operasional</strong> sebesar {formatIDR(metrics.balanceDiff)} di Buku Kas.</li>
+                    <li>Melunasi/menyelesaikan sisa <strong>Liabilitas / Hutang Pajak</strong> sebesar {formatIDR(metrics.balanceDiff)}.</li>
+                    <li>Mencatatkan <strong>Piutang Usaha Konsultasi</strong> sebesar {formatIDR(metrics.balanceDiff)} di menu Piutang jika ada invoice belum tertagih.</li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>

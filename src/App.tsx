@@ -36,7 +36,7 @@ import { TransactionCategoryManagerModal } from './components/finance/Transactio
 import { PaymentChannelManagerModal } from './components/finance/PaymentChannelManagerModal';
 
 const DashboardContent: React.FC = () => {
-  const { selectedProject, setSelectedProjectId, isAuthenticated, hasPermission } = useProjects();
+  const { selectedProject, setSelectedProjectId, isAuthenticated, hasPermission, currentUser } = useProjects();
 
   // Active Main Navigation Tab
   const [activeTab, setActiveTab] = useState<MainTabType>('projects');
@@ -146,7 +146,10 @@ const DashboardContent: React.FC = () => {
         />
 
         {/* Main Workspace Body */}
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0 print:m-0 print:max-w-none">
+        <main
+          key={currentUser ? `${currentUser.id}-${currentUser.role}` : 'main-workspace'}
+          className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0 print:m-0 print:max-w-none"
+        >
           <ErrorBoundary fallbackTitle="Gagal Memuat Modul Antarmuka">
             {/* TAB 1: PROJECTS CRM DASHBOARD */}
           {activeTab === 'projects' && (

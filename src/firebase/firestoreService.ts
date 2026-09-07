@@ -411,7 +411,7 @@ export const saveSettingsToFirestore = async (key: string, data: any): Promise<v
       } finally {
         resolvers.forEach((r) => r());
       }
-    }, 350);
+    }, 50);
 
     settingsWriteDebounceTimers.set(key, timer);
   });
