@@ -29,6 +29,10 @@ import {
   generateNextInvoiceNumber,
 } from '../../utils/receivableCalculations';
 import { formatIDR } from '../../utils/formatters';
+import {
+  RETAIL_PAYMENT_TERMS_DAYS,
+  calculateRetailInvoiceDueDate,
+} from '../../utils/retailPaymentTerms';
 
 interface ReceivableModalProps {
   isOpen: boolean;
@@ -79,14 +83,22 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Auto calculate due date when issueDate or paymentTermsDays change
+  // Auto calculate due date when issueDate, paymentTermsDays, or category change
   useEffect(() => {
-    if (issueDate && paymentTermsDays >= 0) {
-      const d = new Date(issueDate);
-      d.setDate(d.getDate() + Number(paymentTermsDays));
-      setDueDate(d.toISOString().slice(0, 10));
+    if (issueDate) {
+      if (category === 'PROYEK_RETAIL') {
+        const autoDue = calculateRetailInvoiceDueDate(issueDate, RETAIL_PAYMENT_TERMS_DAYS);
+        setDueDate(autoDue);
+        if (paymentTermsDays !== RETAIL_PAYMENT_TERMS_DAYS) {
+          setPaymentTermsDays(RETAIL_PAYMENT_TERMS_DAYS);
+        }
+      } else if (paymentTermsDays >= 0) {
+        const d = new Date(issueDate);
+        d.setDate(d.getDate() + Number(paymentTermsDays));
+        setDueDate(d.toISOString().slice(0, 10));
+      }
     }
-  }, [issueDate, paymentTermsDays]);
+  }, [issueDate, paymentTermsDays, category]);
 
   // Handle initial data or editing state
   useEffect(() => {
@@ -106,9 +118,15 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
         setTotalAmountIDR(editingReceivable.totalAmountIDR || 0);
         setTaxIncluded(editingReceivable.taxIncluded || false);
         setTaxAmountIDR(editingReceivable.taxAmountIDR || 0);
-        setIssueDate(editingReceivable.issueDate || new Date().toISOString().slice(0, 10));
-        setPaymentTermsDays(editingReceivable.paymentTermsDays || 30);
-        setDueDate(editingReceivable.dueDate || '');
+        const editIssueDate = editingReceivable.issueDate || new Date().toISOString().slice(0, 10);
+        setIssueDate(editIssueDate);
+        if (editingReceivable.category === 'PROYEK_RETAIL') {
+          setPaymentTermsDays(RETAIL_PAYMENT_TERMS_DAYS);
+          setDueDate(editingReceivable.dueDate || calculateRetailInvoiceDueDate(editIssueDate, RETAIL_PAYMENT_TERMS_DAYS));
+        } else {
+          setPaymentTermsDays(editingReceivable.paymentTermsDays || 30);
+          setDueDate(editingReceivable.dueDate || '');
+        }
         setNotes(editingReceivable.notes || '');
         setHasInitialPayment(false);
         setInitialPaidAmountIDR(0);
@@ -206,6 +224,8 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
     setIsSubmitting(true);
 
     const selectedProj = projects.find((p) => p.id === selectedProjectId);
+    const finalTermsDays = category === 'PROYEK_RETAIL' ? RETAIL_PAYMENT_TERMS_DAYS : paymentTermsDays;
+    const finalDueDate = category === 'PROYEK_RETAIL' ? calculateRetailInvoiceDueDate(issueDate, RETAIL_PAYMENT_TERMS_DAYS) : dueDate;
 
     if (editingReceivable) {
       const res = updateReceivable(editingReceivable.id, {
@@ -224,8 +244,8 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
         taxIncluded,
         taxAmountIDR: taxIncluded ? taxAmountIDR : 0,
         issueDate,
-        dueDate,
-        paymentTermsDays,
+        dueDate: finalDueDate,
+        paymentTermsDays: finalTermsDays,
         notes: notes.trim() || undefined,
       });
 
@@ -252,8 +272,8 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
         taxIncluded,
         taxAmountIDR: taxIncluded ? taxAmountIDR : 0,
         issueDate,
-        dueDate,
-        paymentTermsDays,
+        dueDate: finalDueDate,
+        paymentTermsDays: finalTermsDays,
         notes: notes.trim() || undefined,
         initialPaidAmountIDR: hasInitialPayment ? initialPaidAmountIDR : 0,
         paymentChannelId: hasInitialPayment ? paymentChannelId : undefined,
@@ -343,7 +363,16 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as ReceivableCategory)}
+                onChange={(e) => {
+                  const newCat = e.target.value as ReceivableCategory;
+                  setCategory(newCat);
+                  if (newCat === 'PROYEK_RETAIL') {
+                    setPaymentTermsDays(RETAIL_PAYMENT_TERMS_DAYS);
+                    if (issueDate) {
+                      setDueDate(calculateRetailInvoiceDueDate(issueDate, RETAIL_PAYMENT_TERMS_DAYS));
+                    }
+                  }
+                }}
                 className="w-full px-3.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-white"
               >
                 {RECEIVABLE_CATEGORIES.map((cat) => (
@@ -507,17 +536,25 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-500" />
-                <span>Syarat TOP / Jatuh Tempo *</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Syarat TOP / Jatuh Tempo *</span>
+                </label>
+                {category === 'PROYEK_RETAIL' && (
+                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 text-emerald-600" /> Otomatis 7 Hari (Net 7)
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <select
-                  value={paymentTermsDays}
+                  value={category === 'PROYEK_RETAIL' ? RETAIL_PAYMENT_TERMS_DAYS : paymentTermsDays}
+                  disabled={category === 'PROYEK_RETAIL'}
                   onChange={(e) => setPaymentTermsDays(Number(e.target.value))}
-                  className="px-2.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-white"
+                  className={`px-2.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-white ${category === 'PROYEK_RETAIL' ? 'font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 cursor-not-allowed' : ''}`}
                 >
-                  <option value={7}>7 Hari</option>
+                  <option value={7}>{category === 'PROYEK_RETAIL' ? '7 Hari (Paten Retail Swasta)' : '7 Hari'}</option>
                   <option value={14}>14 Hari</option>
                   <option value={30}>30 Hari</option>
                   <option value={45}>45 Hari</option>
@@ -527,11 +564,18 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
                 <input
                   type="date"
                   value={dueDate}
+                  readOnly={category === 'PROYEK_RETAIL'}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="px-2 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-white"
+                  className={`px-2 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden dark:text-white ${category === 'PROYEK_RETAIL' ? 'bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800 font-mono font-bold text-indigo-900 dark:text-indigo-300 cursor-default' : ''}`}
+                  title={category === 'PROYEK_RETAIL' ? 'Jatuh tempo proyek retail (swasta) dikunci otomatis 7 hari kalender setelah tanggal terbit invoice' : undefined}
                   required
                 />
               </div>
+              {category === 'PROYEK_RETAIL' && (
+                <p className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-1.5 font-medium flex items-center gap-1">
+                  <span>⚡ <strong>SOP Retail (Swasta):</strong> Jatuh tempo terkunci otomatis 7 hari setelah tanggal invoice terbit ({issueDate} &rarr; <strong>{dueDate}</strong>).</span>
+                </p>
+              )}
             </div>
           </div>
 

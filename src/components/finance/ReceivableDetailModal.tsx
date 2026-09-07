@@ -251,7 +251,12 @@ export const ReceivableDetailModal: React.FC<ReceivableDetailModalProps> = ({
                 Tanggal Terbit: <strong className="text-slate-800 dark:text-slate-200">{receivable.issueDate}</strong>
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Term of Payment: <strong className="text-slate-800 dark:text-slate-200">{receivable.paymentTermsDays || 30} Hari</strong>
+                Term of Payment:{' '}
+                <strong className="text-slate-800 dark:text-slate-200">
+                  {receivable.category === 'PROYEK_RETAIL'
+                    ? '7 Hari (Net 7 Retail Swasta)'
+                    : `${receivable.paymentTermsDays || 30} Hari`}
+                </strong>
               </p>
             </div>
           </div>

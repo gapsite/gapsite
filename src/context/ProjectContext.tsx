@@ -7030,6 +7030,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       status = isOverdue ? 'JATUH_TEMPO' : 'BELUM_DIBAYAR';
     }
 
+    const finalCategory = data.category || 'TERMIN_KONSULTASI_TKDN';
+    let finalDueDate = data.dueDate;
+    let finalPaymentTermsDays = data.paymentTermsDays;
+
+    // Proyek retail (swasta): jatuh tempo invoice otomatis 7 hari setelah tanggal invoice terbit (Net 7)
+    if (finalCategory === 'PROYEK_RETAIL') {
+      finalPaymentTermsDays = RETAIL_PAYMENT_TERMS_DAYS;
+      finalDueDate = calculateRetailInvoiceDueDate(data.issueDate || now.slice(0, 10), RETAIL_PAYMENT_TERMS_DAYS);
+    }
+
     const newReceivable: Receivable = {
       id,
       invoiceNumber: data.invoiceNumber,
@@ -7042,15 +7052,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       projectId: data.projectId,
       projectCode: data.projectCode,
       milestoneTitle: data.milestoneTitle,
-      category: data.category || 'TERMIN_KONSULTASI_TKDN',
+      category: finalCategory,
       totalAmountIDR: totalAmount,
       paidAmountIDR: initialPaid,
       remainingAmountIDR: remaining,
       taxIncluded: data.taxIncluded,
       taxAmountIDR: data.taxAmountIDR,
       issueDate: data.issueDate,
-      dueDate: data.dueDate,
-      paymentTermsDays: data.paymentTermsDays,
+      dueDate: finalDueDate,
+      paymentTermsDays: finalPaymentTermsDays,
       status,
       payments,
       linkedTransactionIds: linkedTxId ? [linkedTxId] : [],
@@ -7083,6 +7093,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (r.id === id) {
           found = true;
           const merged = { ...r, ...updates, updatedAt: new Date().toISOString() };
+
+          // Proyek retail (swasta): jatuh tempo otomatis 7 hari setelah tanggal invoice terbit (Net 7)
+          if ((merged.category === 'PROYEK_RETAIL' || updates.category === 'PROYEK_RETAIL') && (updates.issueDate || updates.category === 'PROYEK_RETAIL')) {
+            merged.paymentTermsDays = RETAIL_PAYMENT_TERMS_DAYS;
+            merged.dueDate = calculateRetailInvoiceDueDate(merged.issueDate || updates.issueDate || new Date().toISOString().slice(0, 10), RETAIL_PAYMENT_TERMS_DAYS);
+          }
+
           // Recalculate totals and status
           const tot = merged.totalAmountIDR !== undefined ? Math.max(0, merged.totalAmountIDR) : r.totalAmountIDR;
           const paid = merged.payments
@@ -7945,8 +7962,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const invYear = new Date().getFullYear();
     const invNum = invoiceData?.invoiceNumber || milestone.invoiceNumber || `INV/RET/${invYear}/${project.id.slice(-4)}/T${milestone.termNumber}`;
     const issueDt = invoiceData?.issueDate || now.slice(0, 10);
-    // Paten jatuh tempo: 7 hari kalender setelah tanggal invoice terbit
-    const dueDt = invoiceData?.dueDate || calculateRetailInvoiceDueDate(issueDt, RETAIL_PAYMENT_TERMS_DAYS);
+    // Otomatis jatuh tempo invoice untuk proyek retail (Swasta): 7 hari kalender setelah tanggal invoice terbit (Net 7)
+    const dueDt = calculateRetailInvoiceDueDate(issueDt, RETAIL_PAYMENT_TERMS_DAYS);
 
     const billingAmount = milestone.pricingType === 'EXCLUDE_PPN'
       ? milestone.grossAmountIDR + milestone.ppnAmountIDR
@@ -7962,6 +7979,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       totalAmountIDR: billingAmount,
       issueDate: issueDt,
       dueDate: dueDt,
+      paymentTermsDays: RETAIL_PAYMENT_TERMS_DAYS,
       taxIncluded: project.pricingType === 'INCLUDE_PPN',
       taxAmountIDR: milestone.ppnAmountIDR,
       notes: invoiceData?.notes || `Klien: ${project.clientName} (NPWP: ${project.clientNpwp || '-'}). Kontrak No: ${project.contractNumber || '-'}. Termin ${milestone.termNumber}: ${milestone.title}. Jatuh Tempo (SOP Paten 7 Hari): ${dueDt}. DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')}. PPN Keluaran 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')}. Estimasi Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}. Kas Bersih Diharapkan: Rp ${milestone.netDisbursementIDR.toLocaleString('id-ID')}. e-Faktur: ${invoiceData?.fakturPajakNumber || milestone.fakturPajakNumber || '-'}`,

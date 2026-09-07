@@ -265,13 +265,16 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
     e.preventDefault();
     if (!selectedMilestoneForInvoice) return;
 
+    // Jatuh tempo otomatis 7 hari kalender setelah tanggal invoice terbit (SOP Retail Swasta Net 7)
+    const autoDueDate = calculateRetailInvoiceDueDate(invoiceForm.issueDate, RETAIL_PAYMENT_TERMS_DAYS);
+
     const res = generateRetailInvoiceToReceivables(
       selectedMilestoneForInvoice.project.id,
       selectedMilestoneForInvoice.milestone.id,
       {
         invoiceNumber: invoiceForm.invoiceNumber,
         issueDate: invoiceForm.issueDate,
-        dueDate: invoiceForm.dueDate,
+        dueDate: autoDueDate,
         fakturPajakNumber: invoiceForm.fakturPajakNumber,
         syncPpnObligation: invoiceForm.syncPpnObligation,
         notes: invoiceForm.notes,
@@ -1695,24 +1698,30 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Jatuh Tempo (Paten 7 Hari) <span className="text-rose-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Jatuh Tempo (Otomatis +7 Hari) <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-emerald-600" /> Net 7 SOP
+                    </span>
+                  </div>
                   <input
                     type="date"
                     required
+                    readOnly
                     value={invoiceForm.dueDate}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-indigo-300 bg-indigo-50/30 font-bold font-mono text-indigo-900 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-indigo-300 bg-indigo-50/60 font-bold font-mono text-indigo-900 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 outline-none cursor-default"
+                    title="Jatuh tempo proyek retail (swasta) dikunci otomatis 7 hari kalender setelah tanggal invoice terbit"
                   />
                 </div>
               </div>
 
               {/* Informative Net 7 Rule Notice */}
-              <div className="p-2.5 bg-indigo-50/80 rounded-xl border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2">
-                <Clock className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+              <div className="p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div className="text-[11px] leading-relaxed">
-                  <strong>Aturan Paten Jatuh Tempo Retail:</strong> 7 hari kalender setelah tanggal terbit invoice (Net 7). Jatuh tempo otomatis dihitung ke <strong>{invoiceForm.dueDate}</strong>.
+                  <strong>Jatuh Tempo Otomatis 7 Hari (Net 7):</strong> Khusus proyek retail (swasta), sistem mengunci tanggal jatuh tempo tepat 7 hari kalender setelah tanggal terbit invoice (Terbit: <strong>{invoiceForm.issueDate}</strong> &rarr; Jatuh Tempo: <strong>{invoiceForm.dueDate}</strong>).
                 </div>
               </div>
 
