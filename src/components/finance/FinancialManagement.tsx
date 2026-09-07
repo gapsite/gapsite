@@ -19,6 +19,7 @@ import {
   Briefcase,
   Zap,
   Building,
+  Gift,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { FinancialStatsCards } from './FinancialStatsCards';
@@ -28,6 +29,7 @@ import { BankLoanManagement } from './BankLoanManagement';
 import { TaxManagement } from './TaxManagement';
 import { ReceivableManagement } from './ReceivableManagement';
 import { PayrollManagement } from './PayrollManagement';
+import { BonusThrManagementView } from './BonusThrManagementView';
 import { GovernmentProjectManagement } from './GovernmentProjectManagement';
 import { RetailProjectManagement } from './RetailProjectManagement';
 import { OverheadManagement } from './OverheadManagement';
@@ -51,7 +53,8 @@ interface FinancialManagementProps {
     | 'RECEIVABLES'
     | 'BANK_LOANS'
     | 'TAX_MANAGEMENT'
-    | 'PAYROLL';
+    | 'PAYROLL'
+    | 'THR_BONUS';
   onSelectProject?: (projectId: string) => void;
   onOpenReports?: () => void;
 }
@@ -87,6 +90,7 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
     | 'BANK_LOANS'
     | 'TAX_MANAGEMENT'
     | 'PAYROLL'
+    | 'THR_BONUS'
   >(initialTab);
 
   useEffect(() => {
@@ -336,11 +340,30 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
         >
           <Users className="w-4 h-4 text-emerald-400" />
           <span>Gaji Karyawan & Payroll</span>
-          {payrollRecords && payrollRecords.length > 0 && (
+          {payrollRecords && payrollRecords.filter((p) => !p.paymentCategory || p.paymentCategory === 'MONTHLY_SALARY').length > 0 && (
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
               activeTab === 'PAYROLL' ? 'bg-emerald-950 text-emerald-200' : 'bg-emerald-100 text-emerald-800'
             }`}>
-              {payrollRecords.length} Slip
+              {payrollRecords.filter((p) => !p.paymentCategory || p.paymentCategory === 'MONTHLY_SALARY').length} Slip
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('THR_BONUS')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'THR_BONUS'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <Gift className="w-4 h-4 text-amber-500" />
+          <span>Bonus & THR Karyawan</span>
+          {payrollRecords && payrollRecords.filter((p) => p.paymentCategory === 'THR' || p.paymentCategory === 'PERFORMANCE_BONUS' || p.paymentCategory === 'PROJECT_BONUS' || p.paymentCategory === 'ANNUAL_BONUS' || (p.thrAmount && p.thrAmount > 0) || (p.bonusAmount && p.bonusAmount > 0)).length > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+              activeTab === 'THR_BONUS' ? 'bg-amber-800 text-white' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {payrollRecords.filter((p) => p.paymentCategory === 'THR' || p.paymentCategory === 'PERFORMANCE_BONUS' || p.paymentCategory === 'PROJECT_BONUS' || p.paymentCategory === 'ANNUAL_BONUS' || (p.thrAmount && p.thrAmount > 0) || (p.bonusAmount && p.bonusAmount > 0)).length}
             </span>
           )}
         </button>
@@ -413,6 +436,11 @@ export const FinancialManagement: React.FC<FinancialManagementProps> = ({
       {/* Tab 5: Employee Salary & Payroll Management */}
       {activeTab === 'PAYROLL' && (
         <PayrollManagement />
+      )}
+
+      {/* Tab 6: Bonus & Tunjangan Hari Raya (THR) Management */}
+      {activeTab === 'THR_BONUS' && (
+        <BonusThrManagementView onSelectProject={onSelectProject} />
       )}
 
       {/* Add / Edit Transaction Modal */}

@@ -313,6 +313,19 @@ const DashboardContent: React.FC = () => {
             </div>
           )}
 
+          {/* TAB 3C-THR: BONUS & TUNJANGAN HARI RAYA (THR) */}
+          {activeTab === 'thr-bonus' && (
+            <div className="animate-in fade-in duration-150">
+              <FinancialManagement
+                initialTab="THR_BONUS"
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId);
+                }}
+                onOpenReports={() => setActiveTab('financial-reports')}
+              />
+            </div>
+          )}
+
           {/* TAB 3D: OFFICIAL FINANCIAL REPORTS & STATEMENTS OUTPUT */}
           {activeTab === 'financial-reports' && (
             <div className="animate-in fade-in duration-150">

@@ -1048,11 +1048,19 @@ export interface ReceivableAgingSummary {
 
 export type PayrollStatus = 'PAID' | 'PENDING' | 'DRAFT';
 
+export type PayrollPaymentCategory =
+  | 'MONTHLY_SALARY'
+  | 'THR'
+  | 'PERFORMANCE_BONUS'
+  | 'PROJECT_BONUS'
+  | 'ANNUAL_BONUS';
+
 export interface PayrollPayment {
   id: string;
-  payrollNumber: string; // e.g. "PAY/2026/08/EMP-001" or "SLIP-202608-01"
-  period: string; // e.g. "Agustus 2026", "September 2026", "2026-08"
+  payrollNumber: string; // e.g. "PAY/2026/08/EMP-001" or "SLIP-202608-01" or "THR/2026/04/EMP-001"
+  period: string; // e.g. "Agustus 2026", "September 2026", "2026-08", "THR Idul Fitri 2026"
   paymentDate: string; // YYYY-MM-DD
+  paymentCategory?: PayrollPaymentCategory; // Default: 'MONTHLY_SALARY'
 
   // Employee Identity
   employeeId: string;
@@ -1074,6 +1082,12 @@ export interface PayrollPayment {
   projectBonus: number; // Bonus / Insentif Proyek TKDN & Legal
   overtimeAmount: number; // Upah Lembur
   otherAllowances: number; // Tunjangan Lainnya
+  thrAmount?: number; // Tunjangan Hari Raya (THR Keagamaan)
+  bonusAmount?: number; // Bonus Kinerja / Bonus Tahunan
+  serviceDurationMonths?: number; // Masa kerja dalam bulan (untuk prorata THR)
+  isProratedThr?: boolean; // True jika perhitungan prorata THR
+  holidayName?: string; // e.g. "Idul Fitri 1447 H", "Natal 2026", "Tahun Baru"
+  bonusCriteria?: string; // Alasan/Kriteria Bonus: "Pencapaian KPI", "Audit Sukses", dll
   totalEarnings: number; // Total Penghasilan Kotor (Gross)
 
   // Deductions Breakdown (Komponen Potongan)

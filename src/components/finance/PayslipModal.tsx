@@ -288,6 +288,36 @@ No. Transaksi Kas: ${payroll.transactionId || '-'}
                     </span>
                   </div>
                 )}
+                {payroll.thrAmount && payroll.thrAmount > 0 && (
+                  <div className="flex justify-between text-slate-700 bg-amber-50/70 -mx-3 px-3 py-1 border-y border-amber-200/60">
+                    <div>
+                      <span className="font-semibold text-amber-900">Tunjangan Hari Raya (THR)</span>
+                      {payroll.holidayName && (
+                        <span className="block text-[10px] text-amber-700 font-normal">
+                          {payroll.holidayName} {payroll.isProratedThr ? `(Prorata ${payroll.serviceDurationMonths || 0}/12 bln)` : '(Penuh 100%)'}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-mono font-bold text-amber-800">
+                      {formatIDR(payroll.thrAmount)}
+                    </span>
+                  </div>
+                )}
+                {payroll.bonusAmount && payroll.bonusAmount > 0 && (
+                  <div className="flex justify-between text-slate-700 bg-emerald-50/70 -mx-3 px-3 py-1 border-y border-emerald-200/60">
+                    <div>
+                      <span className="font-semibold text-emerald-900">Bonus Khusus / Kinerja</span>
+                      {payroll.bonusCriteria && (
+                        <span className="block text-[10px] text-emerald-700 font-normal">
+                          {payroll.bonusCriteria}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-mono font-bold text-emerald-800">
+                      {formatIDR(payroll.bonusAmount)}
+                    </span>
+                  </div>
+                )}
                 {payroll.overtimeAmount > 0 && (
                   <div className="flex justify-between text-slate-700">
                     <span>Upah Lembur</span>

@@ -10688,22 +10688,43 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const count = payrollRecords.length + 1;
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const payrollNumber = `PAY/${year}/${month}/EMP-${String(count).padStart(3, '0')}`;
+    let prefix = 'PAY';
+    if (data.paymentCategory === 'THR') {
+      prefix = 'THR';
+    } else if (
+      data.paymentCategory === 'PERFORMANCE_BONUS' ||
+      data.paymentCategory === 'PROJECT_BONUS' ||
+      data.paymentCategory === 'ANNUAL_BONUS'
+    ) {
+      prefix = 'BNS';
+    }
+    const payrollNumber = `${prefix}/${year}/${month}/EMP-${String(count).padStart(3, '0')}`;
 
     // Automatically create cleared expense FinancialTransaction into Finance & Cash Flow
     let createdTxId: string | undefined = undefined;
     if (data.status === 'PAID' || !data.status) {
+      const txDesc =
+        data.paymentCategory === 'THR'
+          ? `THR Karyawan: ${data.employeeName} (${data.roleTitle}) - ${data.holidayName || data.period}`
+          : data.paymentCategory === 'PERFORMANCE_BONUS'
+          ? `Bonus Kinerja: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`
+          : data.paymentCategory === 'PROJECT_BONUS'
+          ? `Bonus Proyek: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`
+          : data.paymentCategory === 'ANNUAL_BONUS'
+          ? `Bonus Tahunan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`
+          : `Gaji Karyawan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`;
+
       const tx = addTransaction({
         date: data.paymentDate || new Date().toISOString().slice(0, 10),
         type: 'EXPENSE',
         category: 'GAJI_KARYAWAN',
         amountIDR: data.netSalary,
-        description: `Gaji Karyawan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`,
+        description: txDesc,
         clientOrVendorName: data.employeeName,
         paymentMethod: data.paymentMethod,
         referenceNumber: payrollNumber,
         status: 'CLEARED',
-        notes: `Slip: ${payrollNumber} | Bruto: Rp ${data.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${data.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${data.netSalary.toLocaleString('id-ID')}${data.notes ? ' | ' + data.notes : ''}`,
+        notes: `Slip: ${payrollNumber} | Kategori: ${data.paymentCategory || 'GAJI_BULANAN'} | Bruto: Rp ${data.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${data.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${data.netSalary.toLocaleString('id-ID')}${data.notes ? ' | ' + data.notes : ''}`,
         recordedBy: data.recordedBy || currentUser.name || currentUser.username || 'Finance Officer',
       });
       if (tx && tx.id) {
@@ -11045,7 +11066,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     for (const data of records) {
       runningCount++;
       const id = generatePayrollId(data.period);
-      const payrollNumber = `PAY/${year}/${month}/EMP-${String(runningCount).padStart(3, '0')}`;
+      let prefix = 'PAY';
+      if (data.paymentCategory === 'THR') {
+        prefix = 'THR';
+      } else if (
+        data.paymentCategory === 'PERFORMANCE_BONUS' ||
+        data.paymentCategory === 'PROJECT_BONUS' ||
+        data.paymentCategory === 'ANNUAL_BONUS'
+      ) {
+        prefix = 'BNS';
+      }
+      const payrollNumber = `${prefix}/${year}/${month}/EMP-${String(runningCount).padStart(3, '0')}`;
 
       let createdTxId: string | undefined = undefined;
       if (data.status === 'PAID') {
@@ -11058,6 +11089,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           : `${year}${month}`;
         const seq = String(runningCount).padStart(3, '0');
 
+        const txDesc =
+          data.paymentCategory === 'THR'
+            ? `THR Karyawan: ${data.employeeName} (${data.roleTitle}) - ${data.holidayName || data.period}`
+            : data.paymentCategory === 'PERFORMANCE_BONUS'
+            ? `Bonus Kinerja: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`
+            : data.paymentCategory === 'PROJECT_BONUS'
+            ? `Bonus Proyek: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`
+            : data.paymentCategory === 'ANNUAL_BONUS'
+            ? `Bonus Tahunan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`
+            : `Gaji Karyawan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`;
+
         const newTx: FinancialTransaction = {
           id: txId,
           transactionNumber: `TRX-${yyyymm}-${seq}`,
@@ -11065,12 +11107,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           type: 'EXPENSE',
           category: 'GAJI_KARYAWAN',
           amountIDR: data.netSalary,
-          description: `Gaji Karyawan: ${data.employeeName} (${data.roleTitle}) - Periode ${data.period}`,
+          description: txDesc,
           clientOrVendorName: data.employeeName,
           paymentMethod: data.paymentMethod,
           referenceNumber: payrollNumber,
           status: 'CLEARED',
-          notes: `Slip: ${payrollNumber} | Bruto: Rp ${data.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${data.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${data.netSalary.toLocaleString('id-ID')}${data.notes ? ' | ' + data.notes : ''}`,
+          notes: `Slip: ${payrollNumber} | Kategori: ${data.paymentCategory || 'GAJI_BULANAN'} | Bruto: Rp ${data.totalEarnings.toLocaleString('id-ID')} | Potongan: Rp ${data.totalDeductions.toLocaleString('id-ID')} | Net THP: Rp ${data.netSalary.toLocaleString('id-ID')}${data.notes ? ' | ' + data.notes : ''}`,
           recordedBy: data.recordedBy || currentUser.name || currentUser.username || 'Finance Officer',
           createdAt: new Date().toISOString(),
         };

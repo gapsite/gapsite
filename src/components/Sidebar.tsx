@@ -32,6 +32,7 @@ import {
   Tag,
   Zap,
   Building2,
+  Gift,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 
@@ -47,6 +48,7 @@ export type MainTabType =
   | 'bank-loans'
   | 'tax'
   | 'payroll'
+  | 'thr-bonus'
   | 'financial-reports'
   | 'documents'
   | 'calculator'
@@ -600,7 +602,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                       }`}
                     >
-                      {payrollRecords ? payrollRecords.length : 0} Slip
+                      {payrollRecords ? payrollRecords.filter((p) => !p.paymentCategory || p.paymentCategory === 'MONTHLY_SALARY').length : 0} Slip
+                    </span>
+                  )}
+                </button>
+
+                {/* Bonus & Tunjangan Hari Raya (THR) Tab */}
+                <button
+                  onClick={() => handleNavClick('thr-bonus')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'thr-bonus'
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Pencairan Tunjangan Hari Raya (THR) & Bonus Kinerja Karyawan"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Gift className={`w-4 h-4 shrink-0 ${activeTab === 'thr-bonus' ? 'text-slate-950' : 'text-amber-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Bonus & THR Karyawan</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'thr-bonus'
+                          ? 'bg-slate-950 text-amber-300'
+                          : 'bg-amber-950/80 text-amber-300 border border-amber-800'
+                      }`}
+                    >
+                      THR & Bonus
                     </span>
                   )}
                 </button>
@@ -665,7 +694,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                       }`}
                     >
-                      {payrollRecords ? payrollRecords.length : 0} Slip
+                      {payrollRecords ? payrollRecords.filter((p) => !p.paymentCategory || p.paymentCategory === 'MONTHLY_SALARY').length : 0} Slip
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleNavClick('thr-bonus')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeTab === 'thr-bonus'
+                      ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  } ${isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'}`}
+                  title="Bonus Kinerja & Tunjangan Hari Raya (THR)"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Gift className={`w-4 h-4 shrink-0 ${activeTab === 'thr-bonus' ? 'text-slate-950' : 'text-amber-400'}`} />
+                    {(!isCollapsed || isMobileOpen) && <span className="truncate">Bonus & THR</span>}
+                  </div>
+                  {(!isCollapsed || isMobileOpen) && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                        activeTab === 'thr-bonus'
+                          ? 'bg-slate-950 text-amber-300'
+                          : 'bg-amber-950/80 text-amber-300 border border-amber-800'
+                      }`}
+                    >
+                      THR
                     </span>
                   )}
                 </button>

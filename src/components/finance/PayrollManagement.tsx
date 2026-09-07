@@ -29,6 +29,7 @@ import {
   UserCheck,
   Loader2,
   AlertCircle,
+  Gift,
 } from 'lucide-react';
 import { useProjects } from '../../context/ProjectContext';
 import { PayrollPayment, PayrollStatus } from '../../types';
@@ -38,6 +39,7 @@ import { PayslipModal } from './PayslipModal';
 import { PayrollPaymentModal } from './PayrollPaymentModal';
 import { BatchPayrollModal } from './BatchPayrollModal';
 import { AnnualSalaryManagementView } from './AnnualSalaryManagementView';
+import { BonusThrManagementView } from './BonusThrManagementView';
 import { PayrollReconciliationCard, PayrollReconciliationData } from './PayrollReconciliationCard';
 
 export const PayrollManagement: React.FC = () => {
@@ -67,8 +69,8 @@ export const PayrollManagement: React.FC = () => {
     (currentUser.role as string) === 'DIRECTOR_PARTNER' ||
     currentUser.role === 'FINANCE_OFFICER';
 
-  // Navigation tab: 'payroll_records' or 'annual_salary'
-  const [activeTab, setActiveTab] = useState<'payroll_records' | 'annual_salary'>('payroll_records');
+  // Navigation tab: 'payroll_records' | 'thr_bonus' | 'annual_salary'
+  const [activeTab, setActiveTab] = useState<'payroll_records' | 'thr_bonus' | 'annual_salary'>('payroll_records');
 
   // Search & Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -673,9 +675,25 @@ export const PayrollManagement: React.FC = () => {
             }`}
           >
             <Receipt className="w-4 h-4" />
-            <span>Riwayat Pembayaran &amp; Slip Gaji</span>
+            <span>Riwayat Gaji Bulanan</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 text-slate-700">
-              {payrollRecords.length}
+              {payrollRecords.filter((p) => !p.paymentCategory || p.paymentCategory === 'MONTHLY_SALARY').length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('thr_bonus')}
+            className={`px-4 py-2.5 text-xs font-bold border-b-2 flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'thr_bonus'
+                ? 'border-amber-600 text-amber-800 bg-amber-50/60 rounded-t-lg'
+                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+            }`}
+          >
+            <Gift className="w-4 h-4 text-amber-600" />
+            <span>Bonus &amp; THR Karyawan</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-100 text-amber-800 font-bold border border-amber-200">
+              {payrollRecords.filter((p) => p.paymentCategory === 'THR' || p.paymentCategory === 'PERFORMANCE_BONUS' || p.paymentCategory === 'PROJECT_BONUS' || p.paymentCategory === 'ANNUAL_BONUS' || (p.thrAmount && p.thrAmount > 0) || (p.bonusAmount && p.bonusAmount > 0)).length}
             </span>
           </button>
 
@@ -716,6 +734,8 @@ export const PayrollManagement: React.FC = () => {
             setIsInputModalOpen(true);
           }}
         />
+      ) : activeTab === 'thr_bonus' ? (
+        <BonusThrManagementView />
       ) : (
         <>
           {/* Summary KPI Cards */}

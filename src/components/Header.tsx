@@ -29,6 +29,7 @@ import {
   Printer,
   Tag,
   CreditCard,
+  Gift,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { MainTabType } from './Sidebar';
@@ -143,6 +144,13 @@ export const Header: React.FC<HeaderProps> = ({
           subtitle: 'Penggajian, Slip Gaji Resmi, Tunjangan, PPh 21 TER, & Pencatatan Kas Realtime',
           icon: Users,
           badge: `${payrollRecords.length} Slip Gaji`,
+        };
+      case 'thr-bonus':
+        return {
+          title: 'Bonus & Tunjangan Hari Raya (THR)',
+          subtitle: 'Pencairan THR Keagamaan, Bonus Kinerja, Insentif Proyek, PPh 21, & Pembukuan Kas',
+          icon: Gift,
+          badge: `${payrollRecords.filter((p) => p.paymentCategory === 'THR' || p.paymentCategory === 'PERFORMANCE_BONUS' || p.paymentCategory === 'PROJECT_BONUS' || p.paymentCategory === 'ANNUAL_BONUS' || (p.thrAmount && p.thrAmount > 0) || (p.bonusAmount && p.bonusAmount > 0)).length} Pencairan`,
         };
       case 'receivables':
         return {

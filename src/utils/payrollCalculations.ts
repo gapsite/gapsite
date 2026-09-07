@@ -201,3 +201,35 @@ export const calculatePayrollSummary = (records: PayrollPayment[], periodFilter?
     employeeCount: employeeIds.size,
   };
 };
+
+/**
+ * Hitung THR Keagamaan berdasarkan masa kerja (Permenaker No. 6 Tahun 2016)
+ * - Masa kerja >= 12 bulan: 1 bulan upah (atau multiplier x gaji)
+ * - Masa kerja 1 s.d < 12 bulan: (masa kerja / 12) * 1 bulan upah
+ */
+export const hitungThrProrata = (
+  gajiPokok: number,
+  tunjanganTetap: number = 0,
+  masaKerjaBulan: number = 12,
+  multiplier: number = 1
+): {
+  nominalThr: number;
+  isProrated: boolean;
+  rasio: number;
+} => {
+  const upahAcuan = (gajiPokok + tunjanganTetap) * (multiplier > 0 ? multiplier : 1);
+  if (masaKerjaBulan >= 12) {
+    return {
+      nominalThr: Math.round(upahAcuan),
+      isProrated: false,
+      rasio: 1,
+    };
+  }
+  const rasio = Math.max(0, Math.min(1, masaKerjaBulan / 12));
+  return {
+    nominalThr: Math.round(upahAcuan * rasio),
+    isProrated: true,
+    rasio: Number(rasio.toFixed(4)),
+  };
+};
+
