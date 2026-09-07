@@ -653,7 +653,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                     <span className="absolute left-3 top-2 text-xs text-slate-400 font-mono">Rp</span>
                     <input
                       type="number"
-                      value={baseSalary || ''}
+                      value={Number.isNaN(baseSalary) ? '' : (baseSalary || '')}
                       onChange={(e) => setBaseSalary(Number(e.target.value))}
                       placeholder="0"
                       min={0}
@@ -667,7 +667,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
-                      value={serviceMonths}
+                      value={Number.isNaN(serviceMonths) ? '' : (serviceMonths ?? '')}
                       onChange={(e) => setServiceMonths(Math.max(1, Number(e.target.value)))}
                       min={1}
                       max={360}
@@ -710,7 +710,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                     <span className="absolute left-3 top-2 text-xs text-amber-400 font-mono font-bold">Rp</span>
                     <input
                       type="number"
-                      value={nominalThr || ''}
+                      value={Number.isNaN(nominalThr) ? '' : (nominalThr || '')}
                       onChange={(e) => {
                         setAutoCalculateThr(false);
                         setNominalThr(Number(e.target.value));
@@ -779,7 +779,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                     <span className="absolute left-3 top-2 text-xs text-slate-400 font-mono">Rp</span>
                     <input
                       type="number"
-                      value={baseSalary || ''}
+                      value={Number.isNaN(baseSalary) ? '' : (baseSalary || '')}
                       onChange={(e) => setBaseSalary(Number(e.target.value))}
                       placeholder="0"
                       className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
@@ -795,7 +795,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                     <span className="absolute left-3 top-2 text-xs text-emerald-400 font-mono font-bold">Rp</span>
                     <input
                       type="number"
-                      value={nominalBonus || ''}
+                      value={Number.isNaN(nominalBonus) ? '' : (nominalBonus || '')}
                       onChange={(e) => setNominalBonus(Number(e.target.value))}
                       placeholder="0"
                       min={0}
@@ -835,7 +835,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                   <span className="absolute left-3 top-2 text-xs text-slate-500 font-mono">Rp</span>
                   <input
                     type="number"
-                    value={pph21Amount || ''}
+                    value={Number.isNaN(pph21Amount) ? '' : (pph21Amount || '')}
                     onChange={(e) => {
                       setApplyPph21(true);
                       setPph21Amount(Number(e.target.value));
@@ -857,7 +857,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                   <span className="absolute left-3 top-2 text-xs text-slate-500 font-mono">Rp</span>
                   <input
                     type="number"
-                    value={cashAdvanceDeduction || ''}
+                    value={Number.isNaN(cashAdvanceDeduction) ? '' : (cashAdvanceDeduction || '')}
                     onChange={(e) => setCashAdvanceDeduction(Number(e.target.value))}
                     placeholder="0"
                     min={0}
@@ -872,7 +872,7 @@ export const BonusThrModal: React.FC<BonusThrModalProps> = ({
                   <span className="absolute left-3 top-2 text-xs text-slate-500 font-mono">Rp</span>
                   <input
                     type="number"
-                    value={otherDeductions || ''}
+                    value={Number.isNaN(otherDeductions) ? '' : (otherDeductions || '')}
                     onChange={(e) => setOtherDeductions(Number(e.target.value))}
                     placeholder="0"
                     min={0}

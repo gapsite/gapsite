@@ -462,7 +462,7 @@ export const BatchThrModal: React.FC<BatchThrModalProps> = ({
                         <td className="p-3">
                           <input
                             type="number"
-                            value={row.nominalThr}
+                            value={Number.isNaN(row.nominalThr) ? '' : (row.nominalThr ?? '')}
                             onChange={(e) => handleRowThrChange(idx, Number(e.target.value))}
                             disabled={!row.selected}
                             className="w-32 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-amber-300 font-mono font-semibold focus:outline-none focus:border-amber-500 disabled:opacity-50"

@@ -104,6 +104,50 @@ export const isPurgedDummyGovTax = (tax: any): boolean => {
   return false;
 };
 
+export const COMPANY_FOUNDING_YEAR = 2021;
+
+/**
+ * Checks whether a given date, year, or string refers to a period prior to company founding (2021)
+ * or specifically the legacy/typo year 2011.
+ */
+export const isPreFoundingDateOrYear = (val: any): boolean => {
+  if (val === null || val === undefined || val === '') return false;
+  if (typeof val === 'number') {
+    return val > 0 && (val < COMPANY_FOUNDING_YEAR || val === 2011);
+  }
+  const str = String(val).trim();
+  if (!str) return false;
+
+  // Direct 2011 match
+  if (
+    str === '2011' ||
+    str.startsWith('2011-') ||
+    str.startsWith('2011/') ||
+    str.startsWith('2011.') ||
+    str.includes('/2011') ||
+    str.includes('-2011')
+  ) {
+    return true;
+  }
+
+  // Check 4-digit year at beginning of string (e.g. 2011-08-10, 2019-12-01)
+  if (str.length >= 4) {
+    const y = parseInt(str.slice(0, 4), 10);
+    if (!isNaN(y) && y >= 1900 && y < COMPANY_FOUNDING_YEAR) {
+      return true;
+    }
+  }
+
+  // Regex check for 4-digit years between 1900 and 2020 anywhere as whole word
+  const match = str.match(/\b(19\d{2}|200\d|201\d|2020)\b/);
+  if (match) {
+    const parsed = parseInt(match[1], 10);
+    if (parsed < COMPANY_FOUNDING_YEAR) return true;
+  }
+
+  return false;
+};
+
 export const scrubBannedDummyDataFromLocalStorage = (): void => {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
@@ -139,12 +183,24 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
 
     // 3. Scrub Payroll Records
     const payrollRaw = localStorage.getItem('verix_crm_payroll_v1');
+    const purgedPayIds: string[] = [];
     if (payrollRaw) {
       try {
         const list = JSON.parse(payrollRaw);
         if (Array.isArray(list)) {
           const cleaned = list.filter((p: any) => {
             if (!p) return false;
+            // Purge 2011 & pre-2021 founding payrolls
+            if (
+              isPreFoundingDateOrYear(p.paymentDate) ||
+              isPreFoundingDateOrYear(p.paidAt) ||
+              isPreFoundingDateOrYear(p.createdAt) ||
+              isPreFoundingDateOrYear(p.period) ||
+              p.payrollNumber?.includes('2011')
+            ) {
+              if (p.id) purgedPayIds.push(p.id);
+              return false;
+            }
             if (bannedIds.has(p.employeeId)) return false;
             if (isPurgedDummyName(p.employeeName)) return false;
             if (isPurgedDummyName(p.bankAccountHolder)) return false;
@@ -167,6 +223,7 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
         if (Array.isArray(list)) {
           const cleaned = list.filter((s: any) => {
             if (!s) return false;
+            if (s.year && (s.year < COMPANY_FOUNDING_YEAR || s.year === 2011)) return false;
             if (bannedIds.has(s.employeeId)) return false;
             if (isPurgedDummyName(s.employeeName)) return false;
             return true;
@@ -178,12 +235,26 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
 
     // 5. Scrub Transactions (Buku Kas)
     const trxsRaw = localStorage.getItem('verix_crm_transactions_v1');
+    const purgedTrxIds: string[] = [];
     if (trxsRaw) {
       try {
         const list = JSON.parse(trxsRaw);
         if (Array.isArray(list)) {
           const cleaned = list.filter((t: any) => {
             if (!t) return false;
+            // Purge 2011 & pre-2021 founding data
+            if (isPreFoundingDateOrYear(t.date) || isPreFoundingDateOrYear(t.createdAt) || isPreFoundingDateOrYear(t.settledAt)) {
+              if (t.id) purgedTrxIds.push(t.id);
+              return false;
+            }
+            if (
+              t.date?.includes('2011') ||
+              t.transactionNumber?.includes('2011') ||
+              t.referenceNumber?.includes('2011')
+            ) {
+              if (t.id) purgedTrxIds.push(t.id);
+              return false;
+            }
             if (['trx-pay-202608-01', 'trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'].includes(t.id)) return false;
             if (t.referenceNumber === 'PAY/2026/08/EMP-001') return false;
             if (t.transactionNumber === 'TRX-202608-EMP-001' || t.transactionNumber === 'TRX-202608-001') return false;
@@ -200,12 +271,29 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
 
     // 6. Scrub Tax Obligations
     const taxRaw = localStorage.getItem('verix_crm_tax_obligations_v1');
+    const purgedTaxIds: string[] = [];
     if (taxRaw) {
       try {
         const list = JSON.parse(taxRaw);
         if (Array.isArray(list)) {
           const cleaned = list.filter((tax: any) => {
             if (!tax) return false;
+            // Purge 2011 & pre-2021 founding tax obligations
+            if (
+              (tax.taxYear && tax.taxYear < COMPANY_FOUNDING_YEAR) ||
+              tax.taxYear === 2011 ||
+              isPreFoundingDateOrYear(tax.dueDate) ||
+              isPreFoundingDateOrYear(tax.createdAt) ||
+              isPreFoundingDateOrYear(tax.paidAt) ||
+              isPreFoundingDateOrYear(tax.taxPeriod)
+            ) {
+              if (tax.id) purgedTaxIds.push(tax.id);
+              return false;
+            }
+            if (tax.taxPeriod?.includes('2011') || tax.title?.includes('2011') || tax.taxInvoiceNumber?.includes('2011')) {
+              if (tax.id) purgedTaxIds.push(tax.id);
+              return false;
+            }
             if (['tax-pay-202608-01', 'tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03'].includes(tax.id)) return false;
             if (tax.payrollId === 'pay-202608-01' || tax.payrollNumber === 'PAY/2026/08/EMP-001') return false;
             if (tax.taxPeriod?.toLowerCase().includes('agustus 2026') && tax.taxType === 'PPH_21' && tax.employeeName?.toLowerCase().includes('adryan')) return false;
@@ -274,6 +362,9 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
     dummyPayIds.forEach((pid) => {
       if (!deletedPayrollsList.includes(pid)) deletedPayrollsList.push(pid);
     });
+    purgedPayIds.forEach((pid) => {
+      if (!deletedPayrollsList.includes(pid)) deletedPayrollsList.push(pid);
+    });
     localStorage.setItem('verix_crm_deleted_payroll_ids_v1', JSON.stringify(deletedPayrollsList));
 
     // 10. Blacklist deleted transaction IDs
@@ -286,6 +377,9 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
     }
     const dummyTrxIds = ['trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'];
     dummyTrxIds.forEach((tid) => {
+      if (!deletedTrxsList.includes(tid)) deletedTrxsList.push(tid);
+    });
+    purgedTrxIds.forEach((tid) => {
       if (!deletedTrxsList.includes(tid)) deletedTrxsList.push(tid);
     });
     localStorage.setItem('verix_crm_deleted_transaction_ids_v1', JSON.stringify(deletedTrxsList));
@@ -302,6 +396,9 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
     dummyTaxIds.forEach((txid) => {
       if (!deletedTaxesList.includes(txid)) deletedTaxesList.push(txid);
     });
+    purgedTaxIds.forEach((txid) => {
+      if (!deletedTaxesList.includes(txid)) deletedTaxesList.push(txid);
+    });
     localStorage.setItem('verix_crm_deleted_tax_ids_v1', JSON.stringify(deletedTaxesList));
 
     // 12. Scrub Government Projects
@@ -311,14 +408,37 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
       try {
         const list = JSON.parse(govRaw);
         if (Array.isArray(list)) {
-          const cleaned = list.filter((p: any) => {
-            if (!p) return false;
-            if (isPurgedDummyGovProject(p)) {
-              if (p.id) purgedGovIds.push(p.id);
-              return false;
-            }
-            return true;
-          });
+          const cleaned = list
+            .filter((p: any) => {
+              if (!p) return false;
+              if (
+                isPreFoundingDateOrYear(p.startDate) ||
+                isPreFoundingDateOrYear(p.createdAt) ||
+                p.code?.includes('2011') ||
+                p.contractNumber?.includes('2011')
+              ) {
+                if (p.id) purgedGovIds.push(p.id);
+                return false;
+              }
+              if (isPurgedDummyGovProject(p)) {
+                if (p.id) purgedGovIds.push(p.id);
+                return false;
+              }
+              return true;
+            })
+            .map((p: any) => {
+              // Also clean any pre-founding / 2011 milestones
+              if (Array.isArray(p.milestones)) {
+                const cleanedMilestones = p.milestones.filter(
+                  (m: any) =>
+                    !isPreFoundingDateOrYear(m.targetDate) &&
+                    !isPreFoundingDateOrYear(m.invoiceDate) &&
+                    !isPreFoundingDateOrYear(m.paymentDate)
+                );
+                return { ...p, milestones: cleanedMilestones };
+              }
+              return p;
+            });
           localStorage.setItem('verix_crm_government_projects_v1', JSON.stringify(cleaned));
         }
       } catch {}
@@ -333,6 +453,18 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
         if (Array.isArray(list)) {
           const cleaned = list.filter((r: any) => {
             if (!r) return false;
+            // Purge 2011 & pre-2021 founding receivables
+            if (
+              isPreFoundingDateOrYear(r.issueDate) ||
+              isPreFoundingDateOrYear(r.createdAt) ||
+              isPreFoundingDateOrYear(r.dueDate) ||
+              isPreFoundingDateOrYear(r.settledAt) ||
+              r.invoiceNumber?.includes('2011') ||
+              r.title?.includes('2011')
+            ) {
+              if (r.id) purgedRecIds.push(r.id);
+              return false;
+            }
             if (isPurgedDummyGovReceivable(r) || (r.projectId && purgedGovIds.includes(r.projectId))) {
               if (r.id) purgedRecIds.push(r.id);
               return false;
@@ -372,6 +504,109 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
         if (!deletedRecList.includes(rid)) deletedRecList.push(rid);
       });
       localStorage.setItem('verix_crm_deleted_receivable_ids_v1', JSON.stringify(deletedRecList));
+    }
+
+    // 16. Scrub Bank Loans (Pinjaman Bank)
+    const loansRaw = localStorage.getItem('verix_crm_bank_loans_v1');
+    if (loansRaw) {
+      try {
+        const list = JSON.parse(loansRaw);
+        if (Array.isArray(list)) {
+          const cleaned = list.filter((l: any) => {
+            if (!l) return false;
+            if (
+              isPreFoundingDateOrYear(l.startDate) ||
+              isPreFoundingDateOrYear(l.endDate) ||
+              isPreFoundingDateOrYear(l.createdAt) ||
+              l.loanNumber?.includes('2011') ||
+              l.bankName?.includes('2011')
+            ) {
+              return false;
+            }
+            return true;
+          });
+          localStorage.setItem('verix_crm_bank_loans_v1', JSON.stringify(cleaned));
+        }
+      } catch {}
+    }
+
+    // 17. Scrub Retail Projects
+    const retailRaw = localStorage.getItem('verix_crm_retail_projects_v1');
+    if (retailRaw) {
+      try {
+        const list = JSON.parse(retailRaw);
+        if (Array.isArray(list)) {
+          const cleaned = list
+            .filter((p: any) => {
+              if (!p) return false;
+              if (
+                isPreFoundingDateOrYear(p.startDate) ||
+                isPreFoundingDateOrYear(p.createdAt) ||
+                p.code?.includes('2011')
+              ) {
+                return false;
+              }
+              return true;
+            })
+            .map((p: any) => {
+              if (Array.isArray(p.milestones)) {
+                const cleanedMilestones = p.milestones.filter(
+                  (m: any) =>
+                    !isPreFoundingDateOrYear(m.targetDate) &&
+                    !isPreFoundingDateOrYear(m.invoiceDate) &&
+                    !isPreFoundingDateOrYear(m.paymentDate)
+                );
+                return { ...p, milestones: cleanedMilestones };
+              }
+              return p;
+            });
+          localStorage.setItem('verix_crm_retail_projects_v1', JSON.stringify(cleaned));
+        }
+      } catch {}
+    }
+
+    // 18. Scrub Overhead Expenses
+    const overheadRaw = localStorage.getItem('verix_crm_overhead_expenses_v1');
+    if (overheadRaw) {
+      try {
+        const list = JSON.parse(overheadRaw);
+        if (Array.isArray(list)) {
+          const cleaned = list.filter((o: any) => {
+            if (!o) return false;
+            if (
+              isPreFoundingDateOrYear(o.date) ||
+              isPreFoundingDateOrYear(o.createdAt) ||
+              o.expenseNumber?.includes('2011')
+            ) {
+              return false;
+            }
+            return true;
+          });
+          localStorage.setItem('verix_crm_overhead_expenses_v1', JSON.stringify(cleaned));
+        }
+      } catch {}
+    }
+
+    // 19. Scrub Office Rent Contracts
+    const rentRaw = localStorage.getItem('verix_crm_office_rents_v1');
+    if (rentRaw) {
+      try {
+        const list = JSON.parse(rentRaw);
+        if (Array.isArray(list)) {
+          const cleaned = list.filter((rent: any) => {
+            if (!rent) return false;
+            if (
+              isPreFoundingDateOrYear(rent.startDate) ||
+              isPreFoundingDateOrYear(rent.endDate) ||
+              rent.contractNumber?.includes('2011')
+            ) {
+              return false;
+            }
+            return true;
+          });
+          localStorage.setItem('verix_crm_office_rents_v1', JSON.stringify(cleaned));
+        }
+      } catch {}
     }
   } catch (e) {
     console.warn('[storage] Note during dummy data scrub:', e);

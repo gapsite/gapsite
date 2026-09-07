@@ -510,7 +510,7 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
                 type="number"
                 min="0"
                 step="1000"
-                value={totalAmountIDR || ''}
+                value={Number.isNaN(totalAmountIDR) ? '' : (totalAmountIDR || '')}
                 onChange={(e) => setTotalAmountIDR(Math.max(0, Number(e.target.value)))}
                 placeholder="0"
                 className="w-full px-3.5 py-2 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-hidden text-emerald-600 dark:text-emerald-400"
@@ -638,7 +638,7 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
                         min="0"
                         max={totalAmountIDR}
                         step="1000"
-                        value={initialPaidAmountIDR || ''}
+                        value={Number.isNaN(initialPaidAmountIDR) ? '' : (initialPaidAmountIDR || '')}
                         onChange={(e) => setInitialPaidAmountIDR(Math.max(0, Number(e.target.value)))}
                         placeholder="0"
                         className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-800 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden text-emerald-600 dark:text-emerald-400"

@@ -382,29 +382,30 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     return `${y}-${m}-${dt}`;
   };
 
-  // Dynamically extract available years across all financial data
+  // Dynamically extract available years across all financial data (PT founded in 2021)
   const availableYears = useMemo(() => {
+    const COMPANY_FOUNDING_YEAR = 2021;
     const yearSet = new Set<number>();
     const currentYear = new Date().getFullYear();
     yearSet.add(currentYear);
-    yearSet.add(currentYear - 1);
-    yearSet.add(currentYear - 2);
+    if (currentYear - 1 >= COMPANY_FOUNDING_YEAR) yearSet.add(currentYear - 1);
+    if (currentYear - 2 >= COMPANY_FOUNDING_YEAR) yearSet.add(currentYear - 2);
     yearSet.add(currentYear + 1);
 
     (transactions || []).forEach((t) => {
       if (t.date && t.date.length >= 4) {
         const y = parseInt(t.date.slice(0, 4), 10);
-        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+        if (!isNaN(y) && y >= COMPANY_FOUNDING_YEAR && y <= 2100) yearSet.add(y);
       }
     });
 
     (taxObligations || []).forEach((t) => {
-      if (t.taxYear && t.taxYear >= 2000 && t.taxYear <= 2100) {
+      if (t.taxYear && t.taxYear >= COMPANY_FOUNDING_YEAR && t.taxYear <= 2100) {
         yearSet.add(t.taxYear);
       }
       if (t.dueDate && t.dueDate.length >= 4) {
         const y = parseInt(t.dueDate.slice(0, 4), 10);
-        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+        if (!isNaN(y) && y >= COMPANY_FOUNDING_YEAR && y <= 2100) yearSet.add(y);
       }
     });
 
@@ -412,7 +413,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       const d = r.issueDate || r.createdAt;
       if (d && d.length >= 4) {
         const y = parseInt(d.slice(0, 4), 10);
-        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+        if (!isNaN(y) && y >= COMPANY_FOUNDING_YEAR && y <= 2100) yearSet.add(y);
       }
     });
 
@@ -420,7 +421,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       const d = p.paymentDate || p.paidAt || p.createdAt;
       if (d && d.length >= 4) {
         const y = parseInt(d.slice(0, 4), 10);
-        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+        if (!isNaN(y) && y >= COMPANY_FOUNDING_YEAR && y <= 2100) yearSet.add(y);
       }
     });
 
@@ -428,11 +429,11 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       const d = l.startDate || l.createdAt;
       if (d && d.length >= 4) {
         const y = parseInt(d.slice(0, 4), 10);
-        if (!isNaN(y) && y >= 2000 && y <= 2100) yearSet.add(y);
+        if (!isNaN(y) && y >= COMPANY_FOUNDING_YEAR && y <= 2100) yearSet.add(y);
       }
     });
 
-    return Array.from(yearSet).sort((a, b) => b - a);
+    return Array.from(yearSet).filter((y) => y >= COMPANY_FOUNDING_YEAR).sort((a, b) => b - a);
   }, [transactions, taxObligations, receivables, payrollRecords, bankLoans]);
 
   // Helper date ranges
@@ -469,7 +470,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
 
     if (periodFilter === 'THIS_YEAR') {
       if (selectedYear === 'ALL') {
-        return { start: '1970-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi (Seluruh Tahun)' };
+        return { start: '2021-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi (Seluruh Tahun)' };
       }
       const start = `${selectedYear}-01-01`;
       const end = `${selectedYear}-12-31`;
@@ -484,7 +485,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
 
     if (periodFilter === 'CUSTOM' && (customStartDate || customEndDate)) {
       return {
-        start: customStartDate || '1970-01-01',
+        start: customStartDate || '2021-01-01',
         end: customEndDate || '2099-12-31',
         label: `Periode: ${customStartDate || 'Awal'} s/d ${customEndDate || 'Akhir'}`,
       };
@@ -500,7 +501,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
           label: `Tahun Pembukuan ${selectedYear} (1 Jan - 31 Des ${selectedYear})`
         };
       }
-      return { start: '1970-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi (Seluruh Tahun)' };
+      return { start: '2021-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi (Seluruh Tahun)' };
     }
 
     if (selectedYear !== 'ALL') {
@@ -511,12 +512,17 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       };
     }
 
-    return { start: '1970-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi' };
+    return { start: '2021-01-01', end: '2099-12-31', label: 'Semua Periode Transaksi' };
   }, [periodFilter, selectedYear, customStartDate, customEndDate]);
 
   // Filtered Transactions
   const filteredTransactions = useMemo(() => {
     const list = transactions.filter((t) => {
+      // Exclude pre-founding (prior to 2021) or legacy typo 2011 transactions
+      if (!t || !t.date || t.date < '2021-01-01' || t.date.startsWith('2011') || t.date.includes('2011')) {
+        return false;
+      }
+
       // 1. Date Range
       if (t.date < dateBounds.start || t.date > dateBounds.end) {
         return false;

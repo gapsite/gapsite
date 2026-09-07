@@ -146,16 +146,74 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
     notes: '',
   });
 
-  // Add Custom Milestone Modal state
+  // Add / Edit Custom Milestone Modal state
   const [isAddMilestoneModalOpen, setIsAddMilestoneModalOpen] = useState(false);
   const [activeProjectIdForMilestone, setActiveProjectIdForMilestone] = useState<string | null>(null);
+  const [editingMilestone, setEditingMilestone] = useState<RetailMilestone | null>(null);
   const [milestoneForm, setMilestoneForm] = useState({
     title: '',
+    termNumber: 1,
     percentage: 30,
     grossAmountIDR: 0,
     targetDate: new Date().toISOString().slice(0, 10),
+    status: 'BELUM_DITAGIH' as RetailMilestoneStatus,
+    invoiceNumber: '',
+    invoiceDate: '',
+    invoiceDueDate: '',
+    fakturPajakNumber: '',
+    bupotPphNumber: '',
+    paymentDate: '',
+    referenceNumber: '',
     notes: '',
   });
+
+  const handleOpenAddMilestoneModal = (project: RetailProject) => {
+    setActiveProjectIdForMilestone(project.id);
+    setEditingMilestone(null);
+    const currentTotalPct = project.milestones.reduce((acc, m) => acc + (m.percentage || 0), 0);
+    const remPct = Math.max(0, 100 - currentTotalPct);
+    const remGross = Math.round((project.totalContractValueIDR * remPct) / 100);
+
+    setMilestoneForm({
+      title: `Termin ${project.milestones.length + 1}`,
+      termNumber: project.milestones.length + 1,
+      percentage: remPct || 20,
+      grossAmountIDR: remGross || 0,
+      targetDate: new Date().toISOString().slice(0, 10),
+      status: 'BELUM_DITAGIH',
+      invoiceNumber: '',
+      invoiceDate: '',
+      invoiceDueDate: '',
+      fakturPajakNumber: '',
+      bupotPphNumber: '',
+      paymentDate: '',
+      referenceNumber: '',
+      notes: '',
+    });
+    setIsAddMilestoneModalOpen(true);
+  };
+
+  const handleOpenEditMilestoneModal = (project: RetailProject, milestone: RetailMilestone) => {
+    setActiveProjectIdForMilestone(project.id);
+    setEditingMilestone(milestone);
+    setMilestoneForm({
+      title: milestone.title || '',
+      termNumber: milestone.termNumber || 1,
+      percentage: milestone.percentage || 0,
+      grossAmountIDR: milestone.grossAmountIDR || 0,
+      targetDate: milestone.targetDate || '',
+      status: milestone.status || 'BELUM_DITAGIH',
+      invoiceNumber: milestone.invoiceNumber || '',
+      invoiceDate: milestone.invoiceDate || '',
+      invoiceDueDate: milestone.invoiceDueDate || '',
+      fakturPajakNumber: milestone.fakturPajakNumber || '',
+      bupotPphNumber: milestone.bupotPphNumber || '',
+      paymentDate: milestone.paymentDate || '',
+      referenceNumber: milestone.referenceNumber || '',
+      notes: milestone.notes || '',
+    });
+    setIsAddMilestoneModalOpen(true);
+  };
 
   // Toggle Project Milestone Accordion
   const toggleProjectExpand = (id: string) => {
@@ -924,21 +982,7 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                       </div>
 
                       <button
-                        onClick={() => {
-                          setActiveProjectIdForMilestone(project.id);
-                          const currentTotalPct = project.milestones.reduce((acc, m) => acc + (m.percentage || 0), 0);
-                          const remPct = Math.max(0, 100 - currentTotalPct);
-                          const remGross = Math.round((project.totalContractValueIDR * remPct) / 100);
-
-                          setMilestoneForm({
-                            title: `Termin ${project.milestones.length + 1}`,
-                            percentage: remPct || 20,
-                            grossAmountIDR: remGross || 0,
-                            targetDate: new Date().toISOString().slice(0, 10),
-                            notes: '',
-                          });
-                          setIsAddMilestoneModalOpen(true);
-                        }}
+                        onClick={() => handleOpenAddMilestoneModal(project)}
                         className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                         id={`btn-add-milestone-${project.id}`}
                       >
@@ -1151,11 +1195,22 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                                       )}
 
                                       {isPaid && (
-                                        <div className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
-                                          <Check className="w-3.5 h-3.5" />
+                                        <div className="text-[11px] text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                                          <Check className="w-3.5 h-3.5 text-emerald-600" />
                                           <span>{milestone.paymentDate || 'Selesai'}</span>
                                         </div>
                                       )}
+
+                                      {/* Tombol Edit Jadwal Termin */}
+                                      <button
+                                        onClick={() => handleOpenEditMilestoneModal(project, milestone)}
+                                        className="px-2 py-1 bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 border border-slate-200 hover:border-teal-300 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                                        title="Edit Rincian Jadwal Termin"
+                                        id={`btn-edit-milestone-${milestone.id}`}
+                                      >
+                                        <Edit className="w-3.5 h-3.5 text-teal-600" />
+                                        <span>Edit</span>
+                                      </button>
 
                                       <button
                                         onClick={() => {
@@ -1844,8 +1899,8 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                 <input
                   type="number"
                   required
-                  value={paymentForm.amountReceivedIDR}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, amountReceivedIDR: Number(e.target.value) })}
+                  value={Number.isNaN(paymentForm.amountReceivedIDR) ? '' : (paymentForm.amountReceivedIDR ?? '')}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amountReceivedIDR: e.target.value === '' ? 0 : Number(e.target.value) })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono font-black text-emerald-700 focus:ring-2 focus:ring-emerald-500 outline-none"
                   id="input-payment-amount"
                 />
@@ -2027,137 +2082,432 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
       )}
 
       {/* ===================================================================== */}
-      {/* MODAL 4: Tambah Custom Milestone / Termin Baru                        */}
+      {/* ===================================================================== */}
+      {/* MODAL 4: Tambah / Edit Jadwal Termin Pembayaran                       */}
       {/* ===================================================================== */}
       {isAddMilestoneModalOpen && activeProjectIdForMilestone && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 bg-gradient-to-r from-teal-900 to-slate-900 text-white flex items-center justify-between">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-teal-400" />
-                Tambah Termin Pembayaran Baru
-              </h3>
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center border border-teal-400/30">
+                  {editingMilestone ? (
+                    <Edit className="w-5 h-5 text-teal-300" />
+                  ) : (
+                    <Plus className="w-5 h-5 text-teal-300" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>{editingMilestone ? `Edit Jadwal Termin #${milestoneForm.termNumber}` : 'Tambah Termin Pembayaran Baru'}</span>
+                    {editingMilestone && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-teal-800/80 text-teal-200 border border-teal-600/50">
+                        {milestoneForm.status}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] text-teal-200">
+                    {editingMilestone
+                      ? 'Perbarui rincian termin, nilai bruto, persentase, tanggal jatuh tempo, dan dokumen terkait'
+                      : 'Tambahkan jadwal tagihan & persentase termin untuk proyek ini'}
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => setIsAddMilestoneModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                onClick={() => {
+                  setIsAddMilestoneModalOpen(false);
+                  setEditingMilestone(null);
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const project = retailProjects.find((p) => p.id === activeProjectIdForMilestone);
-                if (!project) return;
+            {/* Modal Form */}
+            {(() => {
+              const activeProj = retailProjects.find((p) => p.id === activeProjectIdForMilestone);
+              const gross = Math.max(0, Math.round(Number(milestoneForm.grossAmountIDR) || 0));
+              const pricingType = activeProj?.pricingType || 'INCLUDE_PPN';
+              const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
+              const ppnRate = pricingType === 'NON_PKP' ? 0 : (activeProj?.ppnRatePercent || 11);
+              const ppnAmount = pricingType === 'INCLUDE_PPN'
+                ? Math.round(gross - dpp)
+                : pricingType === 'EXCLUDE_PPN'
+                ? Math.round((dpp * ppnRate) / 100)
+                : 0;
+              const pphType = activeProj?.pphType || 'PPH_23';
+              const pphRate = activeProj?.pphRatePercent || (pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0);
+              const pphAmount = pphType === 'PPH_23'
+                ? Math.round((dpp * pphRate) / 100)
+                : pphType === 'PPH_FINAL_UMKM'
+                ? Math.round((gross * pphRate) / 100)
+                : 0;
+              const netDisbursement = pricingType === 'EXCLUDE_PPN'
+                ? Math.round(gross + ppnAmount - pphAmount)
+                : Math.round(gross - pphAmount);
 
-                const res = addRetailMilestone(project.id, {
-                  termNumber: project.milestones.length + 1,
-                  title: milestoneForm.title,
-                  percentage: milestoneForm.percentage,
-                  grossAmountIDR: milestoneForm.grossAmountIDR,
-                  targetDate: milestoneForm.targetDate,
-                  status: 'BELUM_DITAGIH',
-                  notes: milestoneForm.notes,
-                });
+              return (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!activeProj) return;
 
-                if (res.success) {
-                  alert('Termin baru berhasil ditambahkan!');
-                  setIsAddMilestoneModalOpen(false);
-                } else {
-                  alert(res.message || 'Gagal menambahkan termin.');
-                }
-              }}
-              className="p-6 space-y-4"
-            >
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Uraian / Nama Termin <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={milestoneForm.title}
-                  onChange={(e) => setMilestoneForm({ ...milestoneForm, title: e.target.value })}
-                  placeholder="Contoh: Termin 3 (Penerbitan Laporan Akhir & BAST)"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
-                />
-              </div>
+                    if (editingMilestone) {
+                      const effDueDate = milestoneForm.invoiceDueDate || (milestoneForm.invoiceDate ? calculateRetailInvoiceDueDate(milestoneForm.invoiceDate, RETAIL_PAYMENT_TERMS_DAYS) : milestoneForm.targetDate);
+                      const delayAnalysis = evaluateRetailPaymentDelay(milestoneForm.invoiceDate, effDueDate, milestoneForm.paymentDate);
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Persentase (%)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={milestoneForm.percentage}
-                    onChange={(e) => {
-                      const pct = Number(e.target.value);
-                      const project = retailProjects.find((p) => p.id === activeProjectIdForMilestone);
-                      const gross = project ? Math.round((project.totalContractValueIDR * pct) / 100) : 0;
-                      setMilestoneForm({ ...milestoneForm, percentage: pct, grossAmountIDR: gross });
-                    }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
-                </div>
+                      const res = updateRetailMilestone(activeProj.id, editingMilestone.id, {
+                        termNumber: Number(milestoneForm.termNumber) || editingMilestone.termNumber,
+                        title: milestoneForm.title,
+                        percentage: Number(milestoneForm.percentage) || 0,
+                        grossAmountIDR: Number(milestoneForm.grossAmountIDR) || 0,
+                        targetDate: milestoneForm.targetDate,
+                        status: milestoneForm.status,
+                        invoiceNumber: milestoneForm.invoiceNumber || undefined,
+                        invoiceDate: milestoneForm.invoiceDate || undefined,
+                        invoiceDueDate: milestoneForm.invoiceDueDate || undefined,
+                        fakturPajakNumber: milestoneForm.fakturPajakNumber || undefined,
+                        bupotPphNumber: milestoneForm.bupotPphNumber || undefined,
+                        paymentDate: milestoneForm.paymentDate || undefined,
+                        referenceNumber: milestoneForm.referenceNumber || undefined,
+                        isOverduePayment: delayAnalysis.isDelayed,
+                        delayDays: delayAnalysis.delayDays,
+                        delayNotes: delayAnalysis.delayNotes,
+                        notes: milestoneForm.notes,
+                      });
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nominal Bruto (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    value={milestoneForm.grossAmountIDR}
-                    onChange={(e) => setMilestoneForm({ ...milestoneForm, grossAmountIDR: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
-                </div>
-              </div>
+                      if (res.success) {
+                        setSyncToast({
+                          message: `Jadwal "${milestoneForm.title}" berhasil diperbarui!`,
+                          type: 'success',
+                        });
+                        setIsAddMilestoneModalOpen(false);
+                        setEditingMilestone(null);
+                      } else {
+                        alert(res.message || 'Gagal memperbarui termin.');
+                      }
+                    } else {
+                      const res = addRetailMilestone(activeProj.id, {
+                        termNumber: Number(milestoneForm.termNumber) || activeProj.milestones.length + 1,
+                        title: milestoneForm.title,
+                        percentage: Number(milestoneForm.percentage) || 0,
+                        grossAmountIDR: Number(milestoneForm.grossAmountIDR) || 0,
+                        targetDate: milestoneForm.targetDate,
+                        status: milestoneForm.status || 'BELUM_DITAGIH',
+                        notes: milestoneForm.notes,
+                      });
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Target Jatuh Tempo
-                </label>
-                <input
-                  type="date"
-                  value={milestoneForm.targetDate}
-                  onChange={(e) => setMilestoneForm({ ...milestoneForm, targetDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Catatan Termin
-                </label>
-                <textarea
-                  rows={2}
-                  value={milestoneForm.notes}
-                  onChange={(e) => setMilestoneForm({ ...milestoneForm, notes: e.target.value })}
-                  placeholder="Keterangan prasyarat termin..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsAddMilestoneModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100"
+                      if (res.success) {
+                        setSyncToast({
+                          message: `Termin baru "${milestoneForm.title}" berhasil ditambahkan!`,
+                          type: 'success',
+                        });
+                        setIsAddMilestoneModalOpen(false);
+                        setEditingMilestone(null);
+                      } else {
+                        alert(res.message || 'Gagal menambahkan termin.');
+                      }
+                    }
+                  }}
+                  className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
                 >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
-                >
-                  Simpan Termin
-                </button>
-              </div>
-            </form>
+                  {/* Info Ringkas Proyek */}
+                  {activeProj && (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-slate-500">Proyek:</span>{' '}
+                        <strong className="text-slate-800">{activeProj.projectName}</strong>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-500">Total Kontrak:</span>{' '}
+                        <strong className="font-mono text-teal-700 font-bold">{formatIDR(activeProj.totalContractValueIDR)}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Uraian & Nomor Termin */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="md:col-span-3">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Uraian / Nama Termin <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={milestoneForm.title}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, title: e.target.value })}
+                        placeholder="Contoh: Termin 1 (Uang Muka 50% SPK)"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Urutan (#)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={Number.isNaN(milestoneForm.termNumber) ? '' : (milestoneForm.termNumber ?? '')}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, termNumber: e.target.value === '' ? 1 : Number(e.target.value) })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-teal-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Persentase & Nominal Bruto */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Persentase Tagihan (%) <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          max={100}
+                          required
+                          value={Number.isNaN(milestoneForm.percentage) ? '' : (milestoneForm.percentage ?? '')}
+                          onChange={(e) => {
+                            const pct = e.target.value === '' ? 0 : Number(e.target.value);
+                            const calcGross = activeProj ? Math.round((activeProj.totalContractValueIDR * (Number.isNaN(pct) ? 0 : pct)) / 100) : 0;
+                            setMilestoneForm({ ...milestoneForm, percentage: pct, grossAmountIDR: calcGross });
+                          }}
+                          className="w-full px-3 py-2 pr-8 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-teal-500 outline-none"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Nominal Bruto Tagihan (IDR) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        required
+                        value={Number.isNaN(milestoneForm.grossAmountIDR) ? '' : (milestoneForm.grossAmountIDR ?? '')}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? 0 : Number(e.target.value);
+                          const calcPct = activeProj && activeProj.totalContractValueIDR > 0
+                            ? Math.round((val / activeProj.totalContractValueIDR) * 1000) / 10
+                            : milestoneForm.percentage;
+                          setMilestoneForm({ ...milestoneForm, grossAmountIDR: val, percentage: calcPct });
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-teal-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Real-time Calculation Breakdown Card */}
+                  <div className="p-3.5 bg-gradient-to-br from-teal-50/60 to-emerald-50/40 border border-teal-200/80 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-teal-800 font-bold border-b border-teal-100 pb-1.5">
+                      <span>Kalkulasi Pajak & Estimasi Kas Bersih:</span>
+                      <span className="font-mono text-xs text-emerald-800">
+                        Skema: {pricingType} | PPh: {pphType} ({pphRate}%)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                      <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
+                        <span className="text-slate-500 block text-[10px]">DPP (Dasar Pajak)</span>
+                        <span className="font-mono font-bold text-slate-800">{formatIDR(dpp)}</span>
+                      </div>
+                      <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
+                        <span className="text-slate-500 block text-[10px]">PPN 11% (Faktur)</span>
+                        <span className="font-mono font-bold text-teal-700">{formatIDR(ppnAmount)}</span>
+                      </div>
+                      <div className="bg-white/80 p-2 rounded-lg border border-teal-100">
+                        <span className="text-slate-500 block text-[10px]">Pot. PPh ({pphRate}%)</span>
+                        <span className="font-mono font-bold text-rose-600">-{formatIDR(pphAmount)}</span>
+                      </div>
+                      <div className="bg-emerald-100/60 p-2 rounded-lg border border-emerald-300">
+                        <span className="text-emerald-800 block text-[10px] font-bold">Kas Bersih (Netto)</span>
+                        <span className="font-mono font-bold text-emerald-900">{formatIDR(netDisbursement)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Target Jatuh Tempo & Status Termin */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Target Tanggal Jatuh Tempo
+                      </label>
+                      <input
+                        type="date"
+                        value={milestoneForm.targetDate}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, targetDate: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Status Pembayaran Termin
+                      </label>
+                      <select
+                        value={milestoneForm.status}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, status: e.target.value as RetailMilestoneStatus })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                      >
+                        <option value="BELUM_DITAGIH">BELUM DITAGIH (Draft Termin)</option>
+                        <option value="INVOICE_TERBIT">INVOICE TERBIT (Tercatat Piutang)</option>
+                        <option value="LUNAS">LUNAS (Kas Masuk Diterima)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Section: Dokumen Invoice & Pajak (Bisa diedit kapan saja) */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Dokumen Invoice & Faktur Perpajakan (Opsional)</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Nomor Invoice</label>
+                        <input
+                          type="text"
+                          value={milestoneForm.invoiceNumber}
+                          onChange={(e) => setMilestoneForm({ ...milestoneForm, invoiceNumber: e.target.value })}
+                          placeholder="e.g. INV/RET/2026/001"
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Tgl Terbit Invoice</label>
+                        <input
+                          type="date"
+                          value={milestoneForm.invoiceDate}
+                          onChange={(e) => {
+                            const invDate = e.target.value;
+                            const defaultDue = invDate ? calculateRetailInvoiceDueDate(invDate, RETAIL_PAYMENT_TERMS_DAYS) : '';
+                            setMilestoneForm({
+                              ...milestoneForm,
+                              invoiceDate: invDate,
+                              invoiceDueDate: milestoneForm.invoiceDueDate || defaultDue,
+                            });
+                          }}
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Jatuh Tempo (SOP 7 Hari)</label>
+                        <input
+                          type="date"
+                          value={milestoneForm.invoiceDueDate}
+                          onChange={(e) => setMilestoneForm({ ...milestoneForm, invoiceDueDate: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">No. e-Faktur Pajak PPN</label>
+                        <input
+                          type="text"
+                          value={milestoneForm.fakturPajakNumber}
+                          onChange={(e) => setMilestoneForm({ ...milestoneForm, fakturPajakNumber: e.target.value })}
+                          placeholder="010.002-26.12345678"
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">No. Bukti Potong PPh 23</label>
+                        <input
+                          type="text"
+                          value={milestoneForm.bupotPphNumber}
+                          onChange={(e) => setMilestoneForm({ ...milestoneForm, bupotPphNumber: e.target.value })}
+                          placeholder="BP-PPH23-2026-001"
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section: Realisasi Kas Masuk (jika status LUNAS atau ada tanggal bayar) */}
+                  {(milestoneForm.status === 'LUNAS' || milestoneForm.paymentDate) && (
+                    <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-3">
+                      <h4 className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Data Realisasi Pembayaran Diterima (Kas Masuk)</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-emerald-900 mb-1">Tanggal Bayar Diterima</label>
+                          <input
+                            type="date"
+                            value={milestoneForm.paymentDate}
+                            onChange={(e) => setMilestoneForm({ ...milestoneForm, paymentDate: e.target.value })}
+                            className="w-full px-2.5 py-1.5 border border-emerald-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-emerald-900 mb-1">No. Ref Bank / Bukti Transfer</label>
+                          <input
+                            type="text"
+                            value={milestoneForm.referenceNumber}
+                            onChange={(e) => setMilestoneForm({ ...milestoneForm, referenceNumber: e.target.value })}
+                            placeholder="e.g. TRF-BCA-98124578"
+                            className="w-full px-2.5 py-1.5 border border-emerald-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-teal-500 outline-none bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Catatan Termin */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Catatan / Prasyarat Dokumen Termin
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={milestoneForm.notes}
+                      onChange={(e) => setMilestoneForm({ ...milestoneForm, notes: e.target.value })}
+                      placeholder="Contoh: Ditagihkan setelah Berita Acara Serah Terima (BAST) dan laporan akhir disetujui..."
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
+                    />
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddMilestoneModalOpen(false);
+                        setEditingMilestone(null);
+                      }}
+                      className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+                    >
+                      {editingMilestone ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Simpan Perubahan Termin</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          <span>Simpan Termin Baru</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              );
+            })()}
           </div>
         </div>
       )}

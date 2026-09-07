@@ -847,8 +847,8 @@ export const ServiceTypeManagerModal: React.FC<ServiceTypeManagerModalProps> = (
                   <input
                     type="number"
                     min="1"
-                    value={formDurationDays}
-                    onChange={(e) => setFormDurationDays(Number(e.target.value))}
+                    value={Number.isNaN(formDurationDays) ? '' : (formDurationDays ?? '')}
+                    onChange={(e) => setFormDurationDays(e.target.value === '' ? 0 : Number(e.target.value))}
                     className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 font-mono font-medium"
                   />
                 </div>
@@ -861,8 +861,8 @@ export const ServiceTypeManagerModal: React.FC<ServiceTypeManagerModalProps> = (
                     type="number"
                     min="0"
                     step="1000000"
-                    value={formBasePriceIDR}
-                    onChange={(e) => setFormBasePriceIDR(Number(e.target.value))}
+                    value={Number.isNaN(formBasePriceIDR) ? '' : (formBasePriceIDR ?? '')}
+                    onChange={(e) => setFormBasePriceIDR(e.target.value === '' ? 0 : Number(e.target.value))}
                     className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl px-3 py-2 font-mono font-bold"
                   />
                   <span className="text-[10px] font-mono text-emerald-600 block mt-1">

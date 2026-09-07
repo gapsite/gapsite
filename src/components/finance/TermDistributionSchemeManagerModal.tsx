@@ -536,7 +536,7 @@ export const TermDistributionSchemeManagerModal: React.FC<TermDistributionScheme
                               max="100"
                               step="0.5"
                               required
-                              value={term.percentage}
+                              value={Number.isNaN(term.percentage) ? '' : (term.percentage ?? '')}
                               onChange={(e) => {
                                 const val = Number(e.target.value);
                                 setFormTerms((prev) =>

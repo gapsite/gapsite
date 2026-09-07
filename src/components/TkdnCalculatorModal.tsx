@@ -268,7 +268,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                   </label>
                   <input
                     type="number"
-                    value={materialKdn}
+                    value={Number.isNaN(materialKdn) ? '' : (materialKdn ?? '')}
                     onChange={(e) => setMaterialKdn(Number(e.target.value) || 0)}
                     className="w-full text-xs font-mono bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-2 focus:ring-emerald-500 font-bold"
                   />
@@ -280,7 +280,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                   </label>
                   <input
                     type="number"
-                    value={materialKln}
+                    value={Number.isNaN(materialKln) ? '' : (materialKln ?? '')}
                     onChange={(e) => setMaterialKln(Number(e.target.value) || 0)}
                     className="w-full text-xs font-mono bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-2 focus:ring-emerald-500 font-bold"
                   />
@@ -314,7 +314,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                   </label>
                   <input
                     type="number"
-                    value={laborWni}
+                    value={Number.isNaN(laborWni) ? '' : (laborWni ?? '')}
                     onChange={(e) => setLaborWni(Number(e.target.value) || 0)}
                     className="w-full text-xs font-mono bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-2 focus:ring-blue-500 font-bold"
                   />
@@ -326,7 +326,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                   </label>
                   <input
                     type="number"
-                    value={laborWna}
+                    value={Number.isNaN(laborWna) ? '' : (laborWna ?? '')}
                     onChange={(e) => setLaborWna(Number(e.target.value) || 0)}
                     className="w-full text-xs font-mono bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-2 focus:ring-blue-500 font-bold"
                   />
@@ -360,7 +360,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                   </label>
                   <input
                     type="number"
-                    value={overheadKdn}
+                    value={Number.isNaN(overheadKdn) ? '' : (overheadKdn ?? '')}
                     onChange={(e) => setOverheadKdn(Number(e.target.value) || 0)}
                     className="w-full text-xs font-mono bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-2 focus:ring-teal-500 font-bold"
                   />
@@ -372,7 +372,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                   </label>
                   <input
                     type="number"
-                    value={overheadKln}
+                    value={Number.isNaN(overheadKln) ? '' : (overheadKln ?? '')}
                     onChange={(e) => setOverheadKln(Number(e.target.value) || 0)}
                     className="w-full text-xs font-mono bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-2 focus:ring-teal-500 font-bold"
                   />
@@ -423,7 +423,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                   min="0"
                   max="20"
                   step="0.5"
-                  value={rdBonus}
+                  value={Number.isNaN(rdBonus) ? 0 : (rdBonus ?? 0)}
                   onChange={(e) => setRdBonus(Number(e.target.value))}
                   className="w-full accent-indigo-600 cursor-pointer"
                 />
@@ -461,7 +461,7 @@ export const TkdnCalculatorModal: React.FC<TkdnCalculatorModalProps> = ({ isOpen
                 min="0"
                 max="15"
                 step="0.5"
-                value={bmpScore}
+                value={Number.isNaN(bmpScore) ? 0 : (bmpScore ?? 0)}
                 onChange={(e) => setBmpScore(Number(e.target.value))}
                 className="w-full accent-amber-600 cursor-pointer"
               />

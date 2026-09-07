@@ -514,7 +514,7 @@ export const CategorizedUploadModal: React.FC<CategorizedUploadModalProps> = ({
                   </label>
                   <input
                     type="number"
-                    value={amountIDR}
+                    value={amountIDR === '' || Number.isNaN(amountIDR) ? '' : (amountIDR ?? '')}
                     onChange={(e) => setAmountIDR(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="e.g. 50000000"
                     className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-mono font-bold focus:ring-1 focus:ring-emerald-500"

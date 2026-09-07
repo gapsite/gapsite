@@ -1155,8 +1155,8 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
                       type="number"
                       min={1000}
                       step={1000}
-                      value={formData.amountIDR || ''}
-                      onChange={(e) => setFormData({ ...formData, amountIDR: Number(e.target.value) })}
+                      value={Number.isNaN(formData.amountIDR) ? '' : (formData.amountIDR || '')}
+                      onChange={(e) => setFormData({ ...formData, amountIDR: e.target.value === '' ? 0 : Number(e.target.value) })}
                       className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                       placeholder="0"
                       required
@@ -1270,8 +1270,8 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
                         <input
                           type="number"
                           step={0.5}
-                          value={formData.taxRatePercent}
-                          onChange={(e) => setFormData({ ...formData, taxRatePercent: Number(e.target.value) })}
+                          value={Number.isNaN(formData.taxRatePercent) ? '' : (formData.taxRatePercent ?? '')}
+                          onChange={(e) => setFormData({ ...formData, taxRatePercent: e.target.value === '' ? 0 : Number(e.target.value) })}
                           className="w-20 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold"
                         />
                         <span className="text-xs text-purple-700 font-mono font-bold">

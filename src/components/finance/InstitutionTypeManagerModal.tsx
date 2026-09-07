@@ -435,8 +435,8 @@ export const InstitutionTypeManagerModal: React.FC<InstitutionTypeManagerModalPr
                     <input
                       type="number"
                       step="0.1"
-                      value={formPphRate}
-                      onChange={(e) => setFormPphRate(Number(e.target.value))}
+                      value={Number.isNaN(formPphRate) ? '' : (formPphRate ?? '')}
+                      onChange={(e) => setFormPphRate(e.target.value === '' ? 0 : Number(e.target.value))}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-bold"
                     />
                   </div>
@@ -448,8 +448,8 @@ export const InstitutionTypeManagerModal: React.FC<InstitutionTypeManagerModalPr
                     <input
                       type="number"
                       step="0.1"
-                      value={formPpnRate}
-                      onChange={(e) => setFormPpnRate(Number(e.target.value))}
+                      value={Number.isNaN(formPpnRate) ? '' : (formPpnRate ?? '')}
+                      onChange={(e) => setFormPpnRate(e.target.value === '' ? 0 : Number(e.target.value))}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-blue-700"
                     />
                     <span className="text-[10px] text-slate-400">Umumnya 11% (atau 12% sesuai UU HPP terbaru)</span>

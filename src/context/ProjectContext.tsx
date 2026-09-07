@@ -171,6 +171,8 @@ import {
   isPurgedDummyGovTransaction,
   isPurgedDummyGovReceivable,
   isPurgedDummyGovTax,
+  COMPANY_FOUNDING_YEAR,
+  isPreFoundingDateOrYear,
 } from '../utils/storage';
 import { CERTIFICATION_MILESTONE_TEMPLATES } from '../utils/checklistGenerator';
 import { getServiceTypeName, getServiceTypeBadgeColor, formatIDR } from '../utils/formatters';
@@ -1358,6 +1360,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             t.id &&
             !isBannedAdryanAugSalary &&
             !isPurgedDummyGovTransaction(t) &&
+            !isPreFoundingDateOrYear(t.date) &&
+            !isPreFoundingDateOrYear(t.createdAt) &&
+            !t.date?.includes('2011') &&
+            !t.transactionNumber?.includes('2011') &&
+            !t.referenceNumber?.includes('2011') &&
             !seenIds.has(String(t.id).trim()) &&
             !mockTrxIds.has(t.id) &&
             !(t.projectId && mockProjectIds.has(t.projectId)) &&
@@ -1563,7 +1570,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          return parsed.filter(
+            (l) =>
+              l &&
+              !isPreFoundingDateOrYear(l.startDate) &&
+              !isPreFoundingDateOrYear(l.endDate) &&
+              !isPreFoundingDateOrYear(l.createdAt) &&
+              !l.loanNumber?.includes('2011') &&
+              !l.bankName?.includes('2011')
+          );
         }
       }
       return [];
@@ -1653,6 +1668,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 t.id &&
                 !deletedIds.has(t.id) &&
                 !isPurgedDummyGovTax(t) &&
+                !(t.taxYear && t.taxYear < COMPANY_FOUNDING_YEAR) &&
+                t.taxYear !== 2011 &&
+                !isPreFoundingDateOrYear(t.dueDate) &&
+                !isPreFoundingDateOrYear(t.createdAt) &&
+                !isPreFoundingDateOrYear(t.paidAt) &&
+                !isPreFoundingDateOrYear(t.taxPeriod) &&
+                !t.taxPeriod?.includes('2011') &&
+                !t.title?.includes('2011') &&
                 t.id !== 'tax-pay-202608-01' &&
                 t.payrollId !== 'pay-202608-01' &&
                 t.payrollNumber !== 'PAY/2026/08/EMP-001' &&
@@ -1712,7 +1735,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((r) => r && r.id && !deletedIds.has(r.id) && !isPurgedDummyGovReceivable(r));
+          return parsed.filter(
+            (r) =>
+              r &&
+              r.id &&
+              !deletedIds.has(r.id) &&
+              !isPurgedDummyGovReceivable(r) &&
+              !isPreFoundingDateOrYear(r.issueDate) &&
+              !isPreFoundingDateOrYear(r.createdAt) &&
+              !isPreFoundingDateOrYear(r.dueDate) &&
+              !isPreFoundingDateOrYear(r.settledAt) &&
+              !r.invoiceNumber?.includes('2011') &&
+              !r.title?.includes('2011')
+          );
         }
       }
       return INITIAL_RECEIVABLES.filter((r) => r && r.id && !deletedIds.has(r.id) && !isPurgedDummyGovReceivable(r));
@@ -1749,10 +1784,30 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id) && !isPurgedDummyGovProject(p));
+          return parsed.filter(
+            (p) =>
+              p &&
+              p.id &&
+              !deletedIds.has(p.id) &&
+              !isPurgedDummyGovProject(p) &&
+              !isPreFoundingDateOrYear(p.startDate) &&
+              !isPreFoundingDateOrYear(p.createdAt) &&
+              !p.satkerCode?.includes('2011') &&
+              !p.contractNumber?.includes('2011')
+          );
         }
       }
-      return INITIAL_GOVERNMENT_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id) && !isPurgedDummyGovProject(p));
+      return INITIAL_GOVERNMENT_PROJECTS.filter(
+        (p) =>
+          p &&
+          p.id &&
+          !deletedIds.has(p.id) &&
+          !isPurgedDummyGovProject(p) &&
+          !isPreFoundingDateOrYear(p.startDate) &&
+          !isPreFoundingDateOrYear(p.createdAt) &&
+          !p.satkerCode?.includes('2011') &&
+          !p.contractNumber?.includes('2011')
+      );
     } catch {
       return INITIAL_GOVERNMENT_PROJECTS.filter((p) => !isPurgedDummyGovProject(p));
     }
@@ -1786,10 +1841,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((p) => p && p.id && !deletedIds.has(p.id));
+          return parsed.filter(
+            (p) =>
+              p &&
+              p.id &&
+              !deletedIds.has(p.id) &&
+              !isPreFoundingDateOrYear(p.contractDate) &&
+              !isPreFoundingDateOrYear(p.createdAt) &&
+              !p.projectCode?.includes('2011')
+          );
         }
       }
-      return INITIAL_RETAIL_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id));
+      return INITIAL_RETAIL_PROJECTS.filter(
+        (p) =>
+          p &&
+          p.id &&
+          !deletedIds.has(p.id) &&
+          !isPreFoundingDateOrYear(p.contractDate) &&
+          !isPreFoundingDateOrYear(p.createdAt) &&
+          !p.projectCode?.includes('2011')
+      );
     } catch {
       return INITIAL_RETAIL_PROJECTS;
     }
@@ -1823,10 +1894,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((e) => e && e.id && !deletedIds.has(e.id));
+          return parsed.filter(
+            (e) =>
+              e &&
+              e.id &&
+              !deletedIds.has(e.id) &&
+              !isPreFoundingDateOrYear(e.date) &&
+              !isPreFoundingDateOrYear(e.createdAt) &&
+              !e.overheadNumber?.includes('2011')
+          );
         }
       }
-      return INITIAL_OVERHEAD_EXPENSES.filter((e) => e && e.id && !deletedIds.has(e.id));
+      return INITIAL_OVERHEAD_EXPENSES.filter(
+        (e) =>
+          e &&
+          e.id &&
+          !deletedIds.has(e.id) &&
+          !isPreFoundingDateOrYear(e.date) &&
+          !isPreFoundingDateOrYear(e.createdAt) &&
+          !e.overheadNumber?.includes('2011')
+      );
     } catch {
       return INITIAL_OVERHEAD_EXPENSES;
     }
@@ -1860,10 +1947,26 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((c) => c && c.id && !deletedIds.has(c.id));
+          return parsed.filter(
+            (c) =>
+              c &&
+              c.id &&
+              !deletedIds.has(c.id) &&
+              !isPreFoundingDateOrYear(c.startDate) &&
+              !isPreFoundingDateOrYear(c.endDate) &&
+              !c.contractNumber?.includes('2011')
+          );
         }
       }
-      return INITIAL_OFFICE_RENTS.filter((c) => c && c.id && !deletedIds.has(c.id));
+      return INITIAL_OFFICE_RENTS.filter(
+        (c) =>
+          c &&
+          c.id &&
+          !deletedIds.has(c.id) &&
+          !isPreFoundingDateOrYear(c.startDate) &&
+          !isPreFoundingDateOrYear(c.endDate) &&
+          !c.contractNumber?.includes('2011')
+      );
     } catch {
       return INITIAL_OFFICE_RENTS;
     }
@@ -1973,6 +2076,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               p &&
               p.id &&
               !deletedIds.has(p.id) &&
+              !isPreFoundingDateOrYear(p.paymentDate) &&
+              !isPreFoundingDateOrYear(p.paidAt) &&
+              !isPreFoundingDateOrYear(p.createdAt) &&
+              !isPreFoundingDateOrYear(p.period) &&
+              !p.payrollNumber?.includes('2011') &&
               p.id !== 'pay-202608-01' &&
               p.payrollNumber !== 'PAY/2026/08/EMP-001' &&
               !(p.paymentDate === '2026-08-28' && p.employeeName?.toLowerCase().includes('adryan')) &&
@@ -2044,6 +2152,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return parsed.filter(
             (s: EmployeeAnnualSalaryConfig) =>
               s &&
+              !(s.year && s.year < COMPANY_FOUNDING_YEAR) &&
+              s.year !== 2011 &&
               !PURGED_DUMMY_USER_IDS.includes(s.employeeId) &&
               !isPurgedDummyName(s.employeeName)
           );

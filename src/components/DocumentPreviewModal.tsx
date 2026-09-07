@@ -1601,7 +1601,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                       <label className="block text-slate-400 font-bold mb-1">Nilai Nominal / Valuation (IDR)</label>
                       <input
                         type="number"
-                        value={editAmount}
+                        value={editAmount === '' || Number.isNaN(editAmount) ? '' : (editAmount ?? '')}
                         onChange={(e) => setEditAmount(e.target.value === '' ? '' : Number(e.target.value))}
                         placeholder="Contoh: 150000000"
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs font-mono focus:ring-1 focus:ring-emerald-500 focus:outline-none"

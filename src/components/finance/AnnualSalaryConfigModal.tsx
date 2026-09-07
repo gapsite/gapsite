@@ -545,7 +545,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                     type="number"
                     min={0}
                     step={50_000}
-                    value={basicSalary}
+                    value={Number.isNaN(basicSalary) ? '' : (basicSalary ?? '')}
                     onChange={(e) => setBasicSalary(Number(e.target.value) || 0)}
                     className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold"
                   />
@@ -564,7 +564,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                     type="number"
                     min={0}
                     step={50_000}
-                    value={positionAllowance}
+                    value={Number.isNaN(positionAllowance) ? '' : (positionAllowance ?? '')}
                     onChange={(e) => setPositionAllowance(Number(e.target.value) || 0)}
                     className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
@@ -583,7 +583,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                     type="number"
                     min={0}
                     step={50_000}
-                    value={transportAllowance}
+                    value={Number.isNaN(transportAllowance) ? '' : (transportAllowance ?? '')}
                     onChange={(e) => setTransportAllowance(Number(e.target.value) || 0)}
                     className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
@@ -602,7 +602,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                     type="number"
                     min={0}
                     step={50_000}
-                    value={mealAllowance}
+                    value={Number.isNaN(mealAllowance) ? '' : (mealAllowance ?? '')}
                     onChange={(e) => setMealAllowance(Number(e.target.value) || 0)}
                     className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
@@ -621,7 +621,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                     type="number"
                     min={0}
                     step={25_000}
-                    value={communicationAllowance}
+                    value={Number.isNaN(communicationAllowance) ? '' : (communicationAllowance ?? '')}
                     onChange={(e) => setCommunicationAllowance(Number(e.target.value) || 0)}
                     className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
@@ -640,7 +640,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                     type="number"
                     min={0}
                     step={50_000}
-                    value={fixedAllowance}
+                    value={Number.isNaN(fixedAllowance) ? '' : (fixedAllowance ?? '')}
                     onChange={(e) => setFixedAllowance(Number(e.target.value) || 0)}
                     className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
@@ -685,7 +685,7 @@ export const AnnualSalaryConfigModal: React.FC<AnnualSalaryConfigModalProps> = (
                     type="number"
                     min={0}
                     step={500_000}
-                    value={annualBonusEstimate}
+                    value={Number.isNaN(annualBonusEstimate) ? '' : (annualBonusEstimate ?? '')}
                     onChange={(e) => setAnnualBonusEstimate(Number(e.target.value) || 0)}
                     className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   />

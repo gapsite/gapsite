@@ -652,8 +652,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClos
                     step="0.1"
                     min="0"
                     max="100"
-                    value={targetTkdnPercentage}
-                    onChange={(e) => setTargetTkdnPercentage(Number(e.target.value))}
+                    value={Number.isNaN(targetTkdnPercentage) ? '' : (targetTkdnPercentage ?? '')}
+                    onChange={(e) => setTargetTkdnPercentage(e.target.value === '' ? 0 : Number(e.target.value))}
                     className="w-full text-xs bg-white border border-emerald-300 text-slate-900 rounded-lg px-3 py-2 font-bold font-mono focus:ring-2 focus:ring-emerald-500"
                     required
                   />
@@ -671,8 +671,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClos
                     step="0.1"
                     min="0"
                     max="100"
-                    value={projectedTkdnPercentage}
-                    onChange={(e) => setProjectedTkdnPercentage(Number(e.target.value))}
+                    value={Number.isNaN(projectedTkdnPercentage) ? '' : (projectedTkdnPercentage ?? '')}
+                    onChange={(e) => setProjectedTkdnPercentage(e.target.value === '' ? 0 : Number(e.target.value))}
                     className="w-full text-xs bg-white border border-emerald-300 text-emerald-800 rounded-lg px-3 py-2 font-bold font-mono focus:ring-2 focus:ring-emerald-500"
                   />
                   <span className="absolute right-3 top-2 text-xs font-bold text-emerald-600">%</span>
@@ -685,8 +685,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClos
                 </label>
                 <input
                   type="number"
-                  value={contractValueIDR}
-                  onChange={(e) => setContractValueIDR(Number(e.target.value))}
+                  value={Number.isNaN(contractValueIDR) ? '' : (contractValueIDR ?? '')}
+                  onChange={(e) => setContractValueIDR(e.target.value === '' ? 0 : Number(e.target.value))}
                   className="w-full text-xs bg-white border border-slate-300 text-slate-900 rounded-lg px-3 py-2 font-bold font-mono focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -700,8 +700,8 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClos
                 </label>
                 <input
                   type="number"
-                  value={contractValueIDR}
-                  onChange={(e) => setContractValueIDR(Number(e.target.value))}
+                  value={Number.isNaN(contractValueIDR) ? '' : (contractValueIDR ?? '')}
+                  onChange={(e) => setContractValueIDR(e.target.value === '' ? 0 : Number(e.target.value))}
                   className="w-full text-xs bg-white border border-slate-300 text-slate-900 rounded-lg px-3 py-2 font-bold font-mono focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g. 50000000"
                 />

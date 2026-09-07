@@ -1419,8 +1419,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   <input
                     id="tax-form-year-input"
                     type="number"
-                    value={formData.taxYear}
-                    onChange={(e) => handleYearChange(Number(e.target.value))}
+                    value={Number.isNaN(formData.taxYear) ? '' : (formData.taxYear ?? '')}
+                    onChange={(e) => handleYearChange(e.target.value === '' ? 0 : Number(e.target.value))}
                     className="w-full px-3.5 py-2 bg-slate-800/90 border border-slate-700 rounded-xl text-sm font-medium text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   />
                 </div>
@@ -1506,9 +1506,9 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       type="number"
                       required
                       min={0}
-                      value={formData.taxableBaseAmount}
+                      value={Number.isNaN(formData.taxableBaseAmount) ? '' : (formData.taxableBaseAmount ?? '')}
                       onChange={(e) => {
-                        const val = Number(e.target.value);
+                        const val = e.target.value === '' ? 0 : Number(e.target.value);
                         handleDppOrRateChange(val, formData.taxRatePercent);
                       }}
                       className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
@@ -1523,9 +1523,9 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       type="number"
                       step="0.1"
                       required
-                      value={formData.taxRatePercent}
+                      value={Number.isNaN(formData.taxRatePercent) ? '' : (formData.taxRatePercent ?? '')}
                       onChange={(e) => {
-                        const val = Number(e.target.value);
+                        const val = e.target.value === '' ? 0 : Number(e.target.value);
                         handleDppOrRateChange(formData.taxableBaseAmount, val);
                       }}
                       className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
@@ -1543,9 +1543,9 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       <input
                         type="number"
                         min={0}
-                        value={formData.ppnOutputAmount}
+                        value={Number.isNaN(formData.ppnOutputAmount) ? '' : (formData.ppnOutputAmount ?? '')}
                         onChange={(e) => {
-                          const outVal = Number(e.target.value);
+                          const outVal = e.target.value === '' ? 0 : Number(e.target.value);
                           handleDppOrRateChange(formData.taxableBaseAmount, formData.taxRatePercent, outVal, formData.ppnInputAmount);
                         }}
                         className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -1558,9 +1558,9 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                       <input
                         type="number"
                         min={0}
-                        value={formData.ppnInputAmount}
+                        value={Number.isNaN(formData.ppnInputAmount) ? '' : (formData.ppnInputAmount ?? '')}
                         onChange={(e) => {
-                          const inVal = Number(e.target.value);
+                          const inVal = e.target.value === '' ? 0 : Number(e.target.value);
                           handleDppOrRateChange(formData.taxableBaseAmount, formData.taxRatePercent, formData.ppnOutputAmount, inVal);
                         }}
                         className="w-full px-3.5 py-2 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -2231,9 +2231,9 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   type="number"
                   min={0}
                   step={1000000}
-                  value={calcDpp}
+                  value={Number.isNaN(calcDpp) ? '' : (calcDpp ?? '')}
                   onChange={(e) => {
-                    const val = Number(e.target.value);
+                    const val = e.target.value === '' ? 0 : Number(e.target.value);
                     setCalcDpp(val);
                     if (calcType === 'PPN') {
                       setCalcPpnOutput(Math.round((val * calcRate) / 100));
@@ -2251,8 +2251,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     </label>
                     <input
                       type="number"
-                      value={calcPpnOutput}
-                      onChange={(e) => setCalcPpnOutput(Number(e.target.value))}
+                      value={Number.isNaN(calcPpnOutput) ? '' : (calcPpnOutput ?? '')}
+                      onChange={(e) => setCalcPpnOutput(e.target.value === '' ? 0 : Number(e.target.value))}
                       className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
@@ -2262,8 +2262,8 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                     </label>
                     <input
                       type="number"
-                      value={calcPpnInput}
-                      onChange={(e) => setCalcPpnInput(Number(e.target.value))}
+                      value={Number.isNaN(calcPpnInput) ? '' : (calcPpnInput ?? '')}
+                      onChange={(e) => setCalcPpnInput(e.target.value === '' ? 0 : Number(e.target.value))}
                       className="w-full px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-semibold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>

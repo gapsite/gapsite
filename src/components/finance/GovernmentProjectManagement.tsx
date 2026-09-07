@@ -127,8 +127,10 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
 
   const [isAddMilestoneModalOpen, setIsAddMilestoneModalOpen] = useState(false);
   const [activeProjectIdForMilestone, setActiveProjectIdForMilestone] = useState<string | null>(null);
+  const [editingMilestone, setEditingMilestone] = useState<GovMilestone | null>(null);
   const [milestoneForm, setMilestoneForm] = useState({
     title: '',
+    termNumber: 1,
     percentage: 20,
     grossAmountIDR: 0,
     pphType: 'PPH_22' as 'PPH_22' | 'PPH_23',
@@ -137,7 +139,49 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
     targetDate: new Date().toISOString().slice(0, 10),
     bapNumber: '',
     bastNumber: '',
+    notes: '',
   });
+
+  const handleOpenAddGovMilestoneModal = (project: GovernmentProject) => {
+    setActiveProjectIdForMilestone(project.id);
+    setEditingMilestone(null);
+    const remainingGross = Math.max(0, project.totalContractValueIDR - project.milestones.reduce((acc, m) => acc + m.grossAmountIDR, 0));
+    const remainingPercent = project.totalContractValueIDR > 0 ? Math.round((remainingGross / project.totalContractValueIDR) * 100) : 0;
+
+    setMilestoneForm({
+      title: `Termin ${project.milestones.length + 1}`,
+      termNumber: project.milestones.length + 1,
+      percentage: remainingPercent > 0 ? remainingPercent : 20,
+      grossAmountIDR: remainingGross,
+      pphType: project.institutionType === 'KEMENTERIAN' || project.institutionType === 'LEMBAGA' || project.institutionType === 'DINAS_PEMDA' ? 'PPH_22' : 'PPH_23',
+      pphRatePercent: project.whtRatePph || 1.5,
+      ppnRatePercent: project.vatWapuRate || 11,
+      targetDate: new Date().toISOString().slice(0, 10),
+      bapNumber: '',
+      bastNumber: '',
+      notes: '',
+    });
+    setIsAddMilestoneModalOpen(true);
+  };
+
+  const handleOpenEditGovMilestoneModal = (project: GovernmentProject, milestone: GovMilestone) => {
+    setActiveProjectIdForMilestone(project.id);
+    setEditingMilestone(milestone);
+    setMilestoneForm({
+      title: milestone.title || '',
+      termNumber: milestone.termNumber || 1,
+      percentage: milestone.percentage || 0,
+      grossAmountIDR: milestone.grossAmountIDR || 0,
+      pphType: (milestone.pphType === 'PPH_23' ? 'PPH_23' : 'PPH_22') as 'PPH_22' | 'PPH_23',
+      pphRatePercent: milestone.pphRatePercent ?? (project.whtRatePph || 1.5),
+      ppnRatePercent: milestone.ppnRatePercent ?? (project.vatWapuRate || 11),
+      targetDate: milestone.targetDate || '',
+      bapNumber: milestone.bapNumber || '',
+      bastNumber: milestone.bastNumber || '',
+      notes: milestone.notes || '',
+    });
+    setIsAddMilestoneModalOpen(true);
+  };
 
   // Toggle Project Milestone Accordion
   const toggleProjectExpand = (id: string) => {
@@ -745,28 +789,13 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => {
-                          setActiveProjectIdForMilestone(project.id);
-                          const remainingGross = Math.max(0, project.totalContractValueIDR - project.milestones.reduce((acc, m) => acc + m.grossAmountIDR, 0));
-                          const remainingPercent = project.totalContractValueIDR > 0 ? Math.round((remainingGross / project.totalContractValueIDR) * 100) : 0;
-                          
-                          setMilestoneForm({
-                            title: `Termin ${project.milestones.length + 1}`,
-                            percentage: remainingPercent > 0 ? remainingPercent : 20,
-                            grossAmountIDR: remainingGross,
-                            pphType: project.institutionType === 'KEMENTERIAN' || project.institutionType === 'LEMBAGA' || project.institutionType === 'DINAS_PEMDA' ? 'PPH_22' : 'PPH_23',
-                            pphRatePercent: project.whtRatePph || 1.5,
-                            ppnRatePercent: project.vatWapuRate || 11,
-                            targetDate: new Date().toISOString().slice(0, 10),
-                            bapNumber: '',
-                            bastNumber: '',
-                          });
-                          setIsAddMilestoneModalOpen(true);
-                        }}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        onClick={() => handleOpenAddGovMilestoneModal(project)}
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
                         title="Tambah Termin Baru"
+                        id={`btn-add-gov-milestone-${project.id}`}
                       >
-                        + Termin
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Termin Baru</span>
                       </button>
 
                       <button
@@ -969,6 +998,17 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
                                       <span>Terintegrasi Kas & Pajak</span>
                                     </div>
                                   )}
+
+                                  {/* Edit milestone option */}
+                                  <button
+                                    onClick={() => handleOpenEditGovMilestoneModal(project, milestone)}
+                                    className="px-2 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-300 rounded-lg text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+                                    title="Edit Rincian Termin"
+                                    id={`btn-edit-gov-milestone-${milestone.id}`}
+                                  >
+                                    <Edit className="w-3 h-3 text-blue-600" />
+                                    <span>Edit</span>
+                                  </button>
 
                                   {/* Delete milestone option */}
                                   {milestone.status !== 'SP2D_CAIR' && (
@@ -1339,122 +1379,294 @@ export const GovernmentProjectManagement: React.FC<GovernmentProjectManagementPr
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 4: ADD SINGLE MILESTONE TO AN EXISTING PROJECT */}
+      {/* MODAL 4: TAMBAH / EDIT JADWAL TERMIN PENGADAAN                            */}
       {/* ========================================================================= */}
       {isAddMilestoneModalOpen && activeProjectIdForMilestone && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-blue-400" />
-                <span>Tambah Termin Pengadaan</span>
-              </h3>
+          <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="p-5 bg-gradient-to-r from-blue-900 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-300 flex items-center justify-center border border-blue-400/30">
+                  {editingMilestone ? <Edit className="w-4 h-4 text-blue-300" /> : <Plus className="w-4 h-4 text-blue-400" />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>{editingMilestone ? `Edit Termin #${milestoneForm.termNumber}` : 'Tambah Termin Pengadaan'}</span>
+                    {editingMilestone && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-800/80 text-blue-200 border border-blue-600/50">
+                        {editingMilestone.status}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] text-blue-200">
+                    {editingMilestone ? 'Perbarui jadwal termin, bobot persentase, nominal bruto & dokumen' : 'Jadwal termin pencairan SP2D / penagihan proyek instansi'}
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => setIsAddMilestoneModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                onClick={() => {
+                  setIsAddMilestoneModalOpen(false);
+                  setEditingMilestone(null);
+                }}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                addGovMilestone(activeProjectIdForMilestone, {
-                  termNumber: 1, // auto assigned
-                  title: milestoneForm.title,
-                  percentage: Number(milestoneForm.percentage) || 0,
-                  grossAmountIDR: Number(milestoneForm.grossAmountIDR) || 0,
-                  pphType: milestoneForm.pphType,
-                  pphRatePercent: Number(milestoneForm.pphRatePercent) || 1.5,
-                  pphAmountIDR: 0,
-                  ppnRatePercent: Number(milestoneForm.ppnRatePercent) || 11,
-                  ppnAmountIDR: 0,
-                  netDisbursementIDR: 0,
-                  status: 'BELUM_DITAGIH',
-                  targetDate: milestoneForm.targetDate,
-                  bapNumber: milestoneForm.bapNumber,
-                  bastNumber: milestoneForm.bastNumber,
-                });
-                setIsAddMilestoneModalOpen(false);
-              }}
-              className="p-5 space-y-3.5 text-xs"
-            >
-              <div className="space-y-1">
-                <label className="font-bold text-slate-700">Nama / Uraian Termin *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Termin II - Laporan Antara & BAP 50%"
-                  value={milestoneForm.title}
-                  onChange={(e) => setMilestoneForm({ ...milestoneForm, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
-                />
-              </div>
+            {(() => {
+              const activeProj = governmentProjects.find((p) => p.id === activeProjectIdForMilestone);
+              const gross = Math.max(0, Math.round(Number(milestoneForm.grossAmountIDR) || 0));
+              const pphRate = Number(milestoneForm.pphRatePercent) || 0;
+              const ppnRate = Number(milestoneForm.ppnRatePercent) || 0;
+              const pphAmount = Math.round((gross * pphRate) / 100);
+              const ppnAmount = Math.round((gross * ppnRate) / 100);
+              const netDisbursement = Math.round(gross - pphAmount);
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Nominal Bruto (IDR) *</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={milestoneForm.grossAmountIDR || ''}
-                    onChange={(e) => setMilestoneForm({ ...milestoneForm, grossAmountIDR: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold"
-                  />
-                </div>
+              return (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!activeProj) return;
 
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Bobot Persentase (%)</label>
-                  <input
-                    type="number"
-                    value={milestoneForm.percentage || ''}
-                    onChange={(e) => setMilestoneForm({ ...milestoneForm, percentage: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
-                  />
-                </div>
-              </div>
+                    if (editingMilestone) {
+                      const res = updateGovMilestone(activeProj.id, editingMilestone.id, {
+                        termNumber: Number(milestoneForm.termNumber) || editingMilestone.termNumber,
+                        title: milestoneForm.title,
+                        percentage: Number(milestoneForm.percentage) || 0,
+                        grossAmountIDR: gross,
+                        pphType: milestoneForm.pphType,
+                        pphRatePercent: pphRate,
+                        pphAmountIDR: pphAmount,
+                        ppnRatePercent: ppnRate,
+                        ppnAmountIDR: ppnAmount,
+                        netDisbursementIDR: netDisbursement,
+                        targetDate: milestoneForm.targetDate,
+                        bapNumber: milestoneForm.bapNumber || undefined,
+                        bastNumber: milestoneForm.bastNumber || undefined,
+                        notes: milestoneForm.notes || undefined,
+                      });
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Tarif PPh (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={milestoneForm.pphRatePercent}
-                    onChange={(e) => setMilestoneForm({ ...milestoneForm, pphRatePercent: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Target Tanggal</label>
-                  <input
-                    type="date"
-                    value={milestoneForm.targetDate}
-                    onChange={(e) => setMilestoneForm({ ...milestoneForm, targetDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsAddMilestoneModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
+                      if (res.success) {
+                        setIsAddMilestoneModalOpen(false);
+                        setEditingMilestone(null);
+                      } else {
+                        alert(res.message || 'Gagal memperbarui termin.');
+                      }
+                    } else {
+                      addGovMilestone(activeProj.id, {
+                        termNumber: Number(milestoneForm.termNumber) || activeProj.milestones.length + 1,
+                        title: milestoneForm.title,
+                        percentage: Number(milestoneForm.percentage) || 0,
+                        grossAmountIDR: gross,
+                        pphType: milestoneForm.pphType,
+                        pphRatePercent: pphRate,
+                        pphAmountIDR: pphAmount,
+                        ppnRatePercent: ppnRate,
+                        ppnAmountIDR: ppnAmount,
+                        netDisbursementIDR: netDisbursement,
+                        status: 'BELUM_DITAGIH',
+                        targetDate: milestoneForm.targetDate,
+                        bapNumber: milestoneForm.bapNumber || undefined,
+                        bastNumber: milestoneForm.bastNumber || undefined,
+                        notes: milestoneForm.notes || undefined,
+                      });
+                      setIsAddMilestoneModalOpen(false);
+                      setEditingMilestone(null);
+                    }
+                  }}
+                  className="p-5 space-y-3.5 text-xs max-h-[80vh] overflow-y-auto"
                 >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold cursor-pointer"
-                >
-                  Simpan Termin
-                </button>
-              </div>
-            </form>
+                  {/* Info Ringkas Proyek */}
+                  {activeProj && (
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-slate-500">Proyek:</span>{' '}
+                        <strong className="text-slate-800">{activeProj.projectName}</strong>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-500">Nilai Kontrak:</span>{' '}
+                        <strong className="font-mono text-blue-700 font-bold">{formatIDR(activeProj.totalContractValueIDR)}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="md:col-span-3 space-y-1">
+                      <label className="font-bold text-slate-700">Nama / Uraian Termin *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Termin II - Laporan Antara & BAP 50%"
+                        value={milestoneForm.title}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, title: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Urutan (#)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={Number.isNaN(milestoneForm.termNumber) ? '' : (milestoneForm.termNumber || '')}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, termNumber: e.target.value === '' ? 1 : Number(e.target.value) })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Nominal Bruto (IDR) *</label>
+                      <input
+                        type="number"
+                        required
+                        min={0}
+                        value={Number.isNaN(milestoneForm.grossAmountIDR) ? '' : (milestoneForm.grossAmountIDR || '')}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? 0 : Number(e.target.value);
+                          const calcPct = activeProj && activeProj.totalContractValueIDR > 0
+                            ? Math.round((val / activeProj.totalContractValueIDR) * 1000) / 10
+                            : milestoneForm.percentage;
+                          setMilestoneForm({ ...milestoneForm, grossAmountIDR: val, percentage: calcPct });
+                        }}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Bobot Persentase (%)</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          max={100}
+                          value={Number.isNaN(milestoneForm.percentage) ? '' : (milestoneForm.percentage || '')}
+                          onChange={(e) => {
+                            const pct = e.target.value === '' ? 0 : Number(e.target.value);
+                            const calcGross = activeProj ? Math.round((activeProj.totalContractValueIDR * pct) / 100) : 0;
+                            setMilestoneForm({ ...milestoneForm, percentage: pct, grossAmountIDR: calcGross });
+                          }}
+                          className="w-full px-3 py-2 pr-8 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Realtime Breakdown */}
+                  <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-blue-900 font-bold border-b border-blue-200 pb-1">
+                      <span>Estimasi Pemotongan Pajak & SP2D Bersih:</span>
+                      <span className="font-mono text-xs font-bold text-blue-800">
+                        {milestoneForm.pphType} ({pphRate}%)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      <div className="bg-white/80 p-2 rounded-lg border border-blue-100">
+                        <span className="text-slate-500 block text-[10px]">PPN Dipungut WAPU</span>
+                        <span className="font-mono font-bold text-slate-800">{formatIDR(ppnAmount)}</span>
+                      </div>
+                      <div className="bg-white/80 p-2 rounded-lg border border-blue-100">
+                        <span className="text-slate-500 block text-[10px]">Pot. {milestoneForm.pphType}</span>
+                        <span className="font-mono font-bold text-rose-600">-{formatIDR(pphAmount)}</span>
+                      </div>
+                      <div className="bg-emerald-100/70 p-2 rounded-lg border border-emerald-300">
+                        <span className="text-emerald-800 block text-[10px] font-bold">SP2D Bersih Diterima</span>
+                        <span className="font-mono font-bold text-emerald-900">{formatIDR(netDisbursement)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Jenis & Tarif PPh</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={milestoneForm.pphType}
+                          onChange={(e) => setMilestoneForm({ ...milestoneForm, pphType: e.target.value as 'PPH_22' | 'PPH_23' })}
+                          className="w-1/2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs"
+                        >
+                          <option value="PPH_22">PPh 22</option>
+                          <option value="PPH_23">PPh 23</option>
+                        </select>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={Number.isNaN(milestoneForm.pphRatePercent) ? '' : (milestoneForm.pphRatePercent ?? '')}
+                          onChange={(e) => setMilestoneForm({ ...milestoneForm, pphRatePercent: Number(e.target.value) })}
+                          className="w-1/2 px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold"
+                          placeholder="%"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Target Tanggal</label>
+                      <input
+                        type="date"
+                        value={milestoneForm.targetDate}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, targetDate: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">No. BAP (Berita Acara Pembayaran)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. BAP/002/KEMENKES/2026"
+                        value={milestoneForm.bapNumber}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, bapNumber: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">No. BAST (Serah Terima Pekerjaan)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. BAST/002/KEMENKES/2026"
+                        value={milestoneForm.bastNumber}
+                        onChange={(e) => setMilestoneForm({ ...milestoneForm, bastNumber: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddMilestoneModalOpen(false);
+                        setEditingMilestone(null);
+                      }}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold cursor-pointer flex items-center gap-1.5 shadow-md"
+                    >
+                      {editingMilestone ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Simpan Perubahan Termin</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          <span>Simpan Termin Baru</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1752,7 +1964,7 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
               <label className="font-bold text-slate-700">Tahun Anggaran</label>
               <input
                 type="number"
-                value={formData.fiscalYear}
+                value={Number.isNaN(formData.fiscalYear) ? '' : (formData.fiscalYear ?? '')}
                 onChange={(e) => setFormData({ ...formData, fiscalYear: Number(e.target.value) })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold"
               />
@@ -1779,7 +1991,7 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
                 required
                 min={1}
                 placeholder="e.g. 750000000"
-                value={formData.totalContractValueIDR || ''}
+                value={Number.isNaN(formData.totalContractValueIDR) ? '' : (formData.totalContractValueIDR || '')}
                 onChange={(e) => setFormData({ ...formData, totalContractValueIDR: Number(e.target.value) })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-bold text-blue-700"
               />
@@ -1790,7 +2002,7 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
               <input
                 type="number"
                 step="0.1"
-                value={formData.whtRatePph}
+                value={Number.isNaN(formData.whtRatePph) ? '' : (formData.whtRatePph ?? '')}
                 onChange={(e) => setFormData({ ...formData, whtRatePph: Number(e.target.value) })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-semibold text-slate-800"
               />
@@ -1801,7 +2013,7 @@ const GovProjectModal: React.FC<GovProjectModalProps> = ({
               <input
                 type="number"
                 step="0.1"
-                value={formData.vatWapuRate}
+                value={Number.isNaN(formData.vatWapuRate) ? '' : (formData.vatWapuRate ?? '')}
                 onChange={(e) => setFormData({ ...formData, vatWapuRate: Number(e.target.value) })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs font-semibold text-slate-800"
               />

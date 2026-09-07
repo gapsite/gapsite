@@ -230,7 +230,7 @@ export const CompanyCapitalModal: React.FC<CompanyCapitalModalProps> = ({
                   type="number"
                   min="0"
                   step="1000000"
-                  value={authorizedCapital || ''}
+                  value={Number.isNaN(authorizedCapital) ? '' : (authorizedCapital || '')}
                   onChange={(e) => setAuthorizedCapital(Number(e.target.value))}
                   placeholder="Contoh: 5000000000"
                   className="w-full pl-10 pr-4 py-2.5 text-sm font-mono font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
@@ -258,7 +258,7 @@ export const CompanyCapitalModal: React.FC<CompanyCapitalModalProps> = ({
                   type="number"
                   min="0"
                   step="1000000"
-                  value={paidInCapital || ''}
+                  value={Number.isNaN(paidInCapital) ? '' : (paidInCapital || '')}
                   onChange={(e) => setPaidInCapital(Number(e.target.value))}
                   placeholder="Contoh: 1250000000"
                   className="w-full pl-10 pr-4 py-2.5 text-sm font-mono font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white"
@@ -289,7 +289,7 @@ export const CompanyCapitalModal: React.FC<CompanyCapitalModalProps> = ({
                   type="number"
                   min="0"
                   step="1000000"
-                  value={additionalCapital || ''}
+                  value={Number.isNaN(additionalCapital) ? '' : (additionalCapital || '')}
                   onChange={(e) => setAdditionalCapital(Number(e.target.value))}
                   placeholder="Contoh: 250000000"
                   className="w-full pl-10 pr-4 py-2.5 text-sm font-mono font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
@@ -321,7 +321,7 @@ export const CompanyCapitalModal: React.FC<CompanyCapitalModalProps> = ({
                 <input
                   type="number"
                   step="1000000"
-                  value={retainedEarningsOpening || ''}
+                  value={Number.isNaN(retainedEarningsOpening) ? '' : (retainedEarningsOpening || '')}
                   onChange={(e) => setRetainedEarningsOpening(Number(e.target.value))}
                   placeholder="Contoh: 0"
                   className="w-full pl-10 pr-4 py-2 text-sm font-mono rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white"

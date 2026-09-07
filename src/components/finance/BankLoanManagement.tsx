@@ -1223,7 +1223,7 @@ export const BankLoanManagement: React.FC = () => {
                       required
                       min={1000000}
                       step={1000000}
-                      value={principalAmount}
+                      value={Number.isNaN(principalAmount) ? '' : (principalAmount ?? '')}
                       onChange={(e) => setPrincipalAmount(e.target.value === '' ? '' : Number(e.target.value))}
                       placeholder="500000000"
                       className="w-full text-xs bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono font-bold text-slate-900"
@@ -1244,7 +1244,7 @@ export const BankLoanManagement: React.FC = () => {
                       min={0}
                       max={100}
                       step={0.1}
-                      value={annualInterestRate}
+                      value={Number.isNaN(annualInterestRate) ? '' : (annualInterestRate ?? '')}
                       onChange={(e) =>
                         setAnnualInterestRate(e.target.value === '' ? '' : Number(e.target.value))
                       }
@@ -1266,7 +1266,7 @@ export const BankLoanManagement: React.FC = () => {
                       required
                       min={1}
                       max={360}
-                      value={tenureMonths}
+                      value={Number.isNaN(tenureMonths) ? '' : (tenureMonths ?? '')}
                       onChange={(e) => setTenureMonths(e.target.value === '' ? '' : Number(e.target.value))}
                       placeholder="24"
                       className="w-full text-xs bg-white border border-slate-300 rounded-xl px-3 py-2 pr-12 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono font-bold text-slate-900"
@@ -2069,7 +2069,7 @@ export const BankLoanManagement: React.FC = () => {
                       type="number"
                       min={1}
                       max={60}
-                      value={renewTenureMonths}
+                      value={Number.isNaN(renewTenureMonths) ? '' : (renewTenureMonths ?? '')}
                       onChange={(e) => setRenewTenureMonths(Math.max(1, parseInt(e.target.value) || 12))}
                       className="w-32 px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       required
@@ -2122,7 +2122,7 @@ export const BankLoanManagement: React.FC = () => {
                       type="number"
                       min={0}
                       step={1000000}
-                      value={renewPrincipal}
+                      value={renewPrincipal === '' || Number.isNaN(renewPrincipal) ? '' : (renewPrincipal ?? '')}
                       onChange={(e) => setRenewPrincipal(e.target.value === '' ? '' : parseFloat(e.target.value))}
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       required
@@ -2147,7 +2147,7 @@ export const BankLoanManagement: React.FC = () => {
                       min={0}
                       max={100}
                       step={0.01}
-                      value={renewInterestRate}
+                      value={renewInterestRate === '' || Number.isNaN(renewInterestRate) ? '' : (renewInterestRate ?? '')}
                       onChange={(e) => setRenewInterestRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       required
@@ -2233,7 +2233,7 @@ export const BankLoanManagement: React.FC = () => {
                     type="number"
                     min={0}
                     step={50000}
-                    value={renewProvisionFee}
+                    value={renewProvisionFee === '' || Number.isNaN(renewProvisionFee) ? '' : (renewProvisionFee ?? '')}
                     onChange={(e) => setRenewProvisionFee(e.target.value === '' ? '' : parseFloat(e.target.value))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white font-mono font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                   />

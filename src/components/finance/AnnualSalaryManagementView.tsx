@@ -97,13 +97,13 @@ export const AnnualSalaryManagementView: React.FC<AnnualSalaryManagementViewProp
     }
   };
 
-  // Distinct years available in data
+  // Distinct years available in data (company founded in 2021)
   const availableYears = useMemo(() => {
     const set = new Set<number>([2025, 2026, 2027]);
     employeeSalaryConfigs.forEach((c) => {
-      if (c.year) set.add(c.year);
+      if (c.year && c.year >= 2021) set.add(c.year);
     });
-    return Array.from(set).sort((a, b) => b - a);
+    return Array.from(set).filter((y) => y >= 2021).sort((a, b) => b - a);
   }, [employeeSalaryConfigs]);
 
   // Filtered salary configs

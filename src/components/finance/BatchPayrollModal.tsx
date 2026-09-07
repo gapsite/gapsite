@@ -399,7 +399,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
                       <input
                         type="number"
                         step="50000"
-                        value={row.basicSalary}
+                        value={Number.isNaN(row.basicSalary) ? '' : (row.basicSalary ?? '')}
                         disabled={!row.selected}
                         onChange={(e) => updateRow(idx, 'basicSalary', Number(e.target.value) || 0)}
                         className="w-28 text-right text-xs bg-white border border-slate-200 rounded px-2 py-1 font-mono focus:outline-emerald-600"
@@ -409,7 +409,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
                       <input
                         type="number"
                         step="50000"
-                        value={row.allowances}
+                        value={Number.isNaN(row.allowances) ? '' : (row.allowances ?? '')}
                         disabled={!row.selected}
                         onChange={(e) => updateRow(idx, 'allowances', Number(e.target.value) || 0)}
                         className="w-24 text-right text-xs bg-white border border-slate-200 rounded px-2 py-1 font-mono focus:outline-emerald-600"
@@ -419,7 +419,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
                       <input
                         type="number"
                         step="50000"
-                        value={row.bonus}
+                        value={Number.isNaN(row.bonus) ? '' : (row.bonus ?? '')}
                         disabled={!row.selected}
                         onChange={(e) => updateRow(idx, 'bonus', Number(e.target.value) || 0)}
                         className="w-24 text-right text-xs bg-white border border-emerald-300 rounded px-2 py-1 font-mono font-semibold text-emerald-800 focus:outline-emerald-600"
@@ -429,7 +429,7 @@ export const BatchPayrollModal: React.FC<BatchPayrollModalProps> = ({
                       <input
                         type="number"
                         step="10000"
-                        value={row.deductions}
+                        value={Number.isNaN(row.deductions) ? '' : (row.deductions ?? '')}
                         disabled={!row.selected}
                         onChange={(e) => updateRow(idx, 'deductions', Number(e.target.value) || 0)}
                         className="w-24 text-right text-xs bg-white border border-rose-200 rounded px-2 py-1 font-mono text-rose-700 focus:outline-rose-500"

@@ -2839,7 +2839,7 @@ export const RoleManagerModal: React.FC<{
                       type="number"
                       min={0}
                       step={100_000}
-                      value={editRoleBasicSalary}
+                      value={Number.isNaN(editRoleBasicSalary) ? '' : (editRoleBasicSalary ?? '')}
                       onChange={(e) => setEditRoleBasicSalary(Number(e.target.value) || 0)}
                       className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900"
                     />
@@ -2854,7 +2854,7 @@ export const RoleManagerModal: React.FC<{
                       type="number"
                       min={0}
                       step={50_000}
-                      value={editRolePositionAllowance}
+                      value={Number.isNaN(editRolePositionAllowance) ? '' : (editRolePositionAllowance ?? '')}
                       onChange={(e) => setEditRolePositionAllowance(Number(e.target.value) || 0)}
                       className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
                     />
@@ -2869,7 +2869,7 @@ export const RoleManagerModal: React.FC<{
                       type="number"
                       min={0}
                       step={50_000}
-                      value={editRoleTransportAllowance}
+                      value={Number.isNaN(editRoleTransportAllowance) ? '' : (editRoleTransportAllowance ?? '')}
                       onChange={(e) => setEditRoleTransportAllowance(Number(e.target.value) || 0)}
                       className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
                     />
@@ -2884,7 +2884,7 @@ export const RoleManagerModal: React.FC<{
                       type="number"
                       min={0}
                       step={50_000}
-                      value={editRoleMealAllowance}
+                      value={Number.isNaN(editRoleMealAllowance) ? '' : (editRoleMealAllowance ?? '')}
                       onChange={(e) => setEditRoleMealAllowance(Number(e.target.value) || 0)}
                       className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
                     />

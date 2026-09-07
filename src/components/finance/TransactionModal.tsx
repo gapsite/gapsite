@@ -720,7 +720,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     type="number"
                     min="1"
                     max="360"
-                    value={loanTenureMonths}
+                    value={Number.isNaN(loanTenureMonths) ? '' : (loanTenureMonths ?? '')}
                     onChange={(e) => setLoanTenureMonths(parseInt(e.target.value) || 12)}
                     className="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono"
                   />
@@ -735,7 +735,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     step="0.1"
                     min="0"
                     max="100"
-                    value={loanInterestRate}
+                    value={Number.isNaN(loanInterestRate) ? '' : (loanInterestRate ?? '')}
                     onChange={(e) => setLoanInterestRate(parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-mono"
                   />

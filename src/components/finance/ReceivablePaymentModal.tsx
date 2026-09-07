@@ -217,7 +217,7 @@ export const ReceivablePaymentModal: React.FC<ReceivablePaymentModalProps> = ({
               min="1000"
               max={remaining}
               step="1000"
-              value={paymentAmountIDR || ''}
+              value={Number.isNaN(paymentAmountIDR) ? '' : (paymentAmountIDR || '')}
               onChange={(e) => setPaymentAmountIDR(Math.max(0, Number(e.target.value)))}
               placeholder="0"
               className="w-full px-3.5 py-2.5 text-sm font-mono font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden text-emerald-600 dark:text-emerald-400"

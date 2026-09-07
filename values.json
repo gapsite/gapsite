@@ -1,0 +1,3932 @@
+[
+  {
+    "file": "src/components/AccountSwitchModal.tsx",
+    "tag": "input",
+    "val": "pin",
+    "fullTag": "<input\n                type={showPin ? 'text' : 'password'}\n                required\n               "
+  },
+  {
+    "file": "src/components/ActivityLog.tsx",
+    "tag": "select",
+    "val": "selectedRemarkType",
+    "fullTag": "<select\n                value={selectedRemarkType}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/ActivityLog.tsx",
+    "tag": "input",
+    "val": "newRemarkText",
+    "fullTag": "<input\n              type=\"text\"\n              value={newRemarkText}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/ActivityLog.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n            type=\"text\"\n            value={searchQuery}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "select",
+    "val": "selectedProjectId",
+    "fullTag": "<select\n              value={selectedProjectId}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "select",
+    "val": "docType",
+    "fullTag": "<select\n                  value={docType}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "option",
+    "val": "d.id",
+    "fullTag": "<option key={d.id} value={d.id}"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "option",
+    "val": "d.id",
+    "fullTag": "<option key={d.id} value={d.id}"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "referenceNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={referenceNumber}\n                  onC"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "counterpartyName",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={counterpartyName}\n                  on"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "amountIDR",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={amountIDR}\n                    o"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "versionTag",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={versionTag}\n                    on"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "validUntil",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={validUntil}\n                    on"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "taxNumber",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={taxNumber}\n                   "
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "select",
+    "val": "paymentMethod",
+    "fullTag": "<select\n                      value={paymentMethod}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "select",
+    "val": "paymentMethod",
+    "fullTag": "<select\n                    value={paymentMethod}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "customDocName",
+    "fullTag": "<input\n                type=\"text\"\n                value={customDocName}\n                onChange={("
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "tag": "input",
+    "val": "notes",
+    "fullTag": "<input\n                type=\"text\"\n                value={notes}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "tag": "textarea",
+    "val": "signoffNote",
+    "fullTag": "<textarea\n                  rows={3}\n                  value={signoffNote}\n                  onChang"
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "tag": "input",
+    "val": "customTitle",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  value={customTitle"
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "tag": "select",
+    "val": "customStage",
+    "fullTag": "<select\n                    value={customStage}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "tag": "input",
+    "val": "customRegulatoryClause",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={customRegulatoryClause}\n          "
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "tag": "textarea",
+    "val": "customDescription",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={customDescription}\n                  o"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.logoUrl || ''",
+    "fullTag": "<input\n                    type=\"url\"\n                    value={formData.logoUrl || ''}\n           "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.companyName",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    value={formD"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.shortName || ''",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.shortName || ''}\n    "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.taxId || ''",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.taxId || ''}\n        "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.tagline || ''",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formData.tagline || ''}\n          "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "textarea",
+    "val": "formData.address || ''",
+    "fullTag": "<textarea\n                    rows={2}\n                    value={formData.address || ''}\n          "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.phone || ''",
+    "fullTag": "<input\n                        type=\"text\"\n                        value={formData.phone || ''}\n    "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.email || ''",
+    "fullTag": "<input\n                        type=\"email\"\n                        value={formData.email || ''}\n   "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.website || ''",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.website || ''}\n      "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.authorizedSignatoryName || ''",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formData.authorizedSignatoryName |"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "input",
+    "val": "formData.authorizedSignatoryTitle || ''",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formData.authorizedSignatoryTitle "
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "tag": "textarea",
+    "val": "formData.notes || ''",
+    "fullTag": "<textarea\n                    rows={2}\n                    value={formData.notes || ''}\n            "
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n              type=\"text\"\n              value={searchQuery}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "tag": "select",
+    "val": "selectedProjectFilter",
+    "fullTag": "<select\n            value={selectedProjectFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "tag": "select",
+    "val": "selectedStatusFilter",
+    "fullTag": "<select\n            value={selectedStatusFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "tag": "input",
+    "val": "reviewNoteInput[doc.id] || ''",
+    "fullTag": "<input\n                              type=\"text\"\n                              value={reviewNoteInpu"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "searchDocQuery",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"Search component or cert"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "textarea",
+    "val": "flagInputNote",
+    "fullTag": "<textarea\n                    rows={2}\n                    value={flagInputNote}\n                   "
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "editDocName",
+    "fullTag": "<input\n                        type=\"text\"\n                        value={editDocName}\n             "
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "select",
+    "val": "editCategoryGroup",
+    "fullTag": "<select\n                        value={editCategoryGroup}\n                        onChange={(e) ="
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "select",
+    "val": "editDocType",
+    "fullTag": "<select\n                        value={editDocType}\n                        onChange={(e) ="
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "option",
+    "val": "dt.id",
+    "fullTag": "<option key={dt.id} value={dt.id}"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "editRefNumber",
+    "fullTag": "<input\n                        type=\"text\"\n                        value={editRefNumber}\n           "
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "editAmount",
+    "fullTag": "<input\n                        type=\"number\"\n                        value={editAmount}\n            "
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "editCounterparty",
+    "fullTag": "<input\n                        type=\"text\"\n                        value={editCounterparty}\n        "
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "editTaxNumber",
+    "fullTag": "<input\n                        type=\"text\"\n                        value={editTaxNumber}\n           "
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "editValidUntil",
+    "fullTag": "<input\n                        type=\"date\"\n                        value={editValidUntil}\n          "
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "tag": "input",
+    "val": "editNotes",
+    "fullTag": "<input\n                        type=\"text\"\n                        value={editNotes}\n               "
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                    id=\"input-search-doc-types\"\n                    type=\"text\"\n             "
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "categoryFilter",
+    "fullTag": "<select\n                  id=\"select-category-filter-doc-types\"\n                  value={categoryFil"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n                  id=\"select-status-filter-doc-types\"\n                  value={statusFilter}"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "categorySearchQuery",
+    "fullTag": "<input\n                    id=\"input-search-categories\"\n                    type=\"text\"\n            "
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "categoryStatusFilter",
+    "fullTag": "<select\n                  id=\"select-category-status-filter\"\n                  value={categoryStatus"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formId",
+    "fullTag": "<input\n                    id=\"input-doctype-id\"\n                    type=\"text\"\n                   "
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "formCategory",
+    "fullTag": "<select\n                    id=\"select-doctype-category\"\n                    value={formCategory}\n  "
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formName",
+    "fullTag": "<input\n                  id=\"input-doctype-name\"\n                  type=\"text\"\n                  val"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "textarea",
+    "val": "formDescription",
+    "fullTag": "<textarea\n                  id=\"input-doctype-description\"\n                  value={formDescription}"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formAcceptedTypes",
+    "fullTag": "<input\n                    id=\"input-doctype-accepted-types\"\n                    type=\"text\"\n       "
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "categoryFormId",
+    "fullTag": "<input\n                  id=\"input-category-id\"\n                  type=\"text\"\n                  valu"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "categoryFormName",
+    "fullTag": "<input\n                  id=\"input-category-name\"\n                  type=\"text\"\n                  va"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "textarea",
+    "val": "categoryFormDescription",
+    "fullTag": "<textarea\n                  id=\"input-category-description\"\n                  value={categoryFormDes"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "reassignTargetId",
+    "fullTag": "<select\n                      value={reassignTargetId}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "d.id",
+    "fullTag": "<option key={d.id} value={d.id}"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "reassignCategoryTargetId",
+    "fullTag": "<select\n                      value={reassignCategoryTargetId}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "select",
+    "val": "filters.stage",
+    "fullTag": "<select\n            id=\"filter-stage-select\"\n            name=\"stage\"\n            value={filters.sta"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "option",
+    "val": "s.value",
+    "fullTag": "<option key={s.value} value={s.value}"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "select",
+    "val": "filters.surveyor",
+    "fullTag": "<select\n            id=\"filter-surveyor-select\"\n            name=\"surveyor\"\n            value={filte"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "option",
+    "val": "opt",
+    "fullTag": "<option key={opt} value={opt}"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "select",
+    "val": "filters.status",
+    "fullTag": "<select\n            id=\"filter-status-select\"\n            name=\"status\"\n            value={filters.s"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "option",
+    "val": "st.value",
+    "fullTag": "<option key={st.value} value={st.value}"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "select",
+    "val": "filters.leadConsultantId",
+    "fullTag": "<select\n            id=\"filter-consultant-select\"\n            name=\"leadConsultant\"\n            valu"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "tag": "select",
+    "val": "filters.priority",
+    "fullTag": "<select\n            id=\"filter-priority-select\"\n            name=\"priority\"\n            value={filte"
+  },
+  {
+    "file": "src/components/Header.tsx",
+    "tag": "input",
+    "val": "filters.searchQuery",
+    "fullTag": "<input\n                id=\"global-search-input\"\n                name=\"search\"\n                type=\""
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n            type=\"text\"\n            value={searchQuery}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "tag": "select",
+    "val": "filterAssignee",
+    "fullTag": "<select\n            value={filterAssignee}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "tag": "select",
+    "val": "filterPriority",
+    "fullTag": "<select\n            value={filterPriority}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "tag": "select",
+    "val": "disp.status",
+    "fullTag": "<select\n                            value={disp.status}\n                            onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "select",
+    "val": "projectId",
+    "fullTag": "<select\n              value={projectId}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "input",
+    "val": "title",
+    "fullTag": "<input\n              type=\"text\"\n              value={title}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "select",
+    "val": "category",
+    "fullTag": "<select\n                value={category}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "select",
+    "val": "priority",
+    "fullTag": "<select\n                value={priority}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "select",
+    "val": "status",
+    "fullTag": "<select\n                value={status}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "input",
+    "val": "dueDate",
+    "fullTag": "<input\n                type=\"date\"\n                value={dueDate}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "textarea",
+    "val": "instructions",
+    "fullTag": "<textarea\n              rows={3}\n              value={instructions}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "tag": "input",
+    "val": "newChecklistText",
+    "fullTag": "<input\n                type=\"text\"\n                value={newChecklistText}\n                onChange"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "identifier",
+    "fullTag": "<input\n                      id=\"signin-username\"\n                      name=\"username\"\n            "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "pin",
+    "fullTag": "<input\n                      id=\"signin-pin\"\n                      name=\"pin\"\n                      "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "regName",
+    "fullTag": "<input\n                      id=\"reg-name\"\n                      name=\"name\"\n                      t"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "regUsername",
+    "fullTag": "<input\n                        id=\"reg-username\"\n                        name=\"username\"\n           "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "regEmail",
+    "fullTag": "<input\n                      id=\"reg-email\"\n                      name=\"email\"\n                     "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "regPhone",
+    "fullTag": "<input\n                      id=\"reg-phone\"\n                      name=\"tel\"\n                      t"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "regPin",
+    "fullTag": "<input\n                      id=\"reg-pin\"\n                      name=\"pin\"\n                      typ"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "regConfirmPin",
+    "fullTag": "<input\n                      id=\"reg-confirmpin\"\n                      name=\"confirmPin\"\n           "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "forgotEmail",
+    "fullTag": "<input\n                          id=\"forgot-email\"\n                          name=\"email\"\n          "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "inputCode",
+    "fullTag": "<input\n                        id=\"verify-code\"\n                        name=\"code\"\n                "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "newPin",
+    "fullTag": "<input\n                          id=\"reset-newpin\"\n                          name=\"newPin\"\n         "
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "tag": "input",
+    "val": "confirmNewPin",
+    "fullTag": "<input\n                          id=\"reset-confirmpin\"\n                          name=\"confirmNewPin"
+  },
+  {
+    "file": "src/components/Navbar.tsx",
+    "tag": "input",
+    "val": "filters.searchQuery",
+    "fullTag": "<input\n                type=\"text\"\n                value={filters.searchQuery}\n                onCha"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "clientName",
+    "fullTag": "<input\n                type=\"text\"\n                value={clientName}\n                onChange={(e) "
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "select",
+    "val": "companyType",
+    "fullTag": "<select\n                value={companyType}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "productOrServiceName",
+    "fullTag": "<input\n              type=\"text\"\n              value={productOrServiceName}\n              onChange={"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "select",
+    "val": "serviceType",
+    "fullTag": "<select\n                value={serviceType}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "option",
+    "val": "svc.id",
+    "fullTag": "<option key={svc.id} value={svc.id}"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "kbliCode",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={kbliCode}\n                    onCh"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "industry",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={industry}\n                    onCh"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "targetTkdnPercentage",
+    "fullTag": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    min=\"0\"\n"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "projectedTkdnPercentage",
+    "fullTag": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    min=\"0\"\n"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "contractValueIDR",
+    "fullTag": "<input\n                  type=\"number\"\n                  value={contractValueIDR}\n                  "
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "contractValueIDR",
+    "fullTag": "<input\n                  type=\"number\"\n                  value={contractValueIDR}\n                  "
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "select",
+    "val": "surveyorBody",
+    "fullTag": "<select\n                  value={surveyorBody}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "option",
+    "val": "opt",
+    "fullTag": "<option key={opt} value={opt}"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "newOptionInput",
+    "fullTag": "<input\n                          type=\"text\"\n                          value={newOptionInput}\n      "
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "editingOptionValue",
+    "fullTag": "<input\n                                  type=\"text\"\n                                  value={editin"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "select",
+    "val": "licensingAuthority",
+    "fullTag": "<select\n                  value={licensingAuthority}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "select",
+    "val": "leadConsultantId",
+    "fullTag": "<select\n                value={leadConsultantId}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "startDate",
+    "fullTag": "<input\n                type=\"date\"\n                value={startDate}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "targetCompletionDate",
+    "fullTag": "<input\n                type=\"date\"\n                value={targetCompletionDate}\n                onCh"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "textarea",
+    "val": "description",
+    "fullTag": "<textarea\n              rows={2}\n              value={description}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "tag": "input",
+    "val": "tagInput",
+    "fullTag": "<input\n              type=\"text\"\n              value={tagInput}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/ProjectDetailModal.tsx",
+    "tag": "select",
+    "val": "project.stage",
+    "fullTag": "<select\n                value={project.stage}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/ProjectDetailModal.tsx",
+    "tag": "select",
+    "val": "project.status",
+    "fullTag": "<select\n              value={project.status}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/ProjectGanttChart.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n              type=\"text\"\n              placeholder=\"Filter project milestones...\"\n          "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={searchQuery}\n                  onChang"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "select",
+    "val": "roleFilter",
+    "fullTag": "<select\n                value={roleFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "select",
+    "val": "user.role",
+    "fullTag": "<select\n                            id={`role-select-${user.id}`}\n                            value="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "select",
+    "val": "verifyRole",
+    "fullTag": "<select\n                  value={verifyRole}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "verifyRoleTitle",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={verifyRoleTitle}\n                 "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "verifyDepartment",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={verifyDepartment}\n                "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "textarea",
+    "val": "verifyNotes",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={verifyNotes}\n                  onChang"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "verifyNik",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={verifyNik}\n                   "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "verifyBankName",
+    "fullTag": "<input\n                      type=\"text\"\n                      list=\"popular-banks-verify\"\n         "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "option",
+    "val": "b",
+    "fullTag": "<option key={b} value={b} /"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "verifyBankAccountNumber",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={verifyBankAccountNumber}\n     "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "verifyBankAccountHolder",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={verifyBankAccountHolder}\n     "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.name",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    value={formD"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.username",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    value={formD"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.email",
+    "fullTag": "<input\n                    type=\"email\"\n                    required\n                    value={form"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.phone",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formData.phone}\n                  "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "select",
+    "val": "formData.role",
+    "fullTag": "<select\n                    value={formData.role}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.pin",
+    "fullTag": "<input\n                    type=\"text\"\n                    maxLength={6}\n                    value={"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.department",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formData.department}\n             "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.clientCompany",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.clientCompany}\n      "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "select",
+    "val": "formData.idType || 'NIK'",
+    "fullTag": "<select\n                      value={formData.idType || 'NIK'}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.nik",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.nik}\n                "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.bankName",
+    "fullTag": "<input\n                      type=\"text\"\n                      list=\"popular-banks-edit-list\"\n      "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "option",
+    "val": "b",
+    "fullTag": "<option key={b} value={b} /"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.bankAccountNumber",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.bankAccountNumber}\n  "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.bankAccountHolder",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.bankAccountHolder}\n  "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.specialization",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={formData.specialization}\n             "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "reassignRoleTitle",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={reassignRoleTitle}\n               "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "reassignDepartment",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={reassignDepartment}\n              "
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "textarea",
+    "val": "reassignNotes",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={reassignNotes}\n                  onCha"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "editRoleFormTitle",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  value={editRoleFor"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "editRoleFormDept",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={editRoleFormDept}\n                  on"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "textarea",
+    "val": "editRoleFormDesc",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={editRoleFormDesc}\n                  on"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "editRoleBasicSalary",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={0}\n                      step="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "editRolePositionAllowance",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={0}\n                      step="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "editRoleTransportAllowance",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={0}\n                      step="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "editRoleMealAllowance",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={0}\n                      step="
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "input",
+    "val": "editGovTitle",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  value={editGovTitl"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "tag": "textarea",
+    "val": "editGovDesc",
+    "fullTag": "<textarea\n                  rows={3}\n                  value={editGovDesc}\n                  onChang"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                type=\"text\"\n                value={searchQuery}\n                onChange={(e)"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "categoryFilter",
+    "fullTag": "<select\n              value={categoryFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "cat",
+    "fullTag": "<option key={cat} value={cat}"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n              value={statusFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formName",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    value={formN"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formShortName",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formShortName}\n                   "
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formCode",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    disabled={!!"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "formCategory",
+    "fullTag": "<select\n                    value={formCategory}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "cat",
+    "fullTag": "<option key={cat} value={cat}"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formCustomCategory",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formCustomCategory}\n          "
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "textarea",
+    "val": "formDescription",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={formDescription}\n                  onC"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formRegulatoryBasis",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formRegulatoryBasis}\n             "
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formSurveyor",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formSurveyor}\n                    "
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formDurationDays",
+    "fullTag": "<input\n                    type=\"number\"\n                    min=\"1\"\n                    value={form"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formBasePriceIDR",
+    "fullTag": "<input\n                    type=\"number\"\n                    min=\"0\"\n                    step=\"10000"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "formBadgeColor",
+    "fullTag": "<select\n                    value={formBadgeColor}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "theme.value",
+    "fullTag": "<option key={theme.value} value={theme.value}"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "reassignTargetId",
+    "fullTag": "<select\n                    value={reassignTargetId}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "tag": "option",
+    "val": "s.id",
+    "fullTag": "<option key={s.id} value={s.id}"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "materialKdn",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={materialKdn}\n                   "
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "materialKln",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={materialKln}\n                   "
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "laborWni",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={laborWni}\n                    on"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "laborWna",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={laborWna}\n                    on"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "overheadKdn",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={overheadKdn}\n                   "
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "overheadKln",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={overheadKln}\n                   "
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "rdBonus",
+    "fullTag": "<input\n                  type=\"range\"\n                  min=\"0\"\n                  max=\"20\"\n         "
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "tag": "input",
+    "val": "bmpScore",
+    "fullTag": "<input\n                type=\"range\"\n                min=\"0\"\n                max=\"15\"\n               "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.name",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.name}\n               "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.username",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.username}\n           "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.email",
+    "fullTag": "<input\n                      type=\"email\"\n                      value={formData.email}\n             "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.phone",
+    "fullTag": "<input\n                      type=\"tel\"\n                      value={formData.phone}\n               "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.department",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.department}\n         "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.clientCompany",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={formData.clientCompany}\n      "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "textarea",
+    "val": "formData.bio",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={formData.bio}\n                  onChan"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "newSkillInput",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={newSkillInput}\n               "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "customAvatarUrl",
+    "fullTag": "<input\n                      type=\"url\"\n                      value={customAvatarUrl}\n              "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.pin",
+    "fullTag": "<input\n                      type={showPin ? 'text' : 'password'}\n                      maxLength={6"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "pinConfirm",
+    "fullTag": "<input\n                      type={showPin ? 'text' : 'password'}\n                      maxLength={6"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.roleTitle",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formData.roleTitle}\n              "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.registrationNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={formData.registrationNumber}\n     "
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "tag": "input",
+    "val": "formData.signatureText",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={formData.signatureText}\n              "
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "select",
+    "val": "selectedEmployeeId",
+    "fullTag": "<select\n                  id=\"salary-cfg-employee-select\"\n                  value={selectedEmployeeI"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "select",
+    "val": "year",
+    "fullTag": "<select\n                  id=\"salary-cfg-year-select\"\n                  value={year}\n               "
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "option",
+    "val": "y",
+    "fullTag": "<option key={y} value={y}"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "basicSalary",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={50_00"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "positionAllowance",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={50_00"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "transportAllowance",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={50_00"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "mealAllowance",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={50_00"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "communicationAllowance",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={25_00"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "fixedAllowance",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={50_00"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "select",
+    "val": "thrMonths",
+    "fullTag": "<select\n                  value={thrMonths}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "option",
+    "val": "1",
+    "fullTag": "<option value={1}"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "option",
+    "val": "1.5",
+    "fullTag": "<option value={1.5}"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "option",
+    "val": "2",
+    "fullTag": "<option value={2}"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "option",
+    "val": "0",
+    "fullTag": "<option value={0}"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "annualBonusEstimate",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={500_0"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "skNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={skNumber}\n                  onChange={"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "input",
+    "val": "effectiveDate",
+    "fullTag": "<input\n                  type=\"date\"\n                  value={effectiveDate}\n                  onCha"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "select",
+    "val": "status",
+    "fullTag": "<select\n                  value={status}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "tag": "textarea",
+    "val": "notes",
+    "fullTag": "<textarea\n                rows={2}\n                value={notes}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "tag": "input",
+    "val": "searchTerm",
+    "fullTag": "<input\n              type=\"text\"\n              placeholder=\"Cari nama karyawan, jabatan, SK...\"\n    "
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "tag": "select",
+    "val": "selectedYearFilter",
+    "fullTag": "<select\n              value={selectedYearFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "tag": "option",
+    "val": "String(y)",
+    "fullTag": "<option key={y} value={String(y)}"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "tag": "select",
+    "val": "roleFilter",
+    "fullTag": "<select\n              value={roleFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n              value={statusFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "loanName",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    value={loanN"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "bankName",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    value={bankN"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "accountNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={accountNumber}\n                   "
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "principalAmount",
+    "fullTag": "<input\n                      type=\"number\"\n                      required\n                      min="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "annualInterestRate",
+    "fullTag": "<input\n                      type=\"number\"\n                      required\n                      min="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "tenureMonths",
+    "fullTag": "<input\n                      type=\"number\"\n                      required\n                      min="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "startDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    required\n                    value={start"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "select",
+    "val": "paymentChannelId",
+    "fullTag": "<select\n                    value={paymentChannelId}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "purpose",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={purpose}\n                    onCha"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "select",
+    "val": "disburseChannelId",
+    "fullTag": "<select\n                  value={disburseChannelId}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "disburseDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={disburseDate}\n                    "
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "disburseRef",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={disburseRef}\n                    o"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "disburseNotes",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={disburseNotes}\n                  onCha"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "select",
+    "val": "payChannelId",
+    "fullTag": "<select\n                  value={payChannelId}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "payDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={payDate}\n                    onCha"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "payRef",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={payRef}\n                    onChan"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "payNotes",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={payNotes}\n                  onChange={"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "renewTenureMonths",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={1}\n                      max={"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "renewPrincipal",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={0}\n                      step="
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "renewInterestRate",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={0}\n                      max={"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "renewEffectiveDate",
+    "fullTag": "<input\n                      type=\"date\"\n                      value={renewEffectiveDate}\n          "
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "renewAdendumNumber",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"Contoh: PK-ADD/BRI/2025/"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "renewProvisionFee",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={0}\n                    step={50000"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "select",
+    "val": "renewPaymentChannelId",
+    "fullTag": "<select\n                            value={renewPaymentChannelId}\n                            onChan"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "tag": "input",
+    "val": "renewNotes",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={renewNotes}\n                    on"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "select",
+    "val": "selectedMonth",
+    "fullTag": "<select\n              id=\"batch-payroll-month-select\"\n              value={selectedMonth}\n          "
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "option",
+    "val": "m",
+    "fullTag": "<option key={m} value={m}"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "select",
+    "val": "selectedYear",
+    "fullTag": "<select\n              id=\"batch-payroll-year-select\"\n              value={selectedYear}\n            "
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "option",
+    "val": "y",
+    "fullTag": "<option key={y} value={y}"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "input",
+    "val": "paymentDate",
+    "fullTag": "<input\n              type=\"date\"\n              value={paymentDate}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "select",
+    "val": "paymentMethod",
+    "fullTag": "<select\n              value={paymentMethod}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "input",
+    "val": "row.basicSalary",
+    "fullTag": "<input\n                        type=\"number\"\n                        step=\"50000\"\n                  "
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "input",
+    "val": "row.allowances",
+    "fullTag": "<input\n                        type=\"number\"\n                        step=\"50000\"\n                  "
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "input",
+    "val": "row.bonus",
+    "fullTag": "<input\n                        type=\"number\"\n                        step=\"50000\"\n                  "
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "tag": "input",
+    "val": "row.deductions",
+    "fullTag": "<input\n                        type=\"number\"\n                        step=\"10000\"\n                  "
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "select",
+    "val": "holidayName",
+    "fullTag": "<select\n                  value={holidayName}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "option",
+    "val": "c",
+    "fullTag": "<option key={c} value={c}"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "input",
+    "val": "paymentDate",
+    "fullTag": "<input\n                  type=\"date\"\n                  value={paymentDate}\n                  onChang"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "select",
+    "val": "paymentChannelId",
+    "fullTag": "<select\n                  value={paymentChannelId}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "select",
+    "val": "defaultMultiplier",
+    "fullTag": "<select\n                  value={defaultMultiplier}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "option",
+    "val": "1",
+    "fullTag": "<option value={1}"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "option",
+    "val": "1.25",
+    "fullTag": "<option value={1.25}"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "option",
+    "val": "1.5",
+    "fullTag": "<option value={1.5}"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "option",
+    "val": "2",
+    "fullTag": "<option value={2}"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "tag": "input",
+    "val": "row.nominalThr",
+    "fullTag": "<input\n                            type=\"number\"\n                            value={row.nominalThr}\n"
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "tag": "input",
+    "val": "searchTerm",
+    "fullTag": "<input\n              type=\"text\"\n              value={searchTerm}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "tag": "select",
+    "val": "yearFilter",
+    "fullTag": "<select\n              value={yearFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "tag": "option",
+    "val": "y",
+    "fullTag": "<option key={y} value={y}"
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n              value={statusFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "select",
+    "val": "selectedEmployeeId",
+    "fullTag": "<select\n                  value={selectedEmployeeId}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "employeeName",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={employeeName}\n                  onChan"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "roleTitle",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={roleTitle}\n                  onChange="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "employeeNik",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={employeeNik}\n                  onChang"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "bankName",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={bankName}\n                  onChange={"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "bankAccountNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={bankAccountNumber}\n                  o"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "bankAccountHolder",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={bankAccountHolder}\n                  o"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "select",
+    "val": "holidayPreset",
+    "fullTag": "<select\n                    value={holidayPreset}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "p",
+    "fullTag": "<option key={p} value={p}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "customHolidayName",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={customHolidayName}\n           "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "baseSalary || ''",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={baseSalary || ''}\n          "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "serviceMonths",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={serviceMonths}\n             "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "select",
+    "val": "thrMultiplier",
+    "fullTag": "<select\n                    value={thrMultiplier}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "1",
+    "fullTag": "<option value={1}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "1.25",
+    "fullTag": "<option value={1.25}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "1.5",
+    "fullTag": "<option value={1.5}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "2",
+    "fullTag": "<option value={2}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "nominalThr || ''",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={nominalThr || ''}\n          "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "bonusCriteria",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={bonusCriteria}\n                   "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "select",
+    "val": "selectedProjectId",
+    "fullTag": "<select\n                      value={selectedProjectId}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "baseSalary || ''",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={baseSalary || ''}\n          "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "nominalBonus || ''",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={nominalBonus || ''}\n        "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "pph21Amount || ''",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={pph21Amount || ''}\n             "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "cashAdvanceDeduction || ''",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={cashAdvanceDeduction || ''}\n    "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "otherDeductions || ''",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={otherDeductions || ''}\n         "
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "select",
+    "val": "paymentMethod",
+    "fullTag": "<select\n                  value={paymentMethod}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "select",
+    "val": "paymentChannelId",
+    "fullTag": "<select\n                  value={paymentChannelId}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "paymentDate",
+    "fullTag": "<input\n                  type=\"date\"\n                  value={paymentDate}\n                  onChang"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "period",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={period}\n                  onChange={(e"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "tag": "input",
+    "val": "notes",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={notes}\n                  onChange={(e)"
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "tag": "select",
+    "val": "selectedTargetChannel",
+    "fullTag": "<select\n                value={selectedTargetChannel}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n              type=\"text\"\n              value={searchQuery}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "tag": "select",
+    "val": "t.paymentMethod || 'UNASSIGNED'",
+    "fullTag": "<select\n                          value={t.paymentMethod || 'UNASSIGNED'}\n                          "
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "tag": "input",
+    "val": "authorizedCapital || ''",
+    "fullTag": "<input\n                  type=\"number\"\n                  min=\"0\"\n                  step=\"1000000\"\n  "
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "tag": "input",
+    "val": "paidInCapital || ''",
+    "fullTag": "<input\n                  type=\"number\"\n                  min=\"0\"\n                  step=\"1000000\"\n  "
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "tag": "input",
+    "val": "additionalCapital || ''",
+    "fullTag": "<input\n                  type=\"number\"\n                  min=\"0\"\n                  step=\"1000000\"\n  "
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "tag": "input",
+    "val": "retainedEarningsOpening || ''",
+    "fullTag": "<input\n                  type=\"number\"\n                  step=\"1000000\"\n                  value={ret"
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "tag": "input",
+    "val": "notes",
+    "fullTag": "<input\n                type=\"text\"\n                value={notes}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n              type=\"text\"\n              value={searchQuery}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "select",
+    "val": "dateRangeFilter",
+    "fullTag": "<select\n            value={dateRangeFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "select",
+    "val": "projectFilter",
+    "fullTag": "<select\n            value={projectFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "select",
+    "val": "categoryFilter",
+    "fullTag": "<select\n            value={categoryFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "select",
+    "val": "channelFilter",
+    "fullTag": "<select\n            value={channelFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "select",
+    "val": "batchTargetChannel",
+    "fullTag": "<select\n                  value={batchTargetChannel}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "selectedYear",
+    "fullTag": "<select\n                  value={selectedYear}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "yr",
+    "fullTag": "<option key={yr} value={yr}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "periodFilter",
+    "fullTag": "<select\n                value={periodFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "customStartDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={customStartDate}\n                 "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "customEndDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={customEndDate}\n                   "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n                value={statusFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "selectedProjectId",
+    "fullTag": "<select\n                value={selectedProjectId}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "categoryFilter",
+    "fullTag": "<select\n                value={categoryFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                type=\"text\"\n                placeholder=\"Cari no. trx, uraian, pihak...\"\n    "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "documentNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={documentNumber}\n                  onCh"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "isCustomPreparer ? 'CUSTOM' : selectedPreparerId",
+    "fullTag": "<select\n                        value={isCustomPreparer ? 'CUSTOM' : selectedPreparerId}\n           "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "preparerName",
+    "fullTag": "<input\n                          type=\"text\"\n                          value={preparerName}\n        "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "preparerPosition",
+    "fullTag": "<select\n                        value={preparerPosition}\n                        onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "pos",
+    "fullTag": "<option key={pos} value={pos}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "customPreparerPosition",
+    "fullTag": "<input\n                          type=\"text\"\n                          value={customPreparerPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "isCustomApprover ? 'CUSTOM' : selectedApproverId",
+    "fullTag": "<select\n                        value={isCustomApprover ? 'CUSTOM' : selectedApproverId}\n           "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "approverName",
+    "fullTag": "<input\n                          type=\"text\"\n                          value={approverName}\n        "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "approverPosition",
+    "fullTag": "<select\n                        value={approverPosition}\n                        onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "pos",
+    "fullTag": "<option key={pos} value={pos}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "customApproverPosition",
+    "fullTag": "<input\n                          type=\"text\"\n                          value={customApproverPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "textarea",
+    "val": "reportNotes",
+    "fullTag": "<textarea\n              value={reportNotes}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "preparerPosition",
+    "fullTag": "<select\n                  value={preparerPosition}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "pos",
+    "fullTag": "<option key={pos} value={pos}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "customPreparerPosition",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={customPreparerPosition}\n          "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "isCustomPreparer ? 'CUSTOM' : selectedPreparerId",
+    "fullTag": "<select\n                  value={isCustomPreparer ? 'CUSTOM' : selectedPreparerId}\n                 "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "preparerName",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={preparerName}\n                    "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "approverPosition",
+    "fullTag": "<select\n                  value={approverPosition}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "pos",
+    "fullTag": "<option key={pos} value={pos}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "customApproverPosition",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={customApproverPosition}\n          "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "select",
+    "val": "isCustomApprover ? 'CUSTOM' : selectedApproverId",
+    "fullTag": "<select\n                  value={isCustomApprover ? 'CUSTOM' : selectedApproverId}\n                 "
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "tag": "input",
+    "val": "approverName",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={approverName}\n                    "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n            type=\"text\"\n            placeholder=\"Cari nama proyek pengadaan, kementerian/dina"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "select",
+    "val": "fundingFilter",
+    "fullTag": "<select\n            value={fundingFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "select",
+    "val": "institutionFilter",
+    "fullTag": "<select\n            value={institutionFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "option",
+    "val": "t.id",
+    "fullTag": "<option key={t.id} value={t.id}"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n            value={statusFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.invoiceNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    value={invoi"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.issueDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    required\n                    value={invoi"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.bapNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. BAP/02/KEMENPERIN/2026\""
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.bastNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. BAST/02/KEMENPERIN/2026"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.dueDate",
+    "fullTag": "<input\n                  type=\"date\"\n                  value={invoiceForm.dueDate}\n                 "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "textarea",
+    "val": "invoiceForm.notes",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={invoiceForm.notes}\n                  o"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "sp2dForm.sp2dNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    required\n                    placeholder="
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "sp2dForm.sp2dDisbursementDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    required\n                    value={sp2dF"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "select",
+    "val": "sp2dForm.paymentChannelId",
+    "fullTag": "<select\n                  required\n                  value={sp2dForm.paymentChannelId}\n             "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "sp2dForm.bupotPphNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. BUPOT-26-02-00419\"\n    "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "sp2dForm.ntpnPpn",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. 782910AKB812\"\n         "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "sp2dForm.spmNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  placeholder=\"e.g. SPM/001/412981/2026\"\n      "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "textarea",
+    "val": "sp2dForm.notes",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={sp2dForm.notes}\n                  onCh"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.title",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  placeholder=\"e.g. "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.grossAmountIDR || ''",
+    "fullTag": "<input\n                    type=\"number\"\n                    required\n                    min={1}\n  "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.percentage || ''",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={milestoneForm.percentage || ''}\n"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.pphRatePercent",
+    "fullTag": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    value={m"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.targetDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={milestoneForm.targetDate}\n        "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.projectName",
+    "fullTag": "<input\n              type=\"text\"\n              required\n              placeholder=\"e.g. Fasilitasi S"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.contractNumber",
+    "fullTag": "<input\n                type=\"text\"\n                required\n                placeholder=\"e.g. 027/SP"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.governmentAgency",
+    "fullTag": "<input\n                type=\"text\"\n                required\n                placeholder=\"e.g. Kement"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "select",
+    "val": "formData.sourceOfFunds",
+    "fullTag": "<select\n                value={formData.sourceOfFunds}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "select",
+    "val": "formData.institutionType",
+    "fullTag": "<select\n                value={formData.institutionType}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "option",
+    "val": "t.id",
+    "fullTag": "<option key={t.id} value={t.id}"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.fiscalYear",
+    "fullTag": "<input\n                type=\"number\"\n                value={formData.fiscalYear}\n                onC"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.totalContractValueIDR || ''",
+    "fullTag": "<input\n                type=\"number\"\n                required\n                min={1}\n              "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.whtRatePph",
+    "fullTag": "<input\n                type=\"number\"\n                step=\"0.1\"\n                value={formData.whtR"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.vatWapuRate",
+    "fullTag": "<input\n                type=\"number\"\n                step=\"0.1\"\n                value={formData.vatW"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.ppkName",
+    "fullTag": "<input\n                type=\"text\"\n                placeholder=\"e.g. Dr. Ir. Hendra Wicaksono, M.Si\""
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.ppkNip",
+    "fullTag": "<input\n                type=\"text\"\n                placeholder=\"e.g. 197805122003121002\"\n           "
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.startDate",
+    "fullTag": "<input\n                type=\"date\"\n                value={formData.startDate}\n                onChan"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "input",
+    "val": "formData.endDate",
+    "fullTag": "<input\n                type=\"date\"\n                value={formData.endDate}\n                onChange"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "select",
+    "val": "selectedSchemeId",
+    "fullTag": "<select\n                value={selectedSchemeId}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "option",
+    "val": "scheme.id",
+    "fullTag": "<option key={scheme.id} value={scheme.id}"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "tag": "textarea",
+    "val": "formData.notes",
+    "fullTag": "<textarea\n              rows={2}\n              placeholder=\"Catatan penyerapan anggaran Kemenkeu, me"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                type=\"text\"\n                placeholder=\"Cari nama instansi, kode, atau tarif"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formName",
+    "fullTag": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formId",
+    "fullTag": "<input\n                      type=\"text\"\n                      required\n                      disabl"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formCode",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"e.g. BOK / KEMEN\"\n      "
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "formFundingSource",
+    "fullTag": "<select\n                      value={formFundingSource}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "select",
+    "val": "formPphType",
+    "fullTag": "<select\n                      value={formPphType}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formPphRate",
+    "fullTag": "<input\n                      type=\"number\"\n                      step=\"0.1\"\n                      va"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "input",
+    "val": "formPpnRate",
+    "fullTag": "<input\n                      type=\"number\"\n                      step=\"0.1\"\n                      va"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "tag": "textarea",
+    "val": "formDescription",
+    "fullTag": "<textarea\n                    rows={2}\n                    placeholder=\"Ketentuan administrasi, meka"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "select",
+    "val": "selectedContractId",
+    "fullTag": "<select\n                value={selectedContractId}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "paymentForm.paidDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={paymentForm.paidDate}\n            "
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "select",
+    "val": "paymentForm.paymentChannelId",
+    "fullTag": "<select\n                    value={paymentForm.paymentChannelId}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "paymentForm.referenceNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  placeholder=\"e.g. TRF-BCA-20260805-9928\"\n    "
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.officeName",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. Kantor Pusat Jakarta La"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.buildingName",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. Gedung Menara Thamrin\"\n"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.landlordName",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. PT Graha Propertindo\"\n "
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.landlordNpwp",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"01.345.678.9-021.000\"\n      "
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.annualBaseRentIDR",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={10000000}\n                    "
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.monthlyServiceChargeIDR",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={0}\n                      step="
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.year",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={contractForm.year}\n             "
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "select",
+    "val": "contractForm.dueDayOfMonth",
+    "fullTag": "<select\n                    value={contractForm.dueDayOfMonth}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "option",
+    "val": "day",
+    "fullTag": "<option key={day} value={day}"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "tag": "input",
+    "val": "contractForm.pph42RatePercent",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={contractForm.pph42RatePercen"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n              type=\"text\"\n              placeholder=\"Cari pengeluaran, vendor, no. referensi,"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "categoryFilter",
+    "fullTag": "<select\n              value={categoryFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n              value={statusFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "taxFilter",
+    "fullTag": "<select\n              value={taxFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "monthFilter",
+    "fullTag": "<select\n                value={monthFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "option",
+    "val": "m",
+    "fullTag": "<option key={m} value={m}"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "formData.category",
+    "fullTag": "<select\n                    value={formData.category}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "formData.division",
+    "fullTag": "<select\n                    value={formData.division}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "input",
+    "val": "formData.title",
+    "fullTag": "<input\n                  type=\"text\"\n                  placeholder=\"e.g. Pembayaran Tagihan Listrik "
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "input",
+    "val": "formData.vendorOrMerchant",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"e.g. PT PLN (Persero) / Peng"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "input",
+    "val": "formData.amountIDR || ''",
+    "fullTag": "<input\n                      type=\"number\"\n                      min={1000}\n                      st"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "input",
+    "val": "formData.date",
+    "fullTag": "<input\n                    type=\"date\"\n                    value={formData.date}\n                   "
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "formData.status",
+    "fullTag": "<select\n                    value={formData.status}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "formData.paymentChannelId",
+    "fullTag": "<select\n                    value={formData.paymentChannelId}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "select",
+    "val": "formData.taxType",
+    "fullTag": "<select\n                        value={formData.taxType}\n                        onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "input",
+    "val": "formData.taxRatePercent",
+    "fullTag": "<input\n                          type=\"number\"\n                          step={0.5}\n                "
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "tag": "textarea",
+    "val": "formData.notes",
+    "fullTag": "<textarea\n                  rows={2}\n                  placeholder=\"Keterangan nomor faktur/kuitansi"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                type=\"text\"\n                placeholder=\"Cari bank, nomor rekening, nama pemi"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n                value={statusFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.name",
+    "fullTag": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.shortName",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"e.g. Bank BRI / BRI\"\n   "
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.accountNumber",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"e.g. 0206-01-002980-30-5"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "input",
+    "val": "formData.accountHolder",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"e.g. PT GAP CONSULTING I"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "select",
+    "val": "formData.category",
+    "fullTag": "<select\n                      value={formData.category}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "option",
+    "val": "c.value",
+    "fullTag": "<option key={c.value} value={c.value}"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "select",
+    "val": "formData.status",
+    "fullTag": "<select\n                      value={formData.status}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "select",
+    "val": "formData.badgeColor",
+    "fullTag": "<select\n                      value={formData.badgeColor}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "option",
+    "val": "b.value",
+    "fullTag": "<option key={b.value} value={b.value}"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "textarea",
+    "val": "formData.description",
+    "fullTag": "<textarea\n                    rows={2}\n                    placeholder=\"e.g. Rekening utama untuk pe"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "select",
+    "val": "deleteResolveModal.reassignTargetId",
+    "fullTag": "<select\n                              value={deleteResolveModal.reassignTargetId}\n                  "
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "tag": "input",
+    "val": "searchTerm",
+    "fullTag": "<input\n                type=\"text\"\n                value={searchTerm}\n                onChange={(e) "
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "tag": "select",
+    "val": "periodFilter",
+    "fullTag": "<select\n                value={periodFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "tag": "option",
+    "val": "p",
+    "fullTag": "<option key={p} value={p}"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n              value={statusFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "tag": "select",
+    "val": "departmentFilter",
+    "fullTag": "<select\n                value={departmentFilter}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "tag": "option",
+    "val": "d",
+    "fullTag": "<option key={d} value={d}"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "select",
+    "val": "selectedEmployeeId",
+    "fullTag": "<select\n                  value={selectedEmployeeId}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "option",
+    "val": "m.id",
+    "fullTag": "<option key={m.id} value={m.id}"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "employeeName",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={employeeName}\n                  onChan"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "employeeNik",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={employeeNik}\n                  onChang"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "roleTitle",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={roleTitle}\n                  onChange="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "department",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={department}\n                  onChange"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "select",
+    "val": "CALENDAR_MONTHS.find((m) => period.toLowerCase().includes(m.toLowerCase())) || 'September'",
+    "fullTag": "<select\n                  value={\n                    CALENDAR_MONTHS.find((m) => period.toLowerCase"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "option",
+    "val": "m",
+    "fullTag": "<option key={m} value={m}"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "select",
+    "val": "Number(period.match(/\\d{4",
+    "fullTag": "<select\n                  value={Number(period.match(/\\d{4}/)?.[0]) || 2026}\n                  onCha"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "option",
+    "val": "y",
+    "fullTag": "<option key={y} value={y}"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "paymentDate",
+    "fullTag": "<input\n                  type=\"date\"\n                  value={paymentDate}\n                  onChang"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "basicSalary",
+    "fullTag": "<input\n                    type=\"number\"\n                    min=\"0\"\n                    step=\"10000"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "positionAllowance",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "transportAllowance",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "mealAllowance",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "overtimeAmount",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "projectBonus",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "otherAllowances",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "bpjsKesehatan",
+    "fullTag": "<input\n                    type=\"number\"\n                    min=\"0\"\n                    step=\"1000\""
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "bpjsKetenagakerjaan",
+    "fullTag": "<input\n                    type=\"number\"\n                    min=\"0\"\n                    step=\"1000\""
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "pph21Amount",
+    "fullTag": "<input\n                    type=\"number\"\n                    min=\"0\"\n                    step=\"1000\""
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "cashAdvanceDeduction",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "otherDeductions",
+    "fullTag": "<input\n                      type=\"number\"\n                      min=\"0\"\n                      step="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "select",
+    "val": "paymentMethod",
+    "fullTag": "<select\n                  value={paymentMethod}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "option",
+    "val": "paymentMethod",
+    "fullTag": "<option value={paymentMethod}"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "bankName",
+    "fullTag": "<input\n                  type=\"text\"\n                  list=\"payroll-employee-banks\"\n               "
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "bankAccountNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={bankAccountNumber}\n                  o"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "select",
+    "val": "status",
+    "fullTag": "<select\n                  value={status}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "tag": "input",
+    "val": "notes",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={notes}\n                  onChange={(e)"
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n              type=\"text\"\n              value={searchQuery}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "tag": "select",
+    "val": "categoryFilter",
+    "fullTag": "<select\n              value={categoryFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "tag": "select",
+    "val": "selectedProjectId",
+    "fullTag": "<select\n              value={selectedProjectId}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "invoiceNumber",
+    "fullTag": "<input\n                type=\"text\"\n                value={invoiceNumber}\n                onChange={("
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "select",
+    "val": "category",
+    "fullTag": "<select\n                value={category}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "cat.id",
+    "fullTag": "<option key={cat.id} value={cat.id}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "select",
+    "val": "selectedProjectId",
+    "fullTag": "<select\n                value={selectedProjectId}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "milestoneTitle",
+    "fullTag": "<input\n                type=\"text\"\n                value={milestoneTitle}\n                onChange={"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "title",
+    "fullTag": "<input\n              type=\"text\"\n              value={title}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "clientName",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={clientName}\n                  onChange"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "clientContactPerson",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={clientContactPerson}\n                 "
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "clientEmail",
+    "fullTag": "<input\n                  type=\"email\"\n                  value={clientEmail}\n                  onChan"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "clientPhone",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={clientPhone}\n                  onChang"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "totalAmountIDR || ''",
+    "fullTag": "<input\n                type=\"number\"\n                min=\"0\"\n                step=\"1000\"\n           "
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "issueDate",
+    "fullTag": "<input\n                type=\"date\"\n                value={issueDate}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "select",
+    "val": "category === 'PROYEK_RETAIL' ? RETAIL_PAYMENT_TERMS_DAYS : paymentTermsDays",
+    "fullTag": "<select\n                  value={category === 'PROYEK_RETAIL' ? RETAIL_PAYMENT_TERMS_DAYS : paymentT"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "7",
+    "fullTag": "<option value={7}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "14",
+    "fullTag": "<option value={14}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "30",
+    "fullTag": "<option value={30}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "45",
+    "fullTag": "<option value={45}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "60",
+    "fullTag": "<option value={60}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "90",
+    "fullTag": "<option value={90}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "dueDate",
+    "fullTag": "<input\n                  type=\"date\"\n                  value={dueDate}\n                  readOnly={c"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "initialPaidAmountIDR || ''",
+    "fullTag": "<input\n                        type=\"number\"\n                        min=\"0\"\n                       "
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "select",
+    "val": "paymentChannelId",
+    "fullTag": "<select\n                        value={paymentChannelId}\n                        onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "input",
+    "val": "referenceNumber",
+    "fullTag": "<input\n                        type=\"text\"\n                        value={referenceNumber}\n         "
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "tag": "textarea",
+    "val": "notes",
+    "fullTag": "<textarea\n              rows={2}\n              value={notes}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "tag": "input",
+    "val": "paymentAmountIDR || ''",
+    "fullTag": "<input\n              type=\"number\"\n              min=\"1000\"\n              max={remaining}\n          "
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "tag": "input",
+    "val": "paymentDate",
+    "fullTag": "<input\n                type=\"date\"\n                value={paymentDate}\n                onChange={(e)"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "tag": "select",
+    "val": "paymentChannelId",
+    "fullTag": "<select\n                value={paymentChannelId}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "tag": "option",
+    "val": "ch.id",
+    "fullTag": "<option key={ch.id} value={ch.id}"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "tag": "input",
+    "val": "referenceNumber",
+    "fullTag": "<input\n              type=\"text\"\n              value={referenceNumber}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "tag": "input",
+    "val": "notes",
+    "fullTag": "<input\n              type=\"text\"\n              value={notes}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n            type=\"text\"\n            placeholder=\"Cari Klien, SPK, NPWP, atau Proyek...\"\n     "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "select",
+    "val": "categoryFilter",
+    "fullTag": "<select\n              value={categoryFilter}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "select",
+    "val": "pricingFilter",
+    "fullTag": "<select\n            value={pricingFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "select",
+    "val": "statusFilter",
+    "fullTag": "<select\n            value={statusFilter}\n            onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.invoiceNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  value={invoiceForm"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.issueDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    required\n                    value={invoi"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.dueDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    required\n                    readOnly\n   "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "invoiceForm.fakturPajakNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  value={invoiceForm.fakturPajakNumber}\n       "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "textarea",
+    "val": "invoiceForm.notes",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={invoiceForm.notes}\n                  o"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "paymentForm.amountReceivedIDR",
+    "fullTag": "<input\n                  type=\"number\"\n                  required\n                  value={paymentFo"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "paymentForm.paymentDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    required\n                    value={payme"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "select",
+    "val": "paymentForm.paymentChannelId",
+    "fullTag": "<select\n                    value={paymentForm.paymentChannelId}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "option",
+    "val": "channel.id",
+    "fullTag": "<option key={channel.id} value={channel.id}"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "paymentForm.referenceNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={paymentForm.referenceNumber}\n     "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "paymentForm.bupotPphNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    value={paymentForm.bupotPphNumber}\n      "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "textarea",
+    "val": "paymentForm.notes",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={paymentForm.notes}\n                  o"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.title",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  value={milestoneFo"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.percentage",
+    "fullTag": "<input\n                    type=\"number\"\n                    min={1}\n                    max={100}\n "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.grossAmountIDR",
+    "fullTag": "<input\n                    type=\"number\"\n                    value={milestoneForm.grossAmountIDR}\n  "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "input",
+    "val": "milestoneForm.targetDate",
+    "fullTag": "<input\n                  type=\"date\"\n                  value={milestoneForm.targetDate}\n            "
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "tag": "textarea",
+    "val": "milestoneForm.notes",
+    "fullTag": "<textarea\n                  rows={2}\n                  value={milestoneForm.notes}\n                 "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n              type=\"text\"\n              placeholder=\"Cari jenis pajak, masa pajak, judul, NTP"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "select",
+    "val": "selectedYear",
+    "fullTag": "<select\n              value={selectedYear}\n              onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "option",
+    "val": "2026",
+    "fullTag": "<option value={2026}"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "option",
+    "val": "2025",
+    "fullTag": "<option value={2025}"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "option",
+    "val": "2024",
+    "fullTag": "<option value={2024}"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "select",
+    "val": "formData.taxMonth",
+    "fullTag": "<select\n                    id=\"tax-form-period-select\"\n                    required\n               "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "option",
+    "val": "m.value",
+    "fullTag": "<option key={m.value} value={m.value} className=\"bg-slate-900 text-white\""
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.taxYear",
+    "fullTag": "<input\n                    id=\"tax-form-year-input\"\n                    type=\"number\"\n              "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.title",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  placeholder=\"Conto"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "textarea",
+    "val": "formData.description",
+    "fullTag": "<textarea\n                  rows={2}\n                  required\n                  placeholder=\"Keter"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.taxableBaseAmount",
+    "fullTag": "<input\n                      type=\"number\"\n                      required\n                      min="
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.taxRatePercent",
+    "fullTag": "<input\n                      type=\"number\"\n                      step=\"0.1\"\n                      re"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.ppnOutputAmount",
+    "fullTag": "<input\n                        type=\"number\"\n                        min={0}\n                       "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.ppnInputAmount",
+    "fullTag": "<input\n                        type=\"number\"\n                        min={0}\n                       "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.dueDate",
+    "fullTag": "<input\n                    type=\"date\"\n                    required\n                    value={formD"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.billingCode",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"Contoh: 829104829102834\"\n   "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.taxInvoiceNumber",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"010.002-26.89102834\"\n       "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "select",
+    "val": "formData.projectId",
+    "fullTag": "<select\n                    value={formData.projectId}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id} className=\"bg-slate-800 text-white\""
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "formData.counterpartyName",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"Contoh: PT Sucofindo, KPP Pr"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "textarea",
+    "val": "formData.notes",
+    "fullTag": "<textarea\n                  rows={2}\n                  placeholder=\"Catatan pelaporan, lampiran e-Fa"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.withholdingTaxPayerName",
+    "fullTag": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.clientWithholdingNumber",
+    "fullTag": "<input\n                        type=\"text\"\n                        required\n                        "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.date",
+    "fullTag": "<input\n                        type=\"date\"\n                        required\n                        "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "select",
+    "val": "payFormData.paymentChannelId",
+    "fullTag": "<select\n                        required\n                        value={payFormData.paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id} className=\"bg-slate-800 text-white\""
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.billingCode",
+    "fullTag": "<input\n                        type=\"text\"\n                        placeholder=\"Contoh: 918273645019"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.notes",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"Contoh: Dipotong PPh 23 "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.ntpnNumber",
+    "fullTag": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.billingCode",
+    "fullTag": "<input\n                        type=\"text\"\n                        placeholder=\"Contoh: 918273645019"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.date",
+    "fullTag": "<input\n                        type=\"date\"\n                        required\n                        "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "select",
+    "val": "payFormData.paymentChannelId",
+    "fullTag": "<select\n                      required\n                      value={payFormData.paymentChannelId}\n  "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id} className=\"bg-slate-800 text-white\""
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "payFormData.notes",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"Contoh: Disetor melalui "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "calcDpp",
+    "fullTag": "<input\n                  type=\"number\"\n                  min={0}\n                  step={1000000}\n  "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "calcPpnOutput",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={calcPpnOutput}\n             "
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "tag": "input",
+    "val": "calcPpnInput",
+    "fullTag": "<input\n                      type=\"number\"\n                      value={calcPpnInput}\n              "
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                type=\"text\"\n                placeholder=\"Cari nama skema termin atau rincian "
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "tag": "input",
+    "val": "formName",
+    "fullTag": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "tag": "input",
+    "val": "formDescription",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder=\"Ketentuan pengajuan SP2D, sy"
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "tag": "input",
+    "val": "term.title",
+    "fullTag": "<input\n                            type=\"text\"\n                            required\n                "
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "tag": "input",
+    "val": "term.percentage",
+    "fullTag": "<input\n                              type=\"number\"\n                              min=\"1\"\n           "
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "input",
+    "val": "searchQuery",
+    "fullTag": "<input\n                type=\"text\"\n                placeholder=\"Cari kategori (misal: Listrik, Gaji,"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "select",
+    "val": "selectedGroup",
+    "fullTag": "<select\n                value={selectedGroup}\n                onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "option",
+    "val": "g",
+    "fullTag": "<option key={g} value={g}"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "select",
+    "val": "formType",
+    "fullTag": "<select\n                      value={formType}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "input",
+    "val": "formName",
+    "fullTag": "<input\n                      type=\"text\"\n                      required\n                      placeh"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "input",
+    "val": "formGroup",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"e.g. Operasional & Rutin"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "input",
+    "val": "formDescription",
+    "fullTag": "<input\n                      type=\"text\"\n                      placeholder=\"Deskripsi singkat pos pe"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "select",
+    "val": "formColor",
+    "fullTag": "<select\n                      value={formColor}\n                      onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "tag": "option",
+    "val": "c.value",
+    "fullTag": "<option key={c.value} value={c.value}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "amountInput",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  placeholder=\"e.g. "
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "date",
+    "fullTag": "<input\n                  type=\"date\"\n                  required\n                  value={date}\n     "
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "select",
+    "val": "category",
+    "fullTag": "<select\n                  value={category}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "loanDebtName",
+    "fullTag": "<input\n                    type=\"text\"\n                    placeholder={description || (clientOrVend"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "select",
+    "val": "loanFacilityType",
+    "fullTag": "<select\n                    value={loanFacilityType}\n                    onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "loanTenureMonths",
+    "fullTag": "<input\n                    type=\"number\"\n                    min=\"1\"\n                    max=\"360\"\n "
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "loanInterestRate",
+    "fullTag": "<input\n                    type=\"number\"\n                    step=\"0.1\"\n                    min=\"0\"\n"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "description",
+    "fullTag": "<input\n              type=\"text\"\n              required\n              placeholder={\n                "
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "clientOrVendorName",
+    "fullTag": "<input\n                  type=\"text\"\n                  required\n                  placeholder={type "
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "select",
+    "val": "projectId",
+    "fullTag": "<select\n                  value={projectId}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "p.id",
+    "fullTag": "<option key={p.id} value={p.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "select",
+    "val": "paymentMethod",
+    "fullTag": "<select\n                  value={paymentMethod}\n                  onChange={(e) ="
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "paymentMethod",
+    "fullTag": "<option value={paymentMethod}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "option",
+    "val": "c.id",
+    "fullTag": "<option key={c.id} value={c.id}"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "referenceNumber",
+    "fullTag": "<input\n                  type=\"text\"\n                  placeholder=\"e.g. INV-2025/VRX/03/001\"\n      "
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "input",
+    "val": "attachmentName",
+    "fullTag": "<input\n                      type=\"text\"\n                      value={attachmentName}\n              "
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "tag": "textarea",
+    "val": "notes",
+    "fullTag": "<textarea\n                rows={3}\n                placeholder=\"e.g. PPh 23 deduction already settle"
+  }
+]

@@ -1,0 +1,3938 @@
+[
+  {
+    "file": "src/components/AccountSwitchModal.tsx",
+    "line": 167,
+    "tag": "input",
+    "expr": "pin"
+  },
+  {
+    "file": "src/components/ActivityLog.tsx",
+    "line": 421,
+    "tag": "select",
+    "expr": "selectedRemarkType"
+  },
+  {
+    "file": "src/components/ActivityLog.tsx",
+    "line": 437,
+    "tag": "input",
+    "expr": "newRemarkText"
+  },
+  {
+    "file": "src/components/ActivityLog.tsx",
+    "line": 460,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 398,
+    "tag": "select",
+    "expr": "selectedProjectId"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 404,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 433,
+    "tag": "select",
+    "expr": "docType"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 457,
+    "tag": "option",
+    "expr": "d.id"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 465,
+    "tag": "option",
+    "expr": "d.id"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 483,
+    "tag": "input",
+    "expr": "referenceNumber"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 500,
+    "tag": "input",
+    "expr": "counterpartyName"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 517,
+    "tag": "input",
+    "expr": "amountIDR"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 535,
+    "tag": "input",
+    "expr": "versionTag"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 551,
+    "tag": "input",
+    "expr": "validUntil"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 566,
+    "tag": "input",
+    "expr": "taxNumber"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 578,
+    "tag": "select",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 583,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 598,
+    "tag": "select",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 603,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 690,
+    "tag": "input",
+    "expr": "customDocName"
+  },
+  {
+    "file": "src/components/CategorizedUploadModal.tsx",
+    "line": 703,
+    "tag": "input",
+    "expr": "notes"
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "line": 1300,
+    "tag": "textarea",
+    "expr": "signoffNote"
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "line": 1358,
+    "tag": "input",
+    "expr": "customTitle"
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "line": 1371,
+    "tag": "select",
+    "expr": "customStage"
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "line": 1390,
+    "tag": "input",
+    "expr": "customRegulatoryClause"
+  },
+  {
+    "file": "src/components/CertificationChecklist.tsx",
+    "line": 1404,
+    "tag": "textarea",
+    "expr": "customDescription"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 575,
+    "tag": "input",
+    "expr": "formData.logoUrl || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 684,
+    "tag": "input",
+    "expr": "formData.companyName"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 703,
+    "tag": "input",
+    "expr": "formData.shortName || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 721,
+    "tag": "input",
+    "expr": "formData.taxId || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 740,
+    "tag": "input",
+    "expr": "formData.tagline || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 773,
+    "tag": "textarea",
+    "expr": "formData.address || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 791,
+    "tag": "input",
+    "expr": "formData.phone || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 809,
+    "tag": "input",
+    "expr": "formData.email || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 828,
+    "tag": "input",
+    "expr": "formData.website || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 859,
+    "tag": "input",
+    "expr": "formData.authorizedSignatoryName || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 877,
+    "tag": "input",
+    "expr": "formData.authorizedSignatoryTitle || ''"
+  },
+  {
+    "file": "src/components/CompanyLetterheadModal.tsx",
+    "line": 895,
+    "tag": "textarea",
+    "expr": "formData.notes || ''"
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "line": 574,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "line": 583,
+    "tag": "select",
+    "expr": "selectedProjectFilter"
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "line": 589,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "line": 597,
+    "tag": "select",
+    "expr": "selectedStatusFilter"
+  },
+  {
+    "file": "src/components/DocumentManager.tsx",
+    "line": 943,
+    "tag": "input",
+    "expr": "reviewNoteInput[doc.id] || ''"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 635,
+    "tag": "input",
+    "expr": "searchDocQuery"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1463,
+    "tag": "textarea",
+    "expr": "flagInputNote"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1556,
+    "tag": "input",
+    "expr": "editDocName"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1565,
+    "tag": "select",
+    "expr": "editCategoryGroup"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1579,
+    "tag": "select",
+    "expr": "editDocType"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1584,
+    "tag": "option",
+    "expr": "dt.id"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1594,
+    "tag": "input",
+    "expr": "editRefNumber"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1604,
+    "tag": "input",
+    "expr": "editAmount"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1614,
+    "tag": "input",
+    "expr": "editCounterparty"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1624,
+    "tag": "input",
+    "expr": "editTaxNumber"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1634,
+    "tag": "input",
+    "expr": "editValidUntil"
+  },
+  {
+    "file": "src/components/DocumentPreviewModal.tsx",
+    "line": 1643,
+    "tag": "input",
+    "expr": "editNotes"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 619,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 642,
+    "tag": "select",
+    "expr": "categoryFilter"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 650,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 659,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 850,
+    "tag": "input",
+    "expr": "categorySearchQuery"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 869,
+    "tag": "select",
+    "expr": "categoryStatusFilter"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1113,
+    "tag": "input",
+    "expr": "formId"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1166,
+    "tag": "select",
+    "expr": "formCategory"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1177,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1225,
+    "tag": "input",
+    "expr": "formName"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1240,
+    "tag": "textarea",
+    "expr": "formDescription"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1257,
+    "tag": "input",
+    "expr": "formAcceptedTypes"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1421,
+    "tag": "input",
+    "expr": "categoryFormId"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1440,
+    "tag": "input",
+    "expr": "categoryFormName"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1454,
+    "tag": "textarea",
+    "expr": "categoryFormDescription"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1578,
+    "tag": "select",
+    "expr": "reassignTargetId"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1586,
+    "tag": "option",
+    "expr": "d.id"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1676,
+    "tag": "select",
+    "expr": "reassignCategoryTargetId"
+  },
+  {
+    "file": "src/components/DocumentTypeManagerModal.tsx",
+    "line": 1684,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 173,
+    "tag": "select",
+    "expr": "filters.stage"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 178,
+    "tag": "option",
+    "expr": "s.value"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 193,
+    "tag": "select",
+    "expr": "filters.surveyor"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 199,
+    "tag": "option",
+    "expr": "opt"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 214,
+    "tag": "select",
+    "expr": "filters.status"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 219,
+    "tag": "option",
+    "expr": "st.value"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 234,
+    "tag": "select",
+    "expr": "filters.leadConsultantId"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 240,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "line": 255,
+    "tag": "select",
+    "expr": "filters.priority"
+  },
+  {
+    "file": "src/components/Header.tsx",
+    "line": 268,
+    "tag": "input",
+    "expr": "filters.searchQuery"
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "line": 104,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "line": 112,
+    "tag": "select",
+    "expr": "filterAssignee"
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "line": 118,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "line": 126,
+    "tag": "select",
+    "expr": "filterPriority"
+  },
+  {
+    "file": "src/components/JobDispositionBoard.tsx",
+    "line": 288,
+    "tag": "select",
+    "expr": "disp.status"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 199,
+    "tag": "select",
+    "expr": "projectId"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 205,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 225,
+    "tag": "input",
+    "expr": "title"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 241,
+    "tag": "select",
+    "expr": "category"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 260,
+    "tag": "select",
+    "expr": "priority"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 277,
+    "tag": "select",
+    "expr": "status"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 296,
+    "tag": "input",
+    "expr": "dueDate"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 357,
+    "tag": "textarea",
+    "expr": "instructions"
+  },
+  {
+    "file": "src/components/JobDispositionModal.tsx",
+    "line": 392,
+    "tag": "input",
+    "expr": "newChecklistText"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 552,
+    "tag": "input",
+    "expr": "identifier"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 591,
+    "tag": "input",
+    "expr": "pin"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 654,
+    "tag": "input",
+    "expr": "regName"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 686,
+    "tag": "input",
+    "expr": "regUsername"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 714,
+    "tag": "input",
+    "expr": "regEmail"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 730,
+    "tag": "input",
+    "expr": "regPhone"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 758,
+    "tag": "input",
+    "expr": "regPin"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 787,
+    "tag": "input",
+    "expr": "regConfirmPin"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 865,
+    "tag": "input",
+    "expr": "forgotEmail"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 927,
+    "tag": "input",
+    "expr": "inputCode"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 956,
+    "tag": "input",
+    "expr": "newPin"
+  },
+  {
+    "file": "src/components/LoginView.tsx",
+    "line": 974,
+    "tag": "input",
+    "expr": "confirmNewPin"
+  },
+  {
+    "file": "src/components/Navbar.tsx",
+    "line": 106,
+    "tag": "input",
+    "expr": "filters.searchQuery"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 503,
+    "tag": "input",
+    "expr": "clientName"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 521,
+    "tag": "select",
+    "expr": "companyType"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 543,
+    "tag": "input",
+    "expr": "productOrServiceName"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 566,
+    "tag": "select",
+    "expr": "serviceType"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 592,
+    "tag": "option",
+    "expr": "svc.id"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 610,
+    "tag": "input",
+    "expr": "kbliCode"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 627,
+    "tag": "input",
+    "expr": "industry"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 655,
+    "tag": "input",
+    "expr": "targetTkdnPercentage"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 674,
+    "tag": "input",
+    "expr": "projectedTkdnPercentage"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 688,
+    "tag": "input",
+    "expr": "contractValueIDR"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 703,
+    "tag": "input",
+    "expr": "contractValueIDR"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 735,
+    "tag": "select",
+    "expr": "surveyorBody"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 747,
+    "tag": "option",
+    "expr": "opt"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 804,
+    "tag": "input",
+    "expr": "newOptionInput"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 866,
+    "tag": "input",
+    "expr": "editingOptionValue"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 984,
+    "tag": "select",
+    "expr": "licensingAuthority"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 1004,
+    "tag": "select",
+    "expr": "leadConsultantId"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 1009,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 1025,
+    "tag": "input",
+    "expr": "startDate"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 1040,
+    "tag": "input",
+    "expr": "targetCompletionDate"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 1056,
+    "tag": "textarea",
+    "expr": "description"
+  },
+  {
+    "file": "src/components/NewProjectModal.tsx",
+    "line": 1077,
+    "tag": "input",
+    "expr": "tagInput"
+  },
+  {
+    "file": "src/components/ProjectDetailModal.tsx",
+    "line": 208,
+    "tag": "select",
+    "expr": "project.stage"
+  },
+  {
+    "file": "src/components/ProjectDetailModal.tsx",
+    "line": 1313,
+    "tag": "select",
+    "expr": "project.status"
+  },
+  {
+    "file": "src/components/ProjectGanttChart.tsx",
+    "line": 392,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 837,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 845,
+    "tag": "select",
+    "expr": "roleFilter"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 1419,
+    "tag": "select",
+    "expr": "user.role"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2064,
+    "tag": "select",
+    "expr": "verifyRole"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2088,
+    "tag": "input",
+    "expr": "verifyRoleTitle"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2097,
+    "tag": "input",
+    "expr": "verifyDepartment"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2108,
+    "tag": "textarea",
+    "expr": "verifyNotes"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2132,
+    "tag": "input",
+    "expr": "verifyNik"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2145,
+    "tag": "input",
+    "expr": "verifyBankName"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2152,
+    "tag": "option",
+    "expr": "b"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2164,
+    "tag": "input",
+    "expr": "verifyBankAccountNumber"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2176,
+    "tag": "input",
+    "expr": "verifyBankAccountHolder"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2262,
+    "tag": "input",
+    "expr": "formData.name"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2274,
+    "tag": "input",
+    "expr": "formData.username"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2286,
+    "tag": "input",
+    "expr": "formData.email"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2297,
+    "tag": "input",
+    "expr": "formData.phone"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2307,
+    "tag": "select",
+    "expr": "formData.role"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2326,
+    "tag": "input",
+    "expr": "formData.pin"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2337,
+    "tag": "input",
+    "expr": "formData.department"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2349,
+    "tag": "input",
+    "expr": "formData.clientCompany"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2376,
+    "tag": "select",
+    "expr": "formData.idType || 'NIK'"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2392,
+    "tag": "input",
+    "expr": "formData.nik"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2408,
+    "tag": "input",
+    "expr": "formData.bankName"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2415,
+    "tag": "option",
+    "expr": "b"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2426,
+    "tag": "input",
+    "expr": "formData.bankAccountNumber"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2439,
+    "tag": "input",
+    "expr": "formData.bankAccountHolder"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2456,
+    "tag": "input",
+    "expr": "formData.specialization"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2624,
+    "tag": "input",
+    "expr": "reassignRoleTitle"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2633,
+    "tag": "input",
+    "expr": "reassignDepartment"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2644,
+    "tag": "textarea",
+    "expr": "reassignNotes"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2794,
+    "tag": "input",
+    "expr": "editRoleFormTitle"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2807,
+    "tag": "input",
+    "expr": "editRoleFormDept"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2820,
+    "tag": "textarea",
+    "expr": "editRoleFormDesc"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2842,
+    "tag": "input",
+    "expr": "editRoleBasicSalary"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2857,
+    "tag": "input",
+    "expr": "editRolePositionAllowance"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2872,
+    "tag": "input",
+    "expr": "editRoleTransportAllowance"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 2887,
+    "tag": "input",
+    "expr": "editRoleMealAllowance"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 3239,
+    "tag": "input",
+    "expr": "editGovTitle"
+  },
+  {
+    "file": "src/components/RoleManagerModal.tsx",
+    "line": 3252,
+    "tag": "textarea",
+    "expr": "editGovDesc"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 418,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 427,
+    "tag": "select",
+    "expr": "categoryFilter"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 433,
+    "tag": "option",
+    "expr": "cat"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 441,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 728,
+    "tag": "input",
+    "expr": "formName"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 741,
+    "tag": "input",
+    "expr": "formShortName"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 759,
+    "tag": "input",
+    "expr": "formCode"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 774,
+    "tag": "select",
+    "expr": "formCategory"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 779,
+    "tag": "option",
+    "expr": "cat"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 789,
+    "tag": "input",
+    "expr": "formCustomCategory"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 805,
+    "tag": "textarea",
+    "expr": "formDescription"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 820,
+    "tag": "input",
+    "expr": "formRegulatoryBasis"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 833,
+    "tag": "input",
+    "expr": "formSurveyor"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 850,
+    "tag": "input",
+    "expr": "formDurationDays"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 864,
+    "tag": "input",
+    "expr": "formBasePriceIDR"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 878,
+    "tag": "select",
+    "expr": "formBadgeColor"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 883,
+    "tag": "option",
+    "expr": "theme.value"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 995,
+    "tag": "select",
+    "expr": "reassignTargetId"
+  },
+  {
+    "file": "src/components/ServiceTypeManagerModal.tsx",
+    "line": 1003,
+    "tag": "option",
+    "expr": "s.id"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 271,
+    "tag": "input",
+    "expr": "materialKdn"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 283,
+    "tag": "input",
+    "expr": "materialKln"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 317,
+    "tag": "input",
+    "expr": "laborWni"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 329,
+    "tag": "input",
+    "expr": "laborWna"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 363,
+    "tag": "input",
+    "expr": "overheadKdn"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 375,
+    "tag": "input",
+    "expr": "overheadKln"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 426,
+    "tag": "input",
+    "expr": "rdBonus"
+  },
+  {
+    "file": "src/components/TkdnCalculatorModal.tsx",
+    "line": 464,
+    "tag": "input",
+    "expr": "bmpScore"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 417,
+    "tag": "input",
+    "expr": "formData.name"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 434,
+    "tag": "input",
+    "expr": "formData.username"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 451,
+    "tag": "input",
+    "expr": "formData.email"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 468,
+    "tag": "input",
+    "expr": "formData.phone"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 484,
+    "tag": "input",
+    "expr": "formData.department"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 500,
+    "tag": "input",
+    "expr": "formData.clientCompany"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 516,
+    "tag": "textarea",
+    "expr": "formData.bio"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 554,
+    "tag": "input",
+    "expr": "newSkillInput"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 656,
+    "tag": "input",
+    "expr": "customAvatarUrl"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 775,
+    "tag": "input",
+    "expr": "formData.pin"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 802,
+    "tag": "input",
+    "expr": "pinConfirm"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 853,
+    "tag": "input",
+    "expr": "formData.roleTitle"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 872,
+    "tag": "input",
+    "expr": "formData.registrationNumber"
+  },
+  {
+    "file": "src/components/UserProfileModal.tsx",
+    "line": 888,
+    "tag": "input",
+    "expr": "formData.signatureText"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 443,
+    "tag": "select",
+    "expr": "selectedEmployeeId"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 450,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 464,
+    "tag": "select",
+    "expr": "year"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 476,
+    "tag": "option",
+    "expr": "y"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 548,
+    "tag": "input",
+    "expr": "basicSalary"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 567,
+    "tag": "input",
+    "expr": "positionAllowance"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 586,
+    "tag": "input",
+    "expr": "transportAllowance"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 605,
+    "tag": "input",
+    "expr": "mealAllowance"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 624,
+    "tag": "input",
+    "expr": "communicationAllowance"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 643,
+    "tag": "input",
+    "expr": "fixedAllowance"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 666,
+    "tag": "select",
+    "expr": "thrMonths"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 670,
+    "tag": "option",
+    "expr": "1"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 671,
+    "tag": "option",
+    "expr": "1.5"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 672,
+    "tag": "option",
+    "expr": "2"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 673,
+    "tag": "option",
+    "expr": "0"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 688,
+    "tag": "input",
+    "expr": "annualBonusEstimate"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 712,
+    "tag": "input",
+    "expr": "skNumber"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 725,
+    "tag": "input",
+    "expr": "effectiveDate"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 736,
+    "tag": "select",
+    "expr": "status"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryConfigModal.tsx",
+    "line": 753,
+    "tag": "textarea",
+    "expr": "notes"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "line": 509,
+    "tag": "input",
+    "expr": "searchTerm"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "line": 519,
+    "tag": "select",
+    "expr": "selectedYearFilter"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "line": 525,
+    "tag": "option",
+    "expr": "String(y)"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "line": 536,
+    "tag": "select",
+    "expr": "roleFilter"
+  },
+  {
+    "file": "src/components/finance/AnnualSalaryManagementView.tsx",
+    "line": 556,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1164,
+    "tag": "input",
+    "expr": "loanName"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1185,
+    "tag": "input",
+    "expr": "bankName"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1203,
+    "tag": "input",
+    "expr": "accountNumber"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1226,
+    "tag": "input",
+    "expr": "principalAmount"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1247,
+    "tag": "input",
+    "expr": "annualInterestRate"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1269,
+    "tag": "input",
+    "expr": "tenureMonths"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1286,
+    "tag": "input",
+    "expr": "startDate"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1298,
+    "tag": "select",
+    "expr": "paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1305,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1317,
+    "tag": "input",
+    "expr": "purpose"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1800,
+    "tag": "select",
+    "expr": "disburseChannelId"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1806,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1818,
+    "tag": "input",
+    "expr": "disburseDate"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1828,
+    "tag": "input",
+    "expr": "disburseRef"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1839,
+    "tag": "input",
+    "expr": "disburseNotes"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1920,
+    "tag": "select",
+    "expr": "payChannelId"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1926,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1938,
+    "tag": "input",
+    "expr": "payDate"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1948,
+    "tag": "input",
+    "expr": "payRef"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 1959,
+    "tag": "input",
+    "expr": "payNotes"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2072,
+    "tag": "input",
+    "expr": "renewTenureMonths"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2125,
+    "tag": "input",
+    "expr": "renewPrincipal"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2150,
+    "tag": "input",
+    "expr": "renewInterestRate"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2169,
+    "tag": "input",
+    "expr": "renewEffectiveDate"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2183,
+    "tag": "input",
+    "expr": "renewAdendumNumber"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2236,
+    "tag": "input",
+    "expr": "renewProvisionFee"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2260,
+    "tag": "select",
+    "expr": "renewPaymentChannelId"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2265,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/BankLoanManagement.tsx",
+    "line": 2283,
+    "tag": "input",
+    "expr": "renewNotes"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 260,
+    "tag": "select",
+    "expr": "selectedMonth"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 265,
+    "tag": "option",
+    "expr": "m"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 278,
+    "tag": "select",
+    "expr": "selectedYear"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 287,
+    "tag": "option",
+    "expr": "y"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 300,
+    "tag": "input",
+    "expr": "paymentDate"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 311,
+    "tag": "select",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 402,
+    "tag": "input",
+    "expr": "row.basicSalary"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 412,
+    "tag": "input",
+    "expr": "row.allowances"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 422,
+    "tag": "input",
+    "expr": "row.bonus"
+  },
+  {
+    "file": "src/components/finance/BatchPayrollModal.tsx",
+    "line": 432,
+    "tag": "input",
+    "expr": "row.deductions"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 295,
+    "tag": "select",
+    "expr": "holidayName"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 300,
+    "tag": "option",
+    "expr": "c"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 311,
+    "tag": "input",
+    "expr": "paymentDate"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 321,
+    "tag": "select",
+    "expr": "paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 326,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 336,
+    "tag": "select",
+    "expr": "defaultMultiplier"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 340,
+    "tag": "option",
+    "expr": "1"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 341,
+    "tag": "option",
+    "expr": "1.25"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 342,
+    "tag": "option",
+    "expr": "1.5"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 343,
+    "tag": "option",
+    "expr": "2"
+  },
+  {
+    "file": "src/components/finance/BatchThrModal.tsx",
+    "line": 465,
+    "tag": "input",
+    "expr": "row.nominalThr"
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "line": 500,
+    "tag": "input",
+    "expr": "searchTerm"
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "line": 509,
+    "tag": "select",
+    "expr": "yearFilter"
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "line": 515,
+    "tag": "option",
+    "expr": "y"
+  },
+  {
+    "file": "src/components/finance/BonusThrManagementView.tsx",
+    "line": 524,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 516,
+    "tag": "select",
+    "expr": "selectedEmployeeId"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 522,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 533,
+    "tag": "input",
+    "expr": "employeeName"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 545,
+    "tag": "input",
+    "expr": "roleTitle"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 556,
+    "tag": "input",
+    "expr": "employeeNik"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 570,
+    "tag": "input",
+    "expr": "bankName"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 580,
+    "tag": "input",
+    "expr": "bankAccountNumber"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 590,
+    "tag": "input",
+    "expr": "bankAccountHolder"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 617,
+    "tag": "select",
+    "expr": "holidayPreset"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 627,
+    "tag": "option",
+    "expr": "p"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 639,
+    "tag": "input",
+    "expr": "customHolidayName"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 656,
+    "tag": "input",
+    "expr": "baseSalary || ''"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 670,
+    "tag": "input",
+    "expr": "serviceMonths"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 685,
+    "tag": "select",
+    "expr": "thrMultiplier"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 689,
+    "tag": "option",
+    "expr": "1"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 690,
+    "tag": "option",
+    "expr": "1.25"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 691,
+    "tag": "option",
+    "expr": "1.5"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 692,
+    "tag": "option",
+    "expr": "2"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 713,
+    "tag": "input",
+    "expr": "nominalThr || ''"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 743,
+    "tag": "input",
+    "expr": "bonusCriteria"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 756,
+    "tag": "select",
+    "expr": "selectedProjectId"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 768,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 782,
+    "tag": "input",
+    "expr": "baseSalary || ''"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 798,
+    "tag": "input",
+    "expr": "nominalBonus || ''"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 838,
+    "tag": "input",
+    "expr": "pph21Amount || ''"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 860,
+    "tag": "input",
+    "expr": "cashAdvanceDeduction || ''"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 875,
+    "tag": "input",
+    "expr": "otherDeductions || ''"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 897,
+    "tag": "select",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 910,
+    "tag": "select",
+    "expr": "paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 916,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 927,
+    "tag": "input",
+    "expr": "paymentDate"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 938,
+    "tag": "input",
+    "expr": "period"
+  },
+  {
+    "file": "src/components/finance/BonusThrModal.tsx",
+    "line": 978,
+    "tag": "input",
+    "expr": "notes"
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "line": 252,
+    "tag": "select",
+    "expr": "selectedTargetChannel"
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "line": 257,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "line": 300,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "line": 397,
+    "tag": "select",
+    "expr": "t.paymentMethod || 'UNASSIGNED'"
+  },
+  {
+    "file": "src/components/finance/ChannelTransactionsDrilldownModal.tsx",
+    "line": 411,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "line": 233,
+    "tag": "input",
+    "expr": "authorizedCapital || ''"
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "line": 261,
+    "tag": "input",
+    "expr": "paidInCapital || ''"
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "line": 292,
+    "tag": "input",
+    "expr": "additionalCapital || ''"
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "line": 324,
+    "tag": "input",
+    "expr": "retainedEarningsOpening || ''"
+  },
+  {
+    "file": "src/components/finance/CompanyCapitalModal.tsx",
+    "line": 340,
+    "tag": "input",
+    "expr": "notes"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 282,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 371,
+    "tag": "select",
+    "expr": "dateRangeFilter"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 384,
+    "tag": "select",
+    "expr": "projectFilter"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 392,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 400,
+    "tag": "select",
+    "expr": "categoryFilter"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 411,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 423,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 432,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 443,
+    "tag": "select",
+    "expr": "channelFilter"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 458,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 959,
+    "tag": "select",
+    "expr": "batchTargetChannel"
+  },
+  {
+    "file": "src/components/finance/FinancialLedgerTable.tsx",
+    "line": 964,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2294,
+    "tag": "select",
+    "expr": "selectedYear"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2308,
+    "tag": "option",
+    "expr": "yr"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2323,
+    "tag": "select",
+    "expr": "periodFilter"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2339,
+    "tag": "input",
+    "expr": "customStartDate"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2346,
+    "tag": "input",
+    "expr": "customEndDate"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2358,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2372,
+    "tag": "select",
+    "expr": "selectedProjectId"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2378,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2389,
+    "tag": "select",
+    "expr": "categoryFilter"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2449,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2566,
+    "tag": "input",
+    "expr": "documentNumber"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2610,
+    "tag": "select",
+    "expr": "isCustomPreparer ? 'CUSTOM' : selectedPreparerId"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2631,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2648,
+    "tag": "input",
+    "expr": "preparerName"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2662,
+    "tag": "select",
+    "expr": "preparerPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2667,
+    "tag": "option",
+    "expr": "pos"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2682,
+    "tag": "input",
+    "expr": "customPreparerPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2713,
+    "tag": "select",
+    "expr": "isCustomApprover ? 'CUSTOM' : selectedApproverId"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2734,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2751,
+    "tag": "input",
+    "expr": "approverName"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2765,
+    "tag": "select",
+    "expr": "approverPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2770,
+    "tag": "option",
+    "expr": "pos"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 2785,
+    "tag": "input",
+    "expr": "customApproverPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6370,
+    "tag": "textarea",
+    "expr": "reportNotes"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6393,
+    "tag": "select",
+    "expr": "preparerPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6399,
+    "tag": "option",
+    "expr": "pos"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6407,
+    "tag": "input",
+    "expr": "customPreparerPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6428,
+    "tag": "select",
+    "expr": "isCustomPreparer ? 'CUSTOM' : selectedPreparerId"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6450,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6460,
+    "tag": "input",
+    "expr": "preparerName"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6487,
+    "tag": "select",
+    "expr": "approverPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6493,
+    "tag": "option",
+    "expr": "pos"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6501,
+    "tag": "input",
+    "expr": "customApproverPosition"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6522,
+    "tag": "select",
+    "expr": "isCustomApprover ? 'CUSTOM' : selectedApproverId"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6544,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/finance/FinancialReportGenerator.tsx",
+    "line": 6554,
+    "tag": "input",
+    "expr": "approverName"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 585,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 602,
+    "tag": "select",
+    "expr": "fundingFilter"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 614,
+    "tag": "select",
+    "expr": "institutionFilter"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 620,
+    "tag": "option",
+    "expr": "t.id"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 628,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1093,
+    "tag": "input",
+    "expr": "invoiceForm.invoiceNumber"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1104,
+    "tag": "input",
+    "expr": "invoiceForm.issueDate"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1117,
+    "tag": "input",
+    "expr": "invoiceForm.bapNumber"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1128,
+    "tag": "input",
+    "expr": "invoiceForm.bastNumber"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1139,
+    "tag": "input",
+    "expr": "invoiceForm.dueDate"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1149,
+    "tag": "textarea",
+    "expr": "invoiceForm.notes"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1240,
+    "tag": "input",
+    "expr": "sp2dForm.sp2dNumber"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1251,
+    "tag": "input",
+    "expr": "sp2dForm.sp2dDisbursementDate"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1262,
+    "tag": "select",
+    "expr": "sp2dForm.paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1268,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1281,
+    "tag": "input",
+    "expr": "sp2dForm.bupotPphNumber"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1292,
+    "tag": "input",
+    "expr": "sp2dForm.ntpnPpn"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1304,
+    "tag": "input",
+    "expr": "sp2dForm.spmNumber"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1314,
+    "tag": "textarea",
+    "expr": "sp2dForm.notes"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1389,
+    "tag": "input",
+    "expr": "milestoneForm.title"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1402,
+    "tag": "input",
+    "expr": "milestoneForm.grossAmountIDR || ''"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1412,
+    "tag": "input",
+    "expr": "milestoneForm.percentage || ''"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1425,
+    "tag": "input",
+    "expr": "milestoneForm.pphRatePercent"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1435,
+    "tag": "input",
+    "expr": "milestoneForm.targetDate"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1677,
+    "tag": "input",
+    "expr": "formData.projectName"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1690,
+    "tag": "input",
+    "expr": "formData.contractNumber"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1702,
+    "tag": "input",
+    "expr": "formData.governmentAgency"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1713,
+    "tag": "select",
+    "expr": "formData.sourceOfFunds"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1739,
+    "tag": "select",
+    "expr": "formData.institutionType"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1744,
+    "tag": "option",
+    "expr": "t.id"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1755,
+    "tag": "input",
+    "expr": "formData.fiscalYear"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1782,
+    "tag": "input",
+    "expr": "formData.totalContractValueIDR || ''"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1793,
+    "tag": "input",
+    "expr": "formData.whtRatePph"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1804,
+    "tag": "input",
+    "expr": "formData.vatWapuRate"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1817,
+    "tag": "input",
+    "expr": "formData.ppkName"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1828,
+    "tag": "input",
+    "expr": "formData.ppkNip"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1840,
+    "tag": "input",
+    "expr": "formData.startDate"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1850,
+    "tag": "input",
+    "expr": "formData.endDate"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1878,
+    "tag": "select",
+    "expr": "selectedSchemeId"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1883,
+    "tag": "option",
+    "expr": "scheme.id"
+  },
+  {
+    "file": "src/components/finance/GovernmentProjectManagement.tsx",
+    "line": 1936,
+    "tag": "textarea",
+    "expr": "formData.notes"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 275,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 359,
+    "tag": "input",
+    "expr": "formName"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 377,
+    "tag": "input",
+    "expr": "formId"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 390,
+    "tag": "input",
+    "expr": "formCode"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 399,
+    "tag": "select",
+    "expr": "formFundingSource"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 415,
+    "tag": "select",
+    "expr": "formPphType"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 438,
+    "tag": "input",
+    "expr": "formPphRate"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 451,
+    "tag": "input",
+    "expr": "formPpnRate"
+  },
+  {
+    "file": "src/components/finance/InstitutionTypeManagerModal.tsx",
+    "line": 482,
+    "tag": "textarea",
+    "expr": "formDescription"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 627,
+    "tag": "select",
+    "expr": "selectedContractId"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 633,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 920,
+    "tag": "input",
+    "expr": "paymentForm.paidDate"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 932,
+    "tag": "select",
+    "expr": "paymentForm.paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 938,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 959,
+    "tag": "input",
+    "expr": "paymentForm.referenceNumber"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1050,
+    "tag": "input",
+    "expr": "contractForm.officeName"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1064,
+    "tag": "input",
+    "expr": "contractForm.buildingName"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1080,
+    "tag": "input",
+    "expr": "contractForm.landlordName"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1092,
+    "tag": "input",
+    "expr": "contractForm.landlordNpwp"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1113,
+    "tag": "input",
+    "expr": "contractForm.annualBaseRentIDR"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1138,
+    "tag": "input",
+    "expr": "contractForm.monthlyServiceChargeIDR"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1154,
+    "tag": "input",
+    "expr": "contractForm.year"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1163,
+    "tag": "select",
+    "expr": "contractForm.dueDayOfMonth"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1168,
+    "tag": "option",
+    "expr": "day"
+  },
+  {
+    "file": "src/components/finance/OfficeRentManagement.tsx",
+    "line": 1180,
+    "tag": "input",
+    "expr": "contractForm.pph42RatePercent"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 674,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 684,
+    "tag": "select",
+    "expr": "categoryFilter"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 703,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 718,
+    "tag": "select",
+    "expr": "taxFilter"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 733,
+    "tag": "select",
+    "expr": "monthFilter"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 740,
+    "tag": "option",
+    "expr": "m"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1076,
+    "tag": "select",
+    "expr": "formData.category"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1098,
+    "tag": "select",
+    "expr": "formData.division"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1121,
+    "tag": "input",
+    "expr": "formData.title"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1138,
+    "tag": "input",
+    "expr": "formData.vendorOrMerchant"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1158,
+    "tag": "input",
+    "expr": "formData.amountIDR || ''"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1177,
+    "tag": "input",
+    "expr": "formData.date"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1190,
+    "tag": "select",
+    "expr": "formData.status"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1206,
+    "tag": "select",
+    "expr": "formData.paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1213,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1251,
+    "tag": "select",
+    "expr": "formData.taxType"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1273,
+    "tag": "input",
+    "expr": "formData.taxRatePercent"
+  },
+  {
+    "file": "src/components/finance/OverheadManagement.tsx",
+    "line": 1292,
+    "tag": "textarea",
+    "expr": "formData.notes"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 354,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 420,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 484,
+    "tag": "input",
+    "expr": "formData.name"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 498,
+    "tag": "input",
+    "expr": "formData.shortName"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 514,
+    "tag": "input",
+    "expr": "formData.accountNumber"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 528,
+    "tag": "input",
+    "expr": "formData.accountHolder"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 542,
+    "tag": "select",
+    "expr": "formData.category"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 547,
+    "tag": "option",
+    "expr": "c.value"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 560,
+    "tag": "select",
+    "expr": "formData.status"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 575,
+    "tag": "select",
+    "expr": "formData.badgeColor"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 580,
+    "tag": "option",
+    "expr": "b.value"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 596,
+    "tag": "textarea",
+    "expr": "formData.description"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 879,
+    "tag": "select",
+    "expr": "deleteResolveModal.reassignTargetId"
+  },
+  {
+    "file": "src/components/finance/PaymentChannelManagerModal.tsx",
+    "line": 890,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "line": 874,
+    "tag": "input",
+    "expr": "searchTerm"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "line": 885,
+    "tag": "select",
+    "expr": "periodFilter"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "line": 891,
+    "tag": "option",
+    "expr": "p"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "line": 900,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "line": 913,
+    "tag": "select",
+    "expr": "departmentFilter"
+  },
+  {
+    "file": "src/components/finance/PayrollManagement.tsx",
+    "line": 919,
+    "tag": "option",
+    "expr": "d"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 465,
+    "tag": "select",
+    "expr": "selectedEmployeeId"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 473,
+    "tag": "option",
+    "expr": "m.id"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 487,
+    "tag": "input",
+    "expr": "employeeName"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 508,
+    "tag": "input",
+    "expr": "employeeNik"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 523,
+    "tag": "input",
+    "expr": "roleTitle"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 536,
+    "tag": "input",
+    "expr": "department"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 550,
+    "tag": "select",
+    "expr": "\n                    CALENDAR_MONTHS.find((m) => period.toLowerCase().includes(m.toLowerCase())) || 'September'\n                  "
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 561,
+    "tag": "option",
+    "expr": "m"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 573,
+    "tag": "select",
+    "expr": "Number(period.match(/\\d{4}/)?.[0]) || 2026"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 583,
+    "tag": "option",
+    "expr": "y"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 596,
+    "tag": "input",
+    "expr": "paymentDate"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 680,
+    "tag": "input",
+    "expr": "basicSalary"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 695,
+    "tag": "input",
+    "expr": "positionAllowance"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 708,
+    "tag": "input",
+    "expr": "transportAllowance"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 724,
+    "tag": "input",
+    "expr": "mealAllowance"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 737,
+    "tag": "input",
+    "expr": "overtimeAmount"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 753,
+    "tag": "input",
+    "expr": "projectBonus"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 767,
+    "tag": "input",
+    "expr": "otherAllowances"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 836,
+    "tag": "input",
+    "expr": "bpjsKesehatan"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 853,
+    "tag": "input",
+    "expr": "bpjsKetenagakerjaan"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 870,
+    "tag": "input",
+    "expr": "pph21Amount"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 885,
+    "tag": "input",
+    "expr": "cashAdvanceDeduction"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 899,
+    "tag": "input",
+    "expr": "otherDeductions"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 969,
+    "tag": "select",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 980,
+    "tag": "option",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 988,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 998,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 1025,
+    "tag": "input",
+    "expr": "bankName"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 1060,
+    "tag": "input",
+    "expr": "bankAccountNumber"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 1143,
+    "tag": "select",
+    "expr": "status"
+  },
+  {
+    "file": "src/components/finance/PayrollPaymentModal.tsx",
+    "line": 1159,
+    "tag": "input",
+    "expr": "notes"
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "line": 509,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "line": 518,
+    "tag": "select",
+    "expr": "categoryFilter"
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "line": 524,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "line": 533,
+    "tag": "select",
+    "expr": "selectedProjectId"
+  },
+  {
+    "file": "src/components/finance/ReceivableManagement.tsx",
+    "line": 539,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 352,
+    "tag": "input",
+    "expr": "invoiceNumber"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 365,
+    "tag": "select",
+    "expr": "category"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 379,
+    "tag": "option",
+    "expr": "cat.id"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 395,
+    "tag": "select",
+    "expr": "selectedProjectId"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 401,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 414,
+    "tag": "input",
+    "expr": "milestoneTitle"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 429,
+    "tag": "input",
+    "expr": "title"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 451,
+    "tag": "input",
+    "expr": "clientName"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 465,
+    "tag": "input",
+    "expr": "clientContactPerson"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 480,
+    "tag": "input",
+    "expr": "clientEmail"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 493,
+    "tag": "input",
+    "expr": "clientPhone"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 513,
+    "tag": "input",
+    "expr": "totalAmountIDR || ''"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 531,
+    "tag": "input",
+    "expr": "issueDate"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 552,
+    "tag": "select",
+    "expr": "category === 'PROYEK_RETAIL' ? RETAIL_PAYMENT_TERMS_DAYS : paymentTermsDays"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 557,
+    "tag": "option",
+    "expr": "7"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 558,
+    "tag": "option",
+    "expr": "14"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 559,
+    "tag": "option",
+    "expr": "30"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 560,
+    "tag": "option",
+    "expr": "45"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 561,
+    "tag": "option",
+    "expr": "60"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 562,
+    "tag": "option",
+    "expr": "90"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 566,
+    "tag": "input",
+    "expr": "dueDate"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 641,
+    "tag": "input",
+    "expr": "initialPaidAmountIDR || ''"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 654,
+    "tag": "select",
+    "expr": "paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 659,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 674,
+    "tag": "input",
+    "expr": "referenceNumber"
+  },
+  {
+    "file": "src/components/finance/ReceivableModal.tsx",
+    "line": 707,
+    "tag": "textarea",
+    "expr": "notes"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "line": 220,
+    "tag": "input",
+    "expr": "paymentAmountIDR || ''"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "line": 240,
+    "tag": "input",
+    "expr": "paymentDate"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "line": 253,
+    "tag": "select",
+    "expr": "paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "line": 258,
+    "tag": "option",
+    "expr": "ch.id"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "line": 274,
+    "tag": "input",
+    "expr": "referenceNumber"
+  },
+  {
+    "file": "src/components/finance/ReceivablePaymentModal.tsx",
+    "line": 287,
+    "tag": "input",
+    "expr": "notes"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 661,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 673,
+    "tag": "select",
+    "expr": "categoryFilter"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 691,
+    "tag": "select",
+    "expr": "pricingFilter"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 704,
+    "tag": "select",
+    "expr": "statusFilter"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1675,
+    "tag": "input",
+    "expr": "invoiceForm.invoiceNumber"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1690,
+    "tag": "input",
+    "expr": "invoiceForm.issueDate"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1713,
+    "tag": "input",
+    "expr": "invoiceForm.dueDate"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1734,
+    "tag": "input",
+    "expr": "invoiceForm.fakturPajakNumber"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1765,
+    "tag": "textarea",
+    "expr": "invoiceForm.notes"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1847,
+    "tag": "input",
+    "expr": "paymentForm.amountReceivedIDR"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1862,
+    "tag": "input",
+    "expr": "paymentForm.paymentDate"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1873,
+    "tag": "select",
+    "expr": "paymentForm.paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1879,
+    "tag": "option",
+    "expr": "channel.id"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1944,
+    "tag": "input",
+    "expr": "paymentForm.referenceNumber"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 1957,
+    "tag": "input",
+    "expr": "paymentForm.bupotPphNumber"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 2001,
+    "tag": "textarea",
+    "expr": "paymentForm.notes"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 2080,
+    "tag": "input",
+    "expr": "milestoneForm.title"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 2096,
+    "tag": "input",
+    "expr": "milestoneForm.percentage"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 2113,
+    "tag": "input",
+    "expr": "milestoneForm.grossAmountIDR"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 2126,
+    "tag": "input",
+    "expr": "milestoneForm.targetDate"
+  },
+  {
+    "file": "src/components/finance/RetailProjectManagement.tsx",
+    "line": 2138,
+    "tag": "textarea",
+    "expr": "milestoneForm.notes"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 912,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1005,
+    "tag": "select",
+    "expr": "selectedYear"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1009,
+    "tag": "option",
+    "expr": "2026"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1010,
+    "tag": "option",
+    "expr": "2025"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1011,
+    "tag": "option",
+    "expr": "2024"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1403,
+    "tag": "select",
+    "expr": "formData.taxMonth"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1408,
+    "tag": "option",
+    "expr": "m.value"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1422,
+    "tag": "input",
+    "expr": "formData.taxYear"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1438,
+    "tag": "input",
+    "expr": "formData.title"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1471,
+    "tag": "textarea",
+    "expr": "formData.description"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1509,
+    "tag": "input",
+    "expr": "formData.taxableBaseAmount"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1526,
+    "tag": "input",
+    "expr": "formData.taxRatePercent"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1546,
+    "tag": "input",
+    "expr": "formData.ppnOutputAmount"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1561,
+    "tag": "input",
+    "expr": "formData.ppnInputAmount"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1592,
+    "tag": "input",
+    "expr": "formData.dueDate"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1605,
+    "tag": "input",
+    "expr": "formData.billingCode"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1618,
+    "tag": "input",
+    "expr": "formData.taxInvoiceNumber"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1632,
+    "tag": "select",
+    "expr": "formData.projectId"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1638,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1652,
+    "tag": "input",
+    "expr": "formData.counterpartyName"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1667,
+    "tag": "textarea",
+    "expr": "formData.notes"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1914,
+    "tag": "input",
+    "expr": "payFormData.withholdingTaxPayerName"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1933,
+    "tag": "input",
+    "expr": "payFormData.clientWithholdingNumber"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1954,
+    "tag": "input",
+    "expr": "payFormData.date"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1970,
+    "tag": "select",
+    "expr": "payFormData.paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1975,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 1991,
+    "tag": "input",
+    "expr": "payFormData.billingCode"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2042,
+    "tag": "input",
+    "expr": "payFormData.notes"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2059,
+    "tag": "input",
+    "expr": "payFormData.ntpnNumber"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2073,
+    "tag": "input",
+    "expr": "payFormData.billingCode"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2088,
+    "tag": "input",
+    "expr": "payFormData.date"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2101,
+    "tag": "select",
+    "expr": "payFormData.paymentChannelId"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2106,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2120,
+    "tag": "input",
+    "expr": "payFormData.notes"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2234,
+    "tag": "input",
+    "expr": "calcDpp"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2254,
+    "tag": "input",
+    "expr": "calcPpnOutput"
+  },
+  {
+    "file": "src/components/finance/TaxManagement.tsx",
+    "line": 2265,
+    "tag": "input",
+    "expr": "calcPpnInput"
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "line": 340,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "line": 424,
+    "tag": "input",
+    "expr": "formName"
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "line": 443,
+    "tag": "input",
+    "expr": "formDescription"
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "line": 522,
+    "tag": "input",
+    "expr": "term.title"
+  },
+  {
+    "file": "src/components/finance/TermDistributionSchemeManagerModal.tsx",
+    "line": 539,
+    "tag": "input",
+    "expr": "term.percentage"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 316,
+    "tag": "input",
+    "expr": "searchQuery"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 324,
+    "tag": "select",
+    "expr": "selectedGroup"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 330,
+    "tag": "option",
+    "expr": "g"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 363,
+    "tag": "select",
+    "expr": "formType"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 380,
+    "tag": "input",
+    "expr": "formName"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 393,
+    "tag": "input",
+    "expr": "formGroup"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 408,
+    "tag": "input",
+    "expr": "formDescription"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 419,
+    "tag": "select",
+    "expr": "formColor"
+  },
+  {
+    "file": "src/components/finance/TransactionCategoryManagerModal.tsx",
+    "line": 424,
+    "tag": "option",
+    "expr": "c.value"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 530,
+    "tag": "input",
+    "expr": "amountInput"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 558,
+    "tag": "input",
+    "expr": "date"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 586,
+    "tag": "select",
+    "expr": "category"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 594,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 604,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 613,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 623,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 694,
+    "tag": "input",
+    "expr": "loanDebtName"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 705,
+    "tag": "select",
+    "expr": "loanFacilityType"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 723,
+    "tag": "input",
+    "expr": "loanTenureMonths"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 738,
+    "tag": "input",
+    "expr": "loanInterestRate"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 767,
+    "tag": "input",
+    "expr": "description"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 785,
+    "tag": "input",
+    "expr": "clientOrVendorName"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 799,
+    "tag": "select",
+    "expr": "projectId"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 805,
+    "tag": "option",
+    "expr": "p.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 834,
+    "tag": "select",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 845,
+    "tag": "option",
+    "expr": "paymentMethod"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 853,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 863,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 873,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 883,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 893,
+    "tag": "option",
+    "expr": "c.id"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 916,
+    "tag": "input",
+    "expr": "referenceNumber"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 1042,
+    "tag": "input",
+    "expr": "attachmentName"
+  },
+  {
+    "file": "src/components/finance/TransactionModal.tsx",
+    "line": 1059,
+    "tag": "textarea",
+    "expr": "notes"
+  },
+  {
+    "file": "src/context/ProjectContext.tsx",
+    "line": 12270,
+    "tag": "ProjectContext",
+    "expr": "{\n        projects,\n        dispositions,\n        teamMembers: dynamicTeamMembers,\n        transactions,\n        currentUser,\n        setCurrentUser,\n        isAuthenticated,\n        canSwitchAccount,\n        login,\n        resetPinWithEmail,\n        loginWithGoogle,\n        logout,\n        switchAccount,\n        quickSwitchUser,\n        isFirebaseConnected,\n        firebaseUser,\n        isSyncingWithFirestore,\n        syncAllToFirestore,\n        hasPermission,\n        isRole,\n        realtimeRoleToast,\n        dismissRealtimeRoleToast,\n        isMasterAdmin,\n        addUser,\n        updateUser,\n        deleteUser,\n        toggleUserStatus,\n        changeMemberRole,\n        verifyUser,\n        rejectUser,\n        pendingMembersCount,\n        roleDefinitions,\n        roleGovernanceMeta,\n        updateRolePositionTitle,\n        updateRoleCapabilities,\n        resetRolePositionTitles,\n        resetRoleCapabilities,\n        updateRoleGovernanceMeta,\n        resetRoleGovernanceMeta,\n        consultingServices,\n        activeConsultingServices,\n        addConsultingService,\n        updateConsultingService,\n        deleteConsultingService,\n        toggleConsultingServiceStatus,\n        resetConsultingServicesToDefault,\n        getServiceConfig,\n        getServiceTitle,\n        getServiceBadge,\n        documentTypes,\n        activeDocumentTypes,\n        addDocumentType,\n        updateDocumentType,\n        deleteDocumentType,\n        toggleDocumentTypeStatus,\n        resetDocumentTypesToDefault,\n        getDocumentTypeDefinition,\n        documentCategories,\n        activeDocumentCategories,\n        addDocumentCategory,\n        updateDocumentCategory,\n        deleteDocumentCategory,\n        toggleDocumentCategoryStatus,\n        resetDocumentCategoriesToDefault,\n        getDocumentCategory,\n        transactionCategories,\n        activeTransactionCategories,\n        addTransactionCategory,\n        updateTransactionCategory,\n        deleteTransactionCategory,\n        toggleTransactionCategoryStatus,\n        resetTransactionCategoriesToDefault,\n        getTransactionCategoryDefinition,\n        paymentChannels,\n        activePaymentChannels,\n        addPaymentChannel,\n        updatePaymentChannel,\n        deletePaymentChannel,\n        reassignPaymentChannelTransactions,\n        togglePaymentChannelStatus,\n        resetPaymentChannelsToDefault,\n        getPaymentChannelDefinition,\n        assignedByOptions,\n        addAssignedByOption,\n        updateAssignedByOption,\n        deleteAssignedByOption,\n        resetAssignedByOptions,\n        bankLoans,\n        addBankLoan,\n        updateBankLoan,\n        deleteBankLoan,\n        cancelLoanDisbursement,\n        cancelLoanInstallmentPayment,\n        recordLoanDisbursementToLedger,\n        recordLoanInstallmentToLedger,\n        renewBankLoan,\n        companyCapital,\n        updateCompanyCapital,\n        resetCompanyCapitalToDefault,\n        companyLetterhead,\n        updateCompanyLetterhead,\n        resetCompanyLetterheadToDefault,\n        taxObligations,\n        addTaxObligation,\n        updateTaxObligation,\n        deleteTaxObligation,\n        deleteMultipleTaxObligations,\n        payTaxObligation,\n        resetTaxObligationsToDefault,\n        receivables,\n        addReceivable,\n        updateReceivable,\n        deleteReceivable,\n        recordReceivablePayment,\n        cancelReceivable,\n        resetReceivablesToDefault,\n        governmentProjects,\n        addGovernmentProject,\n        updateGovernmentProject,\n        deleteGovernmentProject,\n        generateMilestoneInvoiceToReceivables,\n        recordGovMilestonePaymentSp2d,\n        addGovMilestone,\n        updateGovMilestone,\n        deleteGovMilestone,\n        resetGovernmentProjectsToDefault,\n        retailProjects,\n        addRetailProject,\n        updateRetailProject,\n        deleteRetailProject,\n        generateRetailInvoiceToReceivables,\n        recordRetailMilestonePayment,\n        addRetailMilestone,\n        updateRetailMilestone,\n        deleteRetailMilestone,\n        syncAllRetailToFinance,\n        resetRetailProjectsToDefault,\n        overheadExpenses,\n        addOverheadExpense,\n        updateOverheadExpense,\n        deleteOverheadExpense,\n        deleteMultipleOverheadExpenses,\n        syncAllOverheadToFinance,\n        resetOverheadExpensesToDefault,\n        officeRentContracts,\n        addOfficeRentContract,\n        updateOfficeRentContract,\n        deleteOfficeRentContract,\n        payOfficeRentScheduleItem,\n        payOfficeRentLumpSum,\n        syncAllOfficeRentToFinance,\n        resetOfficeRentContractsToDefault,\n        institutionTypes,\n        activeInstitutionTypes,\n        addInstitutionType,\n        updateInstitutionType,\n        deleteInstitutionType,\n        toggleInstitutionTypeStatus,\n        resetInstitutionTypesToDefault,\n        getInstitutionTypeDefinition,\n        termDistributionSchemes,\n        activeTermDistributionSchemes,\n        addTermDistributionScheme,\n        updateTermDistributionScheme,\n        deleteTermDistributionScheme,\n        toggleTermDistributionSchemeStatus,\n        resetTermDistributionSchemesToDefault,\n        getTermDistributionScheme,\n        payrollRecords,\n        addPayrollPayment,\n        updatePayrollPayment,\n        deletePayrollPayment,\n        batchAddPayrollPayments,\n        markPayrollAsPaid,\n        markAllPayrollAsPaid,\n        syncAllPayrollToFinance,\n        resetPayrollToDefault,\n        employeeSalaryConfigs,\n        addOrUpdateEmployeeSalaryConfig,\n        addOrUpdateMultipleEmployeeSalaryConfigs,\n        syncAllEmployeeSalaryConfigsToDefault,\n        deleteEmployeeSalaryConfig,\n        resetEmployeeSalaryConfigsToDefault,\n        getEmployeeSalaryConfigForYear,\n        updateMilestoneDocRequirements,\n        filters,\n        setFilters,\n        resetFilters,\n        filteredProjects,\n        selectedProjectId,\n        setSelectedProjectId,\n        selectedProject,\n        addProject,\n        updateProject,\n        deleteProject,\n        deleteMultipleProjects,\n        changeProjectStage,\n        addDisposition,\n        updateDisposition,\n        deleteDisposition,\n        toggleChecklistItem,\n        uploadDocument,\n        updateDocumentStatus,\n        updateDocument,\n        deleteDocument,\n        syncDocumentToGoogleDrive,\n        isGoogleDriveConnected,\n        connectGoogleDrive,\n        disconnectGoogleDriveAccount,\n        isDriveSyncing,\n        addActivity,\n        addTransaction,\n        updateTransaction,\n        deleteTransaction,\n        deleteMultipleTransactions,\n        toggleMilestoneManualSignoff,\n        addCustomMilestoneToProject,\n        deleteMilestoneFromProject,\n        restoreMilestoneToProject,\n        deleteDocRequirementFromMilestone,\n        resetProjectMilestonesToDefault,\n        calculateTkdnScore,\n      }"
+  }
+]

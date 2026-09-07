@@ -1110,7 +1110,7 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
                       type="number"
                       min={10000000}
                       step={1000000}
-                      value={contractForm.annualBaseRentIDR}
+                      value={Number.isNaN(contractForm.annualBaseRentIDR) ? '' : (contractForm.annualBaseRentIDR ?? '')}
                       onChange={(e) =>
                         setContractForm({ ...contractForm, annualBaseRentIDR: Number(e.target.value) })
                       }
@@ -1135,7 +1135,7 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
                       type="number"
                       min={0}
                       step={100000}
-                      value={contractForm.monthlyServiceChargeIDR}
+                      value={Number.isNaN(contractForm.monthlyServiceChargeIDR) ? '' : (contractForm.monthlyServiceChargeIDR ?? '')}
                       onChange={(e) =>
                         setContractForm({ ...contractForm, monthlyServiceChargeIDR: Number(e.target.value) })
                       }
@@ -1151,7 +1151,7 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
                   <label className="block text-xs font-bold text-slate-700 mb-1">Tahun Anggaran</label>
                   <input
                     type="number"
-                    value={contractForm.year}
+                    value={Number.isNaN(contractForm.year) ? '' : (contractForm.year ?? '')}
                     onChange={(e) => setContractForm({ ...contractForm, year: Number(e.target.value) })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold"
                   />
@@ -1177,7 +1177,7 @@ export const OfficeRentManagement: React.FC<OfficeRentManagementProps> = ({ onOp
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
-                      value={contractForm.pph42RatePercent}
+                      value={Number.isNaN(contractForm.pph42RatePercent) ? '' : (contractForm.pph42RatePercent ?? '')}
                       disabled
                       className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-purple-700"
                     />

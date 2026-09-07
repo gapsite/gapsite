@@ -90,13 +90,13 @@ export const BonusThrManagementView: React.FC<BonusThrManagementViewProps> = () 
     });
   }, [payrollRecords]);
 
-  // Extract available years
+  // Extract available years (company founded in 2021)
   const availableYears = useMemo(() => {
     const years = new Set<string>();
     bonusThrRecords.forEach((r) => {
       if (r.paymentDate) {
         const y = r.paymentDate.slice(0, 4);
-        if (y) years.add(y);
+        if (y && Number(y) >= 2021) years.add(y);
       }
     });
     return Array.from(years).sort().reverse();

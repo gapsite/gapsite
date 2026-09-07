@@ -677,7 +677,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                     type="number"
                     min="0"
                     step="10000"
-                    value={basicSalary}
+                    value={Number.isNaN(basicSalary) ? '' : (basicSalary ?? '')}
                     onChange={(e) => setBasicSalary(Number(e.target.value) || 0)}
                     className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-mono font-bold focus:outline-emerald-600"
                   />
@@ -692,7 +692,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={positionAllowance}
+                      value={Number.isNaN(positionAllowance) ? '' : (positionAllowance ?? '')}
                       onChange={(e) => setPositionAllowance(Number(e.target.value) || 0)}
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-mono focus:outline-emerald-600"
                     />
@@ -705,7 +705,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={transportAllowance}
+                      value={Number.isNaN(transportAllowance) ? '' : (transportAllowance ?? '')}
                       onChange={(e) => setTransportAllowance(Number(e.target.value) || 0)}
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-mono focus:outline-emerald-600"
                     />
@@ -721,7 +721,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={mealAllowance}
+                      value={Number.isNaN(mealAllowance) ? '' : (mealAllowance ?? '')}
                       onChange={(e) => setMealAllowance(Number(e.target.value) || 0)}
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-mono focus:outline-emerald-600"
                     />
@@ -734,7 +734,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={overtimeAmount}
+                      value={Number.isNaN(overtimeAmount) ? '' : (overtimeAmount ?? '')}
                       onChange={(e) => setOvertimeAmount(Number(e.target.value) || 0)}
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-mono focus:outline-emerald-600"
                     />
@@ -750,7 +750,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={projectBonus}
+                      value={Number.isNaN(projectBonus) ? '' : (projectBonus ?? '')}
                       onChange={(e) => setProjectBonus(Number(e.target.value) || 0)}
                       placeholder="0"
                       className="w-full text-xs bg-white border border-emerald-300 rounded-lg px-3 py-1.5 text-emerald-900 font-mono font-semibold focus:outline-emerald-600"
@@ -764,7 +764,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={otherAllowances}
+                      value={Number.isNaN(otherAllowances) ? '' : (otherAllowances ?? '')}
                       onChange={(e) => setOtherAllowances(Number(e.target.value) || 0)}
                       placeholder="0"
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-mono focus:outline-emerald-600"
@@ -833,7 +833,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                     type="number"
                     min="0"
                     step="1000"
-                    value={bpjsKesehatan}
+                    value={Number.isNaN(bpjsKesehatan) ? '' : (bpjsKesehatan ?? '')}
                     onChange={(e) => setBpjsKesehatan(Number(e.target.value) || 0)}
                     className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-rose-900 font-mono font-medium focus:outline-rose-500"
                   />
@@ -850,7 +850,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                     type="number"
                     min="0"
                     step="1000"
-                    value={bpjsKetenagakerjaan}
+                    value={Number.isNaN(bpjsKetenagakerjaan) ? '' : (bpjsKetenagakerjaan ?? '')}
                     onChange={(e) => setBpjsKetenagakerjaan(Number(e.target.value) || 0)}
                     className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-rose-900 font-mono font-medium focus:outline-rose-500"
                   />
@@ -867,7 +867,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                     type="number"
                     min="0"
                     step="1000"
-                    value={pph21Amount}
+                    value={Number.isNaN(pph21Amount) ? '' : (pph21Amount ?? '')}
                     onChange={(e) => setPph21Amount(Number(e.target.value) || 0)}
                     className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-rose-900 font-mono font-medium focus:outline-rose-500"
                   />
@@ -882,7 +882,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={cashAdvanceDeduction}
+                      value={Number.isNaN(cashAdvanceDeduction) ? '' : (cashAdvanceDeduction ?? '')}
                       onChange={(e) => setCashAdvanceDeduction(Number(e.target.value) || 0)}
                       placeholder="0"
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-rose-900 font-mono focus:outline-rose-500"
@@ -896,7 +896,7 @@ export const PayrollPaymentModal: React.FC<PayrollPaymentModalProps> = ({
                       type="number"
                       min="0"
                       step="10000"
-                      value={otherDeductions}
+                      value={Number.isNaN(otherDeductions) ? '' : (otherDeductions ?? '')}
                       onChange={(e) => setOtherDeductions(Number(e.target.value) || 0)}
                       placeholder="0"
                       className="w-full text-xs bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-rose-900 font-mono focus:outline-rose-500"
