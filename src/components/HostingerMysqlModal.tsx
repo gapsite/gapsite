@@ -124,19 +124,42 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
     }
   };
 
+  // Helper for safe JSON fetching against SPA fallback
+  const safeFetchJson = async (url: string, options?: RequestInit): Promise<any> => {
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await res.text();
+      const isHtml = text.trim().startsWith('<!') || text.includes('<html');
+      if (isHtml) {
+        throw new Error(
+          'Server mengembalikan halaman HTML (<!doctype...>), bukan endpoint JSON. Backend Node.js Express belum aktif di hosting ini, atau route /api dialihkan ke index.html.'
+        );
+      }
+      throw new Error(`Respon server bukan format JSON (HTTP ${res.status})`);
+    }
+    return await res.json();
+  };
+
   // Fetch status on open
   const fetchStatus = async () => {
     setLoading(true);
     setActionMessage(null);
     try {
-      const res = await fetch('/api/mysql/status');
-      const data = await res.json();
+      const data = await safeFetchJson('/api/mysql/status');
       setStatusData(data);
     } catch (err: any) {
       setStatusData({
         configured: false,
         success: false,
         message: 'Gagal terhubung ke API server: ' + (err.message || err),
+        config: {
+          host: '(backend belum aktif)',
+          port: 3306,
+          user: '(backend belum aktif)',
+          database: '(backend belum aktif)',
+          hasPassword: false,
+        },
       });
     } finally {
       setLoading(false);
@@ -188,13 +211,11 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
         assignedByOptions,
       };
 
-      const res = await fetch('/api/mysql/sync/push', {
+      const result = await safeFetchJson('/api/mysql/sync/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      const result = await res.json();
       if (result.success) {
         setActionMessage({
           type: 'success',
@@ -227,8 +248,7 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
     setActionMessage({ type: 'info', text: 'Sedang mengunduh data dari Hostinger MySQL...' });
 
     try {
-      const res = await fetch('/api/mysql/sync/pull');
-      const result = await res.json();
+      const result = await safeFetchJson('/api/mysql/sync/pull');
 
       if (result.success && result.data) {
         await restoreAllDataFromBackup(result.data, 'merge');
@@ -257,8 +277,7 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
     setLoading(true);
     setActionMessage({ type: 'info', text: 'Sedang membuat 12 tabel di Hostinger MySQL...' });
     try {
-      const res = await fetch('/api/mysql/init-schema', { method: 'POST' });
-      const result = await res.json();
+      const result = await safeFetchJson('/api/mysql/init-schema', { method: 'POST' });
       if (result.success) {
         setActionMessage({ type: 'success', text: result.message });
         await fetchStatus();
@@ -375,6 +394,11 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
                         <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                         Gagal Terhubung
+                      </span>
+                    ) : statusData?.message?.includes('HTML') || statusData?.message?.includes('backend') ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                        <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                        Backend Belum Aktif
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">

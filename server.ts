@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import {
@@ -9,8 +10,8 @@ import {
   initMysqlSchema,
   getMysqlPool,
   HOSTINGER_SQL_SCHEMA_RAW,
-  MysqlConfig,
-} from './server/mysql';
+  type MysqlConfig,
+} from './server/mysql.ts';
 
 dotenv.config();
 
@@ -586,17 +587,31 @@ app.get('/api/mysql/sync/pull', async (req, res) => {
 
 // Vite Middleware for Development / Static serving for Production
 async function setupViteOrStatic() {
-  if (process.env.NODE_ENV !== 'production') {
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    process.argv[1]?.includes('dist') ||
+    process.argv[1]?.endsWith('server.cjs');
+
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    // Determine distPath whether executed from project root (with package.json) or directly
+    const distPath = fs.existsSync(path.join(process.cwd(), 'dist'))
+      ? path.join(process.cwd(), 'dist')
+      : (typeof __dirname !== 'undefined' ? __dirname : process.cwd());
+
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.sendFile(path.join(process.cwd(), 'index.html'));
+      }
     });
   }
 

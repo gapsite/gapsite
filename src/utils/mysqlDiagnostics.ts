@@ -64,6 +64,19 @@ export async function verifyMysqlConnectivity(
         'Cache-Control': 'no-cache',
       },
     });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await res.text();
+      const isHtml = text.trim().startsWith('<!') || text.includes('<html');
+      if (isHtml) {
+        throw new Error(
+          'Server mengembalikan file HTML (<!doctype...>), bukan endpoint API JSON. Backend Node.js Express belum berjalan di lingkungan hosting ini, atau web hosting statis mengalihkan route /api ke index.html.'
+        );
+      }
+      throw new Error(`Respon server bukan format JSON (HTTP ${res.status}, Content-Type: ${contentType || 'unknown'})`);
+    }
+
     rawStatus = await res.json();
   } catch (err: any) {
     fetchError = err instanceof Error ? err : new Error(String(err));
@@ -120,7 +133,12 @@ export async function verifyMysqlConnectivity(
   const msgLower = (message || '').toLowerCase();
   const hostLower = config.host.toLowerCase();
 
-  if (!configured) {
+  if (msgLower.includes('<!doctype') || msgLower.includes('unexpected token') || msgLower.includes('bukan endpoint api') || msgLower.includes('failed to fetch')) {
+    advice.push('Backend Express belum aktif di hosting deploy: Database MySQL memerlukan backend server Node.js. Jika di-deploy ke Cloud Run / VPS, pastikan start script "node dist/server.cjs" berjalan dan Environment Variables (MYSQL_HOST, MYSQL_USER, dll.) sudah diisi pada konfigurasi hosting deploy.');
+    advice.push('Jika menggunakan Hostinger Web Hosting statis: Web hosting statis biasa (Apache/Nginx) tidak dapat mengeksekusi backend Node.js. Gunakan Cloud Run, VPS Hostinger, atau aktifkan fitur Node.js App di hPanel Hostinger.');
+  }
+
+  if (!configured && !msgLower.includes('<!doctype') && !msgLower.includes('unexpected token')) {
     advice.push('Lengkapi variabel lingkungan MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, dan MYSQL_DATABASE di menu Settings.');
   }
 

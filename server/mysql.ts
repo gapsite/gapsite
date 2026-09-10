@@ -1,4 +1,5 @@
-import mysql, { Pool, PoolConnection } from 'mysql2/promise';
+import mysql from 'mysql2/promise';
+import type { Pool, PoolConnection } from 'mysql2/promise';
 
 let pool: Pool | null = null;
 let currentPoolKey = '';
