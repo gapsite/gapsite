@@ -174,7 +174,14 @@ import {
   COMPANY_FOUNDING_YEAR,
   isPreFoundingDateOrYear,
 } from '../utils/storage';
+import {
+  loadCollectionFromIndexedDb,
+  saveCollectionToIndexedDb,
+  saveAutoSnapshotToIndexedDb,
+  getAllSnapshotsFromIndexedDb,
+} from '../utils/indexedDb';
 import { CERTIFICATION_MILESTONE_TEMPLATES } from '../utils/checklistGenerator';
+import { verifyMysqlConnectivity } from '../utils/mysqlDiagnostics';
 import { getServiceTypeName, getServiceTypeBadgeColor, formatIDR } from '../utils/formatters';
 import { calculateMemberWorkload } from '../utils/workload';
 import {
@@ -919,6 +926,23 @@ interface ProjectContextType {
 
   // Quick TKDN Calculator Helper (Permenperin No. 35/2025)
   calculateTkdnScore: (breakdown: TkdnCostBreakdown) => TkdnCalculationResult;
+
+  // Deleted tracking IDs
+  deletedProjectIds: string[];
+  deletedDispositionIds: string[];
+  deletedTransactionIds: string[];
+  deletedReceivableIds: string[];
+  deletedTaxIds: string[];
+  deletedOverheadIds: string[];
+  deletedPayrollIds: string[];
+
+  // Aliases for compatibility
+  payrollPayments: PayrollPayment[];
+  salaryConfigs: EmployeeAnnualSalaryConfig[];
+  serviceTypes: ConsultingServiceConfig[];
+
+  // Full backup restore
+  restoreAllDataFromBackup: (data: any, mode?: 'replace' | 'merge') => Promise<{ success: boolean; message?: string }>;
 }
 
 const STORAGE_KEY_PROJECTS = 'verix_crm_projects_v1';
@@ -3017,6 +3041,82 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {}
   }, [currentUser, isAuthenticated]);
 
+  // Status guard for automatic Hostinger MySQL sync
+  const isMysqlSyncReadyRef = useRef<boolean>(false);
+
+  // Check connectivity and log diagnostic status to browser console on authentication
+  useEffect(() => {
+    if (!isAuthenticated) {
+      isMysqlSyncReadyRef.current = false;
+      return;
+    }
+
+    let isCancelled = false;
+    verifyMysqlConnectivity({ silent: false, verbose: true })
+      .then((report) => {
+        if (!isCancelled) {
+          isMysqlSyncReadyRef.current = Boolean(report.configured && report.connected);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          isMysqlSyncReadyRef.current = false;
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  // Real-time automatic background sync to Hostinger MySQL (only when database is verified and reachable)
+  useEffect(() => {
+    // Only attempt if authenticated and MySQL connection is confirmed active
+    if (!isAuthenticated || !isMysqlSyncReadyRef.current) return;
+
+    const timer = setTimeout(() => {
+      fetch('/api/mysql/sync/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projects,
+          transactions,
+          receivables,
+          taxObligations,
+          payrollPayments: payrollRecords,
+          governmentProjects,
+          retailProjects,
+          bankLoans,
+          dispositions,
+          teamMembers,
+        }),
+      })
+        .then((res) => res.json())
+        .then((resData) => {
+          if (resData && !resData.success) {
+            isMysqlSyncReadyRef.current = false;
+          }
+        })
+        .catch(() => {
+          isMysqlSyncReadyRef.current = false;
+        });
+    }, 3500);
+
+    return () => clearTimeout(timer);
+  }, [
+    isAuthenticated,
+    projects,
+    transactions,
+    receivables,
+    taxObligations,
+    payrollRecords,
+    governmentProjects,
+    retailProjects,
+    bankLoans,
+    dispositions,
+    teamMembers,
+  ]);
+
   // Sync state with Firebase Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
@@ -3054,6 +3154,106 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     return () => unsubscribe();
   }, []);
+
+  // 0. IndexedDB Hydration Engine: Guarantees full offline and high-capacity recovery
+  useEffect(() => {
+    let isMounted = true;
+    const hydrateFromIndexedDb = async () => {
+      try {
+        const idbProjects = await loadCollectionFromIndexedDb<ConsultingProject[]>(STORAGE_KEY_PROJECTS);
+        if (isMounted && Array.isArray(idbProjects) && idbProjects.length > 0) {
+          setProjects((curr) => {
+            const currIds = new Set(curr.map((p) => p.id));
+            const toAdd = idbProjects.filter((p) => p && p.id && !currIds.has(p.id));
+            return toAdd.length > 0 ? [...curr, ...toAdd] : curr;
+          });
+        }
+
+        const idbTrxs = await loadCollectionFromIndexedDb<FinancialTransaction[]>(STORAGE_KEY_TRANSACTIONS);
+        if (isMounted && Array.isArray(idbTrxs) && idbTrxs.length > 0) {
+          setTransactions((curr) => {
+            const currIds = new Set(curr.map((t) => t.id));
+            const toAdd = idbTrxs.filter((t) => t && t.id && !currIds.has(t.id));
+            return toAdd.length > 0 ? [...curr, ...toAdd] : curr;
+          });
+        }
+
+        const idbGov = await loadCollectionFromIndexedDb<GovernmentProject[]>(STORAGE_KEY_GOVERNMENT_PROJECTS);
+        if (isMounted && Array.isArray(idbGov) && idbGov.length > 0) {
+          setGovernmentProjects((curr) => {
+            const currIds = new Set(curr.map((g) => g.id));
+            const toAdd = idbGov.filter((g) => g && g.id && !currIds.has(g.id));
+            return toAdd.length > 0 ? [...curr, ...toAdd] : curr;
+          });
+        }
+
+        const idbRecs = await loadCollectionFromIndexedDb<Receivable[]>(STORAGE_KEY_RECEIVABLES);
+        if (isMounted && Array.isArray(idbRecs) && idbRecs.length > 0) {
+          setReceivables((curr) => {
+            const currIds = new Set(curr.map((r) => r.id));
+            const toAdd = idbRecs.filter((r) => r && r.id && !currIds.has(r.id));
+            return toAdd.length > 0 ? [...curr, ...toAdd] : curr;
+          });
+        }
+
+        const idbTaxes = await loadCollectionFromIndexedDb<TaxObligation[]>(STORAGE_KEY_TAX_OBLIGATIONS);
+        if (isMounted && Array.isArray(idbTaxes) && idbTaxes.length > 0) {
+          setTaxObligations((curr) => {
+            const currIds = new Set(curr.map((t) => t.id));
+            const toAdd = idbTaxes.filter((t) => t && t.id && !currIds.has(t.id));
+            return toAdd.length > 0 ? [...curr, ...toAdd] : curr;
+          });
+        }
+
+        const idbDisps = await loadCollectionFromIndexedDb<JobDisposition[]>(STORAGE_KEY_DISPOSITIONS);
+        if (isMounted && Array.isArray(idbDisps) && idbDisps.length > 0) {
+          setDispositions((curr) => {
+            const currIds = new Set(curr.map((d) => d.id));
+            const toAdd = idbDisps.filter((d) => d && d.id && !currIds.has(d.id));
+            return toAdd.length > 0 ? [...curr, ...toAdd] : curr;
+          });
+        }
+      } catch (err) {
+        console.warn('[Storage] Note during IndexedDB hydration:', err);
+      }
+    };
+    hydrateFromIndexedDb();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Rolling Automatic Snapshots in IndexedDB (stores complete point-in-time state backups)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveAutoSnapshotToIndexedDb({
+        projects,
+        dispositions,
+        transactions,
+        receivables,
+        taxObligations,
+        governmentProjects,
+        retailProjects,
+        overheadExpenses,
+        officeRentContracts,
+        payroll: payrollRecords,
+        teamMembers,
+      }).catch(() => {});
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [
+    projects,
+    dispositions,
+    transactions,
+    receivables,
+    taxObligations,
+    governmentProjects,
+    retailProjects,
+    overheadExpenses,
+    officeRentContracts,
+    payrollRecords,
+    teamMembers,
+  ]);
 
   // Firestore Real-Time Subscriptions & Baseline Initialization
   useEffect(() => {
@@ -3129,7 +3329,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(remoteProjects)) {
         const deletedSet = deletedProjectIdsRef.current;
         const valid = remoteProjects.filter((p) => p && p.id && !deletedSet.has(p.id));
-        setProjects(valid);
+        setProjects((currentLocal) => {
+          const remoteIds = new Set(valid.map((p) => p.id));
+          const localToKeep = currentLocal.filter((p) => p && p.id && !deletedSet.has(p.id) && !remoteIds.has(p.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((lp) => {
+              saveProjectToFirestore(lp).catch(() => {});
+            });
+          }
+          return [...valid, ...localToKeep];
+        });
       }
     });
 
@@ -3320,7 +3529,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(remoteDisps)) {
         const deletedSet = deletedDispositionIdsRef.current;
         const valid = remoteDisps.filter((d) => d && d.id && !deletedSet.has(d.id));
-        setDispositions(valid);
+        setDispositions((currentLocal) => {
+          const remoteIds = new Set(valid.map((d) => d.id));
+          const localToKeep = currentLocal.filter((d) => d && d.id && !deletedSet.has(d.id) && !remoteIds.has(d.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((ld) => {
+              saveDispositionToFirestore(ld).catch(() => {});
+            });
+          }
+          return [...valid, ...localToKeep];
+        });
       }
     });
 
@@ -3376,6 +3594,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         const claimedTxIds = new Set<string>();
         const missingTrxsToPersist: FinancialTransaction[] = [];
+
+        // CRITICAL PRESERVATION: Keep all local user-entered transactions that are not on remote yet
+        (transactionsRef.current || []).forEach((lt) => {
+          if (lt && lt.id && !deletedSet.has(lt.id) && !txMap.has(lt.id)) {
+            txMap.set(lt.id, lt);
+            missingTrxsToPersist.push(lt);
+          }
+        });
 
         const allPayrollRecords = ((payrollRecordsRef.current && payrollRecordsRef.current.length > 0 ? payrollRecordsRef.current : INITIAL_PAYROLL_RECORDS) || []).filter(
           (p) =>
@@ -3556,8 +3782,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               !['tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03'].includes(t.id)
           )
           .map(syncTaxObligationDescription);
-        setTaxObligations(valid);
-        taxObligationsRef.current = valid;
+        setTaxObligations((currentLocal) => {
+          const remoteIds = new Set(valid.map((t: any) => t.id));
+          const localToKeep = (currentLocal || []).filter((t: any) => t && t.id && !deletedSet.has(t.id) && !remoteIds.has(t.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((lt) => {
+              saveTaxObligationToFirestore(lt).catch(() => {});
+            });
+          }
+          const merged = [...valid, ...localToKeep];
+          taxObligationsRef.current = merged;
+          return merged;
+        });
       }
     });
 
@@ -3572,7 +3808,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(remoteRecs)) {
         const deletedSet = deletedReceivableIdsRef.current;
         const valid = remoteRecs.filter((r) => r && r.id && !deletedSet.has(r.id));
-        setReceivables(valid);
+        setReceivables((currentLocal) => {
+          const remoteIds = new Set(valid.map((r) => r.id));
+          const localToKeep = currentLocal.filter((r) => r && r.id && !deletedSet.has(r.id) && !remoteIds.has(r.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((lr) => {
+              saveReceivableToFirestore(lr).catch(() => {});
+            });
+          }
+          return [...valid, ...localToKeep];
+        });
       }
     });
 
@@ -3587,7 +3832,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(remoteProjects)) {
         const deletedSet = deletedGovProjectIdsRef.current;
         const valid = remoteProjects.filter((p) => p && p.id && !deletedSet.has(p.id));
-        setGovernmentProjects(valid);
+        setGovernmentProjects((currentLocal) => {
+          const remoteIds = new Set(valid.map((p) => p.id));
+          const localToKeep = currentLocal.filter((p) => p && p.id && !deletedSet.has(p.id) && !remoteIds.has(p.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((lp) => {
+              saveGovernmentProjectToFirestore(lp).catch(() => {});
+            });
+          }
+          return [...valid, ...localToKeep];
+        });
       }
     });
 
@@ -3602,7 +3856,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(remoteProjects)) {
         const deletedSet = deletedRetailProjectIdsRef.current;
         const valid = remoteProjects.filter((p) => p && p.id && !deletedSet.has(p.id));
-        setRetailProjects(valid);
+        setRetailProjects((currentLocal) => {
+          const remoteIds = new Set(valid.map((p) => p.id));
+          const localToKeep = currentLocal.filter((p) => p && p.id && !deletedSet.has(p.id) && !remoteIds.has(p.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((lp) => {
+              saveRetailProjectToFirestore(lp).catch(() => {});
+            });
+          }
+          return [...valid, ...localToKeep];
+        });
       }
     });
 
@@ -3617,7 +3880,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(remoteOverhead)) {
         const deletedSet = deletedOverheadIdsRef.current;
         const valid = remoteOverhead.filter((e) => e && e.id && !deletedSet.has(e.id));
-        setOverheadExpenses(valid);
+        setOverheadExpenses((currentLocal) => {
+          const remoteIds = new Set(valid.map((e) => e.id));
+          const localToKeep = currentLocal.filter((e) => e && e.id && !deletedSet.has(e.id) && !remoteIds.has(e.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((le) => {
+              saveOverheadExpenseToFirestore(le).catch(() => {});
+            });
+          }
+          return [...valid, ...localToKeep];
+        });
       }
     });
 
@@ -3629,12 +3901,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     const unsubOfficeRents = subscribeToOfficeRentContracts((remoteContracts) => {
-      if (Array.isArray(remoteContracts) && remoteContracts.length > 0) {
+      if (Array.isArray(remoteContracts)) {
         const deletedSet = deletedOfficeRentIdsRef.current;
         const valid = remoteContracts.filter((c) => c && c.id && !deletedSet.has(c.id));
-        if (valid.length > 0) {
-          setOfficeRentContracts(valid);
-        }
+        setOfficeRentContracts((currentLocal) => {
+          const remoteIds = new Set(valid.map((c) => c.id));
+          const localToKeep = currentLocal.filter((c) => c && c.id && !deletedSet.has(c.id) && !remoteIds.has(c.id));
+          if (localToKeep.length > 0) {
+            localToKeep.forEach((lc) => {
+              saveOfficeRentContractToFirestore(lc).catch(() => {});
+            });
+          }
+          return [...valid, ...localToKeep];
+        });
       }
     });
 
@@ -12362,6 +12641,197 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, message: 'Daftar opsi Assigned By berhasil dikembalikan ke standar awal.' };
   };
 
+  const restoreAllDataFromBackup = async (
+    data: any,
+    mode: 'replace' | 'merge' = 'replace'
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      if (!data || typeof data !== 'object') {
+        return { success: false, message: 'Payload data backup tidak valid.' };
+      }
+
+      if (mode === 'replace') {
+        if (Array.isArray(data.projects)) {
+          setProjects(data.projects);
+          safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(data.projects));
+          saveCollectionToIndexedDb(STORAGE_KEY_PROJECTS, data.projects).catch(() => {});
+          data.projects.forEach((p: any) => saveProjectToFirestore(p).catch(() => {}));
+        }
+        if (Array.isArray(data.dispositions)) {
+          setDispositions(data.dispositions);
+          safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(data.dispositions));
+          saveCollectionToIndexedDb(STORAGE_KEY_DISPOSITIONS, data.dispositions).catch(() => {});
+          data.dispositions.forEach((d: any) => saveDispositionToFirestore(d).catch(() => {}));
+        }
+        if (Array.isArray(data.transactions)) {
+          setTransactions(data.transactions);
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(data.transactions));
+          saveCollectionToIndexedDb(STORAGE_KEY_TRANSACTIONS, data.transactions).catch(() => {});
+          data.transactions.forEach((t: any) => saveTransactionToFirestore(t).catch(() => {}));
+        }
+        if (Array.isArray(data.receivables)) {
+          setReceivables(data.receivables);
+          safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(data.receivables));
+          saveCollectionToIndexedDb(STORAGE_KEY_RECEIVABLES, data.receivables).catch(() => {});
+          data.receivables.forEach((r: any) => saveReceivableToFirestore(r).catch(() => {}));
+        }
+        if (Array.isArray(data.taxObligations)) {
+          setTaxObligations(data.taxObligations);
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(data.taxObligations));
+          saveCollectionToIndexedDb(STORAGE_KEY_TAX_OBLIGATIONS, data.taxObligations).catch(() => {});
+          data.taxObligations.forEach((t: any) => saveTaxObligationToFirestore(t).catch(() => {}));
+        }
+        if (Array.isArray(data.governmentProjects)) {
+          setGovernmentProjects(data.governmentProjects);
+          safeLocalStorage.setItem(STORAGE_KEY_GOVERNMENT_PROJECTS, JSON.stringify(data.governmentProjects));
+          saveCollectionToIndexedDb(STORAGE_KEY_GOVERNMENT_PROJECTS, data.governmentProjects).catch(() => {});
+          data.governmentProjects.forEach((g: any) => saveGovernmentProjectToFirestore(g).catch(() => {}));
+        }
+        if (Array.isArray(data.retailProjects)) {
+          setRetailProjects(data.retailProjects);
+          safeLocalStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(data.retailProjects));
+          saveCollectionToIndexedDb(STORAGE_KEY_RETAIL_PROJECTS, data.retailProjects).catch(() => {});
+          data.retailProjects.forEach((rp: any) => saveRetailProjectToFirestore(rp).catch(() => {}));
+        }
+        if (Array.isArray(data.overheadExpenses)) {
+          setOverheadExpenses(data.overheadExpenses);
+          safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(data.overheadExpenses));
+          saveCollectionToIndexedDb(STORAGE_KEY_OVERHEAD_EXPENSES, data.overheadExpenses).catch(() => {});
+          data.overheadExpenses.forEach((o: any) => saveOverheadExpenseToFirestore(o).catch(() => {}));
+        }
+        if (Array.isArray(data.officeRentContracts)) {
+          setOfficeRentContracts(data.officeRentContracts);
+          safeLocalStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(data.officeRentContracts));
+          saveCollectionToIndexedDb(STORAGE_KEY_OFFICE_RENTS, data.officeRentContracts).catch(() => {});
+          data.officeRentContracts.forEach((rc: any) => saveOfficeRentContractToFirestore(rc).catch(() => {}));
+        }
+        if (Array.isArray(data.bankLoans)) {
+          setBankLoans(data.bankLoans);
+          safeLocalStorage.setItem(STORAGE_KEY_BANK_LOANS, JSON.stringify(data.bankLoans));
+          saveCollectionToIndexedDb(STORAGE_KEY_BANK_LOANS, data.bankLoans).catch(() => {});
+          saveSettingsToFirestore('bank_loans', data.bankLoans).catch(() => {});
+        }
+        const payrollArr = Array.isArray(data.payrollRecords) ? data.payrollRecords : Array.isArray(data.payrollPayments) ? data.payrollPayments : null;
+        if (payrollArr) {
+          setPayrollRecords(payrollArr);
+          safeLocalStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(payrollArr));
+          saveCollectionToIndexedDb(STORAGE_KEY_PAYROLL, payrollArr).catch(() => {});
+          payrollArr.forEach((p: any) => savePayrollToFirestore(p).catch(() => {}));
+        }
+        const salaryArr = Array.isArray(data.employeeSalaryConfigs) ? data.employeeSalaryConfigs : Array.isArray(data.salaryConfigs) ? data.salaryConfigs : null;
+        if (salaryArr) {
+          setEmployeeSalaryConfigs(salaryArr);
+          safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(salaryArr));
+          saveCollectionToIndexedDb(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, salaryArr).catch(() => {});
+          saveSettingsToFirestore('employee_salary_configs', salaryArr).catch(() => {});
+        }
+        if (Array.isArray(data.teamMembers)) {
+          setTeamMembers(data.teamMembers);
+          safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(data.teamMembers));
+          saveCollectionToIndexedDb(STORAGE_KEY_MEMBERS, data.teamMembers).catch(() => {});
+          data.teamMembers.forEach((m: any) => saveUserToFirestore(m).catch(() => {}));
+        }
+        if (data.companyCapital && typeof data.companyCapital === 'object') {
+          setCompanyCapital(data.companyCapital);
+          safeLocalStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, JSON.stringify(data.companyCapital));
+          saveSettingsToFirestore('company_capital', data.companyCapital).catch(() => {});
+        }
+        if (data.companyLetterhead && typeof data.companyLetterhead === 'object') {
+          setCompanyLetterhead(data.companyLetterhead);
+          safeLocalStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(data.companyLetterhead));
+          saveSettingsToFirestore('company_letterhead', data.companyLetterhead).catch(() => {});
+        }
+      } else {
+        // Merge mode
+        if (Array.isArray(data.projects)) {
+          setProjects((curr) => {
+            const currIds = new Set(curr.map((p) => p.id));
+            const toAdd = data.projects.filter((p: any) => p && p.id && !currIds.has(p.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(merged));
+            toAdd.forEach((p: any) => saveProjectToFirestore(p).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.transactions)) {
+          setTransactions((curr) => {
+            const currIds = new Set(curr.map((t) => t.id));
+            const toAdd = data.transactions.filter((t: any) => t && t.id && !currIds.has(t.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(merged));
+            toAdd.forEach((t: any) => saveTransactionToFirestore(t).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.dispositions)) {
+          setDispositions((curr) => {
+            const currIds = new Set(curr.map((d) => d.id));
+            const toAdd = data.dispositions.filter((d: any) => d && d.id && !currIds.has(d.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(merged));
+            toAdd.forEach((d: any) => saveDispositionToFirestore(d).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.receivables)) {
+          setReceivables((curr) => {
+            const currIds = new Set(curr.map((r) => r.id));
+            const toAdd = data.receivables.filter((r: any) => r && r.id && !currIds.has(r.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(merged));
+            toAdd.forEach((r: any) => saveReceivableToFirestore(r).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.taxObligations)) {
+          setTaxObligations((curr) => {
+            const currIds = new Set(curr.map((t) => t.id));
+            const toAdd = data.taxObligations.filter((t: any) => t && t.id && !currIds.has(t.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(merged));
+            toAdd.forEach((t: any) => saveTaxObligationToFirestore(t).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.governmentProjects)) {
+          setGovernmentProjects((curr) => {
+            const currIds = new Set(curr.map((g) => g.id));
+            const toAdd = data.governmentProjects.filter((g: any) => g && g.id && !currIds.has(g.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_GOVERNMENT_PROJECTS, JSON.stringify(merged));
+            toAdd.forEach((g: any) => saveGovernmentProjectToFirestore(g).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.retailProjects)) {
+          setRetailProjects((curr) => {
+            const currIds = new Set(curr.map((rp) => rp.id));
+            const toAdd = data.retailProjects.filter((rp: any) => rp && rp.id && !currIds.has(rp.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(merged));
+            toAdd.forEach((rp: any) => saveRetailProjectToFirestore(rp).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.overheadExpenses)) {
+          setOverheadExpenses((curr) => {
+            const currIds = new Set(curr.map((o) => o.id));
+            const toAdd = data.overheadExpenses.filter((o: any) => o && o.id && !currIds.has(o.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(merged));
+            toAdd.forEach((o: any) => saveOverheadExpenseToFirestore(o).catch(() => {}));
+            return merged;
+          });
+        }
+      }
+
+      return { success: true, message: 'Data berhasil dipulihkan.' };
+    } catch (err: any) {
+      console.error('Error during data restore:', err);
+      return { success: false, message: err?.message || 'Gagal memulihkan data.' };
+    }
+  };
+
   // Compute live real-time team members with dynamic workload and capacity linked to dispositions
   const dynamicTeamMembers = useMemo(() => {
     return teamMembers.map((m) => {
@@ -12600,6 +13070,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteDocRequirementFromMilestone,
         resetProjectMilestonesToDefault,
         calculateTkdnScore,
+        deletedProjectIds,
+        deletedDispositionIds,
+        deletedTransactionIds,
+        deletedReceivableIds,
+        deletedTaxIds,
+        deletedOverheadIds,
+        deletedPayrollIds,
+        payrollPayments: payrollRecords,
+        salaryConfigs: employeeSalaryConfigs,
+        serviceTypes: consultingServices,
+        restoreAllDataFromBackup,
       }}
     >
       {children}

@@ -33,6 +33,8 @@ import {
   Zap,
   Building2,
   Gift,
+  Database,
+  Server,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 
@@ -72,6 +74,8 @@ interface SidebarProps {
   onOpenTransactionCategoryManager?: () => void;
   onOpenPaymentChannelManager?: () => void;
   onOpenUserProfile?: () => void;
+  onOpenBackupRestore?: () => void;
+  onOpenHostingerMysql?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -92,6 +96,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenTransactionCategoryManager,
   onOpenPaymentChannelManager,
   onOpenUserProfile,
+  onOpenBackupRestore,
+  onOpenHostingerMysql,
 }) => {
   const {
     projects,
@@ -813,6 +819,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   >
                     <Download className="w-4 h-4 text-slate-400 shrink-0" />
                     {(!isCollapsed || isMobileOpen) && <span>Export Files & Reports</span>}
+                  </button>
+                )}
+
+                {/* Backup & Restore Data JSON (Export/Import) */}
+                {onOpenBackupRestore && (
+                  <button
+                    id="btn-sidebar-backup-restore"
+                    onClick={onOpenBackupRestore}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-emerald-300 hover:text-emerald-100 hover:bg-emerald-950/40 border border-emerald-500/30 ${
+                      isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'
+                    }`}
+                    title="Backup & Restore Data JSON (Cadangkan / Pulihkan Data)"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Database className="w-4 h-4 shrink-0 text-emerald-400" />
+                      {(!isCollapsed || isMobileOpen) && <span className="truncate">Backup & Restore</span>}
+                    </div>
+                    {(!isCollapsed || isMobileOpen) && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                        JSON
+                      </span>
+                    )}
+                  </button>
+                )}
+
+                {/* Hostinger MySQL Database */}
+                {onOpenHostingerMysql && (
+                  <button
+                    id="btn-sidebar-hostinger-mysql"
+                    onClick={onOpenHostingerMysql}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-indigo-300 hover:text-indigo-100 hover:bg-indigo-950/40 border border-indigo-500/30 ${
+                      isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'
+                    }`}
+                    title="Database MySQL Hostinger (Sinkronisasi Data Input)"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Server className="w-4 h-4 shrink-0 text-indigo-400" />
+                      {(!isCollapsed || isMobileOpen) && <span className="truncate">Hostinger MySQL</span>}
+                    </div>
+                    {(!isCollapsed || isMobileOpen) && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">
+                        DB
+                      </span>
+                    )}
                   </button>
                 )}
 

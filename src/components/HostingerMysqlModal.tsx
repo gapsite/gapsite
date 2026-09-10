@@ -1,0 +1,788 @@
+import React, { useState, useEffect } from 'react';
+import { useProjects } from '../context/ProjectContext';
+import {
+  Database,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Server,
+  Download,
+  UploadCloud,
+  DownloadCloud,
+  HelpCircle,
+  ExternalLink,
+  ShieldCheck,
+  Zap,
+  X,
+  Copy,
+  Check,
+  Terminal,
+  Activity,
+  XCircle,
+  Wifi,
+} from 'lucide-react';
+import { verifyMysqlConnectivity, MysqlDiagnosticReport } from '../utils/mysqlDiagnostics';
+
+interface HostingerMysqlModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface MysqlStatusData {
+  configured: boolean;
+  success?: boolean;
+  message?: string;
+  latencyMs?: number;
+  host?: string;
+  database?: string;
+  tables?: string[];
+  config?: {
+    host: string;
+    port: number;
+    user: string;
+    database: string;
+    hasPassword: boolean;
+  };
+}
+
+export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen, onClose }) => {
+  const {
+    projects,
+    transactions,
+    receivables,
+    taxObligations,
+    payrollPayments,
+    governmentProjects,
+    retailProjects,
+    bankLoans,
+    dispositions,
+    teamMembers,
+    serviceTypes,
+    documentTypes,
+    documentCategories,
+    transactionCategories,
+    paymentChannels,
+    companyCapital,
+    salaryConfigs,
+    overheadExpenses,
+    officeRentContracts,
+    institutionTypes,
+    termDistributionSchemes,
+    companyLetterhead,
+    roleDefinitions,
+    assignedByOptions,
+    restoreAllDataFromBackup,
+  } = useProjects();
+
+  const [loading, setLoading] = useState(false);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [statusData, setStatusData] = useState<MysqlStatusData | null>(null);
+  const [diagnosticReport, setDiagnosticReport] = useState<MysqlDiagnosticReport | null>(null);
+  const [showDiagnosticsPanel, setShowDiagnosticsPanel] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'sync' | 'guide'>('sync');
+
+  // Run comprehensive diagnostics and log to console
+  const handleRunDiagnostics = async () => {
+    setIsDiagnosing(true);
+    setActionMessage({
+      type: 'info',
+      text: 'Menjalankan uji diagnostik koneksi dan memverifikasi Hostinger MySQL...',
+    });
+    try {
+      const report = await verifyMysqlConnectivity({ verbose: true, silent: false });
+      setDiagnosticReport(report);
+      setShowDiagnosticsPanel(true);
+      setStatusData({
+        configured: report.configured,
+        success: report.connected,
+        message: report.message,
+        latencyMs: report.latencyMs,
+        tables: report.tables,
+        config: report.config,
+      });
+
+      if (report.connected) {
+        setActionMessage({
+          type: 'success',
+          text: `Diagnostik Sukses: Terhubung ke Hostinger MySQL (${report.latencyMs}ms, ${report.tableCount} tabel).`,
+        });
+      } else {
+        setActionMessage({
+          type: 'error',
+          text: `Diagnostik Gagal: ${report.message}`,
+        });
+      }
+    } catch (err: any) {
+      setActionMessage({
+        type: 'error',
+        text: 'Error saat menjalankan diagnostik: ' + (err.message || err),
+      });
+    } finally {
+      setIsDiagnosing(false);
+    }
+  };
+
+  // Fetch status on open
+  const fetchStatus = async () => {
+    setLoading(true);
+    setActionMessage(null);
+    try {
+      const res = await fetch('/api/mysql/status');
+      const data = await res.json();
+      setStatusData(data);
+    } catch (err: any) {
+      setStatusData({
+        configured: false,
+        success: false,
+        message: 'Gagal terhubung ke API server: ' + (err.message || err),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchStatus();
+    }
+  }, [isOpen]);
+
+  // Push all local data into Hostinger MySQL
+  const handlePushData = async () => {
+    if (!statusData?.configured || !statusData?.success) {
+      if (!window.confirm('Koneksi Hostinger MySQL belum terkonfirmasi aktif. Tetap coba sinkronkan?')) {
+        return;
+      }
+    }
+
+    setLoading(true);
+    setActionMessage({ type: 'info', text: 'Sedang menyiapkan tabel dan mengirim seluruh data ke Hostinger MySQL...' });
+
+    try {
+      const payload = {
+        projects,
+        transactions,
+        receivables,
+        taxObligations,
+        payrollPayments,
+        governmentProjects,
+        retailProjects,
+        bankLoans,
+        dispositions,
+        teamMembers,
+        serviceTypes,
+        documentTypes,
+        documentCategories,
+        transactionCategories,
+        paymentChannels,
+        companyCapital,
+        salaryConfigs,
+        overheadExpenses,
+        officeRentContracts,
+        institutionTypes,
+        termDistributionSchemes,
+        companyLetterhead,
+        roleDefinitions,
+        assignedByOptions,
+      };
+
+      const res = await fetch('/api/mysql/sync/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setActionMessage({
+          type: 'success',
+          text: result.message || 'Seluruh data berhasil disimpan ke database Hostinger MySQL!',
+        });
+        await fetchStatus();
+      } else {
+        setActionMessage({
+          type: 'error',
+          text: result.message || 'Gagal menyimpan data ke MySQL Hostinger.',
+        });
+      }
+    } catch (err: any) {
+      setActionMessage({
+        type: 'error',
+        text: 'Error saat menyimpan ke MySQL: ' + (err.message || err),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Pull data from Hostinger MySQL
+  const handlePullData = async () => {
+    if (!window.confirm('Tarik data dari Hostinger MySQL? Data dari MySQL akan digabungkan ke aplikasi saat ini.')) {
+      return;
+    }
+
+    setLoading(true);
+    setActionMessage({ type: 'info', text: 'Sedang mengunduh data dari Hostinger MySQL...' });
+
+    try {
+      const res = await fetch('/api/mysql/sync/pull');
+      const result = await res.json();
+
+      if (result.success && result.data) {
+        await restoreAllDataFromBackup(result.data, 'merge');
+        setActionMessage({
+          type: 'success',
+          text: `Berhasil menarik data dari Hostinger MySQL! (${result.data.projects?.length || 0} proyek, ${result.data.transactions?.length || 0} transaksi dimuat).`,
+        });
+      } else {
+        setActionMessage({
+          type: 'error',
+          text: result.message || 'Gagal menarik data dari MySQL Hostinger.',
+        });
+      }
+    } catch (err: any) {
+      setActionMessage({
+        type: 'error',
+        text: 'Error saat menarik dari MySQL: ' + (err.message || err),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto Init Schema
+  const handleInitSchema = async () => {
+    setLoading(true);
+    setActionMessage({ type: 'info', text: 'Sedang membuat 12 tabel di Hostinger MySQL...' });
+    try {
+      const res = await fetch('/api/mysql/init-schema', { method: 'POST' });
+      const result = await res.json();
+      if (result.success) {
+        setActionMessage({ type: 'success', text: result.message });
+        await fetchStatus();
+      } else {
+        setActionMessage({ type: 'error', text: result.message });
+      }
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: 'Error membuat skema: ' + (err.message || err) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-white tracking-tight">Hostinger MySQL Database</h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-500 text-white uppercase tracking-wider">
+                  Hostinger
+                </span>
+              </div>
+              <p className="text-xs text-slate-300">
+                Penyimpanan data input langsung ke basis data MySQL hosting Hostinger
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tab Selection */}
+        <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('sync')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-t border-x cursor-pointer ${
+              activeTab === 'sync'
+                ? 'bg-white text-indigo-700 border-slate-200 border-b-white -mb-px shadow-xs'
+                : 'bg-transparent text-slate-600 border-transparent hover:text-slate-900'
+            }`}
+          >
+            <Zap className="w-4 h-4 text-indigo-600" />
+            <span>Koneksi & Sinkronisasi</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('guide')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-t border-x cursor-pointer ${
+              activeTab === 'guide'
+                ? 'bg-white text-emerald-700 border-slate-200 border-b-white -mb-px shadow-xs'
+                : 'bg-transparent text-slate-600 border-transparent hover:text-slate-900'
+            }`}
+          >
+            <HelpCircle className="w-4 h-4 text-emerald-600" />
+            <span>Panduan Hostinger hPanel</span>
+          </button>
+        </div>
+
+        {/* Body Content */}
+        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          {/* Action / Alert Message */}
+          {actionMessage && (
+            <div
+              className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 ${
+                actionMessage.type === 'error'
+                  ? 'bg-red-50 border-red-200 text-red-800'
+                  : actionMessage.type === 'success'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-sky-50 border-sky-200 text-sky-800'
+              }`}
+            >
+              {actionMessage.type === 'error' ? (
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              ) : actionMessage.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              ) : (
+                <RefreshCw className="w-4 h-4 text-sky-600 shrink-0 mt-0.5 animate-spin" />
+              )}
+              <div className="flex-1 font-medium">{actionMessage.text}</div>
+            </div>
+          )}
+
+          {activeTab === 'sync' && (
+            <>
+              {/* Connection Status Card */}
+              <div className="p-4 rounded-xl border bg-slate-50/80 border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Server className="w-4 h-4 text-slate-600" />
+                    <span className="text-xs font-bold text-slate-900">Status Koneksi Hostinger MySQL</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {statusData?.success ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Terhubung ({statusData.latencyMs}ms)
+                      </span>
+                    ) : statusData?.configured ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        Gagal Terhubung
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
+                        Belum Dikonfigurasi
+                      </span>
+                    )}
+                    <button
+                      id="btn-run-mysql-diagnostics"
+                      type="button"
+                      onClick={handleRunDiagnostics}
+                      disabled={loading || isDiagnosing}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                      title="Jalankan Diagnostik Lengkap & Verifikasi Koneksi MySQL"
+                    >
+                      <Activity className={`w-3.5 h-3.5 ${isDiagnosing ? 'animate-spin' : ''}`} />
+                      <span>{isDiagnosing ? 'Menguji...' : 'Uji Diagnostik'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fetchStatus}
+                      disabled={loading || isDiagnosing}
+                      className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                      title="Refresh status koneksi"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Configuration Details Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200 text-xs">
+                  <div className="p-2 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-500 block font-medium">Host / Server</span>
+                    <span className="font-mono font-bold text-slate-800 truncate block">
+                      {statusData?.config?.host || '-'}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-500 block font-medium">Port</span>
+                    <span className="font-mono font-bold text-slate-800 block">
+                      {statusData?.config?.port || 3306}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-500 block font-medium">Database Name</span>
+                    <span className="font-mono font-bold text-slate-800 truncate block">
+                      {statusData?.config?.database || '-'}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-500 block font-medium">DB Username</span>
+                    <span className="font-mono font-bold text-slate-800 truncate block">
+                      {statusData?.config?.user || '-'}
+                    </span>
+                  </div>
+                </div>
+
+                {statusData?.config?.host?.toLowerCase() === 'localhost' && (
+                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Perhatian: MYSQL_HOST terisi "localhost"</span>
+                    </div>
+                    <p className="leading-relaxed">
+                      Karena aplikasi web ini berjalan di server cloud Google AI Studio, <code>localhost</code> mengarah ke mesin server lokal aplikasi, <strong>bukan server Hostinger Anda</strong>.
+                    </p>
+                    <p className="font-medium text-amber-950">
+                      Solusi: Buka hPanel Hostinger &rarr; lihat <strong>Server IP</strong> hosting Anda (atau buka menu <strong>Databases &rarr; Remote MySQL</strong>), lalu ubah <code>MYSQL_HOST</code> di Settings menjadi IP Hostinger tersebut (misal: <code>srv1786.hstgr.io</code> atau IP numerik Hostinger Anda).
+                    </p>
+                  </div>
+                )}
+
+                {statusData?.message && !diagnosticReport && (
+                  <p className="text-xs text-slate-600 italic bg-white p-2.5 rounded-lg border border-slate-200">
+                    {statusData.message}
+                  </p>
+                )}
+
+                {/* Direct UI Diagnostic Result Display (Success / Error) */}
+                {diagnosticReport && showDiagnosticsPanel && (
+                  <div
+                    id="mysql-diagnostic-result-container"
+                    className={`p-4 rounded-xl text-xs space-y-3 border transition-all ${
+                      diagnosticReport.connected
+                        ? 'bg-emerald-50/95 border-emerald-300 text-emerald-950'
+                        : 'bg-rose-50/95 border-rose-300 text-rose-950'
+                    }`}
+                  >
+                    {/* Result Header */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        {diagnosticReport.connected ? (
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-700 shrink-0">
+                            <XCircle className="w-5 h-5 text-rose-600" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm">
+                              {diagnosticReport.connected
+                                ? 'Hasil Diagnostik: Terhubung ke Hostinger MySQL'
+                                : 'Hasil Diagnostik: Gagal Terhubung ke MySQL'}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                diagnosticReport.connected
+                                  ? 'bg-emerald-200/80 text-emerald-900 border border-emerald-300'
+                                  : 'bg-rose-200/80 text-rose-900 border border-rose-300'
+                              }`}
+                            >
+                              {diagnosticReport.connected ? 'SUKSES' : 'ERROR'}
+                            </span>
+                          </div>
+                          <span className="text-[11px] opacity-80 block">
+                            {diagnosticReport.connected
+                              ? 'Koneksi database aktif dan siap melayani pertukaran data CRM.'
+                              : 'Koneksi jaringan atau otentikasi ke database Hostinger mengalami kendala.'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-mono text-[11px] font-bold px-2 py-1 bg-white/80 rounded-md border border-slate-200">
+                          {diagnosticReport.latencyMs}ms
+                        </span>
+                        <button
+                          id="btn-dismiss-diagnostic-card"
+                          type="button"
+                          onClick={() => setShowDiagnosticsPanel(false)}
+                          className="p-1 rounded hover:bg-black/5 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                          title="Tutup kartu hasil"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Error Box if Failed */}
+                    {!diagnosticReport.connected && (
+                      <div className="p-3 bg-white rounded-lg border border-rose-200 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">
+                          Pesan Error dari MySQL / Server:
+                        </span>
+                        <p className="font-mono text-[11px] text-rose-900 leading-relaxed break-words bg-rose-50/70 p-2 rounded border border-rose-100">
+                          {diagnosticReport.message}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Diagnostic Checks Checklist */}
+                    <div className="p-3 bg-white/90 rounded-lg border border-slate-200 space-y-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                        Pemeriksaan Komponen Koneksi:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {diagnosticReport.checks.map((c, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex items-start gap-2 p-2 rounded-md border text-[11px] ${
+                              c.passed
+                                ? 'bg-emerald-50/50 border-emerald-100 text-slate-800'
+                                : 'bg-rose-50/50 border-rose-200 text-rose-900'
+                            }`}
+                          >
+                            {c.passed ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                            )}
+                            <div>
+                              <span className="font-semibold block">{c.name}</span>
+                              <span className="text-[10px] opacity-75">{c.detail}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Troubleshooting Guide if Failed */}
+                    {diagnosticReport.advice.length > 0 && (
+                      <div className="p-3 bg-amber-50 rounded-lg border border-amber-300 text-amber-950 space-y-1.5">
+                        <div className="flex items-center gap-1.5 font-bold text-xs text-amber-900">
+                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>Rekomendasi Perbaikan:</span>
+                        </div>
+                        <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed pl-0.5">
+                          {diagnosticReport.advice.map((adv, idx) => (
+                            <li key={idx} className="font-medium text-amber-900">
+                              <span>{adv}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    {/* Card Footer / Re-run Action */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-black/10 text-[11px]">
+                      <div className="flex items-center gap-1 text-slate-600">
+                        <Terminal className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Log dan tabel diagnostik lengkap juga tersedia di Konsol F12 (<code>window.runMysqlDiagnostics()</code>).</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          id="btn-rerun-diagnostics"
+                          type="button"
+                          onClick={handleRunDiagnostics}
+                          disabled={isDiagnosing}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            diagnosticReport.connected
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              : 'bg-rose-600 hover:bg-rose-700 text-white'
+                          }`}
+                        >
+                          <Activity className={`w-3.5 h-3.5 ${isDiagnosing ? 'animate-spin' : ''}`} />
+                          <span>{isDiagnosing ? 'Menguji...' : 'Uji Ulang Diagnostik'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {statusData?.tables && statusData.tables.length > 0 && (
+                  <div className="pt-2">
+                    <span className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Tabel Aktif di Hostinger MySQL ({statusData.tables.length} tabel):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                      {statusData.tables.map((tbl) => (
+                        <span
+                          key={tbl}
+                          className="text-[10px] font-mono px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md"
+                        >
+                          {tbl}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Data Volume Summary */}
+              <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-indigo-950">Data Input Saat Ini yang Siap Disimpan:</span>
+                  <span className="text-[11px] font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-full border border-indigo-200">
+                    {projects.length} Proyek • {transactions.length} Transaksi
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Proyek</span>
+                    <span className="font-bold text-slate-900">{projects.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Transaksi</span>
+                    <span className="font-bold text-slate-900">{transactions.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Piutang</span>
+                    <span className="font-bold text-slate-900">{receivables.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Pajak</span>
+                    <span className="font-bold text-slate-900">{taxObligations.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Payroll</span>
+                    <span className="font-bold text-slate-900">{payrollPayments.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Anggota Tim</span>
+                    <span className="font-bold text-slate-900">{teamMembers.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handlePushData}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Simpan & Sinkronkan ke MySQL</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePullData}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <DownloadCloud className="w-4 h-4 text-indigo-600" />
+                  <span>Tarik Data dari Hostinger MySQL</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleInitSchema}
+                  disabled={loading || isDiagnosing}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <Database className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Buat Tabel Otomatis di MySQL</span>
+                </button>
+
+                <a
+                  href="/api/mysql/schema.sql"
+                  download="hostinger_gap_crm_schema.sql"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Download hostinger_crm_schema.sql</span>
+                </a>
+
+                <button
+                  id="btn-trigger-diagnostics-action-grid"
+                  type="button"
+                  onClick={handleRunDiagnostics}
+                  disabled={loading || isDiagnosing}
+                  className="sm:col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  title="Jalankan Uji Diagnostik Koneksi Hostinger MySQL"
+                >
+                  <Activity className={`w-4 h-4 ${isDiagnosing ? 'animate-spin' : ''}`} />
+                  <span>{isDiagnosing ? 'Sedang Memeriksa Konektivitas MySQL...' : 'Uji Diagnostik Konektivitas Hostinger MySQL'}</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'guide' && (
+            <div className="space-y-4 text-xs text-slate-700">
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                <div className="flex items-center gap-2 text-amber-900 font-bold">
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                  <span>Langkah Penting: Aktifkan "Remote MySQL" di Hostinger hPanel</span>
+                </div>
+                <p className="text-amber-800 leading-relaxed">
+                  Secara default, Hostinger mengunci akses port 3306 dari luar server. Agar aplikasi cloud ini dapat
+                  menyimpan data langsung ke database MySQL Hostinger Anda, Anda perlu mengaktifkan Remote MySQL sekali saja:
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-amber-900 font-medium pl-1">
+                  <li>Masuk ke <strong>hPanel Hostinger</strong> Anda.</li>
+                  <li>Buka menu <strong>Databases</strong> &rarr; pilih <strong>Remote MySQL</strong> (MySQL Jarak Jauh).</li>
+                  <li>
+                    Pada kolom <strong>IP (IPv4 or IPv6)</strong>, masukkan tanda <code>%</code> (tanda persen, mengizinkan akses dari aplikasi).
+                  </li>
+                  <li>Pilih nama database Anda, lalu klik tombol <strong>Create / Tambahkan</strong>.</li>
+                </ol>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Pengaturan Variabel Lingkungan (Environment Variables)</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed">
+                  Masukkan detail database Hostinger Anda di menu <strong>Settings</strong> Google AI Studio atau file <code>.env</code>:
+                </p>
+                <div className="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-[11px] space-y-1 relative">
+                  <p>MYSQL_HOST=sqlXXX.main-hosting.eu (atau IP Hostinger Anda)</p>
+                  <p>MYSQL_PORT=3306</p>
+                  <p>MYSQL_USER=u123456789_crmuser</p>
+                  <p>MYSQL_PASSWORD=PasswordDatabaseAnda123!</p>
+                  <p>MYSQL_DATABASE=u123456789_gapcrm</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
+                <div className="flex items-center gap-2 font-bold text-indigo-950">
+                  <Database className="w-4 h-4 text-indigo-600" />
+                  <span>Opsi Import Manual via phpMyAdmin</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed">
+                  Jika Anda ingin membuat tabel secara manual di phpMyAdmin Hostinger:
+                </p>
+                <p className="text-slate-600 leading-relaxed">
+                  1. Download file <a href="/api/mysql/schema.sql" download="hostinger_gap_crm_schema.sql" className="font-bold text-indigo-700 underline">hostinger_gap_crm_schema.sql</a>.
+                  <br />
+                  2. Di hPanel Hostinger, klik <strong>Enter phpMyAdmin</strong> pada database Anda.
+                  <br />
+                  3. Klik tab <strong>Import</strong> &rarr; pilih file <code>.sql</code> tadi &rarr; klik <strong>Go / Kirim</strong>.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between px-6 py-3.5 bg-slate-50 border-t border-slate-200 text-xs">
+          <span className="text-slate-500">
+            Sistem tetap memiliki cadangan ganda (LocalStorage + IndexedDB) sehingga data Anda aman 100%.
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors cursor-pointer"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

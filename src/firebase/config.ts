@@ -30,6 +30,8 @@ import {
   orderBy,
   serverTimestamp,
   writeBatch,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import { purgeStaleStorage } from '../utils/storage';
@@ -122,6 +124,8 @@ export {
   orderBy,
   serverTimestamp,
   writeBatch,
+  arrayUnion,
+  arrayRemove,
   onAuthStateChanged
 };
 export type { FirebaseUser };

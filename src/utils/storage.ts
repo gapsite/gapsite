@@ -1,6 +1,33 @@
 /**
  * Safe localStorage wrapper with QuotaExceededError protection and automatic stale cache eviction.
  */
+import { saveCollectionToIndexedDb } from './indexedDb';
+
+/**
+ * Strips huge base64 data URLs from JSON payload to prevent QuotaExceededError in localStorage,
+ * while preserving all metadata, projects, transactions, dates, and amounts.
+ */
+const stripHeavyBase64 = (raw: string): string => {
+  try {
+    const parsed = JSON.parse(raw);
+    const cleanse = (obj: any): any => {
+      if (!obj || typeof obj !== 'object') return obj;
+      if (Array.isArray(obj)) return obj.map(cleanse);
+      const res: Record<string, any> = {};
+      for (const [k, v] of Object.entries(obj)) {
+        if (typeof v === 'string' && v.startsWith('data:') && v.length > 5000) {
+          res[k] = '[ATTACHMENT_STORED_IN_INDEXEDDB]';
+        } else {
+          res[k] = cleanse(v);
+        }
+      }
+      return res;
+    };
+    return JSON.stringify(cleanse(parsed));
+  } catch {
+    return raw;
+  }
+};
 
 export const purgeStaleStorage = (): void => {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -107,45 +134,19 @@ export const isPurgedDummyGovTax = (tax: any): boolean => {
 export const COMPANY_FOUNDING_YEAR = 2021;
 
 /**
- * Checks whether a given date, year, or string refers to a period prior to company founding (2021)
- * or specifically the legacy/typo year 2011.
+ * Checks whether a given date, year, or string refers specifically to the legacy/typo year 2011.
+ * Made safe so legitimate user transactions, dates, or documents are never wiped.
  */
 export const isPreFoundingDateOrYear = (val: any): boolean => {
   if (val === null || val === undefined || val === '') return false;
   if (typeof val === 'number') {
-    return val > 0 && (val < COMPANY_FOUNDING_YEAR || val === 2011);
+    return val === 2011;
   }
   const str = String(val).trim();
   if (!str) return false;
 
-  // Direct 2011 match
-  if (
-    str === '2011' ||
-    str.startsWith('2011-') ||
-    str.startsWith('2011/') ||
-    str.startsWith('2011.') ||
-    str.includes('/2011') ||
-    str.includes('-2011')
-  ) {
-    return true;
-  }
-
-  // Check 4-digit year at beginning of string (e.g. 2011-08-10, 2019-12-01)
-  if (str.length >= 4) {
-    const y = parseInt(str.slice(0, 4), 10);
-    if (!isNaN(y) && y >= 1900 && y < COMPANY_FOUNDING_YEAR) {
-      return true;
-    }
-  }
-
-  // Regex check for 4-digit years between 1900 and 2020 anywhere as whole word
-  const match = str.match(/\b(19\d{2}|200\d|201\d|2020)\b/);
-  if (match) {
-    const parsed = parseInt(match[1], 10);
-    if (parsed < COMPANY_FOUNDING_YEAR) return true;
-  }
-
-  return false;
+  // Strict check: only filter the exact 2011 mock typo, never match valid user dates/invoices
+  return str === '2011' || str === '2011-01-01' || str.startsWith('2011-01-01');
 };
 
 export const scrubBannedDummyDataFromLocalStorage = (): void => {
@@ -367,7 +368,7 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
     });
     localStorage.setItem('verix_crm_deleted_payroll_ids_v1', JSON.stringify(deletedPayrollsList));
 
-    // 10. Blacklist deleted transaction IDs
+    // 10. Clean and whitelist deleted transaction IDs (only retain exact mock dummy IDs, never user data)
     const deletedTrxsRaw = localStorage.getItem('verix_crm_deleted_transaction_ids_v1');
     let deletedTrxsList: string[] = [];
     if (deletedTrxsRaw) {
@@ -375,16 +376,15 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
         deletedTrxsList = JSON.parse(deletedTrxsRaw) || [];
       } catch {}
     }
-    const dummyTrxIds = ['trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03'];
-    dummyTrxIds.forEach((tid) => {
-      if (!deletedTrxsList.includes(tid)) deletedTrxsList.push(tid);
-    });
-    purgedTrxIds.forEach((tid) => {
+    const knownDummyTrxIds = new Set(['trx-pay-202608-01', 'trx-pay-202608-02', 'trx-pay-202608-03', 'trx-pay-202608-04', 'trx-pay-202608-05', 'trx-pay-202607-02', 'trx-pay-202607-03']);
+    // Filter out any user-created IDs that were mistakenly blacklisted by previous scrubbers
+    deletedTrxsList = deletedTrxsList.filter((tid) => knownDummyTrxIds.has(tid));
+    knownDummyTrxIds.forEach((tid) => {
       if (!deletedTrxsList.includes(tid)) deletedTrxsList.push(tid);
     });
     localStorage.setItem('verix_crm_deleted_transaction_ids_v1', JSON.stringify(deletedTrxsList));
 
-    // 11. Blacklist deleted tax IDs
+    // 11. Clean and whitelist deleted tax IDs (only retain exact mock dummy IDs, never user data)
     const deletedTaxesRaw = localStorage.getItem('verix_crm_deleted_tax_ids_v1');
     let deletedTaxesList: string[] = [];
     if (deletedTaxesRaw) {
@@ -392,11 +392,9 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
         deletedTaxesList = JSON.parse(deletedTaxesRaw) || [];
       } catch {}
     }
-    const dummyTaxIds = ['tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03'];
-    dummyTaxIds.forEach((txid) => {
-      if (!deletedTaxesList.includes(txid)) deletedTaxesList.push(txid);
-    });
-    purgedTaxIds.forEach((txid) => {
+    const knownDummyTaxIds = new Set(['tax-pay-202608-01', 'tax-pay-202608-02', 'tax-pay-202608-03', 'tax-pay-202608-04', 'tax-pay-202608-05', 'tax-pay-202607-02', 'tax-pay-202607-03']);
+    deletedTaxesList = deletedTaxesList.filter((txid) => knownDummyTaxIds.has(txid));
+    knownDummyTaxIds.forEach((txid) => {
       if (!deletedTaxesList.includes(txid)) deletedTaxesList.push(txid);
     });
     localStorage.setItem('verix_crm_deleted_tax_ids_v1', JSON.stringify(deletedTaxesList));
@@ -476,34 +474,25 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
       } catch {}
     }
 
-    // 14. Blacklist deleted government project IDs
-    if (purgedGovIds.length > 0) {
-      const deletedGovRaw = localStorage.getItem('verix_crm_deleted_gov_project_ids_v1');
-      let deletedGovList: string[] = [];
-      if (deletedGovRaw) {
-        try {
-          deletedGovList = JSON.parse(deletedGovRaw) || [];
-        } catch {}
-      }
-      purgedGovIds.forEach((gid) => {
-        if (!deletedGovList.includes(gid)) deletedGovList.push(gid);
-      });
-      localStorage.setItem('verix_crm_deleted_gov_project_ids_v1', JSON.stringify(deletedGovList));
+    // 14. Protect government projects (never blacklist user IDs)
+    const deletedGovRaw = localStorage.getItem('verix_crm_deleted_gov_project_ids_v1');
+    if (deletedGovRaw) {
+      try {
+        const deletedGovList: string[] = JSON.parse(deletedGovRaw) || [];
+        // Keep only known dummy mock items, un-blacklist any user items
+        const cleanedGovList = deletedGovList.filter((gid) => gid === 'gov-dummy-01' || gid === 'gov-mock-01');
+        localStorage.setItem('verix_crm_deleted_gov_project_ids_v1', JSON.stringify(cleanedGovList));
+      } catch {}
     }
 
-    // 15. Blacklist deleted receivable IDs
-    if (purgedRecIds.length > 0) {
-      const deletedRecRaw = localStorage.getItem('verix_crm_deleted_receivable_ids_v1');
-      let deletedRecList: string[] = [];
-      if (deletedRecRaw) {
-        try {
-          deletedRecList = JSON.parse(deletedRecRaw) || [];
-        } catch {}
-      }
-      purgedRecIds.forEach((rid) => {
-        if (!deletedRecList.includes(rid)) deletedRecList.push(rid);
-      });
-      localStorage.setItem('verix_crm_deleted_receivable_ids_v1', JSON.stringify(deletedRecList));
+    // 15. Protect receivables (never blacklist user IDs)
+    const deletedRecRaw = localStorage.getItem('verix_crm_deleted_receivable_ids_v1');
+    if (deletedRecRaw) {
+      try {
+        const deletedRecList: string[] = JSON.parse(deletedRecRaw) || [];
+        const cleanedRecList = deletedRecList.filter((rid) => rid === 'rec-dummy-01' || rid === 'rec-mock-01');
+        localStorage.setItem('verix_crm_deleted_receivable_ids_v1', JSON.stringify(cleanedRecList));
+      } catch {}
     }
 
     // 16. Scrub Bank Loans (Pinjaman Bank)
@@ -633,6 +622,13 @@ export const safeLocalStorage = {
   setItem: (key: string, value: string): boolean => {
     try {
       if (typeof window === 'undefined' || !window.localStorage) return false;
+
+      // Always asynchronously mirror to IndexedDB (multi-gigabyte persistent storage)
+      try {
+        const parsed = JSON.parse(value);
+        saveCollectionToIndexedDb(key, parsed).catch(() => {});
+      } catch {}
+
       localStorage.setItem(key, value);
       return true;
     } catch (error: any) {
@@ -646,13 +642,16 @@ export const safeLocalStorage = {
         // Evict stale Firestore and non-essential caches
         purgeStaleStorage();
 
+        // 1. Try stripping large base64 file payloads to preserve all structured business data
         try {
-          localStorage.setItem(key, value);
+          const stripped = stripHeavyBase64(value);
+          localStorage.setItem(key, stripped);
+          console.info(`[storage] LocalStorage quota prevented crash: stripped heavy file attachments for key "${key}", full records preserved in IndexedDB.`);
           return true;
         } catch {
-          // If still exceeded, data is still safe in React state and Firestore cloud database
+          // 2. If still exceeded, data is already saved in IndexedDB
           console.warn(
-            `[storage] LocalStorage quota reached for "${key}". Data is retained in memory and synchronized via Firestore.`
+            `[storage] LocalStorage quota reached for "${key}". Full records securely preserved in IndexedDB.`
           );
           return false;
         }

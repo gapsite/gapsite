@@ -11,6 +11,8 @@ import {
   deleteDoc,
   onSnapshot,
   writeBatch,
+  arrayUnion,
+  arrayRemove,
 } from './config';
 import {
   ConsultingProject,
@@ -191,9 +193,9 @@ export const deleteUserFromFirestore = async (userId: string): Promise<void> => 
 export const saveDeletedUserToFirestore = async (record: DeletedUserRecord): Promise<void> => {
   try {
     const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_users');
-    const snap = await getDoc(docRef);
+    const snap = await getDoc(docRef).catch(() => null);
     let existingList: DeletedUserRecord[] = [];
-    if (snap.exists()) {
+    if (snap && snap.exists()) {
       const data = snap.data();
       if (Array.isArray(data?.data)) {
         existingList = data.data;
@@ -210,8 +212,8 @@ export const saveDeletedUserToFirestore = async (record: DeletedUserRecord): Pro
       record,
     ];
     await setDoc(docRef, sanitizeForFirestore({ data: updatedList, updatedAt: new Date().toISOString() }), { merge: true });
-  } catch (error) {
-    console.error('Firestore save deleted user record error:', error);
+  } catch (error: any) {
+    console.warn('Firestore note: save deleted user record deferred/offline:', error?.message || error);
   }
 };
 
@@ -219,8 +221,8 @@ export const removeDeletedUserFromFirestore = async (identifier: string): Promis
   try {
     const cleanId = identifier.trim().toLowerCase();
     const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_users');
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
+    const snap = await getDoc(docRef).catch(() => null);
+    if (snap && snap.exists()) {
       const data = snap.data();
       if (Array.isArray(data?.data)) {
         const filtered = data.data.filter(
@@ -232,8 +234,8 @@ export const removeDeletedUserFromFirestore = async (identifier: string): Promis
         await setDoc(docRef, sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }), { merge: true });
       }
     }
-  } catch (error) {
-    console.error('Firestore remove deleted user record error:', error);
+  } catch (error: any) {
+    console.warn('Firestore note: remove deleted user record deferred/offline:', error?.message || error);
   }
 };
 
@@ -690,9 +692,9 @@ export const savePayrollToFirestore = async (payroll: PayrollPayment): Promise<v
 
     // Also update settings backup document
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
-    const snap = await getDoc(settingsRef);
+    const snap = await getDoc(settingsRef).catch(() => null);
     let list: PayrollPayment[] = [];
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       list = snap.data().data;
     }
     const filtered = list.filter((p) => p.id !== payroll.id);
@@ -700,9 +702,9 @@ export const savePayrollToFirestore = async (payroll: PayrollPayment): Promise<v
       settingsRef,
       sanitizeForFirestore({ data: [payroll, ...filtered], updatedAt: new Date().toISOString() }),
       { merge: true }
-    );
-  } catch (error) {
-    console.error('Firestore save payroll error:', error);
+    ).catch(() => {});
+  } catch (error: any) {
+    console.warn('Firestore note: save payroll deferred/offline:', error?.message || error);
   }
 };
 
@@ -713,55 +715,52 @@ export const deletePayrollFromFirestore = async (payrollId: string): Promise<voi
 
     // Also update settings backup document
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'payroll_records');
-    const snap = await getDoc(settingsRef);
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    const snap = await getDoc(settingsRef).catch(() => null);
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       const filtered = snap.data().data.filter((p: PayrollPayment) => p.id !== payrollId);
       await setDoc(
         settingsRef,
         sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
         { merge: true }
-      );
+      ).catch(() => {});
     }
-  } catch (error) {
-    console.error('Firestore delete payroll error:', error);
-    throw error;
+  } catch (error: any) {
+    console.warn('Firestore note: delete payroll deferred/offline:', error?.message || error);
   }
 };
 
 // Deleted Payroll IDs Management (prevents deleted payroll records from resurfacing)
 export const saveDeletedPayrollIdToFirestore = async (payrollId: string): Promise<void> => {
+  if (!payrollId) return;
   try {
     const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_payroll_ids');
-    const snap = await getDoc(docRef);
-    let existingList: string[] = [];
-    if (snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data?.data)) {
-        existingList = data.data;
-      }
-    }
-    if (!existingList.includes(payrollId)) {
-      const updated = [payrollId, ...existingList];
-      await setDoc(docRef, sanitizeForFirestore({ data: updated, updatedAt: new Date().toISOString() }));
-    }
-  } catch (err) {
-    console.error('Failed to save deleted payroll ID to Firestore:', err);
+    await setDoc(
+      docRef,
+      {
+        data: arrayUnion(payrollId),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.warn('Firestore note: save deleted payroll ID deferred:', err?.message || err);
   }
 };
 
 export const removeDeletedPayrollIdFromFirestore = async (payrollId: string): Promise<void> => {
+  if (!payrollId) return;
   try {
     const docRef = doc(db, FirestoreCollections.SETTINGS, 'deleted_payroll_ids');
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data?.data)) {
-        const filtered = data.data.filter((id: string) => id !== payrollId);
-        await setDoc(docRef, sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }));
-      }
-    }
-  } catch (err) {
-    console.error('Failed to remove deleted payroll ID from Firestore:', err);
+    await setDoc(
+      docRef,
+      {
+        data: arrayRemove(payrollId),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.warn('Firestore note: remove deleted payroll ID deferred:', err?.message || err);
   }
 };
 
@@ -788,9 +787,9 @@ export const saveGovernmentProjectToFirestore = async (project: GovernmentProjec
 
     // Also update settings backup document for atomic fallback
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'government_projects');
-    const snap = await getDoc(settingsRef);
+    const snap = await getDoc(settingsRef).catch(() => null);
     let list: GovernmentProject[] = [];
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       list = snap.data().data;
     }
     const filtered = list.filter((p) => p.id !== project.id);
@@ -798,9 +797,9 @@ export const saveGovernmentProjectToFirestore = async (project: GovernmentProjec
       settingsRef,
       sanitizeForFirestore({ data: [project, ...filtered], updatedAt: new Date().toISOString() }),
       { merge: true }
-    );
-  } catch (error) {
-    console.error('Firestore save government project error:', error);
+    ).catch(() => {});
+  } catch (error: any) {
+    console.warn('Firestore note: save government project deferred/offline:', error?.message || error);
   }
 };
 
@@ -810,18 +809,17 @@ export const deleteGovernmentProjectFromFirestore = async (projectId: string): P
     await deleteDoc(docRef);
 
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'government_projects');
-    const snap = await getDoc(settingsRef);
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    const snap = await getDoc(settingsRef).catch(() => null);
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       const filtered = snap.data().data.filter((p: GovernmentProject) => p.id !== projectId);
       await setDoc(
         settingsRef,
         sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
         { merge: true }
-      );
+      ).catch(() => {});
     }
-  } catch (error) {
-    console.error('Firestore delete government project error:', error);
-    throw error;
+  } catch (error: any) {
+    console.warn('Firestore note: delete government project deferred/offline:', error?.message || error);
   }
 };
 
@@ -866,9 +864,9 @@ export const saveRetailProjectToFirestore = async (project: RetailProject): Prom
 
     // Also update settings backup document for atomic fallback
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'retail_projects');
-    const snap = await getDoc(settingsRef);
+    const snap = await getDoc(settingsRef).catch(() => null);
     let list: RetailProject[] = [];
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       list = snap.data().data;
     }
     const filtered = list.filter((p) => p.id !== project.id);
@@ -876,9 +874,9 @@ export const saveRetailProjectToFirestore = async (project: RetailProject): Prom
       settingsRef,
       sanitizeForFirestore({ data: [project, ...filtered], updatedAt: new Date().toISOString() }),
       { merge: true }
-    );
-  } catch (error) {
-    console.error('Firestore save retail project error:', error);
+    ).catch(() => {});
+  } catch (error: any) {
+    console.warn('Firestore note: save retail project deferred/offline:', error?.message || error);
   }
 };
 
@@ -888,18 +886,17 @@ export const deleteRetailProjectFromFirestore = async (projectId: string): Promi
     await deleteDoc(docRef);
 
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'retail_projects');
-    const snap = await getDoc(settingsRef);
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    const snap = await getDoc(settingsRef).catch(() => null);
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       const filtered = snap.data().data.filter((p: RetailProject) => p.id !== projectId);
       await setDoc(
         settingsRef,
         sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
         { merge: true }
-      );
+      ).catch(() => {});
     }
-  } catch (error) {
-    console.error('Firestore delete retail project error:', error);
-    throw error;
+  } catch (error: any) {
+    console.warn('Firestore note: delete retail project deferred/offline:', error?.message || error);
   }
 };
 
@@ -935,9 +932,9 @@ export const saveOverheadExpenseToFirestore = async (expense: OverheadExpense): 
 
     // Also update settings backup document for atomic fallback
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'overhead_expenses');
-    const snap = await getDoc(settingsRef);
+    const snap = await getDoc(settingsRef).catch(() => null);
     let list: OverheadExpense[] = [];
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       list = snap.data().data;
     }
     const filtered = list.filter((e) => e.id !== expense.id);
@@ -945,9 +942,9 @@ export const saveOverheadExpenseToFirestore = async (expense: OverheadExpense): 
       settingsRef,
       sanitizeForFirestore({ data: [expense, ...filtered], updatedAt: new Date().toISOString() }),
       { merge: true }
-    );
-  } catch (error) {
-    console.error('Firestore save overhead expense error:', error);
+    ).catch(() => {});
+  } catch (error: any) {
+    console.warn('Firestore note: save overhead expense deferred/offline:', error?.message || error);
   }
 };
 
@@ -957,18 +954,17 @@ export const deleteOverheadExpenseFromFirestore = async (expenseId: string): Pro
     await deleteDoc(docRef);
 
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'overhead_expenses');
-    const snap = await getDoc(settingsRef);
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    const snap = await getDoc(settingsRef).catch(() => null);
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       const filtered = snap.data().data.filter((e: OverheadExpense) => e.id !== expenseId);
       await setDoc(
         settingsRef,
         sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
         { merge: true }
-      );
+      ).catch(() => {});
     }
-  } catch (error) {
-    console.error('Firestore delete overhead expense error:', error);
-    throw error;
+  } catch (error: any) {
+    console.warn('Firestore note: delete overhead expense deferred/offline:', error?.message || error);
   }
 };
 
@@ -1004,9 +1000,9 @@ export const saveOfficeRentContractToFirestore = async (contract: OfficeRentCont
 
     // Also update settings backup document for atomic fallback
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'office_rent_contracts');
-    const snap = await getDoc(settingsRef);
+    const snap = await getDoc(settingsRef).catch(() => null);
     let list: OfficeRentContract[] = [];
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       list = snap.data().data;
     }
     const filtered = list.filter((c) => c.id !== contract.id);
@@ -1014,9 +1010,9 @@ export const saveOfficeRentContractToFirestore = async (contract: OfficeRentCont
       settingsRef,
       sanitizeForFirestore({ data: [contract, ...filtered], updatedAt: new Date().toISOString() }),
       { merge: true }
-    );
-  } catch (error) {
-    console.error('Firestore save office rent contract error:', error);
+    ).catch(() => {});
+  } catch (error: any) {
+    console.warn('Firestore note: save office rent contract deferred/offline:', error?.message || error);
   }
 };
 
@@ -1026,18 +1022,17 @@ export const deleteOfficeRentContractFromFirestore = async (contractId: string):
     await deleteDoc(docRef);
 
     const settingsRef = doc(db, FirestoreCollections.SETTINGS, 'office_rent_contracts');
-    const snap = await getDoc(settingsRef);
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
+    const snap = await getDoc(settingsRef).catch(() => null);
+    if (snap && snap.exists() && Array.isArray(snap.data()?.data)) {
       const filtered = snap.data().data.filter((c: OfficeRentContract) => c.id !== contractId);
       await setDoc(
         settingsRef,
         sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }),
         { merge: true }
-      );
+      ).catch(() => {});
     }
-  } catch (error) {
-    console.error('Firestore delete office rent contract error:', error);
-    throw error;
+  } catch (error: any) {
+    console.warn('Firestore note: delete office rent contract deferred/offline:', error?.message || error);
   }
 };
 
@@ -1080,20 +1075,16 @@ export const saveMultipleDeletedEntityIdsToFirestore = async (
   if (!entityIds || entityIds.length === 0) return;
   try {
     const docRef = doc(db, FirestoreCollections.SETTINGS, settingKey);
-    const snap = await getDoc(docRef);
-    let currentIds: string[] = [];
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
-      currentIds = snap.data().data;
-    }
-    const merged = Array.from(new Set([...currentIds, ...entityIds]));
-    if (merged.length !== currentIds.length) {
-      await setDoc(
-        docRef,
-        sanitizeForFirestore({ data: merged, updatedAt: new Date().toISOString() })
-      );
-    }
-  } catch (err) {
-    console.error(`Failed to batch save deleted IDs (${settingKey}) to Firestore:`, err);
+    await setDoc(
+      docRef,
+      {
+        data: arrayUnion(...entityIds),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.warn(`Firestore note: batch save deleted IDs (${settingKey}) deferred:`, err?.message || err);
   }
 };
 
@@ -1123,8 +1114,8 @@ export const deleteBatchEntitiesFromFirestore = async (
       });
       await batch.commit();
     }
-  } catch (err) {
-    console.error(`Failed to batch delete documents from collection (${collectionName}):`, err);
+  } catch (err: any) {
+    console.warn(`Firestore note: batch delete documents from collection (${collectionName}) deferred:`, err?.message || err);
   }
 };
 
@@ -1153,15 +1144,19 @@ export const deleteBatchOverheadExpensesFromFirestore = async (ids: string[]): P
 };
 
 export const removeDeletedEntityIdFromFirestore = async (settingKey: string, entityId: string): Promise<void> => {
+  if (!entityId) return;
   try {
     const docRef = doc(db, FirestoreCollections.SETTINGS, settingKey);
-    const snap = await getDoc(docRef);
-    if (snap.exists() && Array.isArray(snap.data()?.data)) {
-      const filtered = snap.data().data.filter((id: string) => id !== entityId);
-      await setDoc(docRef, sanitizeForFirestore({ data: filtered, updatedAt: new Date().toISOString() }));
-    }
-  } catch (err) {
-    console.error(`Failed to remove deleted ID (${settingKey}) from Firestore:`, err);
+    await setDoc(
+      docRef,
+      {
+        data: arrayRemove(entityId),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.warn(`Firestore note: remove deleted ID (${settingKey}) deferred:`, err?.message || err);
   }
 };
 

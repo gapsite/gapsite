@@ -30,6 +30,8 @@ import {
   Tag,
   CreditCard,
   Gift,
+  Database,
+  Server,
 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { MainTabType } from './Sidebar';
@@ -49,6 +51,8 @@ interface HeaderProps {
   onOpenTransactionCategoryManager?: () => void;
   onOpenPaymentChannelManager?: () => void;
   onOpenUserProfile?: () => void;
+  onOpenBackupRestore?: () => void;
+  onOpenHostingerMysql?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -66,6 +70,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTransactionCategoryManager,
   onOpenPaymentChannelManager,
   onOpenUserProfile,
+  onOpenBackupRestore,
+  onOpenHostingerMysql,
 }) => {
   const {
     projects,
@@ -321,6 +327,38 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Services</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-200/80 text-amber-950">
                   {consultingServices.length}
+                </span>
+              </button>
+            )}
+
+            {/* Backup & Restore Data JSON Quick Action Button */}
+            {onOpenBackupRestore && (isAdminMaster || isMasterAdmin) && (
+              <button
+                id="btn-header-backup-restore"
+                onClick={onOpenBackupRestore}
+                className="p-2 rounded-xl transition-colors hidden md:flex items-center gap-1.5 text-xs font-semibold border cursor-pointer text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border-emerald-300"
+                title="Cadangkan atau Pulihkan Seluruh Basis Data (Backup & Restore JSON)"
+              >
+                <Database className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Backup / Restore</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-emerald-200/80 text-emerald-950">
+                  JSON
+                </span>
+              </button>
+            )}
+
+            {/* Hostinger MySQL Database Quick Action Button */}
+            {onOpenHostingerMysql && (isAdminMaster || isMasterAdmin) && (
+              <button
+                id="btn-header-hostinger-mysql"
+                onClick={onOpenHostingerMysql}
+                className="p-2 rounded-xl transition-colors hidden lg:flex items-center gap-1.5 text-xs font-semibold border cursor-pointer text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border-indigo-300"
+                title="Status & Sinkronisasi Hostinger MySQL"
+              >
+                <Server className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Hostinger MySQL</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-indigo-200/80 text-indigo-950">
+                  DB
                 </span>
               </button>
             )}
@@ -639,7 +677,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setShowUserMenu(false);
                         onOpenLetterheadManager();
                       }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-2 border cursor-pointer text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border-emerald-300"
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-1.5 border cursor-pointer text-emerald-950 bg-emerald-50 hover:bg-emerald-100 border-emerald-300"
                     >
                       <span className="flex items-center gap-2">
                         <Printer className="w-4 h-4 text-emerald-600" />
@@ -647,6 +685,46 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                       <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-emerald-200 text-emerald-950">
                         admin.master
+                      </span>
+                    </button>
+                  )}
+
+                  {onOpenBackupRestore && (isAdminMaster || isMasterAdmin) && (
+                    <button
+                      id="btn-header-backup-restore-dropdown"
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenBackupRestore();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-1.5 border cursor-pointer text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border-emerald-300 shadow-xs"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Database className="w-4 h-4 text-emerald-600" />
+                        <span>Backup & Restore Data</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-emerald-200 text-emerald-950">
+                        JSON
+                      </span>
+                    </button>
+                  )}
+
+                  {onOpenHostingerMysql && (isAdminMaster || isMasterAdmin) && (
+                    <button
+                      id="btn-header-hostinger-mysql-dropdown"
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenHostingerMysql();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-2 border cursor-pointer text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border-indigo-300 shadow-xs"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Server className="w-4 h-4 text-indigo-600" />
+                        <span>Hostinger MySQL Database</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-indigo-200 text-indigo-950">
+                        MySQL
                       </span>
                     </button>
                   )}

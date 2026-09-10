@@ -34,6 +34,8 @@ import { UserProfileModal } from './components/UserProfileModal';
 import { CompanyLetterheadModal } from './components/CompanyLetterheadModal';
 import { TransactionCategoryManagerModal } from './components/finance/TransactionCategoryManagerModal';
 import { PaymentChannelManagerModal } from './components/finance/PaymentChannelManagerModal';
+import { BackupRestoreModal } from './components/BackupRestoreModal';
+import { HostingerMysqlModal } from './components/HostingerMysqlModal';
 
 const DashboardContent: React.FC = () => {
   const { selectedProject, setSelectedProjectId, isAuthenticated, hasPermission, currentUser } = useProjects();
@@ -60,6 +62,8 @@ const DashboardContent: React.FC = () => {
   const [isCompanyLetterheadOpen, setIsCompanyLetterheadOpen] = useState(false);
   const [isTransactionCategoryManagerOpen, setIsTransactionCategoryManagerOpen] = useState(false);
   const [isPaymentChannelManagerOpen, setIsPaymentChannelManagerOpen] = useState(false);
+  const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
+  const [isHostingerMysqlOpen, setIsHostingerMysqlOpen] = useState(false);
 
   // Selected state for disposition modal
   const [dispositionTargetProject, setDispositionTargetProject] = useState<ConsultingProject | null>(null);
@@ -115,6 +119,8 @@ const DashboardContent: React.FC = () => {
         onOpenTransactionCategoryManager={() => setIsTransactionCategoryManagerOpen(true)}
         onOpenPaymentChannelManager={() => setIsPaymentChannelManagerOpen(true)}
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
+        onOpenBackupRestore={() => setIsBackupRestoreOpen(true)}
+        onOpenHostingerMysql={() => setIsHostingerMysqlOpen(true)}
       />
 
       {/* Main Admin Wrapper */}
@@ -143,6 +149,8 @@ const DashboardContent: React.FC = () => {
           onOpenTransactionCategoryManager={() => setIsTransactionCategoryManagerOpen(true)}
           onOpenPaymentChannelManager={() => setIsPaymentChannelManagerOpen(true)}
           onOpenUserProfile={() => setIsUserProfileOpen(true)}
+          onOpenBackupRestore={() => setIsBackupRestoreOpen(true)}
+          onOpenHostingerMysql={() => setIsHostingerMysqlOpen(true)}
         />
 
         {/* Main Workspace Body */}
@@ -451,6 +459,18 @@ const DashboardContent: React.FC = () => {
         <PaymentChannelManagerModal
           isOpen={isPaymentChannelManagerOpen}
           onClose={() => setIsPaymentChannelManagerOpen(false)}
+        />
+
+        {/* 13. Full JSON Data Backup & Restore Modal */}
+        <BackupRestoreModal
+          isOpen={isBackupRestoreOpen}
+          onClose={() => setIsBackupRestoreOpen(false)}
+        />
+
+        {/* 14. Hostinger MySQL Database Manager Modal */}
+        <HostingerMysqlModal
+          isOpen={isHostingerMysqlOpen}
+          onClose={() => setIsHostingerMysqlOpen(false)}
         />
       </ErrorBoundary>
     </div>
