@@ -113,6 +113,7 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
   // Project Modals state
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<RetailProject | null>(null);
+  const [autoRecordInitialPayment, setAutoRecordInitialPayment] = useState(true);
 
   // Invoice Generation Modal state
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
@@ -518,11 +519,11 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
             <button
               onClick={handleSyncToFinance}
               className="px-3.5 py-2 bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
-              title="Sinkronkan seluruh termin invoice/lunas ke Buku Kas & Pajak"
+              title="Sinkronkan seluruh termin invoice/lunas ke Buku Kas (pendapatan & potongan PPh) dan Modul Pajak (PPh 23 & PPN)"
               id="btn-sync-retail-to-finance"
             >
               <RefreshCw className="w-4 h-4 text-emerald-400" />
-              <span>Sinkron ke Arus Kas</span>
+              <span>Sinkron ke Kas & Pajak</span>
             </button>
 
             {onOpenReports && (
@@ -1315,53 +1316,39 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                   });
                   alert('Kontrak proyek retail berhasil diperbarui.');
                 } else {
-                  // Auto generate initial milestones based on paymentScheme
-                  let milestones: Omit<RetailMilestone, 'id' | 'projectId' | 'createdAt'>[] = [];
+                  // Helper to calculate DPP, PPN, PPh and net disbursement
+                  const computeMilestoneAmounts = (gross: number, termNum: number, title: string, percentage: number, targetDate: string) => {
+                    const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
+                    const ppn = pricingType === 'INCLUDE_PPN' ? Math.round(gross - dpp) : pricingType === 'EXCLUDE_PPN' ? Math.round(dpp * 0.11) : 0;
+                    const pph = pphType === 'PPH_23' ? Math.round(dpp * 0.02) : pphType === 'PPH_FINAL_UMKM' ? Math.round(gross * 0.005) : 0;
+                    const net = pricingType === 'EXCLUDE_PPN' ? Math.round(gross + ppn - pph) : Math.round(gross - pph);
+                    return {
+                      termNumber: termNum,
+                      title,
+                      percentage,
+                      grossAmountIDR: gross,
+                      dppAmountIDR: dpp,
+                      ppnAmountIDR: ppn,
+                      pphAmountIDR: pph,
+                      netDisbursementIDR: net,
+                      targetDate,
+                      status: 'BELUM_DITAGIH' as const,
+                    };
+                  };
+
+                  let milestones: any[] = [];
                   const nowStr = new Date().toISOString().slice(0, 10);
 
                   if (paymentScheme === 'LUNAS_DIMUKA') {
                     milestones = [
-                      {
-                        termNumber: 1,
-                        title: 'Pembayaran Lunas Dimuka (100% DP)',
-                        percentage: 100,
-                        grossAmountIDR: totalContractValueIDR,
-                        dppAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(totalContractValueIDR / 1.11) : totalContractValueIDR,
-                        ppnAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(totalContractValueIDR - totalContractValueIDR / 1.11) : pricingType === 'EXCLUDE_PPN' ? Math.round(totalContractValueIDR * 0.11) : 0,
-                        pphAmountIDR: pphType === 'PPH_23' ? Math.round((pricingType === 'INCLUDE_PPN' ? Math.round(totalContractValueIDR / 1.11) : totalContractValueIDR) * 0.02) : 0,
-                        netDisbursementIDR: totalContractValueIDR,
-                        targetDate: nowStr,
-                        status: 'BELUM_DITAGIH',
-                      },
+                      computeMilestoneAmounts(totalContractValueIDR, 1, 'Pembayaran Lunas Dimuka (100% DP)', 100, nowStr),
                     ];
                   } else if (paymentScheme === 'TERMIN_2') {
                     const dp = Math.round(totalContractValueIDR * 0.5);
                     const pelunasan = totalContractValueIDR - dp;
                     milestones = [
-                      {
-                        termNumber: 1,
-                        title: 'Termin 1 (Uang Muka 50% SPK)',
-                        percentage: 50,
-                        grossAmountIDR: dp,
-                        dppAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(dp / 1.11) : dp,
-                        ppnAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(dp - dp / 1.11) : pricingType === 'EXCLUDE_PPN' ? Math.round(dp * 0.11) : 0,
-                        pphAmountIDR: pphType === 'PPH_23' ? Math.round((pricingType === 'INCLUDE_PPN' ? Math.round(dp / 1.11) : dp) * 0.02) : 0,
-                        netDisbursementIDR: dp,
-                        targetDate: nowStr,
-                        status: 'BELUM_DITAGIH',
-                      },
-                      {
-                        termNumber: 2,
-                        title: 'Termin 2 (Pelunasan 50% BAST & Sertifikat)',
-                        percentage: 50,
-                        grossAmountIDR: pelunasan,
-                        dppAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(pelunasan / 1.11) : pelunasan,
-                        ppnAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(pelunasan - pelunasan / 1.11) : pricingType === 'EXCLUDE_PPN' ? Math.round(pelunasan * 0.11) : 0,
-                        pphAmountIDR: pphType === 'PPH_23' ? Math.round((pricingType === 'INCLUDE_PPN' ? Math.round(pelunasan / 1.11) : pelunasan) * 0.02) : 0,
-                        netDisbursementIDR: pelunasan,
-                        targetDate: targetCompletionDate || nowStr,
-                        status: 'BELUM_DITAGIH',
-                      },
+                      computeMilestoneAmounts(dp, 1, 'Termin 1 (Uang Muka 50% SPK)', 50, nowStr),
+                      computeMilestoneAmounts(pelunasan, 2, 'Termin 2 (Pelunasan 50% BAST & Sertifikat)', 50, targetCompletionDate || nowStr),
                     ];
                   } else {
                     // Default TERMIN_3 (30% - 40% - 30%)
@@ -1369,43 +1356,25 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                     const t2 = Math.round(totalContractValueIDR * 0.4);
                     const t3 = totalContractValueIDR - t1 - t2;
                     milestones = [
-                      {
-                        termNumber: 1,
-                        title: 'Termin 1 (Uang Muka 30% SPK)',
-                        percentage: 30,
-                        grossAmountIDR: t1,
-                        dppAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(t1 / 1.11) : t1,
-                        ppnAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(t1 - t1 / 1.11) : pricingType === 'EXCLUDE_PPN' ? Math.round(t1 * 0.11) : 0,
-                        pphAmountIDR: pphType === 'PPH_23' ? Math.round((pricingType === 'INCLUDE_PPN' ? Math.round(t1 / 1.11) : t1) * 0.02) : 0,
-                        netDisbursementIDR: t1,
-                        targetDate: nowStr,
-                        status: 'BELUM_DITAGIH',
-                      },
-                      {
-                        termNumber: 2,
-                        title: 'Termin 2 (Progress 40% Audit LVI Selesai)',
-                        percentage: 40,
-                        grossAmountIDR: t2,
-                        dppAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(t2 / 1.11) : t2,
-                        ppnAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(t2 - t2 / 1.11) : pricingType === 'EXCLUDE_PPN' ? Math.round(t2 * 0.11) : 0,
-                        pphAmountIDR: pphType === 'PPH_23' ? Math.round((pricingType === 'INCLUDE_PPN' ? Math.round(t2 / 1.11) : t2) * 0.02) : 0,
-                        netDisbursementIDR: t2,
-                        targetDate: nowStr,
-                        status: 'BELUM_DITAGIH',
-                      },
-                      {
-                        termNumber: 3,
-                        title: 'Termin 3 (Pelunasan 30% Penerbitan Sertifikat TKDN)',
-                        percentage: 30,
-                        grossAmountIDR: t3,
-                        dppAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(t3 / 1.11) : t3,
-                        ppnAmountIDR: pricingType === 'INCLUDE_PPN' ? Math.round(t3 - t3 / 1.11) : pricingType === 'EXCLUDE_PPN' ? Math.round(t3 * 0.11) : 0,
-                        pphAmountIDR: pphType === 'PPH_23' ? Math.round((pricingType === 'INCLUDE_PPN' ? Math.round(t3 / 1.11) : t3) * 0.02) : 0,
-                        netDisbursementIDR: t3,
-                        targetDate: targetCompletionDate || nowStr,
-                        status: 'BELUM_DITAGIH',
-                      },
+                      computeMilestoneAmounts(t1, 1, 'Termin 1 (Uang Muka 30% SPK)', 30, nowStr),
+                      computeMilestoneAmounts(t2, 2, 'Termin 2 (Progress 40% Audit LVI Selesai)', 40, nowStr),
+                      computeMilestoneAmounts(t3, 3, 'Termin 3 (Pelunasan 30% Penerbitan Sertifikat TKDN)', 30, targetCompletionDate || nowStr),
                     ];
+                  }
+
+                  const recordInitialPaymentToCash = Boolean(fd.get('recordInitialPaymentToCash'));
+                  const initialPaymentChannelId = (fd.get('initialPaymentChannelId') as string) || undefined;
+                  const initialPaymentDate = (fd.get('initialPaymentDate') as string) || undefined;
+                  const initialPaymentBupotNumber = (fd.get('initialPaymentBupotNumber') as string) || undefined;
+                  const initialPaymentRefNumber = (fd.get('initialPaymentRefNumber') as string) || undefined;
+
+                  if (recordInitialPaymentToCash && milestones.length > 0) {
+                    milestones[0].status = 'LUNAS';
+                    milestones[0].paidAmountIDR = milestones[0].netDisbursementIDR;
+                    milestones[0].paymentDate = initialPaymentDate || nowStr;
+                    milestones[0].paymentChannelId = initialPaymentChannelId || 'BANK_TRANSFER_BCA';
+                    milestones[0].referenceNumber = initialPaymentRefNumber;
+                    milestones[0].bupotPphNumber = initialPaymentBupotNumber;
                   }
 
                   const res = addRetailProject({
@@ -1426,6 +1395,11 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                     status: 'AKTIF',
                     milestones: milestones as any,
                     notes,
+                    recordInitialPaymentToCash,
+                    initialPaymentChannelId,
+                    initialPaymentDate,
+                    initialPaymentBupotNumber,
+                    initialPaymentRefNumber,
                   });
 
                   alert(res.message || 'Kontrak proyek retail berhasil didaftarkan!');
@@ -1647,6 +1621,90 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-teal-500 outline-none"
                 />
               </div>
+
+              {/* Field 7: Otomatisasi Kas & Pajak Uang Muka / Termin 1 */}
+              {!editingProject && (
+                <div className="bg-gradient-to-br from-teal-50/80 to-emerald-50/80 p-4 rounded-xl border border-teal-200/90 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="recordInitialPaymentToCash"
+                      name="recordInitialPaymentToCash"
+                      checked={autoRecordInitialPayment}
+                      onChange={(e) => setAutoRecordInitialPayment(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500 cursor-pointer"
+                    />
+                    <label htmlFor="recordInitialPaymentToCash" className="cursor-pointer">
+                      <span className="text-xs font-bold text-slate-900 block flex items-center gap-2">
+                        <span>Otomatis Bukukan Uang Muka / Termin 1 ke Buku Kas & Modul Pajak</span>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-300/60">
+                          Rekomendasi
+                        </span>
+                      </span>
+                      <span className="text-[11px] text-slate-600 block mt-0.5 leading-relaxed">
+                        Jika diaktifkan, uang muka/termin pertama otomatis dibukukan ke Buku Kas (pendapatan bruto dicatat dan potongan PPh 23 otomatis dikurangkan sebagai pengeluaran pajak), serta Bukti Potong PPh 23 masuk ke Menu Pajak.
+                      </span>
+                    </label>
+                  </div>
+
+                  {autoRecordInitialPayment && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-teal-200/70">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Rekening Kas / Bank Penerima <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          name="initialPaymentChannelId"
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+                          defaultValue={paymentChannels[0]?.id || 'BANK_TRANSFER_BCA'}
+                        >
+                          {paymentChannels.map((ch) => (
+                            <option key={ch.id} value={ch.id}>
+                              {ch.name} ({ch.accountNumber ? `${ch.type} - ${ch.accountNumber}` : ch.type})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Tanggal Pembayaran Masuk
+                        </label>
+                        <input
+                          type="date"
+                          name="initialPaymentDate"
+                          defaultValue={new Date().toISOString().slice(0, 10)}
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          No. Bukti Potong PPh 23 (Opsional)
+                        </label>
+                        <input
+                          type="text"
+                          name="initialPaymentBupotNumber"
+                          placeholder="Contoh: BUPOT-23-2026-001"
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          No. Referensi Transfer / Rekening (Opsional)
+                        </label>
+                        <input
+                          type="text"
+                          name="initialPaymentRefNumber"
+                          placeholder="Contoh: TRF-BCA-981240"
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Actions Footer */}
               <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-2.5">

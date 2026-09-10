@@ -573,7 +573,13 @@ interface ProjectContextType {
   // Proyek Retail B2B / Korporasi Swasta (Retail Projects, SPK, Invoicing, PPN 11% & PPh 23)
   retailProjects: RetailProject[];
   addRetailProject: (
-    data: Omit<RetailProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
+    data: Omit<RetailProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'> & {
+      recordInitialPaymentToCash?: boolean;
+      initialPaymentChannelId?: string;
+      initialPaymentDate?: string;
+      initialPaymentBupotNumber?: string;
+      initialPaymentRefNumber?: string;
+    }
   ) => { success: boolean; project?: RetailProject; message?: string };
   updateRetailProject: (
     id: string,
@@ -8157,10 +8163,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // =========================================================================
 
   const addRetailProject = (
-    data: Omit<RetailProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'>
+    data: Omit<RetailProject, 'id' | 'createdAt' | 'createdBy' | 'totalBilledAmountIDR' | 'totalReceivedAmountIDR' | 'totalOutstandingAmountIDR'> & {
+      recordInitialPaymentToCash?: boolean;
+      initialPaymentChannelId?: string;
+      initialPaymentDate?: string;
+      initialPaymentBupotNumber?: string;
+      initialPaymentRefNumber?: string;
+    }
   ): { success: boolean; project?: RetailProject; message?: string } => {
     const now = new Date().toISOString();
     const id = generateRetailProjectId();
+    const shouldRecordCash = Boolean(data.recordInitialPaymentToCash);
+    const initialPayChannel = data.initialPaymentChannelId || (paymentChannels && paymentChannels.length > 0 ? paymentChannels[0].id : 'BANK_TRANSFER_BCA');
+    const initialPayDate = data.initialPaymentDate || now.slice(0, 10);
+    const initialBupot = data.initialPaymentBupotNumber;
+    const initialRef = data.initialPaymentRefNumber;
 
     // Calculate milestone financials & totals
     const milestones: RetailMilestone[] = (data.milestones || []).map((m, idx) => {
@@ -8187,6 +8204,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ? Math.round(gross + ppnAmount - pphAmount)
         : Math.round(gross - pphAmount);
 
+      // Determine initial milestone status
+      const isLunas = (shouldRecordCash && idx === 0) || m.status === 'LUNAS';
+      const milestoneStatus: RetailMilestoneStatus = isLunas ? 'LUNAS' : (m.status || 'BELUM_DITAGIH');
+
       return {
         ...m,
         id: m.id || generateRetailMilestoneId(id, idx + 1),
@@ -8201,10 +8222,218 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         pphRatePercent: pphRate,
         pphAmountIDR: pphAmount,
         netDisbursementIDR: net,
-        status: m.status || 'BELUM_DITAGIH',
+        status: milestoneStatus,
+        paidAmountIDR: isLunas ? (m.paidAmountIDR || net) : undefined,
+        paymentDate: isLunas ? (m.paymentDate || initialPayDate) : undefined,
+        paymentChannelId: isLunas ? (m.paymentChannelId || initialPayChannel) : undefined,
+        referenceNumber: isLunas ? (m.referenceNumber || initialRef || `TRF-${Date.now().toString().slice(-6)}`) : m.referenceNumber,
+        bupotPphNumber: isLunas ? (m.bupotPphNumber || initialBupot) : m.bupotPphNumber,
         createdAt: m.createdAt || now,
       };
     });
+
+    // Automatically record transactions and tax obligations
+    const initialTransactions: FinancialTransaction[] = [];
+    const initialTaxes: TaxObligation[] = [];
+
+    milestones.forEach((m, idx) => {
+      const gross = m.grossAmountIDR;
+      const ppn = m.ppnAmountIDR || 0;
+      const pph = m.pphAmountIDR || 0;
+      const net = m.netDisbursementIDR || (gross - pph);
+      const billing = m.pricingType === 'EXCLUDE_PPN' ? gross + ppn : gross;
+      const payDate = m.paymentDate || initialPayDate;
+      const payChannel = m.paymentChannelId || initialPayChannel;
+      const dateObj = new Date(payDate || new Date());
+      const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+      const taxYear = dateObj.getFullYear();
+      const taxMonth = dateObj.getMonth() + 1;
+
+      if (m.status === 'LUNAS') {
+        // 1. Kas Masuk (INCOME) untuk Penerimaan Termin Retail
+        const incomeTxId = `trx-retail-inc-${id}-${m.id}`;
+        const seqInc = Math.floor(100 + Math.random() * 900);
+        const incomeTx: FinancialTransaction = {
+          id: incomeTxId,
+          transactionNumber: `TRX-RTL-${yyyymm}-${seqInc}`,
+          type: 'INCOME',
+          category: 'RETAIL_PROJECT_INCOME',
+          amountIDR: pph > 0 ? billing : net,
+          date: payDate,
+          description: `Penerimaan Pembayaran Termin ${m.termNumber}: ${m.title} - ${data.projectName} (${data.clientName})`,
+          clientOrVendorName: data.clientName,
+          paymentMethod: payChannel as any,
+          referenceNumber: m.referenceNumber || `TRF-${Date.now().toString().slice(-6)}`,
+          status: 'CLEARED',
+          notes: `Pembayaran Klien Retail: ${data.clientName} | Termin ${m.termNumber} | Bruto DPP: Rp ${m.dppAmountIDR?.toLocaleString('id-ID')} | PPN 11%: Rp ${ppn.toLocaleString('id-ID')} | Potongan PPh 23: Rp ${pph.toLocaleString('id-ID')} | Kas Bersih Diterima: Rp ${net.toLocaleString('id-ID')}`,
+          projectId: id,
+          recordedBy: currentUser.name || 'Finance Officer',
+          createdAt: now,
+        };
+        initialTransactions.push(incomeTx);
+        m.transactionId = incomeTx.id;
+
+        // 2. Kas Keluar / Potongan Pajak PPh 23 oleh Klien (EXPENSE: TAX_PPH_PPN)
+        let taxTxId: string | undefined;
+        if (pph > 0) {
+          taxTxId = `trx-retail-tax-${id}-${m.id}`;
+          const seqTax = Math.floor(100 + Math.random() * 900);
+          const taxTx: FinancialTransaction = {
+            id: taxTxId,
+            transactionNumber: `TRX-TAX-${yyyymm}-${seqTax}`,
+            type: 'EXPENSE',
+            category: 'TAX_PPH_PPN',
+            amountIDR: pph,
+            date: payDate,
+            description: `Potongan PPh ${m.pphType === 'PPH_FINAL_UMKM' ? 'Final UMKM' : '23'} oleh Klien (${data.clientName}) - ${m.title}`,
+            clientOrVendorName: data.clientName,
+            paymentMethod: payChannel as any,
+            referenceNumber: m.bupotPphNumber ? `BUPOT-${m.bupotPphNumber}` : `TAX-BUPOT-${id.slice(-4).toUpperCase()}`,
+            status: 'CLEARED',
+            notes: `Pemotongan PPh langsung oleh Klien (${data.clientName}) atas termin proyek retail ${data.projectName}. Saldo kas rekening penerima terpotong PPh sebesar Rp ${pph.toLocaleString('id-ID')}. Bukti Potong: ${m.bupotPphNumber || '-'}`,
+            projectId: id,
+            recordedBy: currentUser.name || 'Finance Officer',
+            createdAt: now,
+          };
+          initialTransactions.push(taxTx);
+        }
+
+        // 3. Masuk Menu Pajak: Bukti Potong PPh 23 (Status PAID / Kredit Pajak)
+        if (pph > 0) {
+          const taxPphId = `tax-pph-rtl-${id}-${m.id}`;
+          const bupotNum = m.bupotPphNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`;
+          const taxObligationPph: TaxObligation = {
+            id: taxPphId,
+            taxType: (m.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
+            taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
+            taxYear,
+            taxMonth,
+            title: `Bukti Potong PPh 23 - ${m.title} (${data.clientName})`,
+            description: `Bukti Potong PPh 23 - ${m.title} (${data.clientName})`,
+            taxAmount: pph,
+            paidAmount: pph,
+            remainingAmount: 0,
+            status: 'PAID',
+            paidByClient: true,
+            clientWithholdingNumber: bupotNum,
+            clientWithholdingDate: payDate,
+            withholdingTaxPayerName: data.clientName,
+            counterpartyName: data.clientName,
+            dueDate: payDate,
+            paidAt: payDate,
+            transactionId: taxTxId,
+            notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${data.clientName} atas kontrak ${data.projectName}. Bukti potong resmi kredit pajak SPT Tahunan Badan.`,
+            createdAt: now,
+            createdBy: currentUser.name || 'Finance Officer',
+          };
+          initialTaxes.push(taxObligationPph);
+          m.taxObligationPphId = taxPphId;
+        }
+
+        // 4. Masuk Menu Pajak: PPN Keluaran jika ada
+        if (ppn > 0) {
+          const taxPpnId = `tax-ppn-rtl-${id}-${m.id}`;
+          const taxObligationPpn: TaxObligation = {
+            id: taxPpnId,
+            taxType: 'PPN',
+            taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
+            taxYear,
+            taxMonth,
+            title: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
+            description: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
+            taxAmount: ppn,
+            ppnOutputAmount: ppn,
+            paidAmount: ppn,
+            remainingAmount: 0,
+            status: 'PAID',
+            counterpartyName: data.clientName,
+            dueDate: payDate,
+            paidAt: payDate,
+            taxInvoiceNumber: m.fakturPajakNumber,
+            notes: `PPN Keluaran 11% atas kontrak retail ${data.projectName} (${data.clientName}). Faktur pajak standar.`,
+            createdAt: now,
+            createdBy: currentUser.name || 'Finance Officer',
+          };
+          initialTaxes.push(taxObligationPpn);
+          m.taxObligationPpnId = taxPpnId;
+        }
+      } else {
+        // Status belum lunas (BELUM_DITAGIH atau INVOICE_TERBIT)
+        // Tetap daftarkan kewajiban / estimasi kredit pajak ke Menu Pajak!
+        if (pph > 0) {
+          const taxPphId = `tax-pph-rtl-${id}-${m.id}`;
+          const taxObligationPph: TaxObligation = {
+            id: taxPphId,
+            taxType: (m.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
+            taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
+            taxYear,
+            taxMonth,
+            title: `Potongan PPh 23 (Kredit Pajak) - ${m.title} (${data.clientName})`,
+            description: `Potongan PPh 23 (Kredit Pajak) - ${m.title} (${data.clientName})`,
+            taxAmount: pph,
+            paidAmount: 0,
+            remainingAmount: pph,
+            status: 'TERHUTANG',
+            paidByClient: true,
+            withholdingTaxPayerName: data.clientName,
+            counterpartyName: data.clientName,
+            dueDate: m.targetDate || payDate,
+            notes: `Estimasi Kredit Pajak PPh 23 dipotong oleh Klien ${data.clientName} atas kontrak ${data.projectName}. Menjadi kredit pajak pada SPT Tahunan PPh Badan setelah bukti potong diterima.`,
+            createdAt: now,
+            createdBy: currentUser.name || 'Finance Officer',
+          };
+          initialTaxes.push(taxObligationPph);
+          m.taxObligationPphId = taxPphId;
+        }
+
+        if (ppn > 0) {
+          const taxPpnId = `tax-ppn-rtl-${id}-${m.id}`;
+          const taxObligationPpn: TaxObligation = {
+            id: taxPpnId,
+            taxType: 'PPN',
+            taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
+            taxYear,
+            taxMonth,
+            title: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
+            description: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
+            taxAmount: ppn,
+            ppnOutputAmount: ppn,
+            paidAmount: 0,
+            remainingAmount: ppn,
+            status: 'TERHUTANG',
+            counterpartyName: data.clientName,
+            dueDate: m.targetDate || payDate,
+            notes: `PPN Keluaran 11% atas kontrak retail ${data.projectName} (${data.clientName}). Faktur pajak standar.`,
+            createdAt: now,
+            createdBy: currentUser.name || 'Finance Officer',
+          };
+          initialTaxes.push(taxObligationPpn);
+          m.taxObligationPpnId = taxPpnId;
+        }
+      }
+    });
+
+    // Save newly created transactions to Cash Ledger
+    if (initialTransactions.length > 0) {
+      setTransactions((prev) => {
+        const updated = deduplicateById([...initialTransactions, ...prev]);
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        initialTransactions.forEach((t) => saveTransactionToFirestore(t));
+        return updated;
+      });
+    }
+
+    // Save newly created tax obligations to Tax Management
+    if (initialTaxes.length > 0) {
+      setTaxObligations((prev) => {
+        const updated = deduplicateById([...initialTaxes, ...prev]);
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        initialTaxes.forEach((t) => saveSettingsToFirestore('tax_obligations', [t, ...prev]));
+        return updated;
+      });
+    }
 
     const totalBilled = milestones
       .filter((m) => m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
@@ -8241,14 +8470,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addActivity(
       newProject.linkedCrmProjectId || newProject.id,
       'Proyek Retail Baru Terdaftar',
-      `Menambahkan Kontrak Retail "${newProject.projectName}" (${newProject.clientName}) senilai Rp ${newProject.totalContractValueIDR.toLocaleString('id-ID')}`,
+      `Menambahkan Kontrak Retail "${newProject.projectName}" (${newProject.clientName}) senilai Rp ${newProject.totalContractValueIDR.toLocaleString('id-ID')}${initialTransactions.length > 0 ? ' dan otomatis membukukan transaksi kas & potongan PPh' : ''}`,
       'STATUS_CHANGE'
     );
 
     return {
       success: true,
       project: newProject,
-      message: `Kontrak Proyek Retail "${newProject.projectName}" berhasil didaftarkan ke sistem!`,
+      message: `Kontrak Proyek Retail "${newProject.projectName}" berhasil didaftarkan dan otomatis terintegrasi ke Menu Pajak serta Buku Kas!`,
     };
   };
 
@@ -8459,63 +8688,130 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const effectiveDueDate = milestone.invoiceDueDate || milestone.targetDate || (milestone.invoiceDate ? calculateRetailInvoiceDueDate(milestone.invoiceDate, RETAIL_PAYMENT_TERMS_DAYS) : '');
     const delayAnalysis = evaluateRetailPaymentDelay(milestone.invoiceDate, effectiveDueDate, payDate);
 
-    // 1. Post to Cash Ledger (Finance & Cashflow) as RETAIL_PROJECT_INCOME
+    // 1. Post to Cash Ledger (Finance & Cashflow) as RETAIL_PROJECT_INCOME and TAX_PPH_PPN
+    let taxTx: FinancialTransaction | undefined;
+    const pphAmount = milestone.pphAmountIDR || 0;
+    const billingAmount = milestone.pricingType === 'EXCLUDE_PPN'
+      ? milestone.grossAmountIDR + (milestone.ppnAmountIDR || 0)
+      : milestone.grossAmountIDR;
+
     if (paymentData.syncToCashLedger !== false) {
-      linkedTx = addTransaction({
-        date: payDate,
-        type: 'INCOME',
-        category: 'RETAIL_PROJECT_INCOME',
-        amountIDR: amountReceived,
-        description: `Penerimaan Pembayaran Termin ${milestone.termNumber}: ${milestone.title} - ${project.projectName} (${project.clientName})`,
-        clientOrVendorName: project.clientName,
-        projectId: project.linkedCrmProjectId || project.id,
-        paymentMethod: paymentData.paymentChannelId as any,
-        referenceNumber: paymentData.referenceNumber,
-        status: 'CLEARED',
-        recordedBy: currentUser.name,
-        notes: `Pembayaran Klien Retail: ${project.clientName} | No. Inv: ${milestone.invoiceNumber || '-'} | Gross DPP: Rp ${milestone.dppAmountIDR.toLocaleString('id-ID')} | PPN 11%: Rp ${milestone.ppnAmountIDR.toLocaleString('id-ID')} | Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')} | Kas Masuk: Rp ${amountReceived.toLocaleString('id-ID')}${paymentData.notes ? ` | Catatan: ${paymentData.notes}` : ''}${delayAnalysis.isDelayed ? ` | ${delayAnalysis.delayNotes}` : ''}`,
-      });
+      if (pphAmount > 0) {
+        // A. Kas Masuk (INCOME) untuk Nilai Tagihan Termin
+        linkedTx = addTransaction({
+          date: payDate,
+          type: 'INCOME',
+          category: 'RETAIL_PROJECT_INCOME',
+          amountIDR: billingAmount,
+          description: `Penerimaan Pembayaran Termin ${milestone.termNumber}: ${milestone.title} - ${project.projectName} (${project.clientName})`,
+          clientOrVendorName: project.clientName,
+          projectId: project.linkedCrmProjectId || project.id,
+          paymentMethod: paymentData.paymentChannelId as any,
+          referenceNumber: paymentData.referenceNumber,
+          status: 'CLEARED',
+          recordedBy: currentUser.name,
+          notes: `Pembayaran Klien Retail: ${project.clientName} | No. Inv: ${milestone.invoiceNumber || '-'} | Gross DPP: Rp ${milestone.dppAmountIDR?.toLocaleString('id-ID')} | PPN 11%: Rp ${milestone.ppnAmountIDR?.toLocaleString('id-ID')} | Potongan PPh 23: Rp ${pphAmount.toLocaleString('id-ID')} | Kas Bersih Diterima: Rp ${amountReceived.toLocaleString('id-ID')}${paymentData.notes ? ` | Catatan: ${paymentData.notes}` : ''}${delayAnalysis.isDelayed ? ` | ${delayAnalysis.delayNotes}` : ''}`,
+        });
+
+        // B. Kas Keluar (EXPENSE: TAX_PPH_PPN) untuk Potongan Pajak PPh 23 oleh Klien
+        taxTx = addTransaction({
+          date: payDate,
+          type: 'EXPENSE',
+          category: 'TAX_PPH_PPN',
+          amountIDR: pphAmount,
+          description: `Potongan PPh ${project.pphType === 'PPH_FINAL_UMKM' ? 'Final UMKM' : '23'} oleh Klien (${project.clientName}) - ${milestone.title}`,
+          clientOrVendorName: project.clientName,
+          projectId: project.linkedCrmProjectId || project.id,
+          paymentMethod: paymentData.paymentChannelId as any,
+          referenceNumber: paymentData.bupotPphNumber ? `BUPOT-${paymentData.bupotPphNumber}` : `TAX-BUPOT-${milestone.id.slice(-4).toUpperCase()}`,
+          status: 'CLEARED',
+          recordedBy: currentUser.name,
+          notes: `Pemotongan PPh langsung oleh Klien (${project.clientName}) atas termin proyek retail ${project.projectName}. Saldo kas penerima terpotong PPh sebesar Rp ${pphAmount.toLocaleString('id-ID')}. Bukti Potong: ${paymentData.bupotPphNumber || milestone.bupotPphNumber || '-'}`,
+        });
+      } else {
+        linkedTx = addTransaction({
+          date: payDate,
+          type: 'INCOME',
+          category: 'RETAIL_PROJECT_INCOME',
+          amountIDR: amountReceived,
+          description: `Penerimaan Pembayaran Termin ${milestone.termNumber}: ${milestone.title} - ${project.projectName} (${project.clientName})`,
+          clientOrVendorName: project.clientName,
+          projectId: project.linkedCrmProjectId || project.id,
+          paymentMethod: paymentData.paymentChannelId as any,
+          referenceNumber: paymentData.referenceNumber,
+          status: 'CLEARED',
+          recordedBy: currentUser.name,
+          notes: `Pembayaran Klien Retail: ${project.clientName} | No. Inv: ${milestone.invoiceNumber || '-'} | Gross DPP: Rp ${milestone.dppAmountIDR?.toLocaleString('id-ID')} | Kas Masuk: Rp ${amountReceived.toLocaleString('id-ID')}${paymentData.notes ? ` | Catatan: ${paymentData.notes}` : ''}${delayAnalysis.isDelayed ? ` | ${delayAnalysis.delayNotes}` : ''}`,
+        });
+      }
     }
 
     // 2. Mark Linked Receivable as LUNAS (Piutang Usaha)
     if (milestone.receivableId) {
-      const billingAmount = milestone.pricingType === 'EXCLUDE_PPN'
-        ? milestone.grossAmountIDR + milestone.ppnAmountIDR
-        : milestone.grossAmountIDR;
-
       recordReceivablePayment(milestone.receivableId, {
         amountIDR: billingAmount,
         paymentDate: payDate,
         paymentChannelId: paymentData.paymentChannelId,
         referenceNumber: paymentData.referenceNumber,
-        notes: `Pelunasan Pembayaran Retail via ${paymentData.paymentChannelId}. Kas Diterima: Rp ${amountReceived.toLocaleString('id-ID')}. Potongan PPh 23: Rp ${milestone.pphAmountIDR.toLocaleString('id-ID')}.${delayAnalysis.isDelayed ? ` ${delayAnalysis.delayNotes}` : ''}`,
+        notes: `Pelunasan Pembayaran Retail via ${paymentData.paymentChannelId}. Kas Diterima: Rp ${amountReceived.toLocaleString('id-ID')}. Potongan PPh 23: Rp ${pphAmount.toLocaleString('id-ID')}.${delayAnalysis.isDelayed ? ` ${delayAnalysis.delayNotes}` : ''}`,
         syncToCashLedger: false, // Already recorded in step 1!
       });
     }
 
-    // 3. Record Tax Credit (PPh 23 Withholding by Client) in Tax Management
-    if (milestone.pphAmountIDR > 0 && paymentData.syncToTaxObligations !== false) {
+    // 3. Record / Update Tax Credit (PPh 23 Withholding by Client) in Tax Management
+    let taxObligationPphId = milestone.taxObligationPphId;
+    if (pphAmount > 0 && paymentData.syncToTaxObligations !== false) {
       const taxYear = parseInt(payDate.slice(0, 4), 10) || new Date().getFullYear();
       const taxMonth = parseInt(payDate.slice(5, 7), 10) || 1;
+      const bupotNumber = paymentData.bupotPphNumber || milestone.bupotPphNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`;
 
-      addTaxObligation({
-        taxType: (project.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
-        taxPeriod: `Masa ${payDate.slice(5, 7)}/${taxYear}`,
-        taxYear,
-        taxMonth,
-        title: `Bukti Potong PPh 23 - ${milestone.title} (${project.clientName})`,
-        taxAmount: milestone.pphAmountIDR,
-        paidAmount: milestone.pphAmountIDR,
-        remainingAmount: 0,
-        status: 'PAID',
-        paidByClient: true,
-        clientWithholdingNumber: paymentData.bupotPphNumber || milestone.bupotPphNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`,
-        clientWithholdingDate: payDate,
-        withholdingTaxPayerName: project.clientName,
-        dueDate: payDate,
-        paidAt: payDate,
-        notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${project.clientName} atas jasa konsultasi/teknik. Menjadi kredit pajak pada SPT Tahunan PPh Badan.`,
-      });
+      // Check if tax obligation already exists (e.g. from initial project registration)
+      const existingTax = taxObligations.find(
+        (t) =>
+          (milestone.taxObligationPphId && t.id === milestone.taxObligationPphId) ||
+          (t.title?.includes(milestone.title) && t.counterpartyName === project.clientName && (t.taxType === 'PPH_23' || t.taxType === 'PPH_FINAL_UMKM'))
+      );
+
+      if (existingTax) {
+        updateTaxObligation(existingTax.id, {
+          taxAmount: pphAmount,
+          paidAmount: pphAmount,
+          remainingAmount: 0,
+          status: 'PAID',
+          paidByClient: true,
+          clientWithholdingNumber: bupotNumber,
+          clientWithholdingDate: payDate,
+          withholdingTaxPayerName: project.clientName,
+          paidAt: payDate,
+          transactionId: taxTx?.id,
+          notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${project.clientName}. Bukti potong resmi kredit pajak SPT Tahunan Badan.`,
+        });
+        taxObligationPphId = existingTax.id;
+      } else {
+        const taxRes = addTaxObligation({
+          taxType: (project.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
+          taxPeriod: `Masa ${payDate.slice(5, 7)}/${taxYear}`,
+          taxYear,
+          taxMonth,
+          title: `Bukti Potong PPh 23 - ${milestone.title} (${project.clientName})`,
+          taxAmount: pphAmount,
+          paidAmount: pphAmount,
+          remainingAmount: 0,
+          status: 'PAID',
+          paidByClient: true,
+          clientWithholdingNumber: bupotNumber,
+          clientWithholdingDate: payDate,
+          withholdingTaxPayerName: project.clientName,
+          counterpartyName: project.clientName,
+          dueDate: payDate,
+          paidAt: payDate,
+          transactionId: taxTx?.id,
+          notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${project.clientName} atas jasa konsultasi/teknik. Menjadi kredit pajak pada SPT Tahunan PPh Badan.`,
+        });
+        if (taxRes?.taxObligation?.id) {
+          taxObligationPphId = taxRes.taxObligation.id;
+        }
+      }
     }
 
     // 4. Update Milestone State
@@ -8535,6 +8831,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       referenceNumber: paymentData.referenceNumber,
       bupotPphNumber: paymentData.bupotPphNumber,
       transactionId: linkedTx?.id,
+      taxObligationPphId,
       invoiceDueDate: effectiveDueDate,
       invoicePaymentTermDays: RETAIL_PAYMENT_TERMS_DAYS,
       isOverduePayment: delayAnalysis.isDelayed,
@@ -8623,6 +8920,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const project = retailProjects.find((p) => p.id === projectId);
     if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
 
+    const currentMilestone = project.milestones.find((m) => m.id === milestoneId);
+    if (updates.status === 'LUNAS' && currentMilestone && currentMilestone.status !== 'LUNAS') {
+      // Trigger full payment & financial side effects
+      return recordRetailMilestonePayment(projectId, milestoneId, {
+        paymentChannelId: updates.paymentChannelId || currentMilestone.paymentChannelId || 'BANK_TRANSFER_BCA',
+        paymentDate: updates.paymentDate || new Date().toISOString().slice(0, 10),
+        amountReceivedIDR: updates.paidAmountIDR || updates.netDisbursementIDR || currentMilestone.netDisbursementIDR,
+        referenceNumber: updates.referenceNumber || currentMilestone.referenceNumber,
+        bupotPphNumber: updates.bupotPphNumber || currentMilestone.bupotPphNumber,
+        notes: updates.notes || currentMilestone.notes,
+      });
+    }
+
     const updatedMilestones = project.milestones.map((m) => {
       if (m.id !== milestoneId) return m;
       const merged = { ...m, ...updates };
@@ -8688,6 +8998,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   } => {
     let syncedCount = 0;
     let createdCount = 0;
+    let createdTaxCount = 0;
     let totalAmountIDR = 0;
 
     const currentTrxs = [...transactions];
@@ -8697,69 +9008,179 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     retailProjects.forEach((proj) => {
       proj.milestones.forEach((m) => {
+        const gross = m.grossAmountIDR || 0;
+        const ppn = m.ppnAmountIDR || 0;
+        const pph = m.pphAmountIDR || 0;
+        const net = m.netDisbursementIDR || (gross - pph);
+        const billing = m.pricingType === 'EXCLUDE_PPN' ? gross + ppn : gross;
+        const mTitle = m.title || `Termin ${m.termNumber}`;
+
         if (m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN') {
-          const paymentAmount = m.paidAmountIDR || m.netDisbursementIDR || m.grossAmountIDR;
+          const paymentAmount = m.paidAmountIDR || net;
           totalAmountIDR += paymentAmount;
           syncedCount++;
 
-          const existingTx = currentTrxs.find(
+          const existingIncomeTx = currentTrxs.find(
             (t) =>
               (m.transactionId && t.id === m.transactionId) ||
-              (t.referenceNumber && t.referenceNumber === m.invoiceNumber) ||
-              (t.description && t.description.includes(m.name) && t.clientOrVendorName === proj.clientName)
+              (t.referenceNumber && (t.referenceNumber === m.invoiceNumber || t.referenceNumber === m.referenceNumber)) ||
+              (t.description && t.description.includes(mTitle) && t.clientOrVendorName === proj.clientName && t.type === 'INCOME')
           );
 
-          if (!existingTx) {
-            const dateObj = new Date(m.paidDate || m.invoiceDate || new Date());
-            const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+          const dateObj = new Date(m.paymentDate || m.invoiceDate || new Date());
+          const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+          const payDate = m.paymentDate || m.invoiceDate || new Date().toISOString().split('T')[0];
+
+          if (!existingIncomeTx) {
             const seq = Math.floor(100 + Math.random() * 900);
             const createdTx: FinancialTransaction = {
-              id: `trx-retail-${proj.id}-${m.id}`,
+              id: `trx-retail-inc-${proj.id}-${m.id}`,
               transactionNumber: `TRX-RTL-${yyyymm}-${seq}`,
               type: 'INCOME',
-              category: 'CONSULTING_FEE',
-              amountIDR: paymentAmount,
-              date: m.paidDate || m.invoiceDate || new Date().toISOString().split('T')[0],
-              description: `Pendapatan Termin Retail: ${m.name} - ${proj.projectName} (${proj.clientName})`,
+              category: 'RETAIL_PROJECT_INCOME',
+              amountIDR: pph > 0 ? billing : paymentAmount,
+              date: payDate,
+              description: `Penerimaan Pembayaran Termin ${m.termNumber}: ${mTitle} - ${proj.projectName} (${proj.clientName})`,
               clientOrVendorName: proj.clientName,
-              paymentMethod: m.paymentChannelId || 'BANK_TRANSFER_BCA',
-              referenceNumber: m.invoiceNumber || m.paymentReferenceNumber || `SPK-${proj.contractNumber}`,
+              paymentMethod: (m.paymentChannelId as any) || 'BANK_TRANSFER_BCA',
+              referenceNumber: m.invoiceNumber || m.referenceNumber || `SPK-${proj.contractNumber}`,
               status: 'CLEARED',
-              notes: `Sinkronisasi otomatis pendapatan termin proyek retail sektor swasta. SPK: ${proj.contractNumber}`,
+              notes: `Sinkronisasi otomatis pendapatan termin retail. Gross: Rp ${billing.toLocaleString('id-ID')} | PPh: Rp ${pph.toLocaleString('id-ID')} | Kas Bersih: Rp ${paymentAmount.toLocaleString('id-ID')}`,
               projectId: proj.linkedCrmProjectId || proj.id,
               recordedBy: currentUser.name || 'Finance Officer',
               createdAt: new Date().toISOString(),
             };
             newTrxs.push(createdTx);
+            currentTrxs.push(createdTx);
             createdCount++;
             m.transactionId = createdTx.id;
           }
+
+          // Sinkronisasi transaksi potongan PPh 23 jika belum ada di kas
+          if (pph > 0) {
+            const existingPphTx = currentTrxs.find(
+              (t) =>
+                t.type === 'EXPENSE' &&
+                t.category === 'TAX_PPH_PPN' &&
+                (t.referenceNumber === (m.bupotPphNumber ? `BUPOT-${m.bupotPphNumber}` : `TAX-BUPOT-${m.id.slice(-4).toUpperCase()}`) ||
+                  (t.description && t.description.includes(mTitle) && t.clientOrVendorName === proj.clientName))
+            );
+
+            if (!existingPphTx) {
+              const seqPph = Math.floor(100 + Math.random() * 900);
+              const createdPphTx: FinancialTransaction = {
+                id: `trx-retail-tax-${proj.id}-${m.id}`,
+                transactionNumber: `TRX-TAX-${yyyymm}-${seqPph}`,
+                type: 'EXPENSE',
+                category: 'TAX_PPH_PPN',
+                amountIDR: pph,
+                date: payDate,
+                description: `Potongan PPh ${m.pphType === 'PPH_FINAL_UMKM' ? 'Final UMKM' : '23'} oleh Klien (${proj.clientName}) - ${mTitle}`,
+                clientOrVendorName: proj.clientName,
+                paymentMethod: (m.paymentChannelId as any) || 'BANK_TRANSFER_BCA',
+                referenceNumber: m.bupotPphNumber ? `BUPOT-${m.bupotPphNumber}` : `TAX-BUPOT-${m.id.slice(-4).toUpperCase()}`,
+                status: 'CLEARED',
+                notes: `Pemotongan PPh langsung oleh Klien (${proj.clientName}) atas termin retail ${proj.projectName}. Saldo kas terpotong PPh sebesar Rp ${pph.toLocaleString('id-ID')}.`,
+                projectId: proj.linkedCrmProjectId || proj.id,
+                recordedBy: currentUser.name || 'Finance Officer',
+                createdAt: new Date().toISOString(),
+              };
+              newTrxs.push(createdPphTx);
+              currentTrxs.push(createdPphTx);
+              createdCount++;
+            }
+          }
         }
 
-        if ((m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN') && m.ppnAmountIDR > 0) {
-          const existingTax = currentTaxes.find(
+        // Sinkronisasi Bukti Potong PPh 23 ke Menu Pajak
+        if (pph > 0) {
+          const dateObj = new Date(m.paymentDate || m.invoiceDate || new Date());
+          const taxYear = dateObj.getFullYear();
+          const taxMonth = dateObj.getMonth() + 1;
+          const isLunas = m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN';
+
+          const existingTaxPph = currentTaxes.find(
             (t) =>
-              (m.fakturPajakNumber && t.taxInvoiceNumber === m.fakturPajakNumber) ||
-              (t.description && t.description.includes(m.invoiceNumber || ''))
+              (m.taxObligationPphId && t.id === m.taxObligationPphId) ||
+              (t.counterpartyName === proj.clientName && t.title?.includes(mTitle) && (t.taxType === 'PPH_23' || t.taxType === 'PPH_FINAL_UMKM'))
           );
-          if (!existingTax) {
+
+          if (!existingTaxPph) {
             const taxObj: TaxObligation = {
-              id: `tax-ppn-rtl-${proj.id}-${m.id}`,
-              taxType: 'PPN',
-              taxPeriod: m.invoiceDate?.slice(0, 7) || new Date().toISOString().slice(0, 7),
-              taxYear: new Date(m.invoiceDate || new Date()).getFullYear(),
-              title: `PPN Keluaran 11% - Inv ${m.invoiceNumber || m.name} (${proj.clientName})`,
-              description: `PPN Keluaran 11% - Inv ${m.invoiceNumber || m.name} (${proj.clientName})`,
-              taxAmount: m.ppnAmountIDR,
-              paidAmount: m.status === 'LUNAS' ? m.ppnAmountIDR : 0,
-              remainingAmount: m.status === 'LUNAS' ? 0 : m.ppnAmountIDR,
-              dueDate: m.invoiceDueDate || new Date().toISOString().split('T')[0],
-              status: m.status === 'LUNAS' ? 'PAID' : 'TERHUTANG',
-              taxInvoiceNumber: m.fakturPajakNumber,
+              id: `tax-pph-rtl-${proj.id}-${m.id}`,
+              taxType: (m.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
+              taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
+              taxYear,
+              taxMonth,
+              title: isLunas ? `Bukti Potong PPh 23 - ${mTitle} (${proj.clientName})` : `Potongan PPh 23 (Kredit Pajak) - ${mTitle} (${proj.clientName})`,
+              description: `Potongan PPh 23 oleh Klien (${proj.clientName}) atas termin ${mTitle}`,
+              taxAmount: pph,
+              paidAmount: isLunas ? pph : 0,
+              remainingAmount: isLunas ? 0 : pph,
+              status: isLunas ? 'PAID' : 'TERHUTANG',
+              paidByClient: true,
+              clientWithholdingNumber: m.bupotPphNumber || (isLunas ? `BUPOT-23-${Date.now().toString().slice(-6)}` : undefined),
+              clientWithholdingDate: isLunas ? (m.paymentDate || new Date().toISOString().split('T')[0]) : undefined,
+              withholdingTaxPayerName: proj.clientName,
+              counterpartyName: proj.clientName,
+              dueDate: m.invoiceDueDate || m.targetDate || new Date().toISOString().split('T')[0],
+              paidAt: isLunas ? (m.paymentDate || new Date().toISOString().split('T')[0]) : undefined,
+              notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${proj.clientName} atas proyek retail ${proj.projectName}.`,
               createdAt: new Date().toISOString(),
               createdBy: currentUser.name || 'Finance Officer',
             };
             newTaxes.push(taxObj);
+            currentTaxes.push(taxObj);
+            createdTaxCount++;
+            m.taxObligationPphId = taxObj.id;
+          } else if (isLunas && existingTaxPph.status !== 'PAID') {
+            existingTaxPph.status = 'PAID';
+            existingTaxPph.paidAmount = pph;
+            existingTaxPph.remainingAmount = 0;
+            existingTaxPph.paidByClient = true;
+            existingTaxPph.paidAt = m.paymentDate || new Date().toISOString().split('T')[0];
+            existingTaxPph.clientWithholdingNumber = m.bupotPphNumber || existingTaxPph.clientWithholdingNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`;
+          }
+        }
+
+        // Sinkronisasi PPN Keluaran ke Menu Pajak
+        if (ppn > 0) {
+          const dateObj = new Date(m.invoiceDate || m.paymentDate || new Date());
+          const taxYear = dateObj.getFullYear();
+          const taxMonth = dateObj.getMonth() + 1;
+          const isLunas = m.status === 'LUNAS';
+
+          const existingTaxPpn = currentTaxes.find(
+            (t) =>
+              (m.fakturPajakNumber && t.taxInvoiceNumber === m.fakturPajakNumber) ||
+              (m.taxObligationPpnId && t.id === m.taxObligationPpnId) ||
+              (t.counterpartyName === proj.clientName && t.title?.includes(mTitle) && t.taxType === 'PPN')
+          );
+
+          if (!existingTaxPpn) {
+            const taxObj: TaxObligation = {
+              id: `tax-ppn-rtl-${proj.id}-${m.id}`,
+              taxType: 'PPN',
+              taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
+              taxYear,
+              taxMonth,
+              title: `PPN Keluaran 11% - ${mTitle} (${proj.clientName})`,
+              description: `PPN Keluaran 11% - ${mTitle} (${proj.clientName})`,
+              taxAmount: ppn,
+              ppnOutputAmount: ppn,
+              paidAmount: isLunas ? ppn : 0,
+              remainingAmount: isLunas ? 0 : ppn,
+              dueDate: m.invoiceDueDate || m.targetDate || new Date().toISOString().split('T')[0],
+              status: isLunas ? 'PAID' : 'TERHUTANG',
+              taxInvoiceNumber: m.fakturPajakNumber,
+              counterpartyName: proj.clientName,
+              createdAt: new Date().toISOString(),
+              createdBy: currentUser.name || 'Finance Officer',
+            };
+            newTaxes.push(taxObj);
+            currentTaxes.push(taxObj);
+            createdTaxCount++;
+            m.taxObligationPpnId = taxObj.id;
           }
         }
       });
@@ -8767,7 +9188,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (newTrxs.length > 0) {
       setTransactions((prev) => {
-        const updated = [...newTrxs, ...prev];
+        const updated = deduplicateById([...newTrxs, ...prev]);
         safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
         newTrxs.forEach((t) => saveTransactionToFirestore(t));
@@ -8777,7 +9198,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (newTaxes.length > 0) {
       setTaxObligations((prev) => {
-        const updated = [...newTaxes, ...prev];
+        const updated = deduplicateById([...newTaxes, ...prev]);
         safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
         saveSettingsToFirestore('tax_obligations', updated);
@@ -8787,11 +9208,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return {
       success: true,
-      message: `Berhasil menyinkronkan ${syncedCount} termin retail swasta senilai Rp ${totalAmountIDR.toLocaleString('id-ID')}. (${createdCount} transaksi baru dicatat ke Buku Kas & Arus Kas)`,
+      message: `Berhasil menyinkronkan proyek retail swasta. Dicatat ${createdCount} transaksi kas (Pendapatan & Potongan PPh) dan ${createdTaxCount} data perpajakan (PPh 23 & PPN) ke sistem!`,
       syncedCount,
       createdCount,
       createdTransactionsCount: createdCount,
-      createdTaxObligationsCount: newTaxes.length,
+      createdTaxObligationsCount: createdTaxCount,
       totalAmountIDR,
     };
   };
