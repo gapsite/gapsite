@@ -12,13 +12,55 @@ export interface MysqlConfig {
   database?: string;
 }
 
+export interface MysqlHealthState {
+  isHealthy: boolean;
+  lastChecked: number;
+  lastError: string | null;
+  errorHelp?: string;
+  clientIp?: string;
+}
+
+let healthState: MysqlHealthState = {
+  isHealthy: false,
+  lastChecked: 0,
+  lastError: null,
+};
+
+export function getMysqlHealthState(): MysqlHealthState {
+  return healthState;
+}
+
+export function setMysqlHealthState(state: Partial<MysqlHealthState>) {
+  healthState = { ...healthState, ...state };
+}
+
+export function isMysqlHealthy(): boolean {
+  return healthState.isHealthy;
+}
+
+export function isMysqlInBackoff(): boolean {
+  // If connection was tested and failed within the last 45 seconds, back off to prevent error spam
+  return healthState.lastChecked > 0 && !healthState.isHealthy && Date.now() - healthState.lastChecked < 45000;
+}
+
 export function getMysqlConfig(): MysqlConfig {
+  // Prioritize MYSQL_* family if MYSQL_HOST is provided
+  if (process.env.MYSQL_HOST) {
+    return {
+      host: process.env.MYSQL_HOST.trim(),
+      port: parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || '3306', 10),
+      user: (process.env.MYSQL_USER || process.env.DB_USER || '').trim(),
+      password: process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || process.env.DB_PASS || '',
+      database: (process.env.MYSQL_DATABASE || process.env.DB_NAME || process.env.DB_DATABASE || '').trim(),
+    };
+  }
+
   return {
-    host: process.env.MYSQL_HOST || '',
-    port: process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306,
-    user: process.env.MYSQL_USER || '',
-    password: process.env.MYSQL_PASSWORD || '',
-    database: process.env.MYSQL_DATABASE || '',
+    host: (process.env.DB_HOST || '').trim(),
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    user: (process.env.DB_USER || '').trim(),
+    password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
+    database: (process.env.DB_NAME || process.env.DB_DATABASE || '').trim(),
   };
 }
 
@@ -30,11 +72,11 @@ export function isMysqlConfigured(): boolean {
 export function getMysqlPool(customConfig?: MysqlConfig): Pool {
   if (customConfig && customConfig.host) {
     return mysql.createPool({
-      host: customConfig.host,
+      host: customConfig.host.trim(),
       port: customConfig.port || 3306,
-      user: customConfig.user || '',
+      user: (customConfig.user || '').trim(),
       password: customConfig.password || '',
-      database: customConfig.database || '',
+      database: (customConfig.database || '').trim(),
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
@@ -43,14 +85,14 @@ export function getMysqlPool(customConfig?: MysqlConfig): Pool {
   }
 
   const config = getMysqlConfig();
-  const configKey = `${config.host}:${config.port}:${config.user}:${config.database}`;
+  const configKey = `${config.host}:${config.port}:${config.user}:${config.database}:${config.password ? 'haspwd' : 'nopwd'}`;
 
   if (!pool || currentPoolKey !== configKey) {
     if (pool) {
       pool.end().catch(() => {});
     }
-    if (!config.host || !config.user) {
-      throw new Error('Hostinger MySQL environment variables (MYSQL_HOST, MYSQL_USER, MYSQL_DATABASE) are not configured.');
+    if (!config.host || !config.user || !config.database) {
+      throw new Error('Hostinger MySQL environment variables (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) are not configured.');
     }
     pool = mysql.createPool({
       host: config.host,
@@ -86,7 +128,7 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
     if (!config.host || !config.user || !config.database) {
       return {
         success: false,
-        message: 'Konfigurasi Hostinger MySQL belum lengkap. Pastikan MYSQL_HOST, MYSQL_USER, dan MYSQL_DATABASE terisi.',
+        message: 'Konfigurasi Hostinger MySQL belum lengkap. Pastikan DB_HOST (atau MYSQL_HOST), DB_USER (atau MYSQL_USER), dan DB_NAME (atau MYSQL_DATABASE) terisi.',
         host: config.host,
         database: config.database,
       };
@@ -109,6 +151,13 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
     const tables = rows.map((r) => Object.values(r)[0] as string);
     const latencyMs = Date.now() - startTime;
 
+    setMysqlHealthState({
+      isHealthy: true,
+      lastChecked: Date.now(),
+      lastError: null,
+      errorHelp: undefined,
+    });
+
     return {
       success: true,
       message: `Berhasil terhubung ke Hostinger MySQL database "${config.database}" (${latencyMs}ms).`,
@@ -120,16 +169,24 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
   } catch (error: any) {
     let errorHelp = '';
     const hostLower = (customConfig?.host || getMysqlConfig().host || '').toLowerCase().trim();
+    const ipMatch = error.message?.match(/@'([^']+)'/);
+    const incomingIp = ipMatch ? ipMatch[1] : '';
 
     if (hostLower === 'localhost' || hostLower === '127.0.0.1') {
       errorHelp = ' Catatan penting: MYSQL_HOST saat ini diatur ke "localhost". Karena aplikasi ini berjalan di cloud server terpisah, "localhost" merujuk ke internal container dan bukan server Hostinger Anda. Silakan ganti MYSQL_HOST dengan IP Server Hostinger Anda (misalnya IP Server di hPanel Hostinger atau hostname MySQL Hostinger seperti sqlXXX.main-hosting.eu).';
     } else if (error.code === 'ER_ACCESS_DENIED_ERROR' || error.message?.includes('Access denied')) {
-      const ipMatch = error.message?.match(/@'([^']+)'/);
-      const incomingIp = ipMatch ? ipMatch[1] : '';
       errorHelp = ` Catatan: Akses ditolak oleh server Hostinger. Buka hPanel Hostinger > Databases > Remote MySQL, pilih database "${config.database}", dan tambahkan tanda "%" (wildcard semua IP)${incomingIp ? ` atau IP "${incomingIp}"` : ''}. Pastikan juga password user "${config.user}" di Settings cocok dengan di Hostinger.`;
     } else if (error.code === 'ETIMEDOUT' || error.message?.includes('ETIMEDOUT')) {
       errorHelp = ' Catatan: Koneksi timeout. Pastikan Remote MySQL di hPanel Hostinger sudah diaktifkan dengan mengizinkan IP "%" dan port 3306 tidak diblokir firewall.';
     }
+
+    setMysqlHealthState({
+      isHealthy: false,
+      lastChecked: Date.now(),
+      lastError: error.message || String(error),
+      errorHelp,
+      clientIp: incomingIp,
+    });
 
     return {
       success: false,
@@ -148,13 +205,21 @@ export async function initMysqlSchema(): Promise<{ success: boolean; message: st
     return { success: false, message: 'MySQL is not configured.' };
   }
 
+  if (isMysqlInBackoff()) {
+    return {
+      success: false,
+      message: healthState.lastError || 'MySQL sedang dalam masa jeda setelah koneksi sebelumnya ditolak.',
+    };
+  }
+
   const config = getMysqlConfig();
   const hostLower = (config.host || '').toLowerCase().trim();
-  if (hostLower === 'localhost' || hostLower === '127.0.0.1') {
+  const isAiStudioSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+  if (isAiStudioSandbox && (hostLower === 'localhost' || hostLower === '127.0.0.1')) {
     return {
       success: false,
       message:
-        'MYSQL_HOST saat ini bernilai "localhost". Karena aplikasi ini berjalan di server cloud, ubah MYSQL_HOST di Settings dengan IP Hostinger Anda (misal: 153.92.xxx.xxx atau sqlXXX.main-hosting.eu).',
+        'DB_HOST saat ini bernilai "localhost". Di cloud sandbox AI Studio, silakan gunakan IP Remote MySQL Hostinger Anda. Jika aplikasi sudah di-deploy langsung di server Hostinger, "localhost" dapat digunakan secara langsung.',
     };
   }
 
@@ -163,6 +228,14 @@ export async function initMysqlSchema(): Promise<{ success: boolean; message: st
     const p = getMysqlPool();
     conn = await p.getConnection();
   } catch (err: any) {
+    const ipMatch = err.message?.match(/@'([^']+)'/);
+    const incomingIp = ipMatch ? ipMatch[1] : '';
+    setMysqlHealthState({
+      isHealthy: false,
+      lastChecked: Date.now(),
+      lastError: err.message || String(err),
+      clientIp: incomingIp,
+    });
     return {
       success: false,
       message: `Gagal terhubung ke MySQL Hostinger (${err.code || err.message || err}). Pastikan IP Server dan Remote MySQL di hPanel sudah benar.`,

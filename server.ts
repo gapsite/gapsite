@@ -10,6 +10,9 @@ import {
   initMysqlSchema,
   getMysqlPool,
   HOSTINGER_SQL_SCHEMA_RAW,
+  getMysqlHealthState,
+  setMysqlHealthState,
+  isMysqlInBackoff,
   type MysqlConfig,
 } from './server/mysql.ts';
 
@@ -17,10 +20,10 @@ dotenv.config();
 
 const app = express();
 
-// Port configuration: Listen to Hostinger dynamic port (process.env.PORT),
-// while preserving port 3000 in AI Studio sandbox container
+// Port configuration: Listen to Hostinger dynamic port (process.env.PORT) to prevent Bad Gateway,
+// while strictly binding to port 3000 in AI Studio container sandbox
 const isAiStudioSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
-const port = isAiStudioSandbox ? 3000 : Number(process.env.PORT || 3000);
+const PORT = isAiStudioSandbox ? 3000 : Number(process.env.PORT || 3000);
 
 // Middleware for parsing JSON with generous payload limits for full backups
 app.use(express.json({ limit: '50mb' }));
@@ -28,10 +31,13 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health Check
 app.get('/api/health', (req, res) => {
+  const cfg = getMysqlConfig();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     mysqlConfigured: isMysqlConfigured(),
+    port: PORT,
+    database: cfg.database || null,
   });
 });
 
@@ -122,6 +128,505 @@ app.get('/api/storage/status', (req, res) => {
   }
 });
 
+// ==========================================
+// UNIFIED GET /api/data ENDPOINT
+// Fetches data directly from Hostinger MySQL (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
+// with automatic schema migration and fallback to persistent server storage.
+// ==========================================
+app.get('/api/data', async (req, res) => {
+  try {
+    if (isMysqlConfigured() && !isMysqlInBackoff()) {
+      const config = getMysqlConfig();
+      const hostLower = (config.host || '').toLowerCase().trim();
+      const isSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+
+      if (!(isSandbox && (hostLower === 'localhost' || hostLower === '127.0.0.1'))) {
+        try {
+          await initMysqlSchema();
+          const pool = getMysqlPool();
+          const conn = await pool.getConnection();
+
+          try {
+            const fetchTableData = async (tableName: string) => {
+              try {
+                const [rows] = await conn.query<any[]>(`SELECT data FROM ${tableName}`);
+                return rows
+                  .map((r) => {
+                    try {
+                      return typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+                    } catch {
+                      return null;
+                    }
+                  })
+                  .filter(Boolean);
+              } catch {
+                return [];
+              }
+            };
+
+            const projects = await fetchTableData('crm_projects');
+            const transactions = await fetchTableData('crm_transactions');
+            const receivables = await fetchTableData('crm_receivables');
+            const taxObligations = await fetchTableData('crm_tax_obligations');
+            const payrollPayments = await fetchTableData('crm_payroll');
+            const governmentProjects = await fetchTableData('crm_government_projects');
+            const retailProjects = await fetchTableData('crm_retail_projects');
+            const bankLoans = await fetchTableData('crm_bank_loans');
+            const dispositions = await fetchTableData('crm_dispositions');
+            const teamMembers = await fetchTableData('crm_team_members');
+            const overheadExpenses = await fetchTableData('crm_overhead_expenses');
+            const officeRentContracts = await fetchTableData('crm_office_rent_contracts');
+
+            let settingsMap: Record<string, any> = {};
+            try {
+              const [settingsRows] = await conn.query<any[]>('SELECT setting_key, data FROM crm_app_settings');
+              for (const row of settingsRows) {
+                try {
+                  settingsMap[row.setting_key] = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+                } catch {}
+              }
+            } catch {}
+
+            const totalRows =
+              projects.length +
+              transactions.length +
+              receivables.length +
+              taxObligations.length +
+              payrollPayments.length +
+              governmentProjects.length +
+              retailProjects.length +
+              bankLoans.length +
+              dispositions.length +
+              teamMembers.length +
+              overheadExpenses.length +
+              officeRentContracts.length;
+
+            // If MySQL already contains records, return MySQL data immediately
+            if (totalRows > 0) {
+              return res.json({
+                success: true,
+                source: 'mysql',
+                pulledAt: new Date().toISOString(),
+                data: {
+                  projects,
+                  transactions,
+                  receivables,
+                  taxObligations,
+                  payrollPayments,
+                  payrollRecords: payrollPayments,
+                  governmentProjects,
+                  retailProjects,
+                  bankLoans,
+                  dispositions,
+                  teamMembers,
+                  overheadExpenses: overheadExpenses.length > 0 ? overheadExpenses : (settingsMap.overheadExpenses || []),
+                  officeRentContracts: officeRentContracts.length > 0 ? officeRentContracts : (settingsMap.officeRentContracts || []),
+                  serviceTypes: settingsMap.serviceTypes || [],
+                  documentTypes: settingsMap.documentTypes || [],
+                  documentCategories: settingsMap.documentCategories || [],
+                  transactionCategories: settingsMap.transactionCategories || [],
+                  paymentChannels: settingsMap.paymentChannels || [],
+                  companyCapital: settingsMap.companyCapital || null,
+                  salaryConfigs: settingsMap.salaryConfigs || [],
+                  employeeSalaryConfigs: settingsMap.salaryConfigs || [],
+                  institutionTypes: settingsMap.institutionTypes || [],
+                  termDistributionSchemes: settingsMap.termDistributionSchemes || [],
+                  companyLetterhead: settingsMap.companyLetterhead || null,
+                  roleDefinitions: settingsMap.roleDefinitions || null,
+                  assignedByOptions: settingsMap.assignedByOptions || [],
+                },
+              });
+            }
+
+            // If MySQL is currently empty and server storage exists, auto-seed MySQL so data lives permanently in MySQL
+            if (fs.existsSync(SERVER_STORAGE_FILE)) {
+              try {
+                const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+                const parsed = JSON.parse(raw);
+                const fileData = parsed.data || parsed;
+                if (fileData && typeof fileData === 'object') {
+                  if (Array.isArray(fileData.projects)) {
+                    for (const p of fileData.projects) {
+                      if (!p || !p.id) continue;
+                      await conn.query(
+                        `INSERT INTO crm_projects (id, code, client_name, stage, status, kbli_code, data)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = NOW()`,
+                        [p.id, p.projectCode || p.code || '', p.clientName || '', p.stage || '', p.status || '', p.kbliCode || '', JSON.stringify(p)]
+                      );
+                    }
+                  }
+                  if (Array.isArray(fileData.transactions)) {
+                    for (const t of fileData.transactions) {
+                      if (!t || !t.id) continue;
+                      await conn.query(
+                        `INSERT INTO crm_transactions (id, transaction_number, type, category, amount_idr, date, data)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = NOW()`,
+                        [t.id, t.transactionNumber || '', t.type || '', t.category || '', t.amountIdr || t.amount || 0, t.date || '', JSON.stringify(t)]
+                      );
+                    }
+                  }
+                  return res.json({
+                    success: true,
+                    source: 'mysql_seeded',
+                    pulledAt: new Date().toISOString(),
+                    data: fileData,
+                  });
+                }
+              } catch {
+                // Silently fallback if seeding encountered an issue
+              }
+            }
+          } finally {
+            conn.release();
+          }
+        } catch (dbErr: any) {
+          const ipMatch = dbErr.message?.match(/@'([^']+)'/);
+          const incomingIp = ipMatch ? ipMatch[1] : '';
+          setMysqlHealthState({
+            isHealthy: false,
+            lastChecked: Date.now(),
+            lastError: dbErr.message || String(dbErr),
+            clientIp: incomingIp,
+          });
+        }
+      }
+    }
+
+    // Fallback: persistent server disk storage
+    if (fs.existsSync(SERVER_STORAGE_FILE)) {
+      const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+      if (raw.trim()) {
+        const parsed = JSON.parse(raw);
+        return res.json({
+          success: true,
+          source: 'server_storage',
+          pulledAt: parsed.updatedAt || new Date().toISOString(),
+          data: parsed.data || parsed,
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      source: 'empty',
+      pulledAt: new Date().toISOString(),
+      data: null,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
+// POST /api/data/entity ENDPOINT
+// Directly executes INSERT or UPDATE query on MySQL for individual modifications
+// ==========================================
+app.post('/api/data/entity', async (req, res) => {
+  try {
+    const { entityType, action, item, id } = req.body || {};
+    if (!entityType) {
+      return res.status(400).json({ success: false, message: 'entityType is required' });
+    }
+
+    let mysqlSuccess = false;
+    let mysqlMessage = '';
+
+    if (isMysqlConfigured() && !isMysqlInBackoff()) {
+      const config = getMysqlConfig();
+      const hostLower = (config.host || '').toLowerCase().trim();
+      const isSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+
+      if (!(isSandbox && (hostLower === 'localhost' || hostLower === '127.0.0.1'))) {
+        try {
+          await initMysqlSchema();
+          const pool = getMysqlPool();
+          const conn = await pool.getConnection();
+
+          try {
+            if (action === 'delete') {
+              const targetId = id || item?.id;
+              if (targetId) {
+                const tableMap: Record<string, string> = {
+                  projects: 'crm_projects',
+                  transactions: 'crm_transactions',
+                  receivables: 'crm_receivables',
+                  taxObligations: 'crm_tax_obligations',
+                  payroll: 'crm_payroll',
+                  payrollPayments: 'crm_payroll',
+                  governmentProjects: 'crm_government_projects',
+                  retailProjects: 'crm_retail_projects',
+                  bankLoans: 'crm_bank_loans',
+                  dispositions: 'crm_dispositions',
+                  teamMembers: 'crm_team_members',
+                  overheadExpenses: 'crm_overhead_expenses',
+                  officeRentContracts: 'crm_office_rent_contracts',
+                };
+                const tableName = tableMap[entityType];
+                if (tableName) {
+                  await conn.query(`DELETE FROM ${tableName} WHERE id = ?`, [targetId]);
+                  mysqlSuccess = true;
+                  mysqlMessage = `Record ${targetId} deleted from ${tableName}`;
+                }
+              }
+            } else {
+              // action === 'save' (INSERT or UPDATE)
+              if (item && item.id) {
+                if (entityType === 'projects') {
+                  await conn.query(
+                    `INSERT INTO crm_projects (id, code, client_name, stage, status, kbli_code, data)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     code = VALUES(code),
+                     client_name = VALUES(client_name),
+                     stage = VALUES(stage),
+                     status = VALUES(status),
+                     kbli_code = VALUES(kbli_code),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.projectCode || item.code || '',
+                      item.clientName || '',
+                      item.stage || '',
+                      item.status || '',
+                      item.kbliCode || '',
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                  mysqlMessage = `Project ${item.id} saved to crm_projects`;
+                } else if (entityType === 'transactions') {
+                  await conn.query(
+                    `INSERT INTO crm_transactions (id, transaction_number, type, category, amount_idr, date, data)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     transaction_number = VALUES(transaction_number),
+                     type = VALUES(type),
+                     category = VALUES(category),
+                     amount_idr = VALUES(amount_idr),
+                     date = VALUES(date),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.transactionNumber || item.referenceNumber || '',
+                      item.type || '',
+                      item.category || '',
+                      item.amountIdr || item.amountIDR || item.amount || 0,
+                      item.date || '',
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                  mysqlMessage = `Transaction ${item.id} saved to crm_transactions`;
+                } else if (entityType === 'receivables') {
+                  await conn.query(
+                    `INSERT INTO crm_receivables (id, invoice_number, client_name, total_amount, paid_amount, status, data)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     invoice_number = VALUES(invoice_number),
+                     client_name = VALUES(client_name),
+                     total_amount = VALUES(total_amount),
+                     paid_amount = VALUES(paid_amount),
+                     status = VALUES(status),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.invoiceNumber || '',
+                      item.clientName || '',
+                      item.totalAmount || item.totalAmountIDR || 0,
+                      item.paidAmount || item.paidAmountIDR || 0,
+                      item.status || '',
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'taxObligations') {
+                  await conn.query(
+                    `INSERT INTO crm_tax_obligations (id, tax_type, title, amount, status, data)
+                     VALUES (?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     tax_type = VALUES(tax_type),
+                     title = VALUES(title),
+                     amount = VALUES(amount),
+                     status = VALUES(status),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.taxType || '',
+                      item.taxName || item.title || '',
+                      item.amount || item.amountIDR || 0,
+                      item.status || '',
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'payroll' || entityType === 'payrollPayments') {
+                  await conn.query(
+                    `INSERT INTO crm_payroll (id, employee_name, period, net_salary, data)
+                     VALUES (?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     employee_name = VALUES(employee_name),
+                     period = VALUES(period),
+                     net_salary = VALUES(net_salary),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.employeeName || '',
+                      item.period || '',
+                      item.netSalary || item.netSalaryIDR || 0,
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'governmentProjects') {
+                  await conn.query(
+                    `INSERT INTO crm_government_projects (id, project_name, data)
+                     VALUES (?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     project_name = VALUES(project_name),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [item.id, item.name || item.projectName || '', JSON.stringify(item)]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'retailProjects') {
+                  await conn.query(
+                    `INSERT INTO crm_retail_projects (id, project_name, data)
+                     VALUES (?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     project_name = VALUES(project_name),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [item.id, item.name || item.projectName || '', JSON.stringify(item)]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'bankLoans') {
+                  await conn.query(
+                    `INSERT INTO crm_bank_loans (id, loan_name, bank_name, data)
+                     VALUES (?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     loan_name = VALUES(loan_name),
+                     bank_name = VALUES(bank_name),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [item.id, item.loanName || '', item.bankName || '', JSON.stringify(item)]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'dispositions') {
+                  await conn.query(
+                    `INSERT INTO crm_dispositions (id, disposition_number, assignee_name, status, data)
+                     VALUES (?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     disposition_number = VALUES(disposition_number),
+                     assignee_name = VALUES(assignee_name),
+                     status = VALUES(status),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.dispositionNumber || '',
+                      item.assigneeName || '',
+                      item.status || '',
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'teamMembers') {
+                  await conn.query(
+                    `INSERT INTO crm_team_members (id, username, email, role, data)
+                     VALUES (?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     username = VALUES(username),
+                     email = VALUES(email),
+                     role = VALUES(role),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [item.id, item.username || '', item.email || '', item.role || '', JSON.stringify(item)]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'overheadExpenses') {
+                  await conn.query(
+                    `INSERT INTO crm_overhead_expenses (id, overhead_number, category, recipient, amount_idr, date, status, data)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     overhead_number = VALUES(overhead_number),
+                     category = VALUES(category),
+                     recipient = VALUES(recipient),
+                     amount_idr = VALUES(amount_idr),
+                     date = VALUES(date),
+                     status = VALUES(status),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.overheadNumber || '',
+                      item.category || '',
+                      item.recipient || '',
+                      item.amountIdr || item.amount || 0,
+                      item.date || '',
+                      item.status || '',
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                } else if (entityType === 'officeRentContracts') {
+                  await conn.query(
+                    `INSERT INTO crm_office_rent_contracts (id, contract_number, building_name, landlord_name, data)
+                     VALUES (?, ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                     contract_number = VALUES(contract_number),
+                     building_name = VALUES(building_name),
+                     landlord_name = VALUES(landlord_name),
+                     data = VALUES(data),
+                     updated_at = NOW()`,
+                    [
+                      item.id,
+                      item.contractNumber || '',
+                      item.buildingName || '',
+                      item.landlordName || '',
+                      JSON.stringify(item),
+                    ]
+                  );
+                  mysqlSuccess = true;
+                }
+              }
+            }
+          } finally {
+            conn.release();
+          }
+        } catch (dbErr: any) {
+          mysqlMessage = dbErr.message || String(dbErr);
+          const ipMatch = dbErr.message?.match(/@'([^']+)'/);
+          const incomingIp = ipMatch ? ipMatch[1] : '';
+          setMysqlHealthState({
+            isHealthy: false,
+            lastChecked: Date.now(),
+            lastError: dbErr.message || String(dbErr),
+            clientIp: incomingIp,
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      mysqlSuccess,
+      mysqlMessage,
+      entityType,
+      action,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Download SQL Schema for Hostinger phpMyAdmin
 app.get('/api/mysql/schema.sql', (req, res) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -149,10 +654,28 @@ app.get('/api/mysql/status', async (req, res) => {
       });
     }
 
-    const testResult = await testMysqlConnection();
+    const health = getMysqlHealthState();
+    const forceRefresh = req.query.force === 'true';
+    const isStale = Date.now() - health.lastChecked > 20000;
+
+    let testResult;
+    if (forceRefresh || isStale) {
+      testResult = await testMysqlConnection();
+    } else {
+      testResult = {
+        success: health.isHealthy,
+        message: health.isHealthy
+          ? `Berhasil terhubung ke Hostinger MySQL database "${config.database}".`
+          : (health.lastError || 'MySQL Hostinger belum terhubung.'),
+        host: config.host,
+        database: config.database,
+      };
+    }
+
     res.json({
       configured: true,
       ...testResult,
+      clientIp: health.clientIp || undefined,
       config: {
         host: config.host,
         port: config.port,
@@ -253,12 +776,22 @@ app.post('/api/mysql/sync/push', async (req, res) => {
 
     const config = getMysqlConfig();
     const hostLower = (config.host || '').toLowerCase().trim();
-    if (hostLower === 'localhost' || hostLower === '127.0.0.1') {
+    const isSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+    if (isSandbox && (hostLower === 'localhost' || hostLower === '127.0.0.1')) {
       return res.status(200).json({
         success: false,
         skipped: true,
         message:
-          'Hostinger MySQL belum siap: MYSQL_HOST saat ini masih "localhost". Masukkan IP Server Hostinger Anda di Settings.',
+          'Hostinger MySQL belum siap: DB_HOST saat ini masih "localhost". Masukkan IP Server Hostinger Anda di Settings.',
+      });
+    }
+
+    if (isMysqlInBackoff()) {
+      const hState = getMysqlHealthState();
+      return res.status(200).json({
+        success: false,
+        skipped: true,
+        message: `Koneksi MySQL Hostinger ditolak/belum siap (${hState.lastError || 'Access denied'}). Periksa izin Remote MySQL di hPanel Hostinger. Data diamankan di server disk storage.`,
       });
     }
 
@@ -509,8 +1042,7 @@ app.post('/api/mysql/sync/push', async (req, res) => {
              email = VALUES(email),
              role = VALUES(role),
              data = VALUES(data),
-              data = VALUES(data),
-              updated_at = NOW()`,
+             updated_at = NOW()`,
             [
               tm.id,
               tm.username || '',
@@ -622,7 +1154,55 @@ app.post('/api/mysql/sync/push', async (req, res) => {
         [`Auto-Sync ${new Date().toISOString()}`, totalCount, JSON.stringify(payload)]
       );
 
+      // Process deletions if provided
+      if (Array.isArray(payload.deletedProjectIds)) {
+        for (const delId of payload.deletedProjectIds) {
+          if (delId) await conn.query('DELETE FROM crm_projects WHERE id = ?', [delId]);
+        }
+      }
+      if (Array.isArray(payload.deletedTransactionIds)) {
+        for (const delId of payload.deletedTransactionIds) {
+          if (delId) await conn.query('DELETE FROM crm_transactions WHERE id = ?', [delId]);
+        }
+      }
+      if (Array.isArray(payload.deletedReceivableIds)) {
+        for (const delId of payload.deletedReceivableIds) {
+          if (delId) await conn.query('DELETE FROM crm_receivables WHERE id = ?', [delId]);
+        }
+      }
+      const delTaxes = payload.deletedTaxObligationIds || payload.deletedTaxIds;
+      if (Array.isArray(delTaxes)) {
+        for (const delId of delTaxes) {
+          if (delId) await conn.query('DELETE FROM crm_tax_obligations WHERE id = ?', [delId]);
+        }
+      }
+      if (Array.isArray(payload.deletedPayrollIds)) {
+        for (const delId of payload.deletedPayrollIds) {
+          if (delId) await conn.query('DELETE FROM crm_payroll WHERE id = ?', [delId]);
+        }
+      }
+      const delOverheads = payload.deletedOverheadExpenseIds || payload.deletedOverheadIds;
+      if (Array.isArray(delOverheads)) {
+        for (const delId of delOverheads) {
+          if (delId) await conn.query('DELETE FROM crm_overhead_expenses WHERE id = ?', [delId]);
+        }
+      }
+      if (Array.isArray(payload.deletedDispositionIds)) {
+        for (const delId of payload.deletedDispositionIds) {
+          if (delId) await conn.query('DELETE FROM crm_dispositions WHERE id = ?', [delId]);
+        }
+      }
+
       await conn.commit();
+
+      // Keep persistent server storage file synchronized as dual backup
+      try {
+        fs.writeFileSync(
+          SERVER_STORAGE_FILE,
+          JSON.stringify({ updatedAt: new Date().toISOString(), data: payload }, null, 2),
+          'utf-8'
+        );
+      } catch {}
 
       res.json({
         success: true,
@@ -650,7 +1230,14 @@ app.post('/api/mysql/sync/push', async (req, res) => {
       conn.release();
     }
   } catch (error: any) {
-    console.warn('MySQL Sync Push Warning:', error.message || error);
+    const ipMatch = error.message?.match(/@'([^']+)'/);
+    const incomingIp = ipMatch ? ipMatch[1] : '';
+    setMysqlHealthState({
+      isHealthy: false,
+      lastChecked: Date.now(),
+      lastError: error.message || String(error),
+      clientIp: incomingIp,
+    });
     res.status(200).json({
       success: false,
       message: `Gagal menyimpan data ke Hostinger MySQL: ${error.message || error}`,
@@ -671,12 +1258,22 @@ app.get('/api/mysql/sync/pull', async (req, res) => {
 
     const config = getMysqlConfig();
     const hostLower = (config.host || '').toLowerCase().trim();
-    if (hostLower === 'localhost' || hostLower === '127.0.0.1') {
+    const isSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+    if (isSandbox && (hostLower === 'localhost' || hostLower === '127.0.0.1')) {
       return res.status(200).json({
         success: false,
         skipped: true,
         message:
-          'Hostinger MySQL belum terhubung: MYSQL_HOST saat ini masih "localhost". Masukkan IP Server Hostinger Anda di Settings.',
+          'Hostinger MySQL belum terhubung: DB_HOST saat ini masih "localhost". Masukkan IP Server Hostinger Anda di Settings.',
+      });
+    }
+
+    if (isMysqlInBackoff()) {
+      const hState = getMysqlHealthState();
+      return res.status(200).json({
+        success: false,
+        skipped: true,
+        message: `Koneksi MySQL Hostinger ditolak/belum siap (${hState.lastError || 'Access denied'}). Periksa menu Remote MySQL di hPanel Hostinger. Data diambil dari persistent server storage.`,
       });
     }
 
@@ -766,7 +1363,14 @@ app.get('/api/mysql/sync/pull', async (req, res) => {
       conn.release();
     }
   } catch (error: any) {
-    console.warn('MySQL Sync Pull Warning:', error.message || error);
+    const ipMatch = error.message?.match(/@'([^']+)'/);
+    const incomingIp = ipMatch ? ipMatch[1] : '';
+    setMysqlHealthState({
+      isHealthy: false,
+      lastChecked: Date.now(),
+      lastError: error.message || String(error),
+      clientIp: incomingIp,
+    });
     res.status(200).json({
       success: false,
       message: `Gagal menarik data dari Hostinger MySQL: ${error.message || error}`,
@@ -804,8 +1408,8 @@ async function setupViteOrStatic() {
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running on port ${port}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
     console.log(`Hostinger MySQL configured: ${isMysqlConfigured() ? 'YES' : 'NO'}`);
   });
 }

@@ -2955,6 +2955,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
+  // Direct instant MySQL mutation helper (runs INSERT / UPDATE or DELETE on Hostinger MySQL)
+  const saveEntityToMysql = useCallback((entityType: string, action: 'save' | 'delete', item?: any, id?: string) => {
+    try {
+      fetch('/api/data/entity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entityType, action, item, id: id || item?.id }),
+      }).catch(() => {});
+    } catch {}
+  }, []);
+
   // Real-time listener for multi-tab and multi-window synchronization
   useEffect(() => {
     const handleLiveUserUpdate = (updatedMember: TeamMember) => {
@@ -3455,6 +3466,94 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const hydrateFromStorage = async () => {
       try {
+        // Primary Step: Authoritative Hydration via API GET (/api/data)
+        // Fetches directly from Hostinger MySQL (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
+        // or persistent server storage, bypassing stale localStorage and default data.
+        try {
+          const apiRes = await fetch('/api/data').catch(() => null);
+          if (apiRes && apiRes.ok) {
+            const apiResult = await apiRes.json().catch(() => null);
+            if (apiResult && apiResult.success && apiResult.data && isMounted) {
+              const d = apiResult.data;
+              const hasData = Boolean(
+                (Array.isArray(d.projects) && d.projects.length > 0) ||
+                (Array.isArray(d.transactions) && d.transactions.length > 0) ||
+                (Array.isArray(d.receivables) && d.receivables.length > 0) ||
+                (Array.isArray(d.retailProjects) && d.retailProjects.length > 0) ||
+                (Array.isArray(d.governmentProjects) && d.governmentProjects.length > 0) ||
+                (Array.isArray(d.dispositions) && d.dispositions.length > 0) ||
+                (Array.isArray(d.teamMembers) && d.teamMembers.length > 0)
+              );
+
+              if (hasData) {
+                if (Array.isArray(d.projects)) {
+                  setProjects(d.projects);
+                  safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(d.projects));
+                }
+                if (Array.isArray(d.retailProjects)) {
+                  setRetailProjects(d.retailProjects);
+                  safeLocalStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(d.retailProjects));
+                }
+                if (Array.isArray(d.governmentProjects)) {
+                  setGovernmentProjects(d.governmentProjects);
+                  safeLocalStorage.setItem(STORAGE_KEY_GOVERNMENT_PROJECTS, JSON.stringify(d.governmentProjects));
+                }
+                if (Array.isArray(d.transactions)) {
+                  setTransactions(d.transactions);
+                  safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(d.transactions));
+                }
+                if (Array.isArray(d.receivables)) {
+                  setReceivables(d.receivables);
+                  safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(d.receivables));
+                }
+                if (Array.isArray(d.taxObligations)) {
+                  setTaxObligations(d.taxObligations);
+                  safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(d.taxObligations));
+                }
+                if (Array.isArray(d.dispositions)) {
+                  setDispositions(d.dispositions);
+                  safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(d.dispositions));
+                }
+                if (Array.isArray(d.bankLoans)) {
+                  setBankLoans(d.bankLoans);
+                }
+                if (Array.isArray(d.payrollPayments)) {
+                  setPayrollRecords(d.payrollPayments);
+                  safeLocalStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(d.payrollPayments));
+                }
+                if (Array.isArray(d.overheadExpenses)) {
+                  setOverheadExpenses(d.overheadExpenses);
+                }
+                if (Array.isArray(d.officeRentContracts)) {
+                  setOfficeRentContracts(d.officeRentContracts);
+                }
+                if (Array.isArray(d.teamMembers) && d.teamMembers.length > 0) {
+                  setTeamMembers(d.teamMembers);
+                  safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(d.teamMembers));
+                }
+                if (Array.isArray(d.serviceTypes) && d.serviceTypes.length > 0) {
+                  setConsultingServices(d.serviceTypes);
+                }
+                if (Array.isArray(d.documentTypes) && d.documentTypes.length > 0) {
+                  setDocumentTypes(d.documentTypes);
+                }
+                if (Array.isArray(d.documentCategories) && d.documentCategories.length > 0) {
+                  setDocumentCategories(d.documentCategories);
+                }
+                if (d.companyCapital) {
+                  setCompanyCapital(d.companyCapital);
+                }
+                if (Array.isArray(d.salaryConfigs) && d.salaryConfigs.length > 0) {
+                  setEmployeeSalaryConfigs(d.salaryConfigs);
+                }
+                return; // Direct authoritative load complete!
+              }
+            }
+          }
+        } catch (apiErr) {
+          console.warn('[Hydration] API GET data fallback notice:', apiErr);
+        }
+
         // Step A: Immediate local recovery from IndexedDB
         const idbProjects = await loadCollectionFromIndexedDb<ConsultingProject[]>(STORAGE_KEY_PROJECTS);
         if (isMounted && Array.isArray(idbProjects) && idbProjects.length > 0) {
@@ -3685,6 +3784,28 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: snapshotPayload }),
+      }).catch(() => {});
+
+      // Persist changes directly to Hostinger MySQL (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
+      fetch('/api/mysql/sync/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...snapshotPayload,
+          payrollPayments: payrollRecords,
+          serviceTypes: consultingServices,
+          documentTypes,
+          documentCategories,
+          transactionCategories,
+          paymentChannels,
+          companyCapital,
+          salaryConfigs: employeeSalaryConfigs,
+          institutionTypes,
+          termDistributionSchemes,
+          companyLetterhead,
+          roleDefinitions,
+          assignedByOptions,
+        }),
       }).catch(() => {});
     }, 2000);
     return () => clearTimeout(timer);
@@ -7925,6 +8046,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = deduplicateById([newReceivable, ...prev]);
       broadcastLiveDataUpdate('RECEIVABLES', updated);
       saveReceivableToFirestore(newReceivable);
+      saveEntityToMysql('receivables', 'save', newReceivable);
       return updated;
     });
 
@@ -7975,6 +8097,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
 
           saveReceivableToFirestore(merged);
+          saveEntityToMysql('receivables', 'save', merged);
           return merged;
         }
         return r;
@@ -8018,6 +8141,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       txIdsToDelete.forEach((txId) => {
         addDeletedTransactionId(txId);
         deleteTransactionFromFirestore(txId);
+        saveEntityToMysql('transactions', 'delete', undefined, txId);
       });
       setTransactions((prev) => {
         const updated = prev.filter((t) => !txIdsToDelete.has(t.id));
@@ -8040,6 +8164,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
     deleteReceivableFromFirestore(id);
+    saveEntityToMysql('receivables', 'delete', undefined, id);
 
     return { success: true, message: `Invoice piutang "${target.invoiceNumber}" berhasil dihapus.` };
   };
@@ -11359,6 +11484,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
     saveProjectToFirestore(newProject);
+    saveEntityToMysql('projects', 'save', newProject);
     return newProject;
   };
 
@@ -11481,6 +11607,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           activities: [...generatedActivities, ...(p.activities || [])],
         };
         saveProjectToFirestore(updatedProj);
+        saveEntityToMysql('projects', 'save', updatedProj);
         return updatedProj;
       });
       broadcastLiveDataUpdate('PROJECTS', updated);
@@ -11502,6 +11629,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 1. Atomically delete and tombstone projects
     addMultipleDeletedProjectIds(ids);
     deleteBatchProjectsFromFirestore(ids);
+    ids.forEach((id) => saveEntityToMysql('projects', 'delete', undefined, id));
 
     setProjects((prev) => {
       const updated = prev.filter((p) => !idSet.has(p.id));
@@ -11642,6 +11770,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
     saveDispositionToFirestore(newDisp);
+    saveEntityToMysql('dispositions', 'save', newDisp);
 
     // Update team member active count
     setTeamMembers((prev) => {
@@ -11694,6 +11823,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           );
         }
         saveDispositionToFirestore(updatedItem);
+        saveEntityToMysql('dispositions', 'save', updatedItem);
         return updatedItem;
       });
       broadcastLiveDataUpdate('DISPOSITIONS', updated);
@@ -11716,6 +11846,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
     deleteDispositionFromFirestore(id);
+    saveEntityToMysql('dispositions', 'delete', undefined, id);
   };
 
   const toggleChecklistItem = (dispositionId: string, checklistId: string) => {
@@ -12096,6 +12227,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return updated;
     });
     saveTransactionToFirestore(newTx);
+    saveEntityToMysql('transactions', 'save', newTx);
 
     // If associated with a project, add an activity log to the project
     if (tx.projectId) {
@@ -12121,6 +12253,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             projectCode: updates.projectCode !== undefined ? updates.projectCode : t.projectCode,
           };
           saveTransactionToFirestore(updatedItem);
+          saveEntityToMysql('transactions', 'save', updatedItem);
           return updatedItem;
         }
         return t;
@@ -12138,6 +12271,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 1. Atomically delete and tombstone transactions
     addMultipleDeletedTransactionIds(ids);
     deleteBatchTransactionsFromFirestore(ids);
+    ids.forEach((id) => saveEntityToMysql('transactions', 'delete', undefined, id));
 
     setTransactions((prev) => {
       const updated = prev.filter((t) => !idSet.has(t.id));
