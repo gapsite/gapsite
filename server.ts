@@ -16,7 +16,11 @@ import {
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+
+// Port configuration: Listen to Hostinger dynamic port (process.env.PORT),
+// while preserving port 3000 in AI Studio sandbox container
+const isAiStudioSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+const port = isAiStudioSandbox ? 3000 : Number(process.env.PORT || 3000);
 
 // Middleware for parsing JSON with generous payload limits for full backups
 app.use(express.json({ limit: '50mb' }));
@@ -29,6 +33,93 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     mysqlConfigured: isMysqlConfigured(),
   });
+});
+
+// ==========================================
+// SERVER-SIDE PERSISTENT JSON STORAGE API
+// Ensures data survives browser cache clears, private browsing, and client storage eviction.
+// ==========================================
+const DATA_DIR = path.join(process.cwd(), 'data');
+const SERVER_STORAGE_FILE = path.join(DATA_DIR, 'crm_persistent_storage.json');
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (err) {
+    console.warn('[server-storage] Error creating data directory:', err);
+  }
+}
+
+// Retrieve persistent server storage
+app.get('/api/storage/sync', (req, res) => {
+  try {
+    if (!fs.existsSync(SERVER_STORAGE_FILE)) {
+      return res.json({ success: true, exists: false, data: null });
+    }
+    const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+    if (!raw.trim()) {
+      return res.json({ success: true, exists: false, data: null });
+    }
+    const parsed = JSON.parse(raw);
+    res.json({
+      success: true,
+      exists: true,
+      updatedAt: parsed.updatedAt || null,
+      data: parsed.data || parsed,
+    });
+  } catch (error: any) {
+    console.error('[server-storage] Error reading persistent storage:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to read server storage' });
+  }
+});
+
+// Save persistent server storage
+app.post('/api/storage/sync', (req, res) => {
+  try {
+    const payload = req.body;
+    if (!payload) {
+      return res.status(400).json({ success: false, message: 'Invalid payload' });
+    }
+
+    const dataToSave = {
+      version: '1.0',
+      updatedAt: new Date().toISOString(),
+      data: payload.data || payload,
+    };
+
+    const tempFile = `${SERVER_STORAGE_FILE}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(dataToSave, null, 2), 'utf-8');
+    fs.renameSync(tempFile, SERVER_STORAGE_FILE);
+
+    res.json({
+      success: true,
+      updatedAt: dataToSave.updatedAt,
+      message: 'Data berhasil diamankan di penyimpanan server.',
+    });
+  } catch (error: any) {
+    console.error('[server-storage] Error writing persistent storage:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to write server storage' });
+  }
+});
+
+// Storage status
+app.get('/api/storage/status', (req, res) => {
+  try {
+    const exists = fs.existsSync(SERVER_STORAGE_FILE);
+    if (!exists) {
+      return res.json({ exists: false, message: 'Belum ada cadangan penyimpanan di server.' });
+    }
+    const stats = fs.statSync(SERVER_STORAGE_FILE);
+    res.json({
+      exists: true,
+      sizeBytes: stats.size,
+      lastModified: stats.mtime.toISOString(),
+      path: SERVER_STORAGE_FILE,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Download SQL Schema for Hostinger phpMyAdmin
@@ -713,8 +804,8 @@ async function setupViteOrStatic() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server GAP CRM running on http://0.0.0.0:${PORT}`);
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port}`);
     console.log(`Hostinger MySQL configured: ${isMysqlConfigured() ? 'YES' : 'NO'}`);
   });
 }

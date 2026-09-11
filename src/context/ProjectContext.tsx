@@ -3449,11 +3449,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => unsubscribe();
   }, []);
 
-  // 0. IndexedDB Hydration Engine: Guarantees full offline and high-capacity recovery
+  // 0. IndexedDB & Server-Side Persistent Storage Hydration Engine: Guarantees full offline, high-capacity, and cache-clear resilience
   useEffect(() => {
     let isMounted = true;
-    const hydrateFromIndexedDb = async () => {
+
+    const hydrateFromStorage = async () => {
       try {
+        // Step A: Immediate local recovery from IndexedDB
         const idbProjects = await loadCollectionFromIndexedDb<ConsultingProject[]>(STORAGE_KEY_PROJECTS);
         if (isMounted && Array.isArray(idbProjects) && idbProjects.length > 0) {
           setProjects((curr) => {
@@ -3507,20 +3509,162 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return toAdd.length > 0 ? [...curr, ...toAdd] : curr;
           });
         }
+
+        // Step B: Server-Side Storage Hydration (Survives browser cache clears, private tabs, and device resets)
+        const serverRes = await fetch('/api/storage/sync').catch(() => null);
+        if (serverRes && serverRes.ok) {
+          const result = await serverRes.json().catch(() => null);
+          if (result && result.success && result.exists && result.data && isMounted) {
+            const serverData = result.data;
+
+            if (Array.isArray(serverData.projects) && serverData.projects.length > 0) {
+              setProjects((curr) => {
+                const currIds = new Set(curr.map((p) => p.id));
+                const toAdd = serverData.projects.filter((p: any) => p && p.id && !currIds.has(p.id));
+                const serverMap = new Map<string, any>(serverData.projects.map((p: any) => [p.id, p]));
+                const updated = curr.map((p) => (serverMap.has(p.id) ? { ...p, ...(serverMap.get(p.id) as Record<string, any>) } : p));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.retailProjects) && serverData.retailProjects.length > 0) {
+              setRetailProjects((curr) => {
+                const currIds = new Set(curr.map((p) => p.id));
+                const toAdd = serverData.retailProjects.filter((p: any) => p && p.id && !currIds.has(p.id));
+                const serverMap = new Map<string, any>(serverData.retailProjects.map((p: any) => [p.id, p]));
+                const updated = curr.map((p) => (serverMap.has(p.id) ? { ...p, ...(serverMap.get(p.id) as Record<string, any>) } : p));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.governmentProjects) && serverData.governmentProjects.length > 0) {
+              setGovernmentProjects((curr) => {
+                const currIds = new Set(curr.map((g) => g.id));
+                const toAdd = serverData.governmentProjects.filter((g: any) => g && g.id && !currIds.has(g.id));
+                const serverMap = new Map<string, any>(serverData.governmentProjects.map((g: any) => [g.id, g]));
+                const updated = curr.map((g) => (serverMap.has(g.id) ? { ...g, ...(serverMap.get(g.id) as Record<string, any>) } : g));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_GOVERNMENT_PROJECTS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.transactions) && serverData.transactions.length > 0) {
+              setTransactions((curr) => {
+                const currIds = new Set(curr.map((t) => t.id));
+                const toAdd = serverData.transactions.filter((t: any) => t && t.id && !currIds.has(t.id));
+                const serverMap = new Map<string, any>(serverData.transactions.map((t: any) => [t.id, t]));
+                const updated = curr.map((t) => (serverMap.has(t.id) ? { ...t, ...(serverMap.get(t.id) as Record<string, any>) } : t));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.receivables) && serverData.receivables.length > 0) {
+              setReceivables((curr) => {
+                const currIds = new Set(curr.map((r) => r.id));
+                const toAdd = serverData.receivables.filter((r: any) => r && r.id && !currIds.has(r.id));
+                const serverMap = new Map<string, any>(serverData.receivables.map((r: any) => [r.id, r]));
+                const updated = curr.map((r) => (serverMap.has(r.id) ? { ...r, ...(serverMap.get(r.id) as Record<string, any>) } : r));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.taxObligations) && serverData.taxObligations.length > 0) {
+              setTaxObligations((curr) => {
+                const currIds = new Set(curr.map((t) => t.id));
+                const toAdd = serverData.taxObligations.filter((t: any) => t && t.id && !currIds.has(t.id));
+                const serverMap = new Map<string, any>(serverData.taxObligations.map((t: any) => [t.id, t]));
+                const updated = curr.map((t) => (serverMap.has(t.id) ? { ...t, ...(serverMap.get(t.id) as Record<string, any>) } : t));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.dispositions) && serverData.dispositions.length > 0) {
+              setDispositions((curr) => {
+                const currIds = new Set(curr.map((d) => d.id));
+                const toAdd = serverData.dispositions.filter((d: any) => d && d.id && !currIds.has(d.id));
+                const serverMap = new Map<string, any>(serverData.dispositions.map((d: any) => [d.id, d]));
+                const updated = curr.map((d) => (serverMap.has(d.id) ? { ...d, ...(serverMap.get(d.id) as Record<string, any>) } : d));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_DISPOSITIONS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.overheadExpenses) && serverData.overheadExpenses.length > 0) {
+              setOverheadExpenses((curr) => {
+                const currIds = new Set(curr.map((o) => o.id));
+                const toAdd = serverData.overheadExpenses.filter((o: any) => o && o.id && !currIds.has(o.id));
+                const serverMap = new Map<string, any>(serverData.overheadExpenses.map((o: any) => [o.id, o]));
+                const updated = curr.map((o) => (serverMap.has(o.id) ? { ...o, ...(serverMap.get(o.id) as Record<string, any>) } : o));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.officeRentContracts) && serverData.officeRentContracts.length > 0) {
+              setOfficeRentContracts((curr) => {
+                const currIds = new Set(curr.map((rc) => rc.id));
+                const toAdd = serverData.officeRentContracts.filter((rc: any) => rc && rc.id && !currIds.has(rc.id));
+                const serverMap = new Map<string, any>(serverData.officeRentContracts.map((rc: any) => [rc.id, rc]));
+                const updated = curr.map((rc) => (serverMap.has(rc.id) ? { ...rc, ...(serverMap.get(rc.id) as Record<string, any>) } : rc));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.payroll) && serverData.payroll.length > 0) {
+              setPayrollRecords((curr) => {
+                const currIds = new Set(curr.map((p) => p.id));
+                const toAdd = serverData.payroll.filter((p: any) => p && p.id && !currIds.has(p.id));
+                const serverMap = new Map<string, any>(serverData.payroll.map((p: any) => [p.id, p]));
+                const updated = curr.map((p) => (serverMap.has(p.id) ? { ...p, ...(serverMap.get(p.id) as Record<string, any>) } : p));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(merged));
+                return merged;
+              });
+            }
+
+            if (Array.isArray(serverData.teamMembers) && serverData.teamMembers.length > 0) {
+              setTeamMembers((curr) => {
+                const currIds = new Set(curr.map((m) => m.id));
+                const toAdd = serverData.teamMembers.filter((m: any) => m && m.id && !currIds.has(m.id));
+                const serverMap = new Map<string, any>(serverData.teamMembers.map((m: any) => [m.id, m]));
+                const updated = curr.map((m) => (serverMap.has(m.id) ? { ...m, ...(serverMap.get(m.id) as Record<string, any>) } : m));
+                const merged = [...updated, ...toAdd];
+                safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(merged));
+                return merged;
+              });
+            }
+          }
+        }
       } catch (err) {
-        console.warn('[Storage] Note during IndexedDB hydration:', err);
+        console.warn('[Storage] Note during storage hydration:', err);
       }
     };
-    hydrateFromIndexedDb();
+
+    hydrateFromStorage();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Rolling Automatic Snapshots in IndexedDB (stores complete point-in-time state backups)
+  // Rolling Automatic Snapshots in IndexedDB & Server Storage (stores complete point-in-time state backups)
   useEffect(() => {
     const timer = setTimeout(() => {
-      saveAutoSnapshotToIndexedDb({
+      const snapshotPayload = {
         projects,
         dispositions,
         transactions,
@@ -3532,6 +3676,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         officeRentContracts,
         payroll: payrollRecords,
         teamMembers,
+      };
+
+      saveAutoSnapshotToIndexedDb(snapshotPayload).catch(() => {});
+
+      // Persist to server disk so clearing browser cache or changing devices retains all input
+      fetch('/api/storage/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: snapshotPayload }),
       }).catch(() => {});
     }, 2000);
     return () => clearTimeout(timer);
