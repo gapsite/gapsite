@@ -646,38 +646,107 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
               {/* Data Volume Summary */}
               <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-indigo-950">Data Input Saat Ini yang Siap Disimpan:</span>
+                  <span className="text-xs font-bold text-indigo-950">Data Input CRM Lengkap yang Siap Disinkronkan:</span>
                   <span className="text-[11px] font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-full border border-indigo-200">
-                    {projects.length} Proyek • {transactions.length} Transaksi
+                    {projects.length + retailProjects.length + governmentProjects.length} Proyek • {transactions.length} Kas • {taxObligations.length} Pajak
                   </span>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-center text-xs">
                   <div className="bg-white p-2 rounded-lg border border-indigo-100">
-                    <span className="text-slate-500 text-[10px] block">Proyek</span>
+                    <span className="text-slate-500 text-[10px] block">Proyek TKDN</span>
                     <span className="font-bold text-slate-900">{projects.length}</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-indigo-100">
-                    <span className="text-slate-500 text-[10px] block">Transaksi</span>
+                    <span className="text-slate-500 text-[10px] block">Proyek Retail</span>
+                    <span className="font-bold text-indigo-700">{retailProjects.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Proyek Tender</span>
+                    <span className="font-bold text-slate-900">{governmentProjects.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Buku Kas & Bank</span>
                     <span className="font-bold text-slate-900">{transactions.length}</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-indigo-100">
-                    <span className="text-slate-500 text-[10px] block">Piutang</span>
+                    <span className="text-slate-500 text-[10px] block">Piutang Usaha</span>
                     <span className="font-bold text-slate-900">{receivables.length}</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-indigo-100">
-                    <span className="text-slate-500 text-[10px] block">Pajak</span>
+                    <span className="text-slate-500 text-[10px] block">Pajak (PPh/PPN)</span>
                     <span className="font-bold text-slate-900">{taxObligations.length}</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-indigo-100">
-                    <span className="text-slate-500 text-[10px] block">Payroll</span>
+                    <span className="text-slate-500 text-[10px] block">Penggajian</span>
                     <span className="font-bold text-slate-900">{payrollPayments.length}</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-indigo-100">
-                    <span className="text-slate-500 text-[10px] block">Anggota Tim</span>
+                    <span className="text-slate-500 text-[10px] block">Biaya Overhead</span>
+                    <span className="font-bold text-slate-900">{overheadExpenses.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Sewa Gedung</span>
+                    <span className="font-bold text-slate-900">{officeRentContracts.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Pinjaman Bank</span>
+                    <span className="font-bold text-slate-900">{bankLoans.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Disposisi Kerja</span>
+                    <span className="font-bold text-slate-900">{dispositions.length}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-indigo-100">
+                    <span className="text-slate-500 text-[10px] block">Pengguna / Tim</span>
                     <span className="font-bold text-slate-900">{teamMembers.length}</span>
                   </div>
                 </div>
               </div>
+
+              {/* Hostinger Remote MySQL Quick Permission Banner if Access Denied */}
+              {statusData?.configured && !statusData?.success && (statusData?.message?.includes('Access denied') || statusData?.message?.includes('ER_ACCESS_DENIED_ERROR') || statusData?.message?.includes('Remote MySQL')) && (
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-xs text-amber-950">
+                  <div className="flex items-center gap-2 font-bold text-amber-900 text-sm">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Perizinan Remote MySQL Hostinger Diperlukan</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    Hostinger secara default mengunci akses database MySQL dari luar server hosting. Untuk mengizinkan aplikasi menyimpan data ke database <strong>{statusData?.config?.database || 'u313358252_Gapsite'}</strong>, lakukan langkah berikut:
+                  </p>
+                  <div className="bg-white p-3 rounded-lg border border-amber-200 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-amber-800 shrink-0">1.</span>
+                      <span>Buka <strong>hPanel Hostinger</strong> &rarr; menu <strong>Databases</strong> &rarr; pilih <strong>Remote MySQL</strong>.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-amber-800 shrink-0">2.</span>
+                      <span>Pilih Database: <strong>{statusData?.config?.database || 'u313358252_Gapsite'}</strong></span>
+                    </div>
+                    <div className="flex items-start gap-2 items-center justify-between">
+                      <div className="flex items-start gap-2">
+                        <span className="font-bold text-amber-800 shrink-0">3.</span>
+                        <span>Kolom <strong>IP (IPv4 atau IPv6)</strong>: Masukkan tanda <strong>%</strong> (wildcard semua IP)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText('%');
+                          setIsCopied(true);
+                          setTimeout(() => setIsCopied(false), 2000);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-md transition-colors cursor-pointer"
+                      >
+                        {isCopied ? <Check className="w-3 h-3 text-emerald-700" /> : <Copy className="w-3 h-3" />}
+                        <span>{isCopied ? 'Tersalin!' : 'Salin "%"'}</span>
+                      </button>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-amber-800 shrink-0">4.</span>
+                      <span>Klik tombol <strong>Create / Tambahkan</strong>, lalu kembali ke sini dan klik tombol <strong>"Uji Diagnostik"</strong> di atas.</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">

@@ -3095,6 +3095,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           bankLoans,
           dispositions,
           teamMembers,
+          overheadExpenses,
+          officeRentContracts,
+          serviceTypes: consultingServices,
+          documentTypes,
+          documentCategories,
+          transactionCategories,
+          paymentChannels,
+          companyCapital,
+          salaryConfigs: employeeSalaryConfigs,
+          institutionTypes,
+          termDistributionSchemes,
+          companyLetterhead,
+          roleDefinitions,
+          assignedByOptions,
         }),
       })
         .then((res) => res.json())
@@ -3121,6 +3135,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     bankLoans,
     dispositions,
     teamMembers,
+    overheadExpenses,
+    officeRentContracts,
+    consultingServices,
+    documentTypes,
+    documentCategories,
+    transactionCategories,
+    paymentChannels,
+    companyCapital,
+    employeeSalaryConfigs,
+    institutionTypes,
+    termDistributionSchemes,
+    companyLetterhead,
+    roleDefinitions,
+    assignedByOptions,
   ]);
 
   // Sync state with Firebase Auth
@@ -7029,9 +7057,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Tax Obligations & Tax Liabilities (PPN & PPh Terhutang) Methods
   const addTaxObligation = (
-    taxData: Omit<TaxObligation, 'id' | 'createdAt' | 'createdBy'> & { id?: string }
+    taxData: Omit<TaxObligation, 'id' | 'createdAt' | 'createdBy'> & { id?: string },
+    bypassPermissionCheck: boolean = false
   ): { success: boolean; taxObligation?: TaxObligation; message?: string } => {
-    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
+    if (!bypassPermissionCheck && !isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
       return { success: false, message: 'Akses Ditolak: Hanya Tim Finance / Master Admin yang dapat mencatat kewajiban pajak.' };
     }
 
@@ -7052,10 +7081,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setTaxObligations((prev) => {
       const updated = deduplicateById([newTax, ...prev]);
+      try {
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+      } catch {}
       broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
       saveSettingsToFirestore('tax_obligations', updated);
       return updated;
     });
+    saveTaxObligationToFirestore(newTax);
 
     return {
       success: true,
@@ -7066,13 +7099,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateTaxObligation = (
     id: string,
-    updates: Partial<TaxObligation>
+    updates: Partial<TaxObligation>,
+    bypassPermissionCheck: boolean = false
   ): { success: boolean; message?: string } => {
-    if (!isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
+    if (!bypassPermissionCheck && !isMasterAdmin && !currentUser.permissions?.includes('MANAGE_FINANCE')) {
       return { success: false, message: 'Akses Ditolak: Anda tidak memiliki wewenang mengedit data perpajakan.' };
     }
 
     let found = false;
+    let updatedMergedItem: TaxObligation | null = null;
+
     setTaxObligations((prev) => {
       const updated = prev.map((t) => {
         if (t.id === id) {
@@ -7088,17 +7124,25 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               merged.status = 'TERHUTANG';
             }
           }
+          updatedMergedItem = merged;
           return merged;
         }
         return t;
       });
 
       if (found) {
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
         saveSettingsToFirestore('tax_obligations', updated);
       }
       return updated;
     });
+
+    if (updatedMergedItem) {
+      saveTaxObligationToFirestore(updatedMergedItem);
+    }
 
     if (!found) {
       return { success: false, message: 'Data kewajiban pajak tidak ditemukan.' };
@@ -8304,10 +8348,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const bupotNum = m.bupotPphNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`;
           const taxObligationPph: TaxObligation = {
             id: taxPphId,
+            projectId: id,
+            projectCode: data.contractNumber || id,
             taxType: (m.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
             taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
             taxYear,
             taxMonth,
+            taxableBaseAmount: m.dppAmountIDR || gross,
+            taxRatePercent: m.pphRatePercent || (m.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2),
             title: `Bukti Potong PPh 23 - ${m.title} (${data.clientName})`,
             description: `Bukti Potong PPh 23 - ${m.title} (${data.clientName})`,
             taxAmount: pph,
@@ -8335,10 +8383,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const taxPpnId = `tax-ppn-rtl-${id}-${m.id}`;
           const taxObligationPpn: TaxObligation = {
             id: taxPpnId,
+            projectId: id,
+            projectCode: data.contractNumber || id,
             taxType: 'PPN',
             taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
             taxYear,
             taxMonth,
+            taxableBaseAmount: m.dppAmountIDR || gross,
+            taxRatePercent: m.ppnRatePercent || 11,
             title: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
             description: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
             taxAmount: ppn,
@@ -8364,10 +8416,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const taxPphId = `tax-pph-rtl-${id}-${m.id}`;
           const taxObligationPph: TaxObligation = {
             id: taxPphId,
+            projectId: id,
+            projectCode: data.contractNumber || id,
             taxType: (m.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
             taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
             taxYear,
             taxMonth,
+            taxableBaseAmount: m.dppAmountIDR || gross,
+            taxRatePercent: m.pphRatePercent || (m.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2),
             title: `Potongan PPh 23 (Kredit Pajak) - ${m.title} (${data.clientName})`,
             description: `Potongan PPh 23 (Kredit Pajak) - ${m.title} (${data.clientName})`,
             taxAmount: pph,
@@ -8390,10 +8446,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const taxPpnId = `tax-ppn-rtl-${id}-${m.id}`;
           const taxObligationPpn: TaxObligation = {
             id: taxPpnId,
+            projectId: id,
+            projectCode: data.contractNumber || id,
             taxType: 'PPN',
             taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
             taxYear,
             taxMonth,
+            taxableBaseAmount: m.dppAmountIDR || gross,
+            taxRatePercent: m.ppnRatePercent || 11,
             title: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
             description: `PPN Keluaran 11% - ${m.title} (${data.clientName})`,
             taxAmount: ppn,
@@ -8417,8 +8477,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (initialTransactions.length > 0) {
       setTransactions((prev) => {
         const updated = deduplicateById([...initialTransactions, ...prev]);
-        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        saveSettingsToFirestore('transactions', updated);
         initialTransactions.forEach((t) => saveTransactionToFirestore(t));
         return updated;
       });
@@ -8428,9 +8491,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (initialTaxes.length > 0) {
       setTaxObligations((prev) => {
         const updated = deduplicateById([...initialTaxes, ...prev]);
-        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
-        initialTaxes.forEach((t) => saveSettingsToFirestore('tax_obligations', [t, ...prev]));
+        saveSettingsToFirestore('tax_obligations', updated);
+        initialTaxes.forEach((t) => saveTaxObligationToFirestore(t));
         return updated;
       });
     }
@@ -8536,6 +8602,106 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Proyek retail tidak ditemukan.' };
     }
 
+    const idSet = new Set([id, target.linkedCrmProjectId].filter(Boolean) as string[]);
+    const targetCodes = new Set([target.contractNumber, id].filter(Boolean) as string[]);
+    const targetMilestones = target.milestones || [];
+    const targetInvoiceNumbers = new Set(targetMilestones.map((m) => m.invoiceNumber).filter(Boolean) as string[]);
+    const targetBupotNumbers = new Set(targetMilestones.map((m) => m.bupotPphNumber).filter(Boolean) as string[]);
+    const targetTaxObligationIds = new Set(
+      targetMilestones.flatMap((m) => [m.taxObligationPphId, m.taxObligationPpnId]).filter(Boolean) as string[]
+    );
+    const targetReceivableIds = new Set(targetMilestones.map((m) => m.receivableId).filter(Boolean) as string[]);
+    const targetTxIds = new Set(targetMilestones.map((m) => m.transactionId).filter(Boolean) as string[]);
+
+    // 1. Cascading deletion for Tax Obligations (PPh 23 Withholding, PPN Keluaran)
+    const linkedTaxes = taxObligations.filter((t) => {
+      if (!t || !t.id) return false;
+      if (t.projectId && idSet.has(t.projectId)) return true;
+      if (t.projectCode && targetCodes.has(t.projectCode)) return true;
+      if (targetTaxObligationIds.has(t.id)) return true;
+      if (t.id.startsWith(`tax-pph-rtl-${id}`) || t.id.startsWith(`tax-ppn-rtl-${id}`)) return true;
+      if (t.counterpartyName && t.counterpartyName.toLowerCase() === target.clientName.toLowerCase()) {
+        if (t.title && (t.title.includes(target.projectName) || (target.contractNumber && t.title.includes(target.contractNumber)))) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    const taxIds = linkedTaxes.map((t) => t.id);
+    const taxTxIds = new Set(linkedTaxes.map((t) => t.transactionId).filter(Boolean) as string[]);
+
+    if (taxIds.length > 0) {
+      addMultipleDeletedTaxIds(taxIds);
+      deleteBatchTaxObligationsFromFirestore(taxIds);
+      setTaxObligations((prev) => {
+        const updated = prev.filter((t) => !taxIds.includes(t.id));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('tax_obligations', updated);
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        return updated;
+      });
+    }
+
+    // 2. Cascading deletion for Cash Flow Transactions (Income from billing & Expense for PPh withholding)
+    const linkedTransactions = transactions.filter((t) => {
+      if (!t || !t.id) return false;
+      if (t.projectId && idSet.has(t.projectId)) return true;
+      if (targetTxIds.has(t.id)) return true;
+      if (taxTxIds.has(t.id)) return true;
+      if (t.id.startsWith(`trx-retail-inc-${id}`) || t.id.startsWith(`trx-retail-tax-${id}`)) return true;
+      if (t.referenceNumber && (targetInvoiceNumbers.has(t.referenceNumber) || targetBupotNumbers.has(t.referenceNumber))) return true;
+      if (t.clientOrVendorName && t.clientOrVendorName.toLowerCase() === target.clientName.toLowerCase()) {
+        if (t.description && (t.description.includes(target.projectName) || (target.contractNumber && t.description.includes(target.contractNumber)))) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    const trxIds = linkedTransactions.map((t) => t.id);
+    if (trxIds.length > 0) {
+      addMultipleDeletedTransactionIds(trxIds);
+      deleteBatchTransactionsFromFirestore(trxIds);
+      setTransactions((prev) => {
+        const updated = prev.filter((t) => !trxIds.includes(t.id));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('transactions', updated);
+        broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        return updated;
+      });
+    }
+
+    // 3. Cascading deletion for Receivables (Piutang Usaha)
+    const linkedReceivables = receivables.filter((r) => {
+      if (!r || !r.id) return false;
+      if (r.projectId && idSet.has(r.projectId)) return true;
+      if (targetReceivableIds.has(r.id)) return true;
+      if (r.invoiceNumber && targetInvoiceNumbers.has(r.invoiceNumber)) return true;
+      if (r.clientName && r.clientName.toLowerCase() === target.clientName.toLowerCase() && r.title && r.title.includes(target.projectName)) return true;
+      return false;
+    });
+
+    const recIds = linkedReceivables.map((r) => r.id);
+    if (recIds.length > 0) {
+      addMultipleDeletedReceivableIds(recIds);
+      deleteBatchReceivablesFromFirestore(recIds);
+      setReceivables((prev) => {
+        const updated = prev.filter((r) => !recIds.includes(r.id));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
+        } catch {}
+        saveSettingsToFirestore('receivables', updated);
+        broadcastLiveDataUpdate('RECEIVABLES', updated);
+        return updated;
+      });
+    }
+
+    // 4. Delete the retail project itself
     setRetailProjects((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       broadcastLiveDataUpdate('RETAIL_PROJECTS', updated);
@@ -8553,7 +8719,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return {
       success: true,
-      message: `Kontrak Proyek Retail "${target.projectName}" berhasil dihapus.`,
+      message: `Kontrak Proyek Retail "${target.projectName}" berhasil dihapus beserta seluruh transaksi terkait di Arus Kas (${trxIds.length}), Piutang (${recIds.length}), dan data Pajak (${taxIds.length}).`,
     };
   };
 
@@ -8774,6 +8940,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       if (existingTax) {
         updateTaxObligation(existingTax.id, {
+          projectId: project.linkedCrmProjectId || project.id,
+          projectCode: project.contractNumber || project.id,
+          taxRatePercent: milestone.pphRatePercent || (project.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2),
+          taxableBaseAmount: milestone.dppAmountIDR || milestone.grossAmountIDR,
           taxAmount: pphAmount,
           paidAmount: pphAmount,
           remainingAmount: 0,
@@ -8785,14 +8955,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           paidAt: payDate,
           transactionId: taxTx?.id,
           notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${project.clientName}. Bukti potong resmi kredit pajak SPT Tahunan Badan.`,
-        });
+        }, true);
         taxObligationPphId = existingTax.id;
       } else {
         const taxRes = addTaxObligation({
+          projectId: project.linkedCrmProjectId || project.id,
+          projectCode: project.contractNumber || project.id,
           taxType: (project.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
           taxPeriod: `Masa ${payDate.slice(5, 7)}/${taxYear}`,
           taxYear,
           taxMonth,
+          taxableBaseAmount: milestone.dppAmountIDR || milestone.grossAmountIDR,
+          taxRatePercent: milestone.pphRatePercent || (project.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2),
           title: `Bukti Potong PPh 23 - ${milestone.title} (${project.clientName})`,
           taxAmount: pphAmount,
           paidAmount: pphAmount,
@@ -8807,7 +8981,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           paidAt: payDate,
           transactionId: taxTx?.id,
           notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${project.clientName} atas jasa konsultasi/teknik. Menjadi kredit pajak pada SPT Tahunan PPh Badan.`,
-        });
+        }, true);
         if (taxRes?.taxObligation?.id) {
           taxObligationPphId = taxRes.taxObligation.id;
         }
@@ -8983,6 +9157,77 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const project = retailProjects.find((p) => p.id === projectId);
     if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
 
+    const targetMilestone = project.milestones.find((m) => m.id === milestoneId);
+    if (targetMilestone) {
+      // Cascading clean up for transactions
+      const txIdsToDelete = new Set<string>();
+      if (targetMilestone.transactionId) txIdsToDelete.add(targetMilestone.transactionId);
+      txIdsToDelete.add(`trx-retail-inc-${projectId}-${milestoneId}`);
+      txIdsToDelete.add(`trx-retail-tax-${projectId}-${milestoneId}`);
+
+      const foundTrx = transactions.filter(
+        (t) =>
+          txIdsToDelete.has(t.id) ||
+          (targetMilestone.invoiceNumber && t.referenceNumber === targetMilestone.invoiceNumber) ||
+          (targetMilestone.bupotPphNumber && t.referenceNumber === targetMilestone.bupotPphNumber)
+      );
+      const foundTrxIds = foundTrx.map((t) => t.id);
+
+      if (foundTrxIds.length > 0) {
+        addMultipleDeletedTransactionIds(foundTrxIds);
+        deleteBatchTransactionsFromFirestore(foundTrxIds);
+        setTransactions((prev) => {
+          const updated = prev.filter((t) => !foundTrxIds.includes(t.id));
+          try {
+            safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+          } catch {}
+          saveSettingsToFirestore('transactions', updated);
+          broadcastLiveDataUpdate('TRANSACTIONS', updated);
+          return updated;
+        });
+      }
+
+      // Cascading clean up for tax obligations
+      const taxIdsToDelete = new Set<string>();
+      if (targetMilestone.taxObligationPphId) taxIdsToDelete.add(targetMilestone.taxObligationPphId);
+      if (targetMilestone.taxObligationPpnId) taxIdsToDelete.add(targetMilestone.taxObligationPpnId);
+      taxIdsToDelete.add(`tax-pph-rtl-${projectId}-${milestoneId}`);
+      taxIdsToDelete.add(`tax-ppn-rtl-${projectId}-${milestoneId}`);
+
+      const foundTaxes = taxObligations.filter((t) => taxIdsToDelete.has(t.id));
+      const foundTaxIds = foundTaxes.map((t) => t.id);
+
+      if (foundTaxIds.length > 0) {
+        addMultipleDeletedTaxIds(foundTaxIds);
+        deleteBatchTaxObligationsFromFirestore(foundTaxIds);
+        setTaxObligations((prev) => {
+          const updated = prev.filter((t) => !foundTaxIds.includes(t.id));
+          try {
+            safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+          } catch {}
+          saveSettingsToFirestore('tax_obligations', updated);
+          broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+          return updated;
+        });
+      }
+
+      // Cascading clean up for receivables
+      if (targetMilestone.receivableId) {
+        const recId = targetMilestone.receivableId;
+        addMultipleDeletedReceivableIds([recId]);
+        deleteBatchReceivablesFromFirestore([recId]);
+        setReceivables((prev) => {
+          const updated = prev.filter((r) => r.id !== recId);
+          try {
+            safeLocalStorage.setItem(STORAGE_KEY_RECEIVABLES, JSON.stringify(updated));
+          } catch {}
+          saveSettingsToFirestore('receivables', updated);
+          broadcastLiveDataUpdate('RECEIVABLES', updated);
+          return updated;
+        });
+      }
+    }
+
     const updatedMilestones = project.milestones.filter((m) => m.id !== milestoneId);
     return updateRetailProject(projectId, { milestones: updatedMilestones });
   };
@@ -9108,10 +9353,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (!existingTaxPph) {
             const taxObj: TaxObligation = {
               id: `tax-pph-rtl-${proj.id}-${m.id}`,
+              projectId: proj.linkedCrmProjectId || proj.id,
+              projectCode: proj.contractNumber || proj.id,
               taxType: (m.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
               taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
               taxYear,
               taxMonth,
+              taxableBaseAmount: m.dppAmountIDR || gross,
+              taxRatePercent: m.pphRatePercent || (m.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2),
               title: isLunas ? `Bukti Potong PPh 23 - ${mTitle} (${proj.clientName})` : `Potongan PPh 23 (Kredit Pajak) - ${mTitle} (${proj.clientName})`,
               description: `Potongan PPh 23 oleh Klien (${proj.clientName}) atas termin ${mTitle}`,
               taxAmount: pph,
@@ -9134,12 +9383,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             createdTaxCount++;
             m.taxObligationPphId = taxObj.id;
           } else if (isLunas && existingTaxPph.status !== 'PAID') {
+            existingTaxPph.projectId = proj.linkedCrmProjectId || proj.id;
+            existingTaxPph.projectCode = proj.contractNumber || proj.id;
+            existingTaxPph.taxRatePercent = m.pphRatePercent || (m.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2);
+            existingTaxPph.taxableBaseAmount = m.dppAmountIDR || gross;
             existingTaxPph.status = 'PAID';
             existingTaxPph.paidAmount = pph;
             existingTaxPph.remainingAmount = 0;
             existingTaxPph.paidByClient = true;
             existingTaxPph.paidAt = m.paymentDate || new Date().toISOString().split('T')[0];
             existingTaxPph.clientWithholdingNumber = m.bupotPphNumber || existingTaxPph.clientWithholdingNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`;
+            newTaxes.push(existingTaxPph);
           }
         }
 
@@ -9160,10 +9414,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (!existingTaxPpn) {
             const taxObj: TaxObligation = {
               id: `tax-ppn-rtl-${proj.id}-${m.id}`,
+              projectId: proj.linkedCrmProjectId || proj.id,
+              projectCode: proj.contractNumber || proj.id,
               taxType: 'PPN',
               taxPeriod: `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`,
               taxYear,
               taxMonth,
+              taxableBaseAmount: m.dppAmountIDR || gross,
+              taxRatePercent: m.ppnRatePercent || 11,
               title: `PPN Keluaran 11% - ${mTitle} (${proj.clientName})`,
               description: `PPN Keluaran 11% - ${mTitle} (${proj.clientName})`,
               taxAmount: ppn,
@@ -9189,8 +9447,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTrxs.length > 0) {
       setTransactions((prev) => {
         const updated = deduplicateById([...newTrxs, ...prev]);
-        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+        } catch {}
         broadcastLiveDataUpdate('TRANSACTIONS', updated);
+        saveSettingsToFirestore('transactions', updated);
         newTrxs.forEach((t) => saveTransactionToFirestore(t));
         return updated;
       });
@@ -9199,9 +9460,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newTaxes.length > 0) {
       setTaxObligations((prev) => {
         const updated = deduplicateById([...newTaxes, ...prev]);
-        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
         broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
         saveSettingsToFirestore('tax_obligations', updated);
+        newTaxes.forEach((t) => saveTaxObligationToFirestore(t));
         return updated;
       });
     }

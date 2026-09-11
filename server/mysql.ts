@@ -124,7 +124,9 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
     if (hostLower === 'localhost' || hostLower === '127.0.0.1') {
       errorHelp = ' Catatan penting: MYSQL_HOST saat ini diatur ke "localhost". Karena aplikasi ini berjalan di cloud server terpisah, "localhost" merujuk ke internal container dan bukan server Hostinger Anda. Silakan ganti MYSQL_HOST dengan IP Server Hostinger Anda (misalnya IP Server di hPanel Hostinger atau hostname MySQL Hostinger seperti sqlXXX.main-hosting.eu).';
     } else if (error.code === 'ER_ACCESS_DENIED_ERROR' || error.message?.includes('Access denied')) {
-      errorHelp = ' Catatan: Pastikan username, password, dan izin database sudah benar di Hostinger hPanel, serta opsi "Remote MySQL" sudah menambahkan IP "%" untuk database ini.';
+      const ipMatch = error.message?.match(/@'([^']+)'/);
+      const incomingIp = ipMatch ? ipMatch[1] : '';
+      errorHelp = ` Catatan: Akses ditolak oleh server Hostinger. Buka hPanel Hostinger > Databases > Remote MySQL, pilih database "${config.database}", dan tambahkan tanda "%" (wildcard semua IP)${incomingIp ? ` atau IP "${incomingIp}"` : ''}. Pastikan juga password user "${config.user}" di Settings cocok dengan di Hostinger.`;
     } else if (error.code === 'ETIMEDOUT' || error.message?.includes('ETIMEDOUT')) {
       errorHelp = ' Catatan: Koneksi timeout. Pastikan Remote MySQL di hPanel Hostinger sudah diaktifkan dengan mengizinkan IP "%" dan port 3306 tidak diblokir firewall.';
     }
@@ -298,6 +300,35 @@ export async function initMysqlSchema(): Promise<{ success: boolean; message: st
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS crm_overhead_expenses (
+        id VARCHAR(100) PRIMARY KEY,
+        overhead_number VARCHAR(100),
+        category VARCHAR(100),
+        recipient VARCHAR(255),
+        amount_idr BIGINT,
+        date VARCHAR(20),
+        status VARCHAR(50),
+        data LONGTEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_date (date),
+        INDEX idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS crm_office_rent_contracts (
+        id VARCHAR(100) PRIMARY KEY,
+        contract_number VARCHAR(100),
+        building_name VARCHAR(255),
+        landlord_name VARCHAR(255),
+        data LONGTEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS crm_app_settings (
         setting_key VARCHAR(100) PRIMARY KEY,
         data LONGTEXT,
@@ -433,6 +464,31 @@ CREATE TABLE IF NOT EXISTS \`crm_team_members\` (
   \`username\` VARCHAR(100) DEFAULT NULL,
   \`email\` VARCHAR(255) DEFAULT NULL,
   \`role\` VARCHAR(50) DEFAULT NULL,
+  \`data\` LONGTEXT NOT NULL,
+  \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS \`crm_overhead_expenses\` (
+  \`id\` VARCHAR(100) NOT NULL PRIMARY KEY,
+  \`overhead_number\` VARCHAR(100) DEFAULT NULL,
+  \`category\` VARCHAR(100) DEFAULT NULL,
+  \`recipient\` VARCHAR(255) DEFAULT NULL,
+  \`amount_idr\` BIGINT DEFAULT 0,
+  \`date\` VARCHAR(20) DEFAULT NULL,
+  \`status\` VARCHAR(50) DEFAULT NULL,
+  \`data\` LONGTEXT NOT NULL,
+  \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX \`idx_date\` (\`date\`),
+  INDEX \`idx_status\` (\`status\`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS \`crm_office_rent_contracts\` (
+  \`id\` VARCHAR(100) NOT NULL PRIMARY KEY,
+  \`contract_number\` VARCHAR(100) DEFAULT NULL,
+  \`building_name\` VARCHAR(255) DEFAULT NULL,
+  \`landlord_name\` VARCHAR(255) DEFAULT NULL,
   \`data\` LONGTEXT NOT NULL,
   \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

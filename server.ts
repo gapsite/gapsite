@@ -79,6 +79,37 @@ app.get('/api/mysql/status', async (req, res) => {
   }
 });
 
+// Detailed Diagnostics endpoint for status check and remote debugging
+app.get('/api/mysql/diagnostics', async (req, res) => {
+  try {
+    const config = getMysqlConfig();
+    const testResult = await testMysqlConnection();
+    res.json({
+      timestamp: new Date().toISOString(),
+      configured: isMysqlConfigured(),
+      connected: testResult.success,
+      latencyMs: testResult.latencyMs || 0,
+      config: {
+        host: config.host,
+        port: config.port,
+        user: config.user,
+        database: config.database,
+        hasPassword: Boolean(config.password),
+      },
+      message: testResult.message,
+      tables: testResult.tables || [],
+      tableCount: testResult.tables?.length || 0,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      timestamp: new Date().toISOString(),
+      configured: isMysqlConfigured(),
+      connected: false,
+      message: error.message || 'Gagal menjalankan diagnostik MySQL',
+    });
+  }
+});
+
 // Test Connection (Allows testing with payload or with server env)
 app.post('/api/mysql/test', async (req, res) => {
   try {
@@ -387,7 +418,8 @@ app.post('/api/mysql/sync/push', async (req, res) => {
              email = VALUES(email),
              role = VALUES(role),
              data = VALUES(data),
-             updated_at = NOW()`,
+              data = VALUES(data),
+              updated_at = NOW()`,
             [
               tm.id,
               tm.username || '',
@@ -399,7 +431,61 @@ app.post('/api/mysql/sync/push', async (req, res) => {
         }
       }
 
-      // 11. App Settings & Master Data
+      // 11. Overhead Expenses
+      if (Array.isArray(payload.overheadExpenses)) {
+        for (const oh of payload.overheadExpenses) {
+          if (!oh.id) continue;
+          await conn.query(
+            `INSERT INTO crm_overhead_expenses (id, overhead_number, category, recipient, amount_idr, date, status, data)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+             overhead_number = VALUES(overhead_number),
+             category = VALUES(category),
+             recipient = VALUES(recipient),
+             amount_idr = VALUES(amount_idr),
+             date = VALUES(date),
+             status = VALUES(status),
+             data = VALUES(data),
+             updated_at = NOW()`,
+            [
+              oh.id,
+              oh.overheadNumber || '',
+              oh.category || '',
+              oh.recipient || '',
+              oh.amountIdr || 0,
+              oh.date || '',
+              oh.status || '',
+              JSON.stringify(oh),
+            ]
+          );
+        }
+      }
+
+      // 12. Office Rent Contracts
+      if (Array.isArray(payload.officeRentContracts)) {
+        for (const rent of payload.officeRentContracts) {
+          if (!rent.id) continue;
+          await conn.query(
+            `INSERT INTO crm_office_rent_contracts (id, contract_number, building_name, landlord_name, data)
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+             contract_number = VALUES(contract_number),
+             building_name = VALUES(building_name),
+             landlord_name = VALUES(landlord_name),
+             data = VALUES(data),
+             updated_at = NOW()`,
+            [
+              rent.id,
+              rent.contractNumber || '',
+              rent.buildingName || '',
+              rent.landlordName || '',
+              JSON.stringify(rent),
+            ]
+          );
+        }
+      }
+
+      // 13. App Settings & Master Data
       const settingsToSave = [
         'serviceTypes',
         'documentTypes',
@@ -430,11 +516,14 @@ app.post('/api/mysql/sync/push', async (req, res) => {
         }
       }
 
-      // 12. Full Snapshot for point-in-time recovery
+      // 14. Full Snapshot for point-in-time recovery
       const totalCount =
         (payload.projects?.length || 0) +
         (payload.transactions?.length || 0) +
-        (payload.receivables?.length || 0);
+        (payload.receivables?.length || 0) +
+        (payload.retailProjects?.length || 0) +
+        (payload.governmentProjects?.length || 0) +
+        (payload.overheadExpenses?.length || 0);
 
       await conn.query(
         `INSERT INTO crm_full_snapshots (snapshot_name, total_records, data)
@@ -454,6 +543,13 @@ app.post('/api/mysql/sync/push', async (req, res) => {
           receivables: payload.receivables?.length || 0,
           taxObligations: payload.taxObligations?.length || 0,
           payrollPayments: payload.payrollPayments?.length || 0,
+          retailProjects: payload.retailProjects?.length || 0,
+          governmentProjects: payload.governmentProjects?.length || 0,
+          overheadExpenses: payload.overheadExpenses?.length || 0,
+          officeRentContracts: payload.officeRentContracts?.length || 0,
+          bankLoans: payload.bankLoans?.length || 0,
+          dispositions: payload.dispositions?.length || 0,
+          teamMembers: payload.teamMembers?.length || 0,
         },
       });
     } catch (err: any) {
@@ -531,6 +627,8 @@ app.get('/api/mysql/sync/pull', async (req, res) => {
       const bankLoans = await fetchTableData('crm_bank_loans');
       const dispositions = await fetchTableData('crm_dispositions');
       const teamMembers = await fetchTableData('crm_team_members');
+      const overheadExpensesFromTable = await fetchTableData('crm_overhead_expenses');
+      const officeRentContractsFromTable = await fetchTableData('crm_office_rent_contracts');
 
       // Fetch Settings
       let settingsMap: Record<string, any> = {};
@@ -564,8 +662,8 @@ app.get('/api/mysql/sync/pull', async (req, res) => {
           paymentChannels: settingsMap.paymentChannels || [],
           companyCapital: settingsMap.companyCapital || null,
           salaryConfigs: settingsMap.salaryConfigs || [],
-          overheadExpenses: settingsMap.overheadExpenses || [],
-          officeRentContracts: settingsMap.officeRentContracts || [],
+          overheadExpenses: overheadExpensesFromTable.length > 0 ? overheadExpensesFromTable : (settingsMap.overheadExpenses || []),
+          officeRentContracts: officeRentContractsFromTable.length > 0 ? officeRentContractsFromTable : (settingsMap.officeRentContracts || []),
           institutionTypes: settingsMap.institutionTypes || [],
           termDistributionSchemes: settingsMap.termDistributionSchemes || [],
           companyLetterhead: settingsMap.companyLetterhead || null,
