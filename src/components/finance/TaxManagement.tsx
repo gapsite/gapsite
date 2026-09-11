@@ -86,13 +86,20 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     paymentChannels,
     isMasterAdmin,
     currentUser,
+    retailProjects,
+    governmentProjects,
+    transactions,
+    receivables,
+    payrollRecords,
+    bankLoans,
+    employeeSalaryConfigs,
   } = useProjects();
 
   // Filter & Search States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTaxType, setSelectedTaxType] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState<number | 'ALL'>('ALL');
 
   // Modal States
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -178,7 +185,145 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     deductFromCashChannel: true,
   });
 
-  // Calculate Metrics
+  // Helper to extract year from a tax obligation accurately
+  const getTaxObligationYear = (t: Partial<TaxObligation>): number | undefined => {
+    if (t.taxYear && !isNaN(Number(t.taxYear)) && Number(t.taxYear) >= 2000) {
+      return Number(t.taxYear);
+    }
+    if (t.clientWithholdingDate && t.clientWithholdingDate.length >= 4) {
+      const y = parseInt(t.clientWithholdingDate.slice(0, 4), 10);
+      if (!isNaN(y) && y >= 2000 && y <= 2100) return y;
+    }
+    if (t.paidAt && t.paidAt.length >= 4) {
+      const y = parseInt(t.paidAt.slice(0, 4), 10);
+      if (!isNaN(y) && y >= 2000 && y <= 2100) return y;
+    }
+    if (t.dueDate && t.dueDate.length >= 4) {
+      const y = parseInt(t.dueDate.slice(0, 4), 10);
+      if (!isNaN(y) && y >= 2000 && y <= 2100) return y;
+    }
+    if (t.taxPeriod) {
+      const match = t.taxPeriod.match(/\b(20\d\d)\b/);
+      if (match) {
+        const y = parseInt(match[1], 10);
+        if (!isNaN(y) && y >= 2000 && y <= 2100) return y;
+      }
+    }
+    if (t.createdAt && t.createdAt.length >= 4) {
+      const y = parseInt(t.createdAt.slice(0, 4), 10);
+      if (!isNaN(y) && y >= 2000 && y <= 2100) return y;
+    }
+    return undefined;
+  };
+
+  // Dynamically extract available years across all tax obligations and other modules
+  const availableYears = useMemo(() => {
+    const COMPANY_FOUNDING_YEAR = 2021;
+    const yearSet = new Set<number>();
+    const currentYear = new Date().getFullYear();
+
+    // Default core range: next year down to founding year (2021)
+    for (let y = currentYear + 1; y >= COMPANY_FOUNDING_YEAR; y--) {
+      yearSet.add(y);
+    }
+
+    const addYearFromStr = (d?: string | null) => {
+      if (!d || typeof d !== 'string' || d.length < 4) return;
+      const y = parseInt(d.slice(0, 4), 10);
+      if (!isNaN(y) && y >= 2000 && y <= 2100) {
+        yearSet.add(y);
+      }
+    };
+
+    // 1. Tax Obligations
+    (taxObligations || []).forEach((t) => {
+      const yr = getTaxObligationYear(t);
+      if (yr) yearSet.add(yr);
+      addYearFromStr(t.dueDate);
+      addYearFromStr(t.paidAt);
+      addYearFromStr(t.clientWithholdingDate);
+    });
+
+    // 2. Retail Projects & Milestones
+    (retailProjects || []).forEach((p) => {
+      addYearFromStr(p.contractDate);
+      addYearFromStr(p.targetCompletionDate);
+      addYearFromStr(p.createdAt);
+      (p.milestones || []).forEach((m) => {
+        addYearFromStr(m.paymentDate);
+        addYearFromStr(m.invoiceDate);
+        addYearFromStr(m.targetDate);
+        addYearFromStr(m.invoiceDueDate);
+      });
+    });
+
+    // 3. Government Projects & Milestones
+    (governmentProjects || []).forEach((p) => {
+      if (p.fiscalYear && p.fiscalYear >= 2000 && p.fiscalYear <= 2100) {
+        yearSet.add(p.fiscalYear);
+      }
+      addYearFromStr(p.startDate);
+      addYearFromStr(p.endDate);
+      (p.milestones || []).forEach((m) => {
+        addYearFromStr(m.sp2dDisbursementDate);
+        addYearFromStr(m.targetDate);
+        addYearFromStr(m.createdAt);
+      });
+    });
+
+    // 4. CRM Consulting Projects
+    (projects || []).forEach((p) => {
+      addYearFromStr(p.startDate);
+      addYearFromStr(p.targetCompletionDate);
+      addYearFromStr(p.actualCompletionDate);
+    });
+
+    // 5. Financial Ledger Transactions
+    (transactions || []).forEach((t) => {
+      addYearFromStr(t.date);
+    });
+
+    // 6. Receivables / Piutang
+    (receivables || []).forEach((r) => {
+      addYearFromStr(r.issueDate);
+      addYearFromStr(r.dueDate);
+      addYearFromStr(r.createdAt);
+    });
+
+    // 7. Payroll Records
+    (payrollRecords || []).forEach((pr) => {
+      addYearFromStr(pr.paymentDate);
+      addYearFromStr(pr.paidAt);
+      addYearFromStr(pr.createdAt);
+    });
+
+    // 8. Bank Loans
+    (bankLoans || []).forEach((bl) => {
+      addYearFromStr(bl.startDate);
+      addYearFromStr(bl.createdAt);
+    });
+
+    // 9. Employee Salary Configs
+    (employeeSalaryConfigs || []).forEach((sc) => {
+      if (sc.year && !isNaN(Number(sc.year)) && Number(sc.year) >= 2000) {
+        yearSet.add(Number(sc.year));
+      }
+    });
+
+    return Array.from(yearSet).sort((a, b) => b - a);
+  }, [
+    taxObligations,
+    retailProjects,
+    governmentProjects,
+    projects,
+    transactions,
+    receivables,
+    payrollRecords,
+    bankLoans,
+    employeeSalaryConfigs,
+  ]);
+
+  // Calculate Metrics (filtered by selectedYear if not 'ALL')
   const metrics = useMemo(() => {
     let totalTaxPayable = 0; // Total Hutang Pajak Terhutang
     let totalPpnPayable = 0; // PPN Terhutang
@@ -190,6 +335,11 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
     const todayStr = new Date().toISOString().slice(0, 10);
 
     taxObligations.forEach((t) => {
+      if (selectedYear !== 'ALL') {
+        const yr = getTaxObligationYear(t);
+        if (yr && yr !== selectedYear) return;
+      }
+
       const isUnpaid = t.status !== 'PAID' && (t.remainingAmount > 0 || t.taxAmount > (t.paidAmount || 0));
       const rem = t.remainingAmount !== undefined ? t.remainingAmount : Math.max(0, t.taxAmount - (t.paidAmount || 0));
 
@@ -210,16 +360,51 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       totalPaidTaxes += t.paidAmount || 0;
     });
 
+    // Hitung total kredit pajak PPh yang dipotong oleh klien / pihak ketiga
+    const clientWithholdings = taxObligations.filter((t) => {
+      if (selectedYear !== 'ALL') {
+        const yr = getTaxObligationYear(t);
+        if (yr && yr !== selectedYear) return false;
+      }
+      return Boolean(t.paidByClient);
+    });
+
+    const totalClientWithholdingTax = clientWithholdings.reduce(
+      (acc, t) => acc + (t.status === 'PAID' ? (t.paidAmount || t.taxAmount) : t.taxAmount),
+      0
+    );
+    const clientWithholdingCount = clientWithholdings.length;
+
     return {
       totalTaxPayable,
       totalPpnPayable,
       totalPphPayable,
       totalPaidTaxes,
+      totalClientWithholdingTax,
+      clientWithholdingCount,
       pendingCount,
       overdueCount,
-      totalRecords: taxObligations.length,
+      totalRecords: selectedYear === 'ALL'
+        ? taxObligations.length
+        : taxObligations.filter((t) => getTaxObligationYear(t) === selectedYear).length,
     };
-  }, [taxObligations]);
+  }, [taxObligations, selectedYear]);
+
+  // Status Counts for Quick Filter Buttons
+  const statusCounts = useMemo(() => {
+    const list = selectedYear === 'ALL'
+      ? taxObligations
+      : taxObligations.filter((t) => getTaxObligationYear(t) === selectedYear);
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return {
+      all: list.length,
+      terhutang: list.filter((t) => t.status !== 'PAID' && (t.remainingAmount > 0 || t.taxAmount > (t.paidAmount || 0))).length,
+      overdue: list.filter((t) => t.status !== 'PAID' && t.dueDate && t.dueDate < todayStr).length,
+      paid: list.filter((t) => t.status === 'PAID').length,
+      clientPaid: list.filter((t) => t.paidByClient).length,
+    };
+  }, [taxObligations, selectedYear]);
 
   // Filtered Tax List
   const filteredObligations = useMemo(() => {
@@ -235,13 +420,16 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       } else if (selectedStatus === 'PAID') {
         if (t.status !== 'PAID') return false;
       } else if (selectedStatus === 'CLIENT_PAID') {
-        if (t.status !== 'PAID' || !t.paidByClient) return false;
+        if (!t.paidByClient) return false;
       } else if (selectedStatus === 'OVERDUE') {
         if (t.status === 'PAID' || !t.dueDate || t.dueDate >= todayStr) return false;
       }
 
       // Year filter
-      if (selectedYear && t.taxYear && t.taxYear !== selectedYear) return false;
+      if (selectedYear !== 'ALL') {
+        const obligationYear = getTaxObligationYear(t);
+        if (obligationYear && obligationYear !== selectedYear) return false;
+      }
 
       // Search Query
       if (searchQuery.trim()) {
@@ -767,7 +955,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       </div>
 
       {/* Top Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* Total Hutang Pajak Terhutang */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
@@ -827,7 +1015,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              PPh Terhutang (21/23/4.2/Final)
+              PPh Terhutang (21/23/4.2)
             </span>
             <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
               <FileText className="w-5 h-5" />
@@ -838,11 +1026,44 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
               {formatRupiah(metrics.totalPphPayable)}
             </h3>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              PPh 21 Honor, PPh 23 Surveyor & PPh 4(2)
+              PPh 21 Honor, PPh 23 Vendor & PPh 4(2)
             </p>
           </div>
           <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-400">
             Kewajiban Potong Pungut SPT Unifikasi
+          </div>
+        </div>
+
+        {/* Kredit Pajak PPh (Dipotong Klien) */}
+        <div
+          onClick={() => setSelectedStatus(selectedStatus === 'CLIENT_PAID' ? 'ALL' : 'CLIENT_PAID')}
+          className={`p-5 rounded-2xl border transition-all cursor-pointer shadow-sm relative group ${
+            selectedStatus === 'CLIENT_PAID'
+              ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-400 dark:border-sky-600 ring-2 ring-sky-400/50'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-sky-300 dark:hover:border-sky-700'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-wider flex items-center gap-1.5">
+              Kredit PPh (Dipotong Klien)
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400">
+              <FileCheck className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <h3 className="text-2xl font-bold text-sky-700 dark:text-sky-300">
+              {formatRupiah(metrics.totalClientWithholdingTax)}
+            </h3>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
+              <span>{metrics.clientWithholdingCount} Bukti Potong e-Bupot</span>
+              <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold group-hover:underline">
+                {selectedStatus === 'CLIENT_PAID' ? 'Filter Aktif' : 'Lihat Rincian →'}
+              </span>
+            </p>
+          </div>
+          <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-sky-600/80 dark:text-sky-400/80 font-medium">
+            Kredit Pajak SPT Tahunan Badan (1771-III)
           </div>
         </div>
 
@@ -871,31 +1092,42 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
       </div>
 
       {/* Auto-Sync & Anti-Double Input Status Banner */}
-      <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-start gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
           <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
             <Users className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="text-sm font-bold text-slate-900">
-                Integrasi Pajak Gaji Karyawan (PPh 21) &amp; Laporan Keuangan
+                Integrasi Pajak Gaji Karyawan (PPh 21)
               </h4>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                Anti Double-Input Aktif
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                Anti Double-Input
               </span>
             </div>
             <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-              Pemotongan PPh 21 dari menu <strong className="font-semibold text-slate-900">Pembayaran Gaji Karyawan</strong> otomatis tersinkronisasi sebagai kewajiban pajak di menu ini dan diakui pada Neraca/Laporan Keuangan tanpa perlu input ulang manual.
+              Pemotongan PPh 21 dari menu <strong className="font-semibold text-slate-900">Pembayaran Gaji Karyawan</strong> otomatis tersinkronisasi sebagai kewajiban pajak di menu ini ({taxObligations.filter((t) => t.taxType === 'PPH_21' && (t.payrollId || t.payrollNumber)).length} slip).
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-          <div className="text-right">
-            <div className="text-[11px] text-slate-600 font-medium">PPh 21 Payroll Terhubung:</div>
-            <div className="text-xs font-bold text-emerald-800">
-              {taxObligations.filter((t) => t.taxType === 'PPH_21' && (t.payrollId || t.payrollNumber)).length} Dokumen Slip
+
+        <div className="bg-sky-50/90 border border-sky-200 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <FileCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-sm font-bold text-slate-900">
+                Integrasi Pemotongan PPh oleh Klien (PPh 23 / 22)
+              </h4>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
+                Kredit Pajak (Aset)
+              </span>
             </div>
+            <p className="text-xs text-slate-700 mt-1 leading-relaxed">
+              PPh yang dipotong oleh klien/satker bukan hutang yang harus kita bayar ke DJP, melainkan <strong className="font-semibold text-slate-900">Kredit Pajak (PPh Dibayar di Muka)</strong> yang otomatis tercatat dan dapat dikreditkan pada SPT Tahunan PPh Badan ({metrics.clientWithholdingCount} bukti potong).
+            </p>
           </div>
         </div>
       </div>
@@ -925,7 +1157,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200'
               }`}
             >
-              Semua ({taxObligations.length})
+              Semua ({statusCounts.all})
             </button>
             <button
               onClick={() => setSelectedStatus('TERHUTANG')}
@@ -935,7 +1167,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 hover:bg-rose-100'
               }`}
             >
-              Terhutang ({metrics.pendingCount})
+              Terhutang ({statusCounts.terhutang})
             </button>
             <button
               onClick={() => setSelectedStatus('OVERDUE')}
@@ -945,7 +1177,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 hover:bg-amber-100'
               }`}
             >
-              Jatuh Tempo ({metrics.overdueCount})
+              Jatuh Tempo ({statusCounts.overdue})
             </button>
             <button
               onClick={() => setSelectedStatus('PAID')}
@@ -955,7 +1187,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 hover:bg-emerald-100'
               }`}
             >
-              Disetor Lunas ({taxObligations.filter((t) => t.status === 'PAID').length})
+              Disetor Lunas ({statusCounts.paid})
             </button>
             <button
               onClick={() => setSelectedStatus('CLIENT_PAID')}
@@ -965,7 +1197,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                   : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 hover:bg-sky-100'
               }`}
             >
-              Dibayar Klien ({taxObligations.filter((t) => t.status === 'PAID' && t.paidByClient).length})
+              Dibayar Klien ({statusCounts.clientPaid})
             </button>
           </div>
         </div>
@@ -1002,13 +1234,17 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
           <div className="flex items-center gap-2">
             <span className="text-slate-400 font-medium">Tahun Pajak:</span>
             <select
+              id="tax-management-year-select"
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 font-medium focus:outline-none"
+              onChange={(e) => setSelectedYear(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+              className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 font-medium focus:outline-none cursor-pointer"
             >
-              <option value={2026}>2026</option>
-              <option value={2025}>2025</option>
-              <option value={2024}>2024</option>
+              <option value="ALL">Semua Tahun</option>
+              {availableYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  Tahun {yr}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -1088,7 +1324,7 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                             t.paidByClient ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-900 dark:bg-sky-950/70 dark:text-sky-300 border border-sky-300 dark:border-sky-700">
                                 <FileCheck className="w-3 h-3" />
-                                Dipotong Klien
+                                Dipotong Klien (Kredit Sah)
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
@@ -1096,6 +1332,11 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                                 Disetor Sah
                               </span>
                             )
+                          ) : t.paidByClient ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-300 dark:border-sky-700">
+                              <Clock className="w-3 h-3 text-sky-600" />
+                              Dipotong Klien (Menunggu Bayar)
+                            </span>
                           ) : isOverdue ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-900 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-300 dark:border-rose-700 animate-pulse">
                               <AlertTriangle className="w-3 h-3" />
@@ -1201,9 +1442,20 @@ export const TaxManagement: React.FC<TaxManagementProps> = ({ onOpenLedgerWithFi
                             {formatRupiah(t.taxAmount)}
                           </div>
                           {isPaid ? (
-                            <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-1">
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              Lunas {formatRupiah(t.paidAmount || t.taxAmount)}
+                            t.paidByClient ? (
+                              <div className="text-xs font-semibold text-sky-600 dark:text-sky-400 flex items-center justify-end gap-1">
+                                <FileCheck className="w-3.5 h-3.5" />
+                                Dipotong Klien {formatRupiah(t.paidAmount || t.taxAmount)}
+                              </div>
+                            ) : (
+                              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-end gap-1">
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Lunas {formatRupiah(t.paidAmount || t.taxAmount)}
+                              </div>
+                            )
+                          ) : t.paidByClient ? (
+                            <div className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+                              Estimasi Kredit: {formatRupiah(t.taxAmount)}
                             </div>
                           ) : t.paidAmount && t.paidAmount > 0 ? (
                             <div className="text-xs font-semibold text-amber-600 dark:text-amber-400">

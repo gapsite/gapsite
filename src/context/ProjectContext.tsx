@@ -1092,6 +1092,97 @@ const INITIAL_TAX_OBLIGATIONS: TaxObligation[] = [
   },
 ];
 
+export const safeNumber = (val: unknown, fallback: number): number => {
+  if (val === undefined || val === null || val === '') return fallback;
+  const num = Number(val);
+  return isNaN(num) ? fallback : num;
+};
+
+export const sanitizeAndRepairRetailProject = (p: RetailProject): RetailProject => {
+  if (!p || !Array.isArray(p.milestones)) return p;
+
+  const pricingType: RetailPricingType = p.pricingType || 'INCLUDE_PPN';
+  const pphType: RetailPphType = p.pphType || 'PPH_23';
+  const defaultPphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+  const pphRate = pphType === 'NON_PPH' ? 0 : safeNumber(p.pphRatePercent, defaultPphRate);
+  const ppnRate = pricingType === 'NON_PKP' ? 0 : safeNumber(p.ppnRatePercent, 11);
+
+  const repairedMilestones = p.milestones.map((m, idx) => {
+    const gross = Math.round(safeNumber(m.grossAmountIDR, 0));
+    const mPricingType: RetailPricingType = m.pricingType || pricingType;
+    const dpp = mPricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
+    const mPpnRate = mPricingType === 'NON_PKP' ? 0 : safeNumber(m.ppnRatePercent, ppnRate);
+    const ppn = mPricingType === 'INCLUDE_PPN'
+      ? Math.round(gross - dpp)
+      : mPricingType === 'EXCLUDE_PPN'
+      ? Math.round((dpp * mPpnRate) / 100)
+      : 0;
+
+    const mPphType: RetailPphType = m.pphType || pphType;
+    const mDefaultPphRate = mPphType === 'PPH_23' ? 2 : mPphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+    const mPphRate = mPphType === 'NON_PPH' ? 0 : safeNumber(m.pphRatePercent, safeNumber(p.pphRatePercent, mDefaultPphRate));
+    const pph = mPphType === 'PPH_23'
+      ? Math.round((dpp * mPphRate) / 100)
+      : mPphType === 'PPH_FINAL_UMKM'
+      ? Math.round((gross * mPphRate) / 100)
+      : 0;
+
+    const net = mPricingType === 'EXCLUDE_PPN'
+      ? Math.round(gross + ppn - pph)
+      : Math.round(gross - pph);
+
+    const isLunas = m.status === 'LUNAS';
+    const paidAmount = isLunas ? (safeNumber(m.paidAmountIDR, net) || net) : m.paidAmountIDR;
+
+    return {
+      ...m,
+      grossAmountIDR: gross,
+      pricingType: mPricingType,
+      dppAmountIDR: dpp,
+      ppnRatePercent: mPpnRate,
+      ppnAmountIDR: ppn,
+      pphType: mPphType,
+      pphRatePercent: mPphRate,
+      pphAmountIDR: pph,
+      netDisbursementIDR: net,
+      paidAmountIDR: paidAmount,
+    };
+  });
+
+  const totalContract = safeNumber(p.totalContractValueIDR, 0);
+  const totalBilled = repairedMilestones
+    .filter((m) => m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
+    .reduce((acc, m) => {
+      const billing = m.pricingType === 'EXCLUDE_PPN' ? m.grossAmountIDR + m.ppnAmountIDR : m.grossAmountIDR;
+      return acc + billing;
+    }, 0);
+
+  const totalReceived = repairedMilestones
+    .filter((m) => m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
+    .reduce((acc, m) => acc + (safeNumber(m.paidAmountIDR, 0) || safeNumber(m.netDisbursementIDR, 0) || m.grossAmountIDR), 0);
+
+  const totalOutstanding = repairedMilestones.reduce((acc, m) => {
+    if (m.status === 'LUNAS') return acc;
+    if (m.status === 'DIBAYAR_SEBAGIAN') {
+      const fulfilled = safeNumber(m.paidAmountIDR, 0) + safeNumber(m.pphAmountIDR, 0);
+      return acc + Math.max(0, m.grossAmountIDR - fulfilled);
+    }
+    return acc + (m.grossAmountIDR || 0);
+  }, 0);
+
+  return {
+    ...p,
+    pricingType,
+    pphType,
+    pphRatePercent: pphRate,
+    ppnRatePercent: ppnRate,
+    milestones: repairedMilestones,
+    totalBilledAmountIDR: totalBilled,
+    totalReceivedAmountIDR: totalReceived,
+    totalOutstandingAmountIDR: totalOutstanding,
+  };
+};
+
 const defaultFilters: FilterState = {
   searchQuery: '',
   serviceType: 'ALL',
@@ -1871,15 +1962,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter(
-            (p) =>
-              p &&
-              p.id &&
-              !deletedIds.has(p.id) &&
-              !isPreFoundingDateOrYear(p.contractDate) &&
-              !isPreFoundingDateOrYear(p.createdAt) &&
-              !p.projectCode?.includes('2011')
-          );
+          return parsed
+            .filter(
+              (p) =>
+                p &&
+                p.id &&
+                !deletedIds.has(p.id) &&
+                !isPreFoundingDateOrYear(p.contractDate) &&
+                !isPreFoundingDateOrYear(p.createdAt) &&
+                !p.projectCode?.includes('2011')
+            )
+            .map(sanitizeAndRepairRetailProject);
         }
       }
       return INITIAL_RETAIL_PROJECTS.filter(
@@ -1890,9 +1983,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           !isPreFoundingDateOrYear(p.contractDate) &&
           !isPreFoundingDateOrYear(p.createdAt) &&
           !p.projectCode?.includes('2011')
-      );
+      ).map(sanitizeAndRepairRetailProject);
     } catch {
-      return INITIAL_RETAIL_PROJECTS;
+      return INITIAL_RETAIL_PROJECTS.map(sanitizeAndRepairRetailProject);
     }
   });
 
@@ -2455,6 +2548,173 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return deduplicateTransactions(currentTransactions);
     });
   }, [payrollRecords, deduplicateTransactions]);
+
+  // Auto-sync & auto-heal any retail project tax obligations (PPh 23 & PPN)
+  // Ensures any retail project entered (including 2023 or any other year) is accurately mapped to tax obligations with matching taxYear
+  useEffect(() => {
+    if (isManualSyncingRef.current) return;
+    if (!retailProjects || retailProjects.length === 0) return;
+
+    setTaxObligations((currentTaxes) => {
+      let hasChanges = false;
+      const updatedTaxesMap = new Map<string, TaxObligation>(currentTaxes.map((t) => [t.id, { ...t }]));
+
+      retailProjects.forEach((proj) => {
+        if (!proj || !proj.id) return;
+        const milestones = proj.milestones || [];
+        milestones.forEach((m, idx) => {
+          const gross = Math.round(Number(m.grossAmountIDR) || 0);
+          const pph = Math.round(Number(m.pphAmountIDR) || 0);
+          const ppn = Math.round(Number(m.ppnAmountIDR) || 0);
+          const mTitle = m.title || `Termin ${m.termNumber || idx + 1}`;
+
+          if (pph > 0) {
+            const effDateStr = m.paymentDate || m.invoiceDate || m.targetDate || proj.contractDate || new Date().toISOString().slice(0, 10);
+            const dateObj = new Date(effDateStr);
+            const taxYear = !isNaN(dateObj.getFullYear()) && dateObj.getFullYear() >= 2000
+              ? dateObj.getFullYear()
+              : (proj.contractDate ? parseInt(proj.contractDate.slice(0, 4), 10) : new Date().getFullYear());
+            const taxMonth = !isNaN(dateObj.getMonth())
+              ? dateObj.getMonth() + 1
+              : (proj.contractDate && proj.contractDate.length >= 7 ? parseInt(proj.contractDate.slice(5, 7), 10) : 1);
+            const isLunas = m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN';
+            const taxPeriod = `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`;
+
+            let existing = Array.from(updatedTaxesMap.values()).find(
+              (t) =>
+                (m.taxObligationPphId && t.id === m.taxObligationPphId) ||
+                (t.projectId === proj.id && (t.taxType === 'PPH_23' || t.taxType === 'PPH_FINAL_UMKM') && t.title?.includes(mTitle)) ||
+                (t.counterpartyName === proj.clientName && t.title?.includes(mTitle) && (t.taxType === 'PPH_23' || t.taxType === 'PPH_FINAL_UMKM'))
+            );
+
+            if (!existing) {
+              const newTaxId = m.taxObligationPphId || `tax-pph-rtl-${proj.id}-${m.id}`;
+              if (!deletedTaxIdsRef.current.has(newTaxId)) {
+                hasChanges = true;
+                const taxObj: TaxObligation = {
+                  id: newTaxId,
+                  projectId: proj.linkedCrmProjectId || proj.id,
+                  projectCode: proj.contractNumber || proj.id,
+                  taxType: (m.pphType === 'PPH_FINAL_UMKM' ? 'PPH_FINAL_UMKM' : 'PPH_23') as TaxType,
+                  taxPeriod,
+                  taxYear,
+                  taxMonth,
+                  taxableBaseAmount: m.dppAmountIDR || gross,
+                  taxRatePercent: m.pphRatePercent || (m.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2),
+                  title: isLunas ? `Bukti Potong PPh 23 - ${mTitle} (${proj.clientName})` : `Potongan PPh 23 (Kredit Pajak) - ${mTitle} (${proj.clientName})`,
+                  description: `Potongan PPh 23 oleh Klien (${proj.clientName}) atas termin ${mTitle}`,
+                  taxAmount: pph,
+                  paidAmount: isLunas ? pph : 0,
+                  remainingAmount: isLunas ? 0 : pph,
+                  status: isLunas ? 'PAID' : 'TERHUTANG',
+                  paidByClient: true,
+                  clientWithholdingNumber: m.bupotPphNumber || (isLunas ? `BUPOT-23-${taxYear}-${Date.now().toString().slice(-6)}` : undefined),
+                  clientWithholdingDate: isLunas ? (m.paymentDate || effDateStr) : undefined,
+                  withholdingTaxPayerName: proj.clientName,
+                  counterpartyName: proj.clientName,
+                  dueDate: m.invoiceDueDate || m.targetDate || effDateStr,
+                  paidAt: isLunas ? (m.paymentDate || effDateStr) : undefined,
+                  notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${proj.clientName} atas proyek retail ${proj.projectName}.`,
+                  createdAt: new Date().toISOString(),
+                  createdBy: 'System Retail Sync',
+                };
+                updatedTaxesMap.set(newTaxId, taxObj);
+              }
+            } else {
+              if (existing.taxYear !== taxYear || existing.taxPeriod !== taxPeriod || (isLunas && existing.status !== 'PAID')) {
+                hasChanges = true;
+                existing.taxYear = taxYear;
+                existing.taxMonth = taxMonth;
+                existing.taxPeriod = taxPeriod;
+                if (isLunas && existing.status !== 'PAID') {
+                  existing.status = 'PAID';
+                  existing.paidAmount = pph;
+                  existing.remainingAmount = 0;
+                  existing.paidByClient = true;
+                  existing.paidAt = m.paymentDate || effDateStr;
+                }
+                updatedTaxesMap.set(existing.id, { ...existing });
+              }
+            }
+          }
+
+          if (ppn > 0) {
+            const effPpnDateStr = m.invoiceDate || m.paymentDate || m.targetDate || proj.contractDate || new Date().toISOString().slice(0, 10);
+            const dateObj = new Date(effPpnDateStr);
+            const taxYear = !isNaN(dateObj.getFullYear()) && dateObj.getFullYear() >= 2000
+              ? dateObj.getFullYear()
+              : (proj.contractDate ? parseInt(proj.contractDate.slice(0, 4), 10) : new Date().getFullYear());
+            const taxMonth = !isNaN(dateObj.getMonth())
+              ? dateObj.getMonth() + 1
+              : (proj.contractDate && proj.contractDate.length >= 7 ? parseInt(proj.contractDate.slice(5, 7), 10) : 1);
+            const isLunas = m.status === 'LUNAS';
+            const taxPeriod = `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`;
+
+            let existing = Array.from(updatedTaxesMap.values()).find(
+              (t) =>
+                (m.taxObligationPpnId && t.id === m.taxObligationPpnId) ||
+                (t.projectId === proj.id && t.taxType === 'PPN' && t.title?.includes(mTitle)) ||
+                (t.counterpartyName === proj.clientName && t.title?.includes(mTitle) && t.taxType === 'PPN')
+            );
+
+            if (!existing) {
+              const newTaxId = m.taxObligationPpnId || `tax-ppn-rtl-${proj.id}-${m.id}`;
+              if (!deletedTaxIdsRef.current.has(newTaxId)) {
+                hasChanges = true;
+                const taxObj: TaxObligation = {
+                  id: newTaxId,
+                  projectId: proj.linkedCrmProjectId || proj.id,
+                  projectCode: proj.contractNumber || proj.id,
+                  taxType: 'PPN',
+                  taxPeriod,
+                  taxYear,
+                  taxMonth,
+                  taxableBaseAmount: m.dppAmountIDR || gross,
+                  taxRatePercent: m.ppnRatePercent || 11,
+                  title: `PPN Keluaran 11% - ${mTitle} (${proj.clientName})`,
+                  description: `PPN Keluaran 11% - ${mTitle} (${proj.clientName})`,
+                  taxAmount: ppn,
+                  ppnOutputAmount: ppn,
+                  paidAmount: isLunas ? ppn : 0,
+                  remainingAmount: isLunas ? 0 : ppn,
+                  dueDate: m.invoiceDueDate || m.targetDate || effPpnDateStr,
+                  status: isLunas ? 'PAID' : 'TERHUTANG',
+                  taxInvoiceNumber: m.fakturPajakNumber,
+                  counterpartyName: proj.clientName,
+                  createdAt: new Date().toISOString(),
+                  createdBy: 'System Retail Sync',
+                };
+                updatedTaxesMap.set(newTaxId, taxObj);
+              }
+            } else {
+              if (existing.taxYear !== taxYear || existing.taxPeriod !== taxPeriod || (isLunas && existing.status !== 'PAID')) {
+                hasChanges = true;
+                existing.taxYear = taxYear;
+                existing.taxMonth = taxMonth;
+                existing.taxPeriod = taxPeriod;
+                if (isLunas && existing.status !== 'PAID') {
+                  existing.status = 'PAID';
+                  existing.paidAmount = ppn;
+                  existing.remainingAmount = 0;
+                }
+                updatedTaxesMap.set(existing.id, { ...existing });
+              }
+            }
+          }
+        });
+      });
+
+      if (hasChanges) {
+        const updated = Array.from(updatedTaxesMap.values());
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        } catch {}
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        return updated;
+      }
+      return currentTaxes;
+    });
+  }, [retailProjects]);
 
   const activeDocumentCategories = useMemo(() => {
     return documentCategories.filter((c) => c.status !== 'INACTIVE');
@@ -7777,11 +8037,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Calculate milestone financials & totals
     const milestones: GovMilestone[] = (data.milestones || []).map((m, idx) => {
-      const gross = Math.round(Number(m.grossAmountIDR) || 0);
+      const gross = Math.round(safeNumber(m.grossAmountIDR, 0));
       const defaultPphType = data.institutionType === 'KEMENTERIAN' || data.institutionType === 'LEMBAGA' || data.institutionType === 'DINAS_PEMDA' ? 'PPH_22' : 'PPH_23';
       const pphType = m.pphType || defaultPphType;
-      const pphRate = Number(m.pphRatePercent) ?? (data.whtRatePph || (pphType === 'PPH_22' ? 1.5 : 2));
-      const ppnRate = Number(m.ppnRatePercent) ?? (data.vatWapuRate || 11);
+      const pphRate = safeNumber(m.pphRatePercent, safeNumber(data.whtRatePph, pphType === 'PPH_22' ? 1.5 : 2));
+      const ppnRate = safeNumber(m.ppnRatePercent, safeNumber(data.vatWapuRate, 11));
       const pphAmount = Math.round((gross * pphRate) / 100);
       const ppnAmount = Math.round((gross * ppnRate) / 100);
       const net = Math.round(gross - pphAmount);
@@ -8123,9 +8383,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const project = governmentProjects.find((p) => p.id === projectId);
     if (!project) return { success: false, message: 'Proyek tidak ditemukan.' };
 
-    const gross = Math.round(Number(milestone.grossAmountIDR) || 0);
-    const pphRate = Number(milestone.pphRatePercent) ?? (project.pphType === 'PPH_22' ? 1.5 : 2);
-    const ppnRate = Number(milestone.ppnRatePercent) ?? 11;
+    const gross = Math.round(safeNumber(milestone.grossAmountIDR, 0));
+    const pphRate = safeNumber(milestone.pphRatePercent, project.pphType === 'PPH_22' ? 1.5 : 2);
+    const ppnRate = safeNumber(milestone.ppnRatePercent, 11);
     const pphAmount = Math.round((gross * pphRate) / 100);
     const ppnAmount = Math.round((gross * ppnRate) / 100);
     const net = Math.round(gross - pphAmount);
@@ -8160,9 +8420,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const updatedMilestones = project.milestones.map((m) => {
       if (m.id !== milestoneId) return m;
       const merged = { ...m, ...updates };
-      const gross = Math.round(Number(merged.grossAmountIDR) || 0);
-      const pphRate = Number(merged.pphRatePercent) ?? (project.pphType === 'PPH_22' ? 1.5 : 2);
-      const ppnRate = Number(merged.ppnRatePercent) ?? 11;
+      const gross = Math.round(safeNumber(merged.grossAmountIDR, 0));
+      const pphRate = safeNumber(merged.pphRatePercent, project.pphType === 'PPH_22' ? 1.5 : 2);
+      const ppnRate = safeNumber(merged.ppnRatePercent, 11);
       const pphAmount = Math.round((gross * pphRate) / 100);
       const ppnAmount = Math.round((gross * ppnRate) / 100);
       const net = Math.round(gross - pphAmount);
@@ -8219,16 +8479,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const id = generateRetailProjectId();
     const shouldRecordCash = Boolean(data.recordInitialPaymentToCash);
     const initialPayChannel = data.initialPaymentChannelId || (paymentChannels && paymentChannels.length > 0 ? paymentChannels[0].id : 'BANK_TRANSFER_BCA');
-    const initialPayDate = data.initialPaymentDate || now.slice(0, 10);
+    const rawInitialPayDate = data.initialPaymentDate;
+    const initialPayDate = rawInitialPayDate && data.contractDate && rawInitialPayDate === now.slice(0, 10) && rawInitialPayDate.slice(0, 4) !== data.contractDate.slice(0, 4)
+      ? data.contractDate
+      : (rawInitialPayDate || data.contractDate || now.slice(0, 10));
     const initialBupot = data.initialPaymentBupotNumber;
     const initialRef = data.initialPaymentRefNumber;
 
     // Calculate milestone financials & totals
     const milestones: RetailMilestone[] = (data.milestones || []).map((m, idx) => {
-      const gross = Math.round(Number(m.grossAmountIDR) || 0);
+      const gross = Math.round(safeNumber(m.grossAmountIDR, 0));
       const pricingType = m.pricingType || data.pricingType || 'INCLUDE_PPN';
       const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
-      const ppnRate = pricingType === 'NON_PKP' ? 0 : (Number(m.ppnRatePercent) ?? (data.ppnRatePercent || 11));
+      const ppnRate = pricingType === 'NON_PKP' ? 0 : safeNumber(m.ppnRatePercent, safeNumber(data.ppnRatePercent, 11));
       const ppnAmount = pricingType === 'INCLUDE_PPN'
         ? Math.round(gross - dpp)
         : pricingType === 'EXCLUDE_PPN'
@@ -8237,7 +8500,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const pphType = m.pphType || data.pphType || 'PPH_23';
       const defaultPphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
-      const pphRate = Number(m.pphRatePercent) ?? (data.pphRatePercent || defaultPphRate);
+      const pphRate = pphType === 'NON_PPH' ? 0 : safeNumber(m.pphRatePercent, safeNumber(data.pphRatePercent, defaultPphRate));
       const pphAmount = pphType === 'PPH_23'
         ? Math.round((dpp * pphRate) / 100)
         : pphType === 'PPH_FINAL_UMKM'
@@ -8286,12 +8549,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const pph = m.pphAmountIDR || 0;
       const net = m.netDisbursementIDR || (gross - pph);
       const billing = m.pricingType === 'EXCLUDE_PPN' ? gross + ppn : gross;
-      const payDate = m.paymentDate || initialPayDate;
+      const milestonePayDate = m.paymentDate || (shouldRecordCash && idx === 0 ? initialPayDate : undefined);
+      const effectiveTaxDate = milestonePayDate || m.invoiceDate || m.targetDate || data.contractDate || now.slice(0, 10);
+      const effDateObj = new Date(effectiveTaxDate);
+      const taxYear = !isNaN(effDateObj.getFullYear()) && effDateObj.getFullYear() >= 2000
+        ? effDateObj.getFullYear()
+        : (data.contractDate ? parseInt(data.contractDate.slice(0, 4), 10) : new Date().getFullYear());
+      const taxMonth = !isNaN(effDateObj.getMonth())
+        ? effDateObj.getMonth() + 1
+        : (data.contractDate && data.contractDate.length >= 7 ? parseInt(data.contractDate.slice(5, 7), 10) : 1);
+
+      const payDate = milestonePayDate || data.contractDate || now.slice(0, 10);
       const payChannel = m.paymentChannelId || initialPayChannel;
-      const dateObj = new Date(payDate || new Date());
-      const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-      const taxYear = dateObj.getFullYear();
-      const taxMonth = dateObj.getMonth() + 1;
+      const yyyymm = `${taxYear}${String(taxMonth).padStart(2, '0')}`;
 
       if (m.status === 'LUNAS') {
         // 1. Kas Masuk (INCOME) untuk Penerimaan Termin Retail
@@ -8512,7 +8782,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .filter((m) => m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
       .reduce((acc, m) => acc + (m.paidAmountIDR || m.netDisbursementIDR || m.grossAmountIDR), 0);
 
-    const totalOutstanding = Math.max(0, data.totalContractValueIDR - totalReceived);
+    const totalOutstanding = milestones.reduce((acc, m) => {
+      if (m.status === 'LUNAS') return acc;
+      if (m.status === 'DIBAYAR_SEBAGIAN') {
+        const fulfilled = safeNumber(m.paidAmountIDR, 0) + safeNumber(m.pphAmountIDR, 0);
+        return acc + Math.max(0, m.grossAmountIDR - fulfilled);
+      }
+      return acc + (m.grossAmountIDR || 0);
+    }, 0);
 
     const newProject: RetailProject = {
       ...data,
@@ -8571,7 +8848,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .filter((m) => m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN')
       .reduce((acc, m) => acc + (m.paidAmountIDR || m.netDisbursementIDR || m.grossAmountIDR), 0);
 
-    const totalOutstanding = Math.max(0, contractValue - totalReceived);
+    const totalOutstanding = updatedMilestones.reduce((acc, m) => {
+      if (m.status === 'LUNAS') return acc;
+      if (m.status === 'DIBAYAR_SEBAGIAN') {
+        const fulfilled = safeNumber(m.paidAmountIDR, 0) + safeNumber(m.pphAmountIDR, 0);
+        return acc + Math.max(0, m.grossAmountIDR - fulfilled);
+      }
+      return acc + (m.grossAmountIDR || 0);
+    }, 0);
 
     const updatedProject: RetailProject = {
       ...target,
@@ -8856,10 +9140,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 1. Post to Cash Ledger (Finance & Cashflow) as RETAIL_PROJECT_INCOME and TAX_PPH_PPN
     let taxTx: FinancialTransaction | undefined;
-    const pphAmount = milestone.pphAmountIDR || 0;
-    const billingAmount = milestone.pricingType === 'EXCLUDE_PPN'
-      ? milestone.grossAmountIDR + (milestone.ppnAmountIDR || 0)
-      : milestone.grossAmountIDR;
+    const grossVal = Math.round(safeNumber(milestone.grossAmountIDR, 0));
+    const pricingVal = milestone.pricingType || project.pricingType || 'INCLUDE_PPN';
+    const dppVal = milestone.dppAmountIDR || (pricingVal === 'INCLUDE_PPN' ? Math.round(grossVal / 1.11) : grossVal);
+    const pphTypeVal = milestone.pphType || project.pphType || 'PPH_23';
+    const defaultPphRateVal = pphTypeVal === 'PPH_23' ? 2 : pphTypeVal === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+    const pphRateVal = pphTypeVal === 'NON_PPH' ? 0 : safeNumber(milestone.pphRatePercent, safeNumber(project.pphRatePercent, defaultPphRateVal));
+    const pphAmount = safeNumber(milestone.pphAmountIDR, 0) > 0
+      ? safeNumber(milestone.pphAmountIDR, 0)
+      : (pphTypeVal === 'PPH_23' ? Math.round((dppVal * pphRateVal) / 100) : pphTypeVal === 'PPH_FINAL_UMKM' ? Math.round((grossVal * pphRateVal) / 100) : 0);
+    const ppnAmount = safeNumber(milestone.ppnAmountIDR, 0);
+    const billingAmount = pricingVal === 'EXCLUDE_PPN' ? grossVal + ppnAmount : grossVal;
 
     if (paymentData.syncToCashLedger !== false) {
       if (pphAmount > 0) {
@@ -8999,6 +9290,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updatedMilestones[milestoneIndex] = {
       ...milestone,
       status: 'LUNAS',
+      grossAmountIDR: grossVal,
+      pricingType: pricingVal,
+      dppAmountIDR: dppVal,
+      ppnAmountIDR: ppnAmount,
+      pphType: pphTypeVal,
+      pphRatePercent: pphRateVal,
+      pphAmountIDR: pphAmount,
+      netDisbursementIDR: amountReceived,
       paidAmountIDR: amountReceived,
       paymentDate: payDate,
       paymentChannelId: paymentData.paymentChannelId,
@@ -9041,10 +9340,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const project = retailProjects.find((p) => p.id === projectId);
     if (!project) return { success: false, message: 'Proyek retail tidak ditemukan.' };
 
-    const gross = Math.round(Number(milestone.grossAmountIDR) || 0);
+    const gross = Math.round(safeNumber(milestone.grossAmountIDR, 0));
     const pricingType = milestone.pricingType || project.pricingType || 'INCLUDE_PPN';
     const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
-    const ppnRate = pricingType === 'NON_PKP' ? 0 : (Number(milestone.ppnRatePercent) ?? (project.ppnRatePercent || 11));
+    const ppnRate = pricingType === 'NON_PKP' ? 0 : safeNumber(milestone.ppnRatePercent, safeNumber(project.ppnRatePercent, 11));
     const ppnAmount = pricingType === 'INCLUDE_PPN'
       ? Math.round(gross - dpp)
       : pricingType === 'EXCLUDE_PPN'
@@ -9053,7 +9352,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const pphType = milestone.pphType || project.pphType || 'PPH_23';
     const defaultPphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
-    const pphRate = Number(milestone.pphRatePercent) ?? (project.pphRatePercent || defaultPphRate);
+    const pphRate = pphType === 'NON_PPH' ? 0 : safeNumber(milestone.pphRatePercent, safeNumber(project.pphRatePercent, defaultPphRate));
     const pphAmount = pphType === 'PPH_23'
       ? Math.round((dpp * pphRate) / 100)
       : pphType === 'PPH_FINAL_UMKM'
@@ -9110,10 +9409,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const updatedMilestones = project.milestones.map((m) => {
       if (m.id !== milestoneId) return m;
       const merged = { ...m, ...updates };
-      const gross = Math.round(Number(merged.grossAmountIDR) || 0);
+      const gross = Math.round(safeNumber(merged.grossAmountIDR, 0));
       const pricingType = merged.pricingType || project.pricingType || 'INCLUDE_PPN';
       const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
-      const ppnRate = pricingType === 'NON_PKP' ? 0 : (Number(merged.ppnRatePercent) ?? (project.ppnRatePercent || 11));
+      const ppnRate = pricingType === 'NON_PKP' ? 0 : safeNumber(merged.ppnRatePercent, safeNumber(project.ppnRatePercent, 11));
       const ppnAmount = pricingType === 'INCLUDE_PPN'
         ? Math.round(gross - dpp)
         : pricingType === 'EXCLUDE_PPN'
@@ -9122,7 +9421,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const pphType = merged.pphType || project.pphType || 'PPH_23';
       const defaultPphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
-      const pphRate = Number(merged.pphRatePercent) ?? (project.pphRatePercent || defaultPphRate);
+      const pphRate = pphType === 'NON_PPH' ? 0 : safeNumber(merged.pphRatePercent, safeNumber(project.pphRatePercent, defaultPphRate));
       const pphAmount = pphType === 'PPH_23'
         ? Math.round((dpp * pphRate) / 100)
         : pphType === 'PPH_FINAL_UMKM'
@@ -9253,12 +9552,30 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     retailProjects.forEach((proj) => {
       proj.milestones.forEach((m) => {
-        const gross = m.grossAmountIDR || 0;
-        const ppn = m.ppnAmountIDR || 0;
-        const pph = m.pphAmountIDR || 0;
-        const net = m.netDisbursementIDR || (gross - pph);
-        const billing = m.pricingType === 'EXCLUDE_PPN' ? gross + ppn : gross;
+        const gross = safeNumber(m.grossAmountIDR, 0);
+        const mPricingType = m.pricingType || proj.pricingType || 'INCLUDE_PPN';
+        const dpp = m.dppAmountIDR || (mPricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross);
+        const mPpnRate = mPricingType === 'NON_PKP' ? 0 : safeNumber(m.ppnRatePercent, safeNumber(proj.ppnRatePercent, 11));
+        const ppn = safeNumber(m.ppnAmountIDR, 0) > 0
+          ? safeNumber(m.ppnAmountIDR, 0)
+          : (mPricingType === 'INCLUDE_PPN' ? Math.round(gross - dpp) : mPricingType === 'EXCLUDE_PPN' ? Math.round((dpp * mPpnRate) / 100) : 0);
+        const mPphType = m.pphType || proj.pphType || 'PPH_23';
+        const mPphDefaultRate = mPphType === 'PPH_23' ? 2 : mPphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+        const pphRate = mPphType === 'NON_PPH' ? 0 : safeNumber(m.pphRatePercent, safeNumber(proj.pphRatePercent, mPphDefaultRate));
+        const pph = safeNumber(m.pphAmountIDR, 0) > 0
+          ? safeNumber(m.pphAmountIDR, 0)
+          : (mPphType === 'PPH_23' ? Math.round((dpp * pphRate) / 100) : mPphType === 'PPH_FINAL_UMKM' ? Math.round((gross * pphRate) / 100) : 0);
+        const net = safeNumber(m.netDisbursementIDR, 0) > 0
+          ? safeNumber(m.netDisbursementIDR, 0)
+          : (mPricingType === 'EXCLUDE_PPN' ? gross + ppn - pph : gross - pph);
+        const billing = mPricingType === 'EXCLUDE_PPN' ? gross + ppn : gross;
         const mTitle = m.title || `Termin ${m.termNumber}`;
+
+        m.dppAmountIDR = dpp;
+        m.ppnAmountIDR = ppn;
+        m.pphAmountIDR = pph;
+        m.pphRatePercent = pphRate;
+        m.netDisbursementIDR = net;
 
         if (m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN') {
           const paymentAmount = m.paidAmountIDR || net;
@@ -9339,9 +9656,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // Sinkronisasi Bukti Potong PPh 23 ke Menu Pajak
         if (pph > 0) {
-          const dateObj = new Date(m.paymentDate || m.invoiceDate || new Date());
-          const taxYear = dateObj.getFullYear();
-          const taxMonth = dateObj.getMonth() + 1;
+          const effDateStr = m.paymentDate || m.invoiceDate || m.targetDate || proj.contractDate || new Date().toISOString().split('T')[0];
+          const dateObj = new Date(effDateStr);
+          const taxYear = !isNaN(dateObj.getFullYear()) && dateObj.getFullYear() >= 2000
+            ? dateObj.getFullYear()
+            : (proj.contractDate ? parseInt(proj.contractDate.slice(0, 4), 10) : new Date().getFullYear());
+          const taxMonth = !isNaN(dateObj.getMonth())
+            ? dateObj.getMonth() + 1
+            : (proj.contractDate && proj.contractDate.length >= 7 ? parseInt(proj.contractDate.slice(5, 7), 10) : 1);
           const isLunas = m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN';
 
           const existingTaxPph = currentTaxes.find(
@@ -9368,12 +9690,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               remainingAmount: isLunas ? 0 : pph,
               status: isLunas ? 'PAID' : 'TERHUTANG',
               paidByClient: true,
-              clientWithholdingNumber: m.bupotPphNumber || (isLunas ? `BUPOT-23-${Date.now().toString().slice(-6)}` : undefined),
-              clientWithholdingDate: isLunas ? (m.paymentDate || new Date().toISOString().split('T')[0]) : undefined,
+              clientWithholdingNumber: m.bupotPphNumber || (isLunas ? `BUPOT-23-${taxYear}-${Date.now().toString().slice(-6)}` : undefined),
+              clientWithholdingDate: isLunas ? (m.paymentDate || effDateStr) : undefined,
               withholdingTaxPayerName: proj.clientName,
               counterpartyName: proj.clientName,
-              dueDate: m.invoiceDueDate || m.targetDate || new Date().toISOString().split('T')[0],
-              paidAt: isLunas ? (m.paymentDate || new Date().toISOString().split('T')[0]) : undefined,
+              dueDate: m.invoiceDueDate || m.targetDate || effDateStr,
+              paidAt: isLunas ? (m.paymentDate || effDateStr) : undefined,
               notes: `Pajak Penghasilan Pasal 23 dipotong oleh Klien ${proj.clientName} atas proyek retail ${proj.projectName}.`,
               createdAt: new Date().toISOString(),
               createdBy: currentUser.name || 'Finance Officer',
@@ -9382,26 +9704,53 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             currentTaxes.push(taxObj);
             createdTaxCount++;
             m.taxObligationPphId = taxObj.id;
-          } else if (isLunas && existingTaxPph.status !== 'PAID') {
-            existingTaxPph.projectId = proj.linkedCrmProjectId || proj.id;
-            existingTaxPph.projectCode = proj.contractNumber || proj.id;
-            existingTaxPph.taxRatePercent = m.pphRatePercent || (m.pphType === 'PPH_FINAL_UMKM' ? 0.5 : 2);
-            existingTaxPph.taxableBaseAmount = m.dppAmountIDR || gross;
-            existingTaxPph.status = 'PAID';
-            existingTaxPph.paidAmount = pph;
-            existingTaxPph.remainingAmount = 0;
-            existingTaxPph.paidByClient = true;
-            existingTaxPph.paidAt = m.paymentDate || new Date().toISOString().split('T')[0];
-            existingTaxPph.clientWithholdingNumber = m.bupotPphNumber || existingTaxPph.clientWithholdingNumber || `BUPOT-23-${Date.now().toString().slice(-6)}`;
-            newTaxes.push(existingTaxPph);
+          } else {
+            let modified = false;
+            if (existingTaxPph.taxYear !== taxYear) {
+              existingTaxPph.taxYear = taxYear;
+              existingTaxPph.taxMonth = taxMonth;
+              existingTaxPph.taxPeriod = `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`;
+              modified = true;
+            }
+            if (isLunas && existingTaxPph.status !== 'PAID') {
+              existingTaxPph.projectId = proj.linkedCrmProjectId || proj.id;
+              existingTaxPph.projectCode = proj.contractNumber || proj.id;
+              existingTaxPph.taxRatePercent = pphRate;
+              existingTaxPph.taxableBaseAmount = dpp;
+              existingTaxPph.taxAmount = pph;
+              existingTaxPph.status = 'PAID';
+              existingTaxPph.paidAmount = pph;
+              existingTaxPph.remainingAmount = 0;
+              existingTaxPph.paidByClient = true;
+              existingTaxPph.paidAt = m.paymentDate || effDateStr;
+              existingTaxPph.clientWithholdingNumber = m.bupotPphNumber || existingTaxPph.clientWithholdingNumber || `BUPOT-23-${taxYear}-${Date.now().toString().slice(-6)}`;
+              modified = true;
+            } else if (existingTaxPph.taxAmount !== pph || existingTaxPph.taxableBaseAmount !== dpp) {
+              existingTaxPph.taxRatePercent = pphRate;
+              existingTaxPph.taxableBaseAmount = dpp;
+              existingTaxPph.taxAmount = pph;
+              if (existingTaxPph.status === 'PAID') {
+                existingTaxPph.paidAmount = pph;
+                existingTaxPph.remainingAmount = 0;
+              }
+              modified = true;
+            }
+            if (modified) {
+              newTaxes.push(existingTaxPph);
+            }
           }
         }
 
         // Sinkronisasi PPN Keluaran ke Menu Pajak
         if (ppn > 0) {
-          const dateObj = new Date(m.invoiceDate || m.paymentDate || new Date());
-          const taxYear = dateObj.getFullYear();
-          const taxMonth = dateObj.getMonth() + 1;
+          const effPpnDateStr = m.invoiceDate || m.paymentDate || m.targetDate || proj.contractDate || new Date().toISOString().split('T')[0];
+          const dateObj = new Date(effPpnDateStr);
+          const taxYear = !isNaN(dateObj.getFullYear()) && dateObj.getFullYear() >= 2000
+            ? dateObj.getFullYear()
+            : (proj.contractDate ? parseInt(proj.contractDate.slice(0, 4), 10) : new Date().getFullYear());
+          const taxMonth = !isNaN(dateObj.getMonth())
+            ? dateObj.getMonth() + 1
+            : (proj.contractDate && proj.contractDate.length >= 7 ? parseInt(proj.contractDate.slice(5, 7), 10) : 1);
           const isLunas = m.status === 'LUNAS';
 
           const existingTaxPpn = currentTaxes.find(
@@ -9428,7 +9777,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               ppnOutputAmount: ppn,
               paidAmount: isLunas ? ppn : 0,
               remainingAmount: isLunas ? 0 : ppn,
-              dueDate: m.invoiceDueDate || m.targetDate || new Date().toISOString().split('T')[0],
+              dueDate: m.invoiceDueDate || m.targetDate || effPpnDateStr,
               status: isLunas ? 'PAID' : 'TERHUTANG',
               taxInvoiceNumber: m.fakturPajakNumber,
               counterpartyName: proj.clientName,
@@ -9439,6 +9788,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             currentTaxes.push(taxObj);
             createdTaxCount++;
             m.taxObligationPpnId = taxObj.id;
+          } else {
+            if (existingTaxPpn.taxYear !== taxYear) {
+              existingTaxPpn.taxYear = taxYear;
+              existingTaxPpn.taxMonth = taxMonth;
+              existingTaxPpn.taxPeriod = `Masa ${String(taxMonth).padStart(2, '0')}/${taxYear}`;
+              newTaxes.push(existingTaxPpn);
+            }
           }
         }
       });
@@ -9469,6 +9825,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return updated;
       });
     }
+
+    // Save and broadcast updated retail projects
+    const repairedProjects = retailProjects.map(sanitizeAndRepairRetailProject);
+    setRetailProjects(repairedProjects);
+    try {
+      safeLocalStorage.setItem(STORAGE_KEY_RETAIL_PROJECTS, JSON.stringify(repairedProjects));
+    } catch {}
+    broadcastLiveDataUpdate('RETAIL_PROJECTS', repairedProjects);
+    repairedProjects.forEach((p) => saveRetailProjectToFirestore(p));
 
     return {
       success: true,
@@ -10330,8 +10695,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       name: typeData.name.trim(),
       code: typeData.code?.trim() || cleanId.slice(0, 8),
       defaultPphType: typeData.defaultPphType || 'PPH_22',
-      defaultPphRate: Number(typeData.defaultPphRate) ?? (typeData.defaultPphType === 'PPH_22' ? 1.5 : 2),
-      defaultPpnRate: Number(typeData.defaultPpnRate) ?? 11,
+      defaultPphRate: safeNumber(typeData.defaultPphRate, typeData.defaultPphType === 'PPH_22' ? 1.5 : 2),
+      defaultPpnRate: safeNumber(typeData.defaultPpnRate, 11),
       defaultFundingSource: typeData.defaultFundingSource || 'APBN',
       description: typeData.description?.trim() || '',
       badgeColor: typeData.badgeColor || 'blue',

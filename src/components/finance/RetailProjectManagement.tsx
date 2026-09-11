@@ -251,6 +251,7 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
     let totalReceived = 0;
     let totalOutstanding = 0;
     let totalPph23 = 0;
+    let totalPph23All = 0;
     let totalPpn = 0;
     let activeProjectsCount = 0;
     let delayedPaymentsCount = 0;
@@ -269,8 +270,19 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
 
       (p.milestones || []).forEach((m) => {
         const effectiveDue = m.invoiceDueDate || m.targetDate || (m.invoiceDate ? calculateRetailInvoiceDueDate(m.invoiceDate, RETAIL_PAYMENT_TERMS_DAYS) : '');
+        const mGross = Number(m.grossAmountIDR) || 0;
+        const mPricing = m.pricingType || p.pricingType || 'INCLUDE_PPN';
+        const mDpp = m.dppAmountIDR || (mPricing === 'INCLUDE_PPN' ? Math.round(mGross / 1.11) : mGross);
+        const mPphType = m.pphType || p.pphType || 'PPH_23';
+        const mPphRate = mPphType === 'NON_PPH' ? 0 : (m.pphRatePercent ?? (p.pphRatePercent ?? (mPphType === 'PPH_23' ? 2 : 0.5)));
+        const mPph = (m.pphAmountIDR && m.pphAmountIDR > 0)
+          ? m.pphAmountIDR
+          : (mPphType === 'PPH_23' ? Math.round((mDpp * mPphRate) / 100) : mPphType === 'PPH_FINAL_UMKM' ? Math.round((mGross * mPphRate) / 100) : 0);
+
+        totalPph23All += mPph;
+
         if (m.status === 'LUNAS') {
-          totalPph23 += m.pphAmountIDR || 0;
+          totalPph23 += mPph;
           const delayCheck = evaluateRetailPaymentDelay(m.invoiceDate, effectiveDue, m.paymentDate);
           if (m.isOverduePayment || delayCheck.isDelayed) {
             delayedPaymentsCount += 1;
@@ -282,7 +294,10 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
           }
         }
         if (m.status === 'INVOICE_TERBIT' || m.status === 'LUNAS' || m.status === 'DIBAYAR_SEBAGIAN') {
-          totalPpn += m.ppnAmountIDR || 0;
+          const mPpn = (m.ppnAmountIDR && m.ppnAmountIDR > 0)
+            ? m.ppnAmountIDR
+            : (mPricing === 'INCLUDE_PPN' ? Math.round(mGross - mDpp) : mPricing === 'EXCLUDE_PPN' ? Math.round(mDpp * 0.11) : 0);
+          totalPpn += mPpn;
         }
       });
     });
@@ -293,6 +308,7 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
       totalReceived,
       totalOutstanding,
       totalPph23,
+      totalPph23All,
       totalPpn,
       activeProjectsCount,
       delayedPaymentsCount,
@@ -353,7 +369,15 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
   const handleOpenPaymentModal = (project: RetailProject, milestone: RetailMilestone) => {
     setSelectedMilestoneForPayment({ project, milestone });
     const defaultChannel = paymentChannels && paymentChannels.length > 0 ? paymentChannels[0].id : 'BANK_TRANSFER';
-    const suggestedCash = milestone.netDisbursementIDR || milestone.grossAmountIDR;
+    const mGross = Number(milestone.grossAmountIDR) || 0;
+    const mPricing = milestone.pricingType || project.pricingType || 'INCLUDE_PPN';
+    const mDpp = milestone.dppAmountIDR || (mPricing === 'INCLUDE_PPN' ? Math.round(mGross / 1.11) : mGross);
+    const mPphType = milestone.pphType || project.pphType || 'PPH_23';
+    const mPphRate = mPphType === 'NON_PPH' ? 0 : (milestone.pphRatePercent ?? (project.pphRatePercent ?? (mPphType === 'PPH_23' ? 2 : 0.5)));
+    const calculatedPph = (milestone.pphAmountIDR && milestone.pphAmountIDR > 0)
+      ? milestone.pphAmountIDR
+      : (mPphType === 'PPH_23' ? Math.round((mDpp * mPphRate) / 100) : mPphType === 'PPH_FINAL_UMKM' ? Math.round((mGross * mPphRate) / 100) : 0);
+    const suggestedCash = milestone.netDisbursementIDR || (mGross - calculatedPph);
 
     setPaymentForm({
       amountReceivedIDR: suggestedCash,
@@ -362,7 +386,7 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
       referenceNumber: `TRF-${Date.now().toString().slice(-6)}`,
       bupotPphNumber: milestone.bupotPphNumber || '',
       syncToCashLedger: true,
-      syncToTaxObligations: milestone.pphAmountIDR > 0,
+      syncToTaxObligations: calculatedPph > 0,
       notes: `Pelunasan Termin ${milestone.termNumber} dari ${project.clientName}`,
     });
     setIsPaymentModalOpen(true);
@@ -648,17 +672,23 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
         {/* Card 6: Kredit PPh 23 Terpotong */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider">Kredit PPh 23 (2%)</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Kredit PPh 23</span>
             <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div>
             <div className="text-base font-black text-purple-700 font-mono">
-              {formatIDR(stats.totalPph23)}
+              {formatIDR(stats.totalPph23 > 0 ? stats.totalPph23 : stats.totalPph23All)}
             </div>
             <div className="text-[11px] text-purple-600 font-medium mt-0.5">
-              Bukti Potong PPh Badan
+              {stats.totalPph23 > 0
+                ? (stats.totalPph23All > stats.totalPph23
+                    ? `Terpotong (Total Potensi: ${formatIDR(stats.totalPph23All)})`
+                    : 'Bukti Potong PPh Badan')
+                : (stats.totalPph23All > 0
+                    ? 'Estimasi Potensi PPh (Menunggu Termin)'
+                    : 'Bukti Potong PPh Badan')}
             </div>
           </div>
         </div>
@@ -926,6 +956,47 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                       </div>
                     </div>
 
+                    {/* PPh 23 / Final Metric */}
+                    {(() => {
+                      const projPphTotal = (project.milestones || []).reduce((acc, m) => {
+                        const mGross = Number(m.grossAmountIDR) || 0;
+                        const mPricing = m.pricingType || project.pricingType || 'INCLUDE_PPN';
+                        const mDpp = m.dppAmountIDR || (mPricing === 'INCLUDE_PPN' ? Math.round(mGross / 1.11) : mGross);
+                        const mPphType = m.pphType || project.pphType || 'PPH_23';
+                        const mPphRate = mPphType === 'NON_PPH' ? 0 : (m.pphRatePercent ?? (project.pphRatePercent ?? (mPphType === 'PPH_23' ? 2 : 0.5)));
+                        const pphVal = (m.pphAmountIDR && m.pphAmountIDR > 0)
+                          ? m.pphAmountIDR
+                          : (mPphType === 'PPH_23' ? Math.round((mDpp * mPphRate) / 100) : mPphType === 'PPH_FINAL_UMKM' ? Math.round((mGross * mPphRate) / 100) : 0);
+                        return acc + pphVal;
+                      }, 0);
+
+                      const projPphLunas = (project.milestones || []).filter(m => m.status === 'LUNAS').reduce((acc, m) => {
+                        const mGross = Number(m.grossAmountIDR) || 0;
+                        const mPricing = m.pricingType || project.pricingType || 'INCLUDE_PPN';
+                        const mDpp = m.dppAmountIDR || (mPricing === 'INCLUDE_PPN' ? Math.round(mGross / 1.11) : mGross);
+                        const mPphType = m.pphType || project.pphType || 'PPH_23';
+                        const mPphRate = mPphType === 'NON_PPH' ? 0 : (m.pphRatePercent ?? (project.pphRatePercent ?? (mPphType === 'PPH_23' ? 2 : 0.5)));
+                        const pphVal = (m.pphAmountIDR && m.pphAmountIDR > 0)
+                          ? m.pphAmountIDR
+                          : (mPphType === 'PPH_23' ? Math.round((mDpp * mPphRate) / 100) : mPphType === 'PPH_FINAL_UMKM' ? Math.round((mGross * mPphRate) / 100) : 0);
+                        return acc + pphVal;
+                      }, 0);
+
+                      if (projPphTotal <= 0) return null;
+
+                      return (
+                        <div className="text-right hidden sm:block">
+                          <div className="text-xs text-purple-700 font-medium">Potongan PPh ({project.pphType === 'PPH_FINAL_UMKM' ? '0.5%' : '2%'})</div>
+                          <div className="text-base font-black text-purple-800 font-mono">
+                            {formatIDR(projPphTotal)}
+                          </div>
+                          <div className="text-[10px] text-purple-600 mt-0.5 font-medium">
+                            {projPphLunas > 0 ? `Terpotong: ${formatIDR(projPphLunas)}` : 'Menunggu Pelunasan'}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div className="w-28 hidden sm:block">
                       <div className="flex justify-between text-[10px] text-slate-500 mb-1 font-mono">
                         <span>Pencairan</span>
@@ -1031,6 +1102,19 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                               const isCurrentlyOverdue = isBilled && effectiveDueDate && getCalendarDaysDiff(effectiveDueDate, todayStr) > 0;
                               const overdueDays = isCurrentlyOverdue ? getCalendarDaysDiff(effectiveDueDate, todayStr) : 0;
 
+                              const mGross = Number(milestone.grossAmountIDR) || 0;
+                              const mPricing = milestone.pricingType || project.pricingType || 'INCLUDE_PPN';
+                              const mDpp = milestone.dppAmountIDR || (mPricing === 'INCLUDE_PPN' ? Math.round(mGross / 1.11) : mGross);
+                              const mPpn = (milestone.ppnAmountIDR && milestone.ppnAmountIDR > 0)
+                                ? milestone.ppnAmountIDR
+                                : (mPricing === 'INCLUDE_PPN' ? Math.round(mGross - mDpp) : mPricing === 'EXCLUDE_PPN' ? Math.round(mDpp * 0.11) : 0);
+                              const mPphType = milestone.pphType || project.pphType || 'PPH_23';
+                              const mPphRate = mPphType === 'NON_PPH' ? 0 : (milestone.pphRatePercent ?? (project.pphRatePercent ?? (mPphType === 'PPH_23' ? 2 : 0.5)));
+                              const mPph = (milestone.pphAmountIDR && milestone.pphAmountIDR > 0)
+                                ? milestone.pphAmountIDR
+                                : (mPphType === 'PPH_23' ? Math.round((mDpp * mPphRate) / 100) : mPphType === 'PPH_FINAL_UMKM' ? Math.round((mGross * mPphRate) / 100) : 0);
+                              const mNet = milestone.netDisbursementIDR || (mPricing === 'EXCLUDE_PPN' ? mGross + mPpn - mPph : mGross - mPph);
+
                               return (
                                 <tr
                                   key={milestone.id}
@@ -1083,27 +1167,27 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
 
                                   {/* Gross */}
                                   <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
-                                    {formatIDR(milestone.grossAmountIDR)}
+                                    {formatIDR(mGross)}
                                   </td>
 
                                   {/* DPP & PPN */}
                                   <td className="py-3 px-3 text-right font-mono">
                                     <div className="text-slate-800 font-medium">
-                                      DPP: {formatIDR(milestone.dppAmountIDR)}
+                                      DPP: {formatIDR(mDpp)}
                                     </div>
                                     <div className="text-[10px] text-blue-600 font-semibold">
-                                      PPN: {formatIDR(milestone.ppnAmountIDR)}
+                                      PPN: {formatIDR(mPpn)}
                                     </div>
                                   </td>
 
                                   {/* PPh 23 */}
                                   <td className="py-3 px-3 text-right font-mono text-purple-700 font-medium">
-                                    -{formatIDR(milestone.pphAmountIDR)}
+                                    -{formatIDR(mPph)}
                                   </td>
 
                                   {/* Net Disbursement Cash */}
                                   <td className="py-3 px-3 text-right font-mono font-black text-emerald-700 bg-emerald-50/20">
-                                    {formatIDR(milestone.netDisbursementIDR)}
+                                    {formatIDR(mNet)}
                                   </td>
 
                                   {/* Status */}
@@ -1319,16 +1403,22 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                   // Helper to calculate DPP, PPN, PPh and net disbursement
                   const computeMilestoneAmounts = (gross: number, termNum: number, title: string, percentage: number, targetDate: string) => {
                     const dpp = pricingType === 'INCLUDE_PPN' ? Math.round(gross / 1.11) : gross;
-                    const ppn = pricingType === 'INCLUDE_PPN' ? Math.round(gross - dpp) : pricingType === 'EXCLUDE_PPN' ? Math.round(dpp * 0.11) : 0;
-                    const pph = pphType === 'PPH_23' ? Math.round(dpp * 0.02) : pphType === 'PPH_FINAL_UMKM' ? Math.round(gross * 0.005) : 0;
+                    const ppnRate = pricingType === 'NON_PKP' ? 0 : 11;
+                    const ppn = pricingType === 'INCLUDE_PPN' ? Math.round(gross - dpp) : pricingType === 'EXCLUDE_PPN' ? Math.round((dpp * ppnRate) / 100) : 0;
+                    const pphRate = pphType === 'PPH_23' ? 2 : pphType === 'PPH_FINAL_UMKM' ? 0.5 : 0;
+                    const pph = pphType === 'PPH_23' ? Math.round((dpp * pphRate) / 100) : pphType === 'PPH_FINAL_UMKM' ? Math.round((gross * pphRate) / 100) : 0;
                     const net = pricingType === 'EXCLUDE_PPN' ? Math.round(gross + ppn - pph) : Math.round(gross - pph);
                     return {
                       termNumber: termNum,
                       title,
                       percentage,
                       grossAmountIDR: gross,
+                      pricingType,
                       dppAmountIDR: dpp,
+                      ppnRatePercent: ppnRate,
                       ppnAmountIDR: ppn,
+                      pphType,
+                      pphRatePercent: pphRate,
                       pphAmountIDR: pph,
                       netDisbursementIDR: net,
                       targetDate,
@@ -1338,17 +1428,18 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
 
                   let milestones: any[] = [];
                   const nowStr = new Date().toISOString().slice(0, 10);
+                  const baseDateStr = contractDate || nowStr;
 
                   if (paymentScheme === 'LUNAS_DIMUKA') {
                     milestones = [
-                      computeMilestoneAmounts(totalContractValueIDR, 1, 'Pembayaran Lunas Dimuka (100% DP)', 100, nowStr),
+                      computeMilestoneAmounts(totalContractValueIDR, 1, 'Pembayaran Lunas Dimuka (100% DP)', 100, baseDateStr),
                     ];
                   } else if (paymentScheme === 'TERMIN_2') {
                     const dp = Math.round(totalContractValueIDR * 0.5);
                     const pelunasan = totalContractValueIDR - dp;
                     milestones = [
-                      computeMilestoneAmounts(dp, 1, 'Termin 1 (Uang Muka 50% SPK)', 50, nowStr),
-                      computeMilestoneAmounts(pelunasan, 2, 'Termin 2 (Pelunasan 50% BAST & Sertifikat)', 50, targetCompletionDate || nowStr),
+                      computeMilestoneAmounts(dp, 1, 'Termin 1 (Uang Muka 50% SPK)', 50, baseDateStr),
+                      computeMilestoneAmounts(pelunasan, 2, 'Termin 2 (Pelunasan 50% BAST & Sertifikat)', 50, targetCompletionDate || baseDateStr),
                     ];
                   } else {
                     // Default TERMIN_3 (30% - 40% - 30%)
@@ -1356,22 +1447,26 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                     const t2 = Math.round(totalContractValueIDR * 0.4);
                     const t3 = totalContractValueIDR - t1 - t2;
                     milestones = [
-                      computeMilestoneAmounts(t1, 1, 'Termin 1 (Uang Muka 30% SPK)', 30, nowStr),
-                      computeMilestoneAmounts(t2, 2, 'Termin 2 (Progress 40% Audit LVI Selesai)', 40, nowStr),
-                      computeMilestoneAmounts(t3, 3, 'Termin 3 (Pelunasan 30% Penerbitan Sertifikat TKDN)', 30, targetCompletionDate || nowStr),
+                      computeMilestoneAmounts(t1, 1, 'Termin 1 (Uang Muka 30% SPK)', 30, baseDateStr),
+                      computeMilestoneAmounts(t2, 2, 'Termin 2 (Progress 40% Audit LVI Selesai)', 40, baseDateStr),
+                      computeMilestoneAmounts(t3, 3, 'Termin 3 (Pelunasan 30% Penerbitan Sertifikat TKDN)', 30, targetCompletionDate || baseDateStr),
                     ];
                   }
 
-                  const recordInitialPaymentToCash = Boolean(fd.get('recordInitialPaymentToCash'));
+                  const recordInitialPaymentToCash = !editingProject && (autoRecordInitialPayment || Boolean(fd.get('recordInitialPaymentToCash')));
                   const initialPaymentChannelId = (fd.get('initialPaymentChannelId') as string) || undefined;
-                  const initialPaymentDate = (fd.get('initialPaymentDate') as string) || undefined;
+                  const rawInitialPaymentDate = (fd.get('initialPaymentDate') as string) || undefined;
+                  // If contractDate is from an earlier year (e.g. 2023) and rawInitialPaymentDate was left as today's default, inherit contractDate
+                  const initialPaymentDate = rawInitialPaymentDate && contractDate && rawInitialPaymentDate === nowStr && rawInitialPaymentDate.slice(0, 4) !== contractDate.slice(0, 4)
+                    ? contractDate
+                    : (rawInitialPaymentDate || contractDate || nowStr);
                   const initialPaymentBupotNumber = (fd.get('initialPaymentBupotNumber') as string) || undefined;
                   const initialPaymentRefNumber = (fd.get('initialPaymentRefNumber') as string) || undefined;
 
                   if (recordInitialPaymentToCash && milestones.length > 0) {
                     milestones[0].status = 'LUNAS';
                     milestones[0].paidAmountIDR = milestones[0].netDisbursementIDR;
-                    milestones[0].paymentDate = initialPaymentDate || nowStr;
+                    milestones[0].paymentDate = initialPaymentDate || baseDateStr;
                     milestones[0].paymentChannelId = initialPaymentChannelId || 'BANK_TRANSFER_BCA';
                     milestones[0].referenceNumber = initialPaymentRefNumber;
                     milestones[0].bupotPphNumber = initialPaymentBupotNumber;
@@ -1931,24 +2026,37 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
             </div>
 
             <form onSubmit={handleSubmitPayment} className="p-6 space-y-4">
-              <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200 text-xs space-y-1">
-                <div className="font-bold text-emerald-950">
-                  {selectedMilestoneForPayment.project.clientName}
-                </div>
-                <div className="text-slate-600">
-                  {selectedMilestoneForPayment.milestone.title} ({selectedMilestoneForPayment.milestone.percentage}%)
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-2 mt-1 border-t border-emerald-200 text-[11px] font-mono">
-                  <div>
-                    <span className="text-slate-500">Nilai Bruto / DPP:</span>
-                    <div className="font-bold text-slate-800">{formatIDR(selectedMilestoneForPayment.milestone.grossAmountIDR)}</div>
+              {(() => {
+                const modalGross = Number(selectedMilestoneForPayment.milestone.grossAmountIDR) || 0;
+                const modalPricing = selectedMilestoneForPayment.milestone.pricingType || selectedMilestoneForPayment.project.pricingType || 'INCLUDE_PPN';
+                const modalDpp = selectedMilestoneForPayment.milestone.dppAmountIDR || (modalPricing === 'INCLUDE_PPN' ? Math.round(modalGross / 1.11) : modalGross);
+                const modalPphType = selectedMilestoneForPayment.milestone.pphType || selectedMilestoneForPayment.project.pphType || 'PPH_23';
+                const modalPphRate = modalPphType === 'NON_PPH' ? 0 : (selectedMilestoneForPayment.milestone.pphRatePercent ?? (selectedMilestoneForPayment.project.pphRatePercent ?? (modalPphType === 'PPH_23' ? 2 : 0.5)));
+                const modalPph = (selectedMilestoneForPayment.milestone.pphAmountIDR && selectedMilestoneForPayment.milestone.pphAmountIDR > 0)
+                  ? selectedMilestoneForPayment.milestone.pphAmountIDR
+                  : (modalPphType === 'PPH_23' ? Math.round((modalDpp * modalPphRate) / 100) : modalPphType === 'PPH_FINAL_UMKM' ? Math.round((modalGross * modalPphRate) / 100) : 0);
+
+                return (
+                  <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200 text-xs space-y-1">
+                    <div className="font-bold text-emerald-950">
+                      {selectedMilestoneForPayment.project.clientName}
+                    </div>
+                    <div className="text-slate-600">
+                      {selectedMilestoneForPayment.milestone.title} ({selectedMilestoneForPayment.milestone.percentage}%)
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 mt-1 border-t border-emerald-200 text-[11px] font-mono">
+                      <div>
+                        <span className="text-slate-500">Nilai Bruto / DPP:</span>
+                        <div className="font-bold text-slate-800">{formatIDR(modalGross)}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Potongan {modalPphType === 'PPH_FINAL_UMKM' ? 'PPh Final UMKM (0.5%)' : `PPh 23 (${modalPphRate}%)`}:</span>
+                        <div className="font-bold text-purple-700">-{formatIDR(modalPph)}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-slate-500">Potongan PPh 23 (2%):</span>
-                    <div className="font-bold text-purple-700">-{formatIDR(selectedMilestoneForPayment.milestone.pphAmountIDR)}</div>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -2089,20 +2197,33 @@ export const RetailProjectManagement: React.FC<RetailProjectManagementProps> = (
                   </label>
                 </div>
 
-                {selectedMilestoneForPayment.milestone.pphAmountIDR > 0 && (
-                  <div className="flex items-center gap-2 p-2.5 bg-purple-50/50 rounded-xl border border-purple-200/60">
-                    <input
-                      type="checkbox"
-                      id="chk-sync-pph"
-                      checked={paymentForm.syncToTaxObligations}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, syncToTaxObligations: e.target.checked })}
-                      className="rounded text-purple-600 focus:ring-purple-500"
-                    />
-                    <label htmlFor="chk-sync-pph" className="text-xs text-purple-950 font-medium cursor-pointer">
-                      Catat bukti potong PPh 23 ({formatIDR(selectedMilestoneForPayment.milestone.pphAmountIDR)}) ke <strong>Kredit Pajak SPT Badan</strong>
-                    </label>
-                  </div>
-                )}
+                {(() => {
+                  const modalGross = Number(selectedMilestoneForPayment.milestone.grossAmountIDR) || 0;
+                  const modalPricing = selectedMilestoneForPayment.milestone.pricingType || selectedMilestoneForPayment.project.pricingType || 'INCLUDE_PPN';
+                  const modalDpp = selectedMilestoneForPayment.milestone.dppAmountIDR || (modalPricing === 'INCLUDE_PPN' ? Math.round(modalGross / 1.11) : modalGross);
+                  const modalPphType = selectedMilestoneForPayment.milestone.pphType || selectedMilestoneForPayment.project.pphType || 'PPH_23';
+                  const modalPphRate = modalPphType === 'NON_PPH' ? 0 : (selectedMilestoneForPayment.milestone.pphRatePercent ?? (selectedMilestoneForPayment.project.pphRatePercent ?? (modalPphType === 'PPH_23' ? 2 : 0.5)));
+                  const modalPph = (selectedMilestoneForPayment.milestone.pphAmountIDR && selectedMilestoneForPayment.milestone.pphAmountIDR > 0)
+                    ? selectedMilestoneForPayment.milestone.pphAmountIDR
+                    : (modalPphType === 'PPH_23' ? Math.round((modalDpp * modalPphRate) / 100) : modalPphType === 'PPH_FINAL_UMKM' ? Math.round((modalGross * modalPphRate) / 100) : 0);
+
+                  if (modalPph <= 0) return null;
+
+                  return (
+                    <div className="flex items-center gap-2 p-2.5 bg-purple-50/50 rounded-xl border border-purple-200/60">
+                      <input
+                        type="checkbox"
+                        id="chk-sync-pph"
+                        checked={paymentForm.syncToTaxObligations}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, syncToTaxObligations: e.target.checked })}
+                        className="rounded text-purple-600 focus:ring-purple-500"
+                      />
+                      <label htmlFor="chk-sync-pph" className="text-xs text-purple-950 font-medium cursor-pointer">
+                        Catat bukti potong {modalPphType === 'PPH_FINAL_UMKM' ? 'PPh Final UMKM' : 'PPh 23'} ({formatIDR(modalPph)}) ke <strong>Kredit Pajak SPT Badan</strong>
+                      </label>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>

@@ -1384,6 +1384,7 @@ export type RetailPricingType =
 export type RetailPphType =
   | 'PPH_23' // PPh 23 Jasa Konsultansi (2.0%) dipotong pihak ketiga
   | 'PPH_FINAL_UMKM' // PPh Final PP 55/2022 (0.5%)
+  | 'NON_PPH' // Tanpa potongan PPh
   | 'NONE'; // Tanpa potongan PPh
 
 export type RetailProjectStatus =
