@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "updatedAt": "2026-09-11T19:31:12.552Z",
+  "data": {
+    "projects": [
+      {
+        "id": "CONCURRENT_TEST_1789155023927",
+        "clientName": "Concurrent Client 2 (Latest)",
+        "stage": "Proposal"
+      },
+      {
+        "id": "API_TEST_101",
+        "clientName": "PT Indo Sejahtera",
+        "stage": "Lead"
+      }
+    ]
+  }
+}

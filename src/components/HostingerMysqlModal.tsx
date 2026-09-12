@@ -20,6 +20,11 @@ import {
   Activity,
   XCircle,
   Wifi,
+  Sliders,
+  Eye,
+  EyeOff,
+  Save,
+  RotateCcw,
 } from 'lucide-react';
 import { verifyMysqlConnectivity, MysqlDiagnosticReport } from '../utils/mysqlDiagnostics';
 
@@ -72,6 +77,11 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
     roleDefinitions,
     assignedByOptions,
     restoreAllDataFromBackup,
+    isMysqlConnected,
+    isMysqlSyncing,
+    lastMysqlSyncTime,
+    syncAllToMysql,
+    checkMysqlConnectivity,
   } = useProjects();
 
   const [loading, setLoading] = useState(false);
@@ -81,7 +91,40 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
   const [showDiagnosticsPanel, setShowDiagnosticsPanel] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [isCopied, setIsCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sync' | 'guide'>('sync');
+  const [activeTab, setActiveTab] = useState<'sync' | 'config' | 'guide'>('sync');
+
+  // Configuration Form State
+  const [configForm, setConfigForm] = useState({
+    host: '',
+    port: '3306',
+    user: '',
+    password: '',
+    database: '',
+    hasPassword: false,
+    isOverride: false,
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+
+  // Fetch active MySQL configuration from server
+  const fetchMysqlConfig = async () => {
+    try {
+      const res = await safeFetchJson('/api/mysql/config');
+      if (res && res.success) {
+        setConfigForm((prev) => ({
+          ...prev,
+          host: res.host || '',
+          port: String(res.port || 3306),
+          user: res.user || '',
+          database: res.database || '',
+          hasPassword: Boolean(res.hasPassword),
+          isOverride: Boolean(res.isOverride),
+        }));
+      }
+    } catch {
+      // Non-fatal if config endpoint not ready
+    }
+  };
 
   // Run comprehensive diagnostics and log to console
   const handleRunDiagnostics = async () => {
@@ -108,6 +151,7 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
           type: 'success',
           text: `Diagnostik Sukses: Terhubung ke Hostinger MySQL (${report.latencyMs}ms, ${report.tableCount} tabel).`,
         });
+        checkMysqlConnectivity();
       } else {
         setActionMessage({
           type: 'error',
@@ -121,6 +165,90 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
       });
     } finally {
       setIsDiagnosing(false);
+    }
+  };
+
+  // Save new MySQL configuration, test connection, init schema, and push current data
+  const handleSaveConfig = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingConfig(true);
+    setActionMessage({
+      type: 'info',
+      text: 'Menyimpan konfigurasi dan menghubungkan ke Hostinger MySQL...',
+    });
+
+    try {
+      const res = await safeFetchJson('/api/mysql/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: configForm.host.trim(),
+          port: parseInt(configForm.port, 10) || 3306,
+          user: configForm.user.trim(),
+          password: configForm.password || undefined,
+          database: configForm.database.trim(),
+        }),
+      });
+
+      if (res && res.success) {
+        const isConnOk = res.connection?.success;
+        setActionMessage({
+          type: isConnOk ? 'success' : 'error',
+          text: res.message,
+        });
+
+        await fetchStatus();
+        await fetchMysqlConfig();
+        await checkMysqlConnectivity();
+
+        if (isConnOk) {
+          // Immediately sync all data to the newly connected database
+          setActionMessage({
+            type: 'info',
+            text: 'Koneksi berhasil! Sedang mengirim seluruh data CRM ke Hostinger MySQL...',
+          });
+          const syncRes = await syncAllToMysql();
+          setActionMessage({
+            type: syncRes.success ? 'success' : 'error',
+            text: syncRes.success
+              ? `Konfigurasi tersimpan dan seluruh data CRM berhasil disinkronkan ke ${configForm.database} di ${configForm.host}!`
+              : syncRes.message,
+          });
+          await fetchStatus();
+        }
+      } else {
+        setActionMessage({
+          type: 'error',
+          text: res?.message || 'Gagal menyimpan konfigurasi MySQL.',
+        });
+      }
+    } catch (err: any) {
+      setActionMessage({
+        type: 'error',
+        text: 'Error saat menyimpan konfigurasi: ' + (err.message || err),
+      });
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  // Reset configuration back to server .env
+  const handleResetConfig = async () => {
+    if (!window.confirm('Kembalikan konfigurasi database ke variabel lingkungan server (.env)?')) return;
+    setIsSavingConfig(true);
+    try {
+      const res = await safeFetchJson('/api/mysql/config', { method: 'DELETE' });
+      setActionMessage({
+        type: res?.success ? 'success' : 'error',
+        text: res?.message || 'Konfigurasi telah direset.',
+      });
+      await fetchStatus();
+      await fetchMysqlConfig();
+      await checkMysqlConnectivity();
+    } catch (err: any) {
+      setActionMessage({ type: 'error', text: 'Gagal mereset: ' + (err.message || err) });
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -169,6 +297,7 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
   useEffect(() => {
     if (isOpen) {
       fetchStatus();
+      fetchMysqlConfig();
     }
   }, [isOpen]);
 
@@ -339,6 +468,25 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
 
           <button
             type="button"
+            onClick={() => {
+              setActiveTab('config');
+              fetchMysqlConfig();
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-t border-x cursor-pointer ${
+              activeTab === 'config'
+                ? 'bg-white text-violet-700 border-slate-200 border-b-white -mb-px shadow-xs'
+                : 'bg-transparent text-slate-600 border-transparent hover:text-slate-900'
+            }`}
+          >
+            <Sliders className="w-4 h-4 text-violet-600" />
+            <span>Konfigurasi Hostinger</span>
+            {configForm.isOverride && (
+              <span className="w-2 h-2 rounded-full bg-violet-600" title="Override Kustom Aktif" />
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('guide')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all border-t border-x cursor-pointer ${
               activeTab === 'guide'
@@ -377,6 +525,70 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
 
           {activeTab === 'sync' && (
             <>
+              {/* Real-time Continuous MySQL Sync Status Banner */}
+              <div
+                className={`p-4 rounded-xl border transition-all ${
+                  isMysqlConnected
+                    ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-emerald-200'
+                    : 'bg-gradient-to-r from-slate-50 via-indigo-50/40 to-slate-50 border-slate-200'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2.5 rounded-xl shrink-0 ${
+                        isMysqlConnected
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                          : 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                      }`}
+                    >
+                      <Zap className={`w-5 h-5 ${isMysqlSyncing ? 'animate-bounce' : ''}`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-xs text-slate-900">
+                          Sinkronisasi Otomatis Real-time (Auto-Sync)
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            isMysqlConnected
+                              ? 'bg-emerald-200 text-emerald-900 border border-emerald-300'
+                              : 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isMysqlConnected ? 'bg-emerald-600 animate-pulse' : 'bg-slate-400'
+                            }`}
+                          />
+                          {isMysqlSyncing ? 'SEDANG MENYINKRONKAN...' : isMysqlConnected ? 'AKTIF & TERHUBUNG' : 'MENUNGGU KONEKSI'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                        {isMysqlConnected
+                          ? 'Setiap penambahan, pengubahan, atau penghapusan data (Proyek TKDN/Retail/Tender, Kas, Piutang, Pajak, Payroll, dan Tim) otomatis tersimpan dan ter-update di database Hostinger MySQL.'
+                          : 'Koneksi ke Hostinger MySQL belum terhubung. Masukkan IP Hostinger Anda di tab "Konfigurasi Hostinger" agar auto-sync berjalan.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="sm:text-right shrink-0 bg-white/70 sm:bg-transparent p-2 sm:p-0 rounded-lg border sm:border-0 border-slate-200">
+                    <span className="text-[10px] text-slate-500 block">Terakhir Disinkronkan:</span>
+                    <span className="font-mono text-[11px] font-bold text-slate-800">
+                      {lastMysqlSyncTime
+                        ? new Date(lastMysqlSyncTime).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })
+                        : isMysqlConnected
+                        ? 'Baru saja'
+                        : 'Belum pernah'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Connection Status Card */}
               <div className="p-4 rounded-xl border bg-slate-50/80 border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -457,7 +669,7 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
                 </div>
 
                 {statusData?.config?.host?.toLowerCase() === 'localhost' && (
-                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-1.5">
+                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 space-y-2">
                     <div className="flex items-center gap-1.5 font-bold text-amber-950">
                       <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                       <span>Perhatian: MYSQL_HOST terisi "localhost"</span>
@@ -465,9 +677,22 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
                     <p className="leading-relaxed">
                       Karena aplikasi web ini berjalan di server cloud Google AI Studio, <code>localhost</code> mengarah ke mesin server lokal aplikasi, <strong>bukan server Hostinger Anda</strong>.
                     </p>
-                    <p className="font-medium text-amber-950">
-                      Solusi: Buka hPanel Hostinger &rarr; lihat <strong>Server IP</strong> hosting Anda (atau buka menu <strong>Databases &rarr; Remote MySQL</strong>), lalu ubah <code>MYSQL_HOST</code> di Settings menjadi IP Hostinger tersebut (misal: <code>srv1786.hstgr.io</code> atau IP numerik Hostinger Anda).
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <p className="font-medium text-amber-950">
+                        Masukkan IP Hostinger Anda (misal: <code>srv1786.hstgr.io</code> atau IP numerik) langsung di Tab Konfigurasi:
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('config');
+                          fetchMysqlConfig();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-amber-200 hover:bg-amber-300 text-amber-950 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Sliders className="w-3.5 h-3.5 text-amber-800" />
+                        <span>Buka Tab Konfigurasi & Masukkan IP &rarr;</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -802,6 +1027,163 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
                 </button>
               </div>
             </>
+          )}
+
+          {activeTab === 'config' && (
+            <div className="space-y-4 text-xs">
+              <div className="p-4 bg-violet-50/70 border border-violet-200 rounded-xl space-y-2 text-violet-950">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-violet-900 text-sm">
+                    <Sliders className="w-4 h-4 text-violet-600" />
+                    <span>Konfigurasi Langsung Hostinger MySQL</span>
+                  </div>
+                  {configForm.isOverride && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-200 text-violet-950 border border-violet-300">
+                      Override Runtime Aktif
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-violet-800 leading-relaxed">
+                  Masukkan informasi koneksi database Hostinger Anda di bawah ini. Ketika disimpan, sistem akan langsung
+                  menguji koneksi, membuat tabel CRM jika belum ada, dan mengirim seluruh data input saat ini ke database Hostinger Anda.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveConfig} className="space-y-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      MySQL Host / IP Server Hostinger <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.host}
+                      onChange={(e) => setConfigForm({ ...configForm, host: e.target.value })}
+                      placeholder="Contoh: 153.92.xxx.xxx atau srv1786.hstgr.io"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
+                      required
+                    />
+                    <span className="text-[10px] text-slate-500 block">
+                      Gunakan <strong>Server IP</strong> dari hPanel Hostinger Anda (bukan <code>localhost</code>).
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      Port MySQL
+                    </label>
+                    <input
+                      type="number"
+                      value={configForm.port}
+                      onChange={(e) => setConfigForm({ ...configForm, port: e.target.value })}
+                      placeholder="3306"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
+                    />
+                    <span className="text-[10px] text-slate-500 block">Default: 3306</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      Nama Database (DB_NAME) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.database}
+                      onChange={(e) => setConfigForm({ ...configForm, database: e.target.value })}
+                      placeholder="Contoh: u546311692_gaphorizon"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      Username Database (DB_USER) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={configForm.user}
+                      onChange={(e) => setConfigForm({ ...configForm, user: e.target.value })}
+                      placeholder="Contoh: u546311692_Gaphorizonz"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      Password Database (DB_PASSWORD)
+                    </label>
+                    {configForm.hasPassword && (
+                      <span className="text-[10px] text-emerald-600 font-medium">
+                        ✓ Password tersimpan di server
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={configForm.password}
+                      onChange={(e) => setConfigForm({ ...configForm, password: e.target.value })}
+                      placeholder={configForm.hasPassword ? '•••••••••••• (Kosongkan jika tidak ingin mengubah)' : 'Masukkan password database'}
+                      className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={handleResetConfig}
+                    disabled={isSavingConfig}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Kembalikan ke Default (.env)</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={isSavingConfig}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingConfig ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>{isSavingConfig ? 'Menyimpan & Menghubungkan...' : 'Simpan & Hubungkan ke Hostinger'}</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              {/* Hostinger Remote MySQL Info Box */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center gap-2 font-bold text-slate-800">
+                  <HelpCircle className="w-4 h-4 text-indigo-600" />
+                  <span>Di mana menemukan IP Server Hostinger & mengizinkan koneksi?</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  1. Masuk ke <strong>hPanel Hostinger</strong> &rarr; menu <strong>Hosting</strong> / <strong>Dashboard</strong> &rarr; temukan <strong>Server IP</strong> di kolom sebelah kiri (misal: <code>153.92.xxx.xxx</code>).
+                  <br />
+                  2. Buka menu <strong>Databases &rarr; Remote MySQL</strong> &rarr; pilih database Anda &rarr; pada kolom IP masukkan <code>%</code> (wildcard) &rarr; klik <strong>Create</strong>.
+                </p>
+              </div>
+            </div>
           )}
 
           {activeTab === 'guide' && (

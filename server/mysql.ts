@@ -1,8 +1,12 @@
 import mysql from 'mysql2/promise';
 import type { Pool, PoolConnection } from 'mysql2/promise';
+import fs from 'fs';
+import path from 'path';
 
 let pool: Pool | null = null;
 let currentPoolKey = '';
+
+const RUNTIME_CONFIG_PATH = path.join(process.cwd(), 'data', 'mysql_config.json');
 
 export interface MysqlConfig {
   host?: string;
@@ -10,6 +14,20 @@ export interface MysqlConfig {
   user?: string;
   password?: string;
   database?: string;
+  connectionLimit?: number;
+  connectTimeout?: number;
+}
+
+/**
+ * Sanitizes any database error message to prevent accidental leakage of
+ * passwords, connection strings, or sensitive tokens.
+ */
+export function sanitizeDbError(message: string): string {
+  if (!message) return 'Unknown database error';
+  return message
+    .replace(/(password|pwd)=([^\s;&]+)/gi, '$1=***')
+    .replace(/(mysql:\/\/)([^:]+):([^@]+)@/gi, '$1$2:***@')
+    .replace(/using password:\s*(YES|NO)/gi, 'using password: ***');
 }
 
 export interface MysqlHealthState {
@@ -43,25 +61,97 @@ export function isMysqlInBackoff(): boolean {
   return healthState.lastChecked > 0 && !healthState.isHealthy && Date.now() - healthState.lastChecked < 45000;
 }
 
-export function getMysqlConfig(): MysqlConfig {
-  // Prioritize MYSQL_* family if MYSQL_HOST is provided
-  if (process.env.MYSQL_HOST) {
-    return {
-      host: process.env.MYSQL_HOST.trim(),
-      port: parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || '3306', 10),
-      user: (process.env.MYSQL_USER || process.env.DB_USER || '').trim(),
-      password: process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || process.env.DB_PASS || '',
-      database: (process.env.MYSQL_DATABASE || process.env.DB_NAME || process.env.DB_DATABASE || '').trim(),
-    };
+export function hasMysqlRuntimeConfig(): boolean {
+  try {
+    return fs.existsSync(RUNTIME_CONFIG_PATH);
+  } catch {
+    return false;
+  }
+}
+
+export function saveMysqlConfig(newConfig: MysqlConfig): MysqlConfig {
+  const dir = path.dirname(RUNTIME_CONFIG_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 
-  return {
-    host: (process.env.DB_HOST || '').trim(),
-    port: parseInt(process.env.DB_PORT || '3306', 10),
-    user: (process.env.DB_USER || '').trim(),
-    password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
-    database: (process.env.DB_NAME || process.env.DB_DATABASE || '').trim(),
+  // Get current config to preserve password if not provided
+  const existing = getMysqlConfig();
+  const configToSave: MysqlConfig = {
+    host: newConfig.host ? newConfig.host.trim() : (existing.host || ''),
+    port: newConfig.port || existing.port || 3306,
+    user: newConfig.user ? newConfig.user.trim() : (existing.user || ''),
+    password: newConfig.password !== undefined && newConfig.password !== ''
+      ? newConfig.password
+      : (existing.password || ''),
+    database: newConfig.database ? newConfig.database.trim() : (existing.database || ''),
   };
+
+  fs.writeFileSync(RUNTIME_CONFIG_PATH, JSON.stringify(configToSave, null, 2), 'utf-8');
+
+  // Reset current pool and health state so next query immediately connects with new config
+  if (pool) {
+    pool.end().catch(() => {});
+    pool = null;
+    currentPoolKey = '';
+  }
+  healthState = {
+    isHealthy: false,
+    lastChecked: 0,
+    lastError: null,
+  };
+
+  return configToSave;
+}
+
+export function clearMysqlRuntimeConfig() {
+  if (fs.existsSync(RUNTIME_CONFIG_PATH)) {
+    try {
+      fs.unlinkSync(RUNTIME_CONFIG_PATH);
+    } catch {}
+  }
+  if (pool) {
+    pool.end().catch(() => {});
+    pool = null;
+    currentPoolKey = '';
+  }
+  healthState = {
+    isHealthy: false,
+    lastChecked: 0,
+    lastError: null,
+  };
+}
+
+export function getMysqlConfig(): MysqlConfig {
+  // 1. Check if user configured runtime credentials override
+  if (fs.existsSync(RUNTIME_CONFIG_PATH)) {
+    try {
+      const content = fs.readFileSync(RUNTIME_CONFIG_PATH, 'utf-8');
+      const saved = JSON.parse(content);
+      if (saved && saved.host && saved.user && saved.database) {
+        return {
+          host: String(saved.host).trim(),
+          port: parseInt(String(saved.port || '3306'), 10),
+          user: String(saved.user).trim(),
+          password: String(saved.password || ''),
+          database: String(saved.database).trim(),
+          connectionLimit: parseInt(String(saved.connectionLimit || process.env.MYSQL_CONNECTION_LIMIT || '10'), 10),
+          connectTimeout: parseInt(String(saved.connectTimeout || process.env.MYSQL_CONNECT_TIMEOUT || '10000'), 10),
+        };
+      }
+    } catch {}
+  }
+
+  // 2. Prioritize MYSQL_* family first, then fallback to DB_* family
+  const host = (process.env.MYSQL_HOST || process.env.DB_HOST || '').trim();
+  const port = parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || '3306', 10);
+  const user = (process.env.MYSQL_USER || process.env.DB_USER || '').trim();
+  const password = process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || process.env.DB_PASS || '';
+  const database = (process.env.MYSQL_DATABASE || process.env.DB_NAME || process.env.DB_DATABASE || '').trim();
+  const connectionLimit = parseInt(process.env.MYSQL_CONNECTION_LIMIT || process.env.DB_CONNECTION_LIMIT || '10', 10);
+  const connectTimeout = parseInt(process.env.MYSQL_CONNECT_TIMEOUT || process.env.DB_CONNECT_TIMEOUT || '10000', 10);
+
+  return { host, port, user, password, database, connectionLimit, connectTimeout };
 }
 
 export function isMysqlConfigured(): boolean {
@@ -78,9 +168,9 @@ export function getMysqlPool(customConfig?: MysqlConfig): Pool {
       password: customConfig.password || '',
       database: (customConfig.database || '').trim(),
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: customConfig.connectionLimit || 10,
       queueLimit: 0,
-      connectTimeout: 10000,
+      connectTimeout: customConfig.connectTimeout || 10000,
     });
   }
 
@@ -92,7 +182,7 @@ export function getMysqlPool(customConfig?: MysqlConfig): Pool {
       pool.end().catch(() => {});
     }
     if (!config.host || !config.user || !config.database) {
-      throw new Error('Hostinger MySQL environment variables (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) are not configured.');
+      throw new Error('Hostinger MySQL environment variables (MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE) are not configured.');
     }
     pool = mysql.createPool({
       host: config.host,
@@ -101,9 +191,9 @@ export function getMysqlPool(customConfig?: MysqlConfig): Pool {
       password: config.password,
       database: config.database,
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: config.connectionLimit || 10,
       queueLimit: 0,
-      connectTimeout: 10000,
+      connectTimeout: config.connectTimeout || 10000,
     });
     currentPoolKey = configKey;
   }
@@ -128,7 +218,7 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
     if (!config.host || !config.user || !config.database) {
       return {
         success: false,
-        message: 'Konfigurasi Hostinger MySQL belum lengkap. Pastikan DB_HOST (atau MYSQL_HOST), DB_USER (atau MYSQL_USER), dan DB_NAME (atau MYSQL_DATABASE) terisi.',
+        message: 'Konfigurasi Hostinger MySQL belum lengkap. Pastikan MYSQL_HOST (atau DB_HOST), MYSQL_USER (atau DB_USER), dan MYSQL_DATABASE (atau DB_NAME) terisi.',
         host: config.host,
         database: config.database,
       };
@@ -140,13 +230,19 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
       user: config.user,
       password: config.password || '',
       database: config.database,
-      connectTimeout: 8000,
+      waitForConnections: true,
+      connectionLimit: 2,
+      queueLimit: 0,
+      connectTimeout: config.connectTimeout || 8000,
     });
 
     connection = await tempPool.getConnection();
-    await connection.ping();
 
-    // Query tables
+    // 1. Health check liveness query (SELECT 1)
+    const [healthRows] = await connection.query<any[]>('SELECT 1 AS health_check');
+    const healthVal = healthRows && healthRows[0] ? healthRows[0].health_check : 1;
+
+    // 2. Query existing tables
     const [rows] = await connection.query<any[]>('SHOW TABLES');
     const tables = rows.map((r) => Object.values(r)[0] as string);
     const latencyMs = Date.now() - startTime;
@@ -160,7 +256,7 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
 
     return {
       success: true,
-      message: `Berhasil terhubung ke Hostinger MySQL database "${config.database}" (${latencyMs}ms).`,
+      message: `Health check koneksi database berhasil (SELECT 1 = ${healthVal}) ke database "${config.database}" (${latencyMs}ms). Catatan: Status ini hanya memverifikasi koneksi aktif, bukan bukti seluruh data telah tersinkronisasi.`,
       latencyMs,
       host: config.host,
       database: config.database,
@@ -180,17 +276,19 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
       errorHelp = ' Catatan: Koneksi timeout. Pastikan Remote MySQL di hPanel Hostinger sudah diaktifkan dengan mengizinkan IP "%" dan port 3306 tidak diblokir firewall.';
     }
 
+    const safeErrorMsg = sanitizeDbError(error.message || String(error));
+
     setMysqlHealthState({
       isHealthy: false,
       lastChecked: Date.now(),
-      lastError: error.message || String(error),
+      lastError: safeErrorMsg,
       errorHelp,
       clientIp: incomingIp,
     });
 
     return {
       success: false,
-      message: `Gagal terhubung ke Hostinger MySQL: ${error.message || error}.${errorHelp}`,
+      message: `Gagal terhubung ke Hostinger MySQL: ${safeErrorMsg}.${errorHelp}`,
     };
   } finally {
     if (connection) connection.release();

@@ -121,6 +121,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     taxObligations,
     transactionCategories,
     paymentChannels,
+    isMysqlConnected,
+    isMysqlSyncing,
   } = useProjects();
 
   const isAdminMaster = Boolean(
@@ -849,18 +851,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     id="btn-sidebar-hostinger-mysql"
                     onClick={onOpenHostingerMysql}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer text-indigo-300 hover:text-indigo-100 hover:bg-indigo-950/40 border border-indigo-500/30 ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      isMysqlConnected
+                        ? 'text-emerald-300 hover:text-emerald-100 hover:bg-emerald-950/40 border border-emerald-500/40'
+                        : 'text-indigo-300 hover:text-indigo-100 hover:bg-indigo-950/40 border border-indigo-500/30'
+                    } ${
                       isCollapsed && !isMobileOpen ? 'justify-center px-2' : 'justify-between'
                     }`}
-                    title="Database MySQL Hostinger (Sinkronisasi Data Input)"
+                    title="Database MySQL Hostinger (Sinkronisasi Data Input & Auto-Sync)"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Server className="w-4 h-4 shrink-0 text-indigo-400" />
+                      <Server className={`w-4 h-4 shrink-0 ${isMysqlConnected ? 'text-emerald-400' : 'text-indigo-400'}`} />
                       {(!isCollapsed || isMobileOpen) && <span className="truncate">Hostinger MySQL</span>}
                     </div>
                     {(!isCollapsed || isMobileOpen) && (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">
-                        DB
+                      <span
+                        className={`flex items-center gap-1 text-[9px] px-1.5 py-0.2 rounded font-mono font-bold border ${
+                          isMysqlConnected
+                            ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                            : 'bg-indigo-950 text-indigo-300 border-indigo-800'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isMysqlConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+                          }`}
+                        />
+                        {isMysqlSyncing ? 'SYNC' : isMysqlConnected ? 'LIVE' : 'DB'}
                       </span>
                     )}
                   </button>

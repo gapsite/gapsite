@@ -255,6 +255,13 @@ interface ProjectContextType {
   firebaseUser: FirebaseUser | null;
   isSyncingWithFirestore: boolean;
   syncAllToFirestore: () => Promise<void>;
+
+  // Hostinger MySQL Persistence & Real-time State
+  isMysqlConnected: boolean;
+  isMysqlSyncing: boolean;
+  lastMysqlSyncTime: string | null;
+  syncAllToMysql: () => Promise<{ success: boolean; message: string; summary?: any }>;
+  checkMysqlConnectivity: () => Promise<boolean>;
   
   // Role & Permissions Helper
   hasPermission: (permission: import('../types').UserPermission) => boolean;
@@ -3318,41 +3325,32 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {}
   }, [currentUser, isAuthenticated]);
 
-  // Status guard for automatic Hostinger MySQL sync
+  // Status guards & state for Hostinger MySQL sync
   const isMysqlSyncReadyRef = useRef<boolean>(false);
+  const [isMysqlConnected, setIsMysqlConnected] = useState<boolean>(false);
+  const [isMysqlSyncing, setIsMysqlSyncing] = useState<boolean>(false);
+  const [lastMysqlSyncTime, setLastMysqlSyncTime] = useState<string | null>(null);
 
-  // Check connectivity and log diagnostic status to browser console on authentication
-  useEffect(() => {
-    if (!isAuthenticated) {
+  // Manual or programmatic check of MySQL connectivity
+  const checkMysqlConnectivity = useCallback(async (): Promise<boolean> => {
+    try {
+      const report = await verifyMysqlConnectivity({ silent: true, verbose: false });
+      const ok = Boolean(report.configured && report.connected);
+      isMysqlSyncReadyRef.current = ok;
+      setIsMysqlConnected(ok);
+      return ok;
+    } catch {
       isMysqlSyncReadyRef.current = false;
-      return;
+      setIsMysqlConnected(false);
+      return false;
     }
+  }, []);
 
-    let isCancelled = false;
-    verifyMysqlConnectivity({ silent: false, verbose: true })
-      .then((report) => {
-        if (!isCancelled) {
-          isMysqlSyncReadyRef.current = Boolean(report.configured && report.connected);
-        }
-      })
-      .catch(() => {
-        if (!isCancelled) {
-          isMysqlSyncReadyRef.current = false;
-        }
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [isAuthenticated]);
-
-  // Real-time automatic background sync to Hostinger MySQL (only when database is verified and reachable)
-  useEffect(() => {
-    // Only attempt if authenticated and MySQL connection is confirmed active
-    if (!isAuthenticated || !isMysqlSyncReadyRef.current) return;
-
-    const timer = setTimeout(() => {
-      fetch('/api/mysql/sync/push', {
+  // Complete one-touch synchronizer for all CRM tables to Hostinger MySQL
+  const syncAllToMysql = useCallback(async (): Promise<{ success: boolean; message: string; summary?: any }> => {
+    setIsMysqlSyncing(true);
+    try {
+      const res = await fetch('/api/mysql/sync/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3381,16 +3379,108 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           roleDefinitions,
           assignedByOptions,
         }),
+      });
+
+      const data = await res.json();
+      if (data && data.success) {
+        isMysqlSyncReadyRef.current = true;
+        setIsMysqlConnected(true);
+        setLastMysqlSyncTime(data.syncedAt || new Date().toISOString());
+      }
+      return data;
+    } catch (err: any) {
+      return {
+        success: false,
+        message: err.message || 'Gagal menyinkronkan data ke Hostinger MySQL. Periksa koneksi jaringan.',
+      };
+    } finally {
+      setIsMysqlSyncing(false);
+    }
+  }, [
+    projects,
+    transactions,
+    receivables,
+    taxObligations,
+    payrollRecords,
+    governmentProjects,
+    retailProjects,
+    bankLoans,
+    dispositions,
+    teamMembers,
+    overheadExpenses,
+    officeRentContracts,
+    consultingServices,
+    documentTypes,
+    documentCategories,
+    transactionCategories,
+    paymentChannels,
+    companyCapital,
+    employeeSalaryConfigs,
+    institutionTypes,
+    termDistributionSchemes,
+    companyLetterhead,
+    roleDefinitions,
+    assignedByOptions,
+  ]);
+
+  // Check connectivity on authentication and periodically poll every 30s
+  useEffect(() => {
+    if (!isAuthenticated) {
+      isMysqlSyncReadyRef.current = false;
+      setIsMysqlConnected(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    // Initial check
+    verifyMysqlConnectivity({ silent: false, verbose: true })
+      .then((report) => {
+        if (!isCancelled) {
+          const ok = Boolean(report.configured && report.connected);
+          isMysqlSyncReadyRef.current = ok;
+          setIsMysqlConnected(ok);
+        }
       })
-        .then((res) => res.json())
-        .then((resData) => {
-          if (resData && !resData.success) {
-            isMysqlSyncReadyRef.current = false;
+      .catch(() => {
+        if (!isCancelled) {
+          isMysqlSyncReadyRef.current = false;
+          setIsMysqlConnected(false);
+        }
+      });
+
+    // Periodic heartbeat check every 30s to detect when connection is restored
+    const interval = setInterval(() => {
+      if (isCancelled) return;
+      verifyMysqlConnectivity({ silent: true, verbose: false })
+        .then((report) => {
+          if (!isCancelled) {
+            const ok = Boolean(report.configured && report.connected);
+            isMysqlSyncReadyRef.current = ok;
+            setIsMysqlConnected(ok);
           }
         })
         .catch(() => {
-          isMysqlSyncReadyRef.current = false;
+          if (!isCancelled) {
+            isMysqlSyncReadyRef.current = false;
+            setIsMysqlConnected(false);
+          }
         });
+    }, 30000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
+
+  // Real-time automatic background sync to Hostinger MySQL (continuous auto-update when database is verified and reachable)
+  useEffect(() => {
+    // Only attempt if authenticated and MySQL connection is confirmed active
+    if (!isAuthenticated || !isMysqlSyncReadyRef.current) return;
+
+    const timer = setTimeout(() => {
+      syncAllToMysql().catch(() => {});
     }, 3500);
 
     return () => clearTimeout(timer);
@@ -3420,6 +3510,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     companyLetterhead,
     roleDefinitions,
     assignedByOptions,
+    syncAllToMysql,
   ]);
 
   // Sync state with Firebase Auth
@@ -14203,6 +14294,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         firebaseUser,
         isSyncingWithFirestore,
         syncAllToFirestore,
+        isMysqlConnected,
+        isMysqlSyncing,
+        lastMysqlSyncTime,
+        syncAllToMysql,
+        checkMysqlConnectivity,
         hasPermission,
         isRole,
         realtimeRoleToast,
