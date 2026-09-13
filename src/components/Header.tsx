@@ -115,8 +115,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const pendingDispositions = dispositions.filter(
-    (d) => d.status === 'PENDING' || d.status === 'IN_PROGRESS' || d.status === 'UNDER_REVIEW'
+  const pendingDispositions = (dispositions || []).filter(
+    (d) => d && (d.status === 'PENDING' || d.status === 'IN_PROGRESS' || d.status === 'UNDER_REVIEW')
   );
 
   const getPageDetails = () => {
@@ -126,21 +126,21 @@ export const Header: React.FC<HeaderProps> = ({
           title: 'Projects CRM Pipeline',
           subtitle: '',
           icon: FolderKanban,
-          badge: `${projects.length} Active Accounts`,
+          badge: `${projects?.length || 0} Active Accounts`,
         };
       case 'dispositions':
         return {
           title: 'Job Dispositions & Task Dispatch',
           subtitle: '',
           icon: Clock,
-          badge: `${pendingDispositions.length} Pending Actions`,
+          badge: `${pendingDispositions?.length || 0} Pending Actions`,
         };
       case 'finance':
         return {
           title: 'Financial Management Suite',
           subtitle: '',
           icon: Wallet,
-          badge: `${transactions.length} Ledger Records`,
+          badge: `${transactions?.length || 0} Ledger Records`,
         };
       case 'government-projects':
         return {
@@ -154,35 +154,35 @@ export const Header: React.FC<HeaderProps> = ({
           title: 'Gaji Karyawan & Payroll Konsultan',
           subtitle: 'Penggajian, Slip Gaji Resmi, Tunjangan, PPh 21 TER, & Pencatatan Kas Realtime',
           icon: Users,
-          badge: `${payrollRecords.length} Slip Gaji`,
+          badge: `${payrollRecords?.length || 0} Slip Gaji`,
         };
       case 'thr-bonus':
         return {
           title: 'Bonus & Tunjangan Hari Raya (THR)',
           subtitle: 'Pencairan THR Keagamaan, Bonus Kinerja, Insentif Proyek, PPh 21, & Pembukuan Kas',
           icon: Gift,
-          badge: `${payrollRecords.filter((p) => p.paymentCategory === 'THR' || p.paymentCategory === 'PERFORMANCE_BONUS' || p.paymentCategory === 'PROJECT_BONUS' || p.paymentCategory === 'ANNUAL_BONUS' || (p.thrAmount && p.thrAmount > 0) || (p.bonusAmount && p.bonusAmount > 0)).length} Pencairan`,
+          badge: `${(payrollRecords || []).filter((p) => p && (p.paymentCategory === 'THR' || p.paymentCategory === 'PERFORMANCE_BONUS' || p.paymentCategory === 'PROJECT_BONUS' || p.paymentCategory === 'ANNUAL_BONUS' || (p.thrAmount && p.thrAmount > 0) || (p.bonusAmount && p.bonusAmount > 0))).length} Pencairan`,
         };
       case 'receivables':
         return {
           title: 'Piutang Usaha & Invoice Termin',
           subtitle: 'Monitoring Tagihan Klien, Aging Schedule, & Pembayaran Invoice',
           icon: Receipt,
-          badge: `${receivables.filter((r) => r.status !== 'LUNAS' && r.status !== 'BATAL').length} Tagihan Aktif`,
+          badge: `${(receivables || []).filter((r) => r && r.status !== 'LUNAS' && r.status !== 'BATAL').length} Tagihan Aktif`,
         };
       case 'bank-loans':
         return {
           title: 'Debt & Bank Loan Management',
           subtitle: 'Kredit Modal Kerja, Pinjaman Bank, & Jadwal Cicilan',
           icon: Landmark,
-          badge: `${bankLoans.length} Fasilitas Pinjaman`,
+          badge: `${bankLoans?.length || 0} Fasilitas Pinjaman`,
         };
       case 'tax':
         return {
           title: 'Pajak & Kewajiban Perpajakan (PPN & PPh)',
           subtitle: 'Monitoring PPN Keluaran/Masukan, PPh 21 TER, PPh 23, PPh Final 4(2), & Status Pembayaran NTPN',
           icon: Receipt,
-          badge: `${taxObligations.filter((t) => t.status !== 'PAID').length} Terhutang`,
+          badge: `${(taxObligations || []).filter((t) => t && t.status !== 'PAID').length} Terhutang`,
         };
       case 'financial-reports':
         return {
@@ -210,7 +210,7 @@ export const Header: React.FC<HeaderProps> = ({
           title: 'Team & Workload Matrix',
           subtitle: '',
           icon: Users,
-          badge: `${teamMembers.length} Consultants`,
+          badge: `${teamMembers?.length || 0} Consultants`,
         };
       default:
         return {
