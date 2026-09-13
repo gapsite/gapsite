@@ -228,6 +228,7 @@ export const INITIAL_TEAM_MEMBERS: TeamMember[] = [
       'MANAGE_DISPOSITIONS',
       'MANAGE_FINANCE',
       'EXPORT_AUDIT_REPORTS',
+      'MANAGE_SETTINGS',
     ],
     specialization: ['Master Access Governance', 'Statutory Verification Audits', 'SIINas National Registry', 'Supreme RBAC Authority'],
     activeTaskCount: 0,

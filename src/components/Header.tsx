@@ -51,6 +51,7 @@ interface HeaderProps {
   onOpenTransactionCategoryManager?: () => void;
   onOpenPaymentChannelManager?: () => void;
   onOpenUserProfile?: () => void;
+  onOpenAccountSwitch?: () => void;
   onOpenBackupRestore?: () => void;
   onOpenHostingerMysql?: () => void;
 }
@@ -70,6 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTransactionCategoryManager,
   onOpenPaymentChannelManager,
   onOpenUserProfile,
+  onOpenAccountSwitch,
   onOpenBackupRestore,
   onOpenHostingerMysql,
 }) => {
@@ -762,6 +764,26 @@ export const Header: React.FC<HeaderProps> = ({
                           }`}
                         />
                         {isMysqlSyncing ? 'SYNC' : isMysqlConnected ? 'LIVE' : 'MYSQL'}
+                      </span>
+                    </button>
+                  )}
+
+                  {onOpenAccountSwitch && (
+                    <button
+                      id="btn-header-switch-account"
+                      type="button"
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenAccountSwitch();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-xl transition-colors mb-2 border cursor-pointer shadow-xs text-blue-900 bg-blue-50 hover:bg-blue-100 border-blue-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <span>Alih Role / Ganti Akun</span>
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold bg-blue-200 text-blue-950">
+                        Role Switch
                       </span>
                     </button>
                   )}

@@ -4059,9 +4059,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           u.id !== 'usr-0' &&
           (PURGED_DUMMY_USER_IDS.includes(u.id) ||
             isPurgedDummyName(u.name) ||
-            isPurgedDummyName(u.username))
+            isPurgedDummyName(u.username) ||
+            (u.username && PURGED_DUMMY_USERNAMES.includes(u.username.toLowerCase())) ||
+            (u.email && PURGED_DUMMY_EMAILS.includes(u.email.toLowerCase())))
         ) {
           deleteUserFromFirestore(u.id);
+          saveEntityToMysql('teamMembers', 'delete', undefined, u.id);
         }
       });
 
@@ -4074,6 +4077,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             !deletedUsernames.has((u.username || '').toLowerCase()) &&
             !deletedEmails.has((u.email || '').toLowerCase()) &&
             !PURGED_DUMMY_USER_IDS.includes(u.id) &&
+            !(u.username && PURGED_DUMMY_USERNAMES.includes(u.username.toLowerCase())) &&
+            !(u.email && PURGED_DUMMY_EMAILS.includes(u.email.toLowerCase())) &&
             !isPurgedDummyName(u.name) &&
             !isPurgedDummyName(u.username))
       );
@@ -5035,6 +5040,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthenticated(true);
     try {
       sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
+      sessionStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
       safeLocalStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
       safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
     } catch (e) {
@@ -5079,6 +5085,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthenticated(false);
     try {
       sessionStorage.removeItem(STORAGE_KEY_AUTH_STATE);
+      sessionStorage.removeItem(STORAGE_KEY_CURRENT_USER_ID);
       safeLocalStorage.removeItem(STORAGE_KEY_AUTH_STATE);
     } catch (e) {
       console.error(e);
@@ -5148,6 +5155,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsAuthenticated(true);
     try {
       sessionStorage.setItem(STORAGE_KEY_AUTH_STATE, 'true');
+      sessionStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
       safeLocalStorage.setItem(STORAGE_KEY_CURRENT_USER_ID, updatedUser.id);
     } catch (e) {
       console.error(e);
@@ -5528,8 +5536,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     saveDeletedUserToFirestore(record);
 
-    // 2. Delete user document from Firestore
+    // 2. Delete user document from Firestore & MySQL
     deleteUserFromFirestore(id);
+    saveEntityToMysql('teamMembers', 'delete', undefined, id);
 
     // 3. Remove user from local state and update localStorage immediately
     const updatedMembers = teamMembers.filter(

@@ -34,6 +34,12 @@ import {
   OverheadExpense,
   OfficeRentContract
 } from '../types';
+import {
+  PURGED_DUMMY_USER_IDS,
+  PURGED_DUMMY_USERNAMES,
+  PURGED_DUMMY_EMAILS,
+  isPurgedDummyName,
+} from '../utils/storage';
 
 export const FirestoreCollections = {
   USERS: 'users',
@@ -1284,13 +1290,47 @@ export const ensureInitialFirestoreSeed = async (
       getDeletedSet('deleted_office_rent_ids'),
     ]);
 
-    // 2. Ensure initial users exist in Firestore (batched, checks for any missing baseline members)
-    if (defaultTeamMembers && defaultTeamMembers.length > 0) {
-      const usersSnap = await getDocs(collection(db, FirestoreCollections.USERS));
-      const existingUserIds = new Set<string>();
-      usersSnap.forEach((d) => existingUserIds.add(d.id));
+    // 2. Ensure initial users exist in Firestore (batched, cleanses banned users & seeds baseline)
+    const usersSnap = await getDocs(collection(db, FirestoreCollections.USERS));
+    const purgeBatch = writeBatch(db);
+    let hasPurgeOps = false;
+    const existingUserIds = new Set<string>();
 
-      const missingMembers = defaultTeamMembers.filter((u) => !existingUserIds.has(u.id));
+    usersSnap.forEach((d) => {
+      const u = d.data() as any;
+      const isPurged =
+        d.id !== 'usr-0' &&
+        (PURGED_DUMMY_USER_IDS.includes(d.id) ||
+          isPurgedDummyName(u?.name) ||
+          isPurgedDummyName(u?.username) ||
+          (u?.username && PURGED_DUMMY_USERNAMES.includes(u.username.toLowerCase())) ||
+          (u?.email && PURGED_DUMMY_EMAILS.includes(u.email.toLowerCase())));
+
+      if (isPurged) {
+        purgeBatch.delete(d.ref);
+        hasPurgeOps = true;
+      } else {
+        existingUserIds.add(d.id);
+      }
+    });
+
+    if (hasPurgeOps) {
+      try {
+        await purgeBatch.commit();
+      } catch (err) {
+        console.warn('[firestore] Note during dummy user purge commit:', err);
+      }
+    }
+
+    if (defaultTeamMembers && defaultTeamMembers.length > 0) {
+      const missingMembers = defaultTeamMembers.filter(
+        (u) =>
+          !existingUserIds.has(u.id) &&
+          !PURGED_DUMMY_USER_IDS.includes(u.id) &&
+          !isPurgedDummyName(u.name) &&
+          !(u.username && PURGED_DUMMY_USERNAMES.includes(u.username.toLowerCase())) &&
+          !(u.email && PURGED_DUMMY_EMAILS.includes(u.email.toLowerCase()))
+      );
       if (missingMembers.length > 0) {
         const batch = writeBatch(db);
         missingMembers.forEach((u) => {

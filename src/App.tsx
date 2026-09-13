@@ -36,6 +36,7 @@ import { TransactionCategoryManagerModal } from './components/finance/Transactio
 import { PaymentChannelManagerModal } from './components/finance/PaymentChannelManagerModal';
 import { BackupRestoreModal } from './components/BackupRestoreModal';
 import { HostingerMysqlModal } from './components/HostingerMysqlModal';
+import { AccountSwitchModal } from './components/AccountSwitchModal';
 
 const DashboardContent: React.FC = () => {
   const { selectedProject, setSelectedProjectId, isAuthenticated, hasPermission, currentUser } = useProjects();
@@ -64,6 +65,7 @@ const DashboardContent: React.FC = () => {
   const [isPaymentChannelManagerOpen, setIsPaymentChannelManagerOpen] = useState(false);
   const [isBackupRestoreOpen, setIsBackupRestoreOpen] = useState(false);
   const [isHostingerMysqlOpen, setIsHostingerMysqlOpen] = useState(false);
+  const [isAccountSwitchOpen, setIsAccountSwitchOpen] = useState(false);
 
   // Selected state for disposition modal
   const [dispositionTargetProject, setDispositionTargetProject] = useState<ConsultingProject | null>(null);
@@ -149,6 +151,7 @@ const DashboardContent: React.FC = () => {
           onOpenTransactionCategoryManager={() => setIsTransactionCategoryManagerOpen(true)}
           onOpenPaymentChannelManager={() => setIsPaymentChannelManagerOpen(true)}
           onOpenUserProfile={() => setIsUserProfileOpen(true)}
+          onOpenAccountSwitch={() => setIsAccountSwitchOpen(true)}
           onOpenBackupRestore={() => setIsBackupRestoreOpen(true)}
           onOpenHostingerMysql={() => setIsHostingerMysqlOpen(true)}
         />
@@ -471,6 +474,12 @@ const DashboardContent: React.FC = () => {
         <HostingerMysqlModal
           isOpen={isHostingerMysqlOpen}
           onClose={() => setIsHostingerMysqlOpen(false)}
+        />
+
+        {/* 15. Role & Account Switcher Modal */}
+        <AccountSwitchModal
+          isOpen={isAccountSwitchOpen}
+          onClose={() => setIsAccountSwitchOpen(false)}
         />
       </ErrorBoundary>
     </div>

@@ -57,15 +57,74 @@ export const purgeStaleStorage = (): void => {
 };
 
 // Target IDs, usernames, emails, and names of dummy users to permanently purge
-export const PURGED_DUMMY_USER_IDS = ['usr-lead-01', 'usr-tech-01', 'usr-survey-01', 'usr-fin-01'];
-export const PURGED_DUMMY_USERNAMES = ['bambang.lead', 'siti.tech', 'hendra.survey', 'dewi.finance'];
+export const PURGED_DUMMY_USER_IDS = [
+  'usr-lead-01',
+  'usr-tech-01',
+  'usr-survey-01',
+  'usr-fin-01',
+  'usr-dir-01',
+  'usr-lead-02',
+  'usr-tech-02',
+  'usr-liaison-01',
+  'usr-fin-02',
+  'usr-client-01',
+  'usr-client-indosejahtera',
+  'usr-bambang',
+  'usr-hendra',
+  'usr-dian',
+  'usr-fajar',
+  'usr-siti',
+  'usr-budi',
+];
+export const PURGED_DUMMY_USERNAMES = [
+  'bambang.lead',
+  'siti.tech',
+  'hendra.survey',
+  'dewi.finance',
+  'bambang.soediro',
+  'director.soediro',
+  'hendra.kusuma',
+  'lead.kusuma',
+  'dian.safitri',
+  'tech.nurhaliza',
+  'fajar.nugraha',
+  'liaison.pratama',
+  'siti.aminah',
+  'finance.sartika',
+  'client.indosejahtera',
+  'client.wibowo',
+  'bambang.irawan',
+  'hendra.wijaya',
+  'dewi.lestari',
+  'siti.rahmawati',
+];
 export const PURGED_DUMMY_EMAILS = [
   'bambang.lead@gapsite.com',
   'siti.rahma@gapsite.com',
   'hendra.survey@gapsite.com',
   'dewi.finance@gapsite.com',
+  'bambang.soediro@gapsite.com',
+  'hendra.kusuma@gapsite.com',
+  'dian.safitri@gapsite.com',
+  'nurhaliza.putri@gapsite.com',
+  'fajar.nugraha@gapsite.com',
+  'dedi.pratama@gapsite.com',
+  'siti.aminah@gapsite.com',
+  'dewi.sartika@gapsite.com',
+  'client.indosejahtera@gapsite.com',
+  'budi.wibowo@clientcorp.co.id',
 ];
 export const PURGED_DUMMY_NAMES_LOWER = [
+  'bambang soediro',
+  'hendra kusuma',
+  'dian safitri',
+  'fajar nugraha',
+  'siti aminah',
+  'budi santoso',
+  'nurhaliza putri',
+  'dedi pratama',
+  'dewi sartika',
+  'budi wibowo',
   'hendra wijaya',
   'dewi lestari',
   'bambang irawan',
@@ -337,13 +396,26 @@ export const scrubBannedDummyDataFromLocalStorage = (): void => {
       } catch {}
     }
     const existingDeletedIds = new Set(deletedUsersList.map((d: any) => d.id?.toLowerCase()));
-    PURGED_DUMMY_USER_IDS.forEach((id, idx) => {
+    PURGED_DUMMY_USER_IDS.forEach((id) => {
       if (!existingDeletedIds.has(id.toLowerCase())) {
         deletedUsersList.push({
           id,
-          username: PURGED_DUMMY_USERNAMES[idx],
-          email: PURGED_DUMMY_EMAILS[idx],
-          name: PURGED_DUMMY_NAMES_LOWER[idx],
+          username: id,
+          email: `${id}@gapsite.com`,
+          name: id,
+          deletedAt: new Date().toISOString(),
+          deletedBy: 'System Data Purge',
+        });
+      }
+    });
+    PURGED_DUMMY_USERNAMES.forEach((un) => {
+      const existing = deletedUsersList.some((d: any) => (d.username || '').toLowerCase() === un.toLowerCase());
+      if (!existing) {
+        deletedUsersList.push({
+          id: `purged-${un}`,
+          username: un,
+          email: `${un}@gapsite.com`,
+          name: un,
           deletedAt: new Date().toISOString(),
           deletedBy: 'System Data Purge',
         });

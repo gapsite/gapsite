@@ -59,28 +59,100 @@ if (!fs.existsSync(DATA_DIR)) {
   }
 }
 
-// Retrieve persistent server storage
-app.get('/api/storage/sync', (req, res) => {
-  try {
-    if (!fs.existsSync(SERVER_STORAGE_FILE)) {
-      return res.json({ success: true, exists: false, data: null });
-    }
-    const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
-    if (!raw.trim()) {
-      return res.json({ success: true, exists: false, data: null });
-    }
-    const parsed = JSON.parse(raw);
-    res.json({
-      success: true,
-      exists: true,
-      updatedAt: parsed.updatedAt || null,
-      data: parsed.data || parsed,
-    });
-  } catch (error: any) {
-    console.error('[server-storage] Error reading persistent storage:', error);
-    res.status(500).json({ success: false, error: error.message || 'Failed to read server storage' });
-  }
-});
+// ==========================================
+// PURGED DUMMY USERS REGISTRY
+// Permanently blacklist & scrub dummy accounts from MySQL & API datasets
+// ==========================================
+const PURGED_DUMMY_USER_IDS = [
+  'usr-lead-01',
+  'usr-tech-01',
+  'usr-survey-01',
+  'usr-fin-01',
+  'usr-dir-01',
+  'usr-lead-02',
+  'usr-tech-02',
+  'usr-liaison-01',
+  'usr-fin-02',
+  'usr-client-01',
+  'usr-client-indosejahtera',
+  'usr-bambang',
+  'usr-hendra',
+  'usr-dian',
+  'usr-fajar',
+  'usr-siti',
+  'usr-budi',
+];
+const PURGED_DUMMY_USERNAMES = [
+  'bambang.lead',
+  'siti.tech',
+  'hendra.survey',
+  'dewi.finance',
+  'bambang.soediro',
+  'director.soediro',
+  'hendra.kusuma',
+  'lead.kusuma',
+  'dian.safitri',
+  'tech.nurhaliza',
+  'fajar.nugraha',
+  'liaison.pratama',
+  'siti.aminah',
+  'finance.sartika',
+  'client.indosejahtera',
+  'client.wibowo',
+  'bambang.irawan',
+  'hendra.wijaya',
+  'dewi.lestari',
+  'siti.rahmawati',
+];
+const PURGED_DUMMY_EMAILS = [
+  'bambang.lead@gapsite.com',
+  'siti.rahma@gapsite.com',
+  'hendra.survey@gapsite.com',
+  'dewi.finance@gapsite.com',
+  'bambang.soediro@gapsite.com',
+  'hendra.kusuma@gapsite.com',
+  'dian.safitri@gapsite.com',
+  'nurhaliza.putri@gapsite.com',
+  'fajar.nugraha@gapsite.com',
+  'dedi.pratama@gapsite.com',
+  'siti.aminah@gapsite.com',
+  'dewi.sartika@gapsite.com',
+  'client.indosejahtera@gapsite.com',
+  'budi.wibowo@clientcorp.co.id',
+];
+const PURGED_DUMMY_NAMES_LOWER = [
+  'bambang soediro',
+  'hendra kusuma',
+  'dian safitri',
+  'fajar nugraha',
+  'siti aminah',
+  'budi santoso',
+  'nurhaliza putri',
+  'dedi pratama',
+  'dewi sartika',
+  'budi wibowo',
+  'hendra wijaya',
+  'dewi lestari',
+  'bambang irawan',
+  'siti rahmawati',
+];
+
+const isPurgedUser = (u: any): boolean => {
+  if (!u) return false;
+  if (u.id === 'usr-0' || u.username === 'admin.master' || u.email === 'adryankelvianto250@gmail.com') return false;
+  const uid = (u.id || '').toLowerCase();
+  const uname = (u.username || '').toLowerCase();
+  const uemail = (u.email || '').toLowerCase();
+  const unameStr = (u.name || '').toLowerCase();
+
+  if (PURGED_DUMMY_USER_IDS.some((id) => id.toLowerCase() === uid)) return true;
+  if (PURGED_DUMMY_USERNAMES.some((un) => un.toLowerCase() === uname)) return true;
+  if (PURGED_DUMMY_EMAILS.some((em) => em.toLowerCase() === uemail)) return true;
+  if (PURGED_DUMMY_NAMES_LOWER.some((name) => unameStr.includes(name))) return true;
+  return false;
+};
+
+// Persistent storage routes are mounted below after executeMysqlCrmBatchWrite and fetchMysqlCrmDataset
 
 // ==========================================
 // CORE PERSISTENT DATABASE ENGINE: executeMysqlCrmBatchWrite
@@ -398,6 +470,16 @@ export async function executeMysqlCrmBatchWrite(rawPayload: any): Promise<{
     if (Array.isArray(payload.teamMembers)) {
       for (const tm of payload.teamMembers) {
         if (!tm || !tm.id) continue;
+        if (isPurgedUser(tm)) {
+          try {
+            await conn.query('DELETE FROM crm_team_members WHERE id = ? OR username = ? OR email = ?', [
+              tm.id,
+              tm.username || '',
+              tm.email || '',
+            ]);
+          } catch {}
+          continue;
+        }
         await conn.query(
           `INSERT INTO crm_team_members (id, username, email, role, data)
            VALUES (?, ?, ?, ?, ?)
@@ -565,6 +647,23 @@ export async function executeMysqlCrmBatchWrite(rawPayload: any): Promise<{
         if (delId) await conn.query('DELETE FROM crm_dispositions WHERE id = ?', [delId]);
       }
     }
+    if (Array.isArray(payload.deletedUserIds)) {
+      for (const delId of payload.deletedUserIds) {
+        if (delId) await conn.query('DELETE FROM crm_team_members WHERE id = ?', [delId]);
+      }
+    }
+    // Explicitly purge all banned dummy users from MySQL crm_team_members table
+    try {
+      for (const pid of PURGED_DUMMY_USER_IDS) {
+        await conn.query('DELETE FROM crm_team_members WHERE id = ?', [pid]);
+      }
+      for (const pun of PURGED_DUMMY_USERNAMES) {
+        await conn.query('DELETE FROM crm_team_members WHERE username = ?', [pun]);
+      }
+      for (const pem of PURGED_DUMMY_EMAILS) {
+        await conn.query('DELETE FROM crm_team_members WHERE email = ?', [pem]);
+      }
+    } catch {}
 
     await conn.commit();
 
@@ -621,147 +720,197 @@ app.get('/api/storage/status', (req, res) => {
 });
 
 // ==========================================
+// UNIFIED DATASET RETRIEVAL: fetchMysqlCrmDataset
+// Retrieves the entire consolidated CRM dataset directly from Hostinger MySQL
+// ==========================================
+export async function fetchMysqlCrmDataset(): Promise<{
+  success: boolean;
+  source: string;
+  totalRows: number;
+  pulledAt: string;
+  data: any;
+} | null> {
+  if (!isMysqlConfigured() || isMysqlInBackoff()) return null;
+  const config = getMysqlConfig();
+  const hostLower = (config.host || '').toLowerCase().trim();
+  const isSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+  if (isSandbox && (hostLower === 'localhost' || hostLower === '127.0.0.1')) return null;
+
+  try {
+    await initMysqlSchema();
+    const pool = getMysqlPool();
+    const conn = await pool.getConnection();
+
+    try {
+      const fetchTableData = async (tableName: string) => {
+        try {
+          const [rows] = await conn.query<any[]>(`SELECT data FROM ${tableName}`);
+          return rows
+            .map((r) => {
+              try {
+                return typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+              } catch {
+                return null;
+              }
+            })
+            .filter(Boolean);
+        } catch {
+          return [];
+        }
+      };
+
+      const projects = await fetchTableData('crm_projects');
+      const transactions = await fetchTableData('crm_transactions');
+      const receivables = await fetchTableData('crm_receivables');
+      const taxObligations = await fetchTableData('crm_tax_obligations');
+      const payrollPayments = await fetchTableData('crm_payroll');
+      const governmentProjects = await fetchTableData('crm_government_projects');
+      const retailProjects = await fetchTableData('crm_retail_projects');
+      const bankLoans = await fetchTableData('crm_bank_loans');
+      const dispositions = await fetchTableData('crm_dispositions');
+      const rawTeamMembers = await fetchTableData('crm_team_members');
+      const teamMembers = rawTeamMembers.filter((m: any) => !isPurgedUser(m));
+      const overheadExpenses = await fetchTableData('crm_overhead_expenses');
+      const officeRentContracts = await fetchTableData('crm_office_rent_contracts');
+
+      let settingsMap: Record<string, any> = {};
+      try {
+        const [settingsRows] = await conn.query<any[]>('SELECT setting_key, data FROM crm_app_settings');
+        for (const row of settingsRows) {
+          try {
+            settingsMap[row.setting_key] = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+          } catch {}
+        }
+      } catch {}
+
+      const totalRows =
+        projects.length +
+        transactions.length +
+        receivables.length +
+        taxObligations.length +
+        payrollPayments.length +
+        governmentProjects.length +
+        retailProjects.length +
+        bankLoans.length +
+        dispositions.length +
+        teamMembers.length +
+        overheadExpenses.length +
+        officeRentContracts.length;
+
+      return {
+        success: true,
+        source: 'mysql',
+        totalRows,
+        pulledAt: new Date().toISOString(),
+        data: {
+          projects,
+          transactions,
+          receivables,
+          taxObligations,
+          payrollPayments,
+          payrollRecords: payrollPayments,
+          governmentProjects,
+          retailProjects,
+          bankLoans,
+          dispositions,
+          teamMembers,
+          overheadExpenses: overheadExpenses.length > 0 ? overheadExpenses : (settingsMap.overheadExpenses || []),
+          officeRentContracts: officeRentContracts.length > 0 ? officeRentContracts : (settingsMap.officeRentContracts || []),
+          serviceTypes: settingsMap.serviceTypes || [],
+          documentTypes: settingsMap.documentTypes || [],
+          documentCategories: settingsMap.documentCategories || [],
+          transactionCategories: settingsMap.transactionCategories || [],
+          paymentChannels: settingsMap.paymentChannels || [],
+          companyCapital: settingsMap.companyCapital || null,
+          salaryConfigs: settingsMap.salaryConfigs || [],
+          employeeSalaryConfigs: settingsMap.salaryConfigs || [],
+          institutionTypes: settingsMap.institutionTypes || [],
+          termDistributionSchemes: settingsMap.termDistributionSchemes || [],
+          companyLetterhead: settingsMap.companyLetterhead || null,
+          roleDefinitions: settingsMap.roleDefinitions || null,
+          assignedByOptions: settingsMap.assignedByOptions || [],
+        },
+      };
+    } finally {
+      conn.release();
+    }
+  } catch (err: any) {
+    const ipMatch = err.message?.match(/@'([^']+)'/);
+    const incomingIp = ipMatch ? ipMatch[1] : '';
+    setMysqlHealthState({
+      isHealthy: false,
+      lastChecked: Date.now(),
+      lastError: err.message || String(err),
+      clientIp: incomingIp,
+    });
+    return null;
+  }
+}
+
+// Retrieve persistent server storage (checks live Hostinger MySQL first, then persistent disk backup)
+app.get('/api/storage/sync', async (req, res) => {
+  try {
+    const mysqlDataset = await fetchMysqlCrmDataset().catch(() => null);
+    if (mysqlDataset && mysqlDataset.totalRows > 0) {
+      return res.json({
+        success: true,
+        exists: true,
+        source: 'mysql',
+        updatedAt: mysqlDataset.pulledAt,
+        data: mysqlDataset.data,
+      });
+    }
+
+    if (!fs.existsSync(SERVER_STORAGE_FILE)) {
+      return res.json({ success: true, exists: false, data: null });
+    }
+    const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+    if (!raw.trim()) {
+      return res.json({ success: true, exists: false, data: null });
+    }
+    const parsed = JSON.parse(raw);
+    res.json({
+      success: true,
+      exists: true,
+      source: 'disk',
+      updatedAt: parsed.updatedAt || null,
+      data: parsed.data || parsed,
+    });
+  } catch (error: any) {
+    console.error('[server-storage] Error reading persistent storage:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to read server storage' });
+  }
+});
+
+// ==========================================
 // UNIFIED GET /api/data ENDPOINT
 // Fetches data directly from Hostinger MySQL (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
 // with automatic schema migration and fallback to persistent server storage.
 // ==========================================
 app.get('/api/data', async (req, res) => {
   try {
-    if (isMysqlConfigured() && !isMysqlInBackoff()) {
-      const config = getMysqlConfig();
-      const hostLower = (config.host || '').toLowerCase().trim();
-      const isSandbox = Boolean(process.env.CONTROL_PLANE_PORT && process.env.DEFAULT_APP_PORT);
+    const mysqlDataset = await fetchMysqlCrmDataset().catch(() => null);
+    if (mysqlDataset && mysqlDataset.totalRows > 0) {
+      return res.json(mysqlDataset);
+    }
 
-      if (!(isSandbox && (hostLower === 'localhost' || hostLower === '127.0.0.1'))) {
-        try {
-          await initMysqlSchema();
-          const pool = getMysqlPool();
-          const conn = await pool.getConnection();
-
-          try {
-            const fetchTableData = async (tableName: string) => {
-              try {
-                const [rows] = await conn.query<any[]>(`SELECT data FROM ${tableName}`);
-                return rows
-                  .map((r) => {
-                    try {
-                      return typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
-                    } catch {
-                      return null;
-                    }
-                  })
-                  .filter(Boolean);
-              } catch {
-                return [];
-              }
-            };
-
-            const projects = await fetchTableData('crm_projects');
-            const transactions = await fetchTableData('crm_transactions');
-            const receivables = await fetchTableData('crm_receivables');
-            const taxObligations = await fetchTableData('crm_tax_obligations');
-            const payrollPayments = await fetchTableData('crm_payroll');
-            const governmentProjects = await fetchTableData('crm_government_projects');
-            const retailProjects = await fetchTableData('crm_retail_projects');
-            const bankLoans = await fetchTableData('crm_bank_loans');
-            const dispositions = await fetchTableData('crm_dispositions');
-            const teamMembers = await fetchTableData('crm_team_members');
-            const overheadExpenses = await fetchTableData('crm_overhead_expenses');
-            const officeRentContracts = await fetchTableData('crm_office_rent_contracts');
-
-            let settingsMap: Record<string, any> = {};
-            try {
-              const [settingsRows] = await conn.query<any[]>('SELECT setting_key, data FROM crm_app_settings');
-              for (const row of settingsRows) {
-                try {
-                  settingsMap[row.setting_key] = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-                } catch {}
-              }
-            } catch {}
-
-            const totalRows =
-              projects.length +
-              transactions.length +
-              receivables.length +
-              taxObligations.length +
-              payrollPayments.length +
-              governmentProjects.length +
-              retailProjects.length +
-              bankLoans.length +
-              dispositions.length +
-              teamMembers.length +
-              overheadExpenses.length +
-              officeRentContracts.length;
-
-            // If MySQL already contains records, return MySQL data immediately
-            if (totalRows > 0) {
-              return res.json({
-                success: true,
-                source: 'mysql',
-                pulledAt: new Date().toISOString(),
-                data: {
-                  projects,
-                  transactions,
-                  receivables,
-                  taxObligations,
-                  payrollPayments,
-                  payrollRecords: payrollPayments,
-                  governmentProjects,
-                  retailProjects,
-                  bankLoans,
-                  dispositions,
-                  teamMembers,
-                  overheadExpenses: overheadExpenses.length > 0 ? overheadExpenses : (settingsMap.overheadExpenses || []),
-                  officeRentContracts: officeRentContracts.length > 0 ? officeRentContracts : (settingsMap.officeRentContracts || []),
-                  serviceTypes: settingsMap.serviceTypes || [],
-                  documentTypes: settingsMap.documentTypes || [],
-                  documentCategories: settingsMap.documentCategories || [],
-                  transactionCategories: settingsMap.transactionCategories || [],
-                  paymentChannels: settingsMap.paymentChannels || [],
-                  companyCapital: settingsMap.companyCapital || null,
-                  salaryConfigs: settingsMap.salaryConfigs || [],
-                  employeeSalaryConfigs: settingsMap.salaryConfigs || [],
-                  institutionTypes: settingsMap.institutionTypes || [],
-                  termDistributionSchemes: settingsMap.termDistributionSchemes || [],
-                  companyLetterhead: settingsMap.companyLetterhead || null,
-                  roleDefinitions: settingsMap.roleDefinitions || null,
-                  assignedByOptions: settingsMap.assignedByOptions || [],
-                },
-              });
-            }
-
-            // If MySQL is currently empty and server storage exists, auto-seed MySQL with full transactional batch write
-            if (fs.existsSync(SERVER_STORAGE_FILE)) {
-              try {
-                const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
-                const parsed = JSON.parse(raw);
-                const fileData = parsed.data || parsed;
-                if (fileData && typeof fileData === 'object') {
-                  await executeMysqlCrmBatchWrite(fileData);
-                  return res.json({
-                    success: true,
-                    source: 'mysql_seeded',
-                    pulledAt: new Date().toISOString(),
-                    data: fileData,
-                  });
-                }
-              } catch {
-                // Silently fallback if seeding encountered an issue
-              }
-            }
-          } finally {
-            conn.release();
-          }
-        } catch (dbErr: any) {
-          const ipMatch = dbErr.message?.match(/@'([^']+)'/);
-          const incomingIp = ipMatch ? ipMatch[1] : '';
-          setMysqlHealthState({
-            isHealthy: false,
-            lastChecked: Date.now(),
-            lastError: dbErr.message || String(dbErr),
-            clientIp: incomingIp,
+    // If MySQL is currently empty and server storage exists, auto-seed MySQL with full transactional batch write
+    if (fs.existsSync(SERVER_STORAGE_FILE)) {
+      try {
+        const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        const fileData = parsed.data || parsed;
+        if (fileData && typeof fileData === 'object') {
+          await executeMysqlCrmBatchWrite(fileData);
+          return res.json({
+            success: true,
+            source: 'mysql_seeded',
+            pulledAt: new Date().toISOString(),
+            data: fileData,
           });
         }
+      } catch {
+        // Silently fallback if seeding encountered an issue
       }
     }
 
@@ -1092,19 +1241,28 @@ app.post('/api/data/entity', async (req, res) => {
                   mysqlSuccess = true;
                   affectedRows = writeRes?.affectedRows || 0;
                 } else if (entityType === 'teamMembers') {
-                  const [writeRes]: any = await conn.query(
-                    `INSERT INTO crm_team_members (id, username, email, role, data)
-                     VALUES (?, ?, ?, ?, ?)
-                     ON DUPLICATE KEY UPDATE
-                     username = VALUES(username),
-                     email = VALUES(email),
-                     role = VALUES(role),
-                     data = VALUES(data),
-                     updated_at = NOW()`,
-                    [item.id, item.username || '', item.email || '', item.role || '', JSON.stringify(item)]
-                  );
-                  mysqlSuccess = true;
-                  affectedRows = writeRes?.affectedRows || 0;
+                  if (isPurgedUser(item)) {
+                    await conn.query('DELETE FROM crm_team_members WHERE id = ? OR username = ? OR email = ?', [
+                      item.id,
+                      item.username || '',
+                      item.email || '',
+                    ]);
+                    mysqlSuccess = true;
+                  } else {
+                    const [writeRes]: any = await conn.query(
+                      `INSERT INTO crm_team_members (id, username, email, role, data)
+                       VALUES (?, ?, ?, ?, ?)
+                       ON DUPLICATE KEY UPDATE
+                       username = VALUES(username),
+                       email = VALUES(email),
+                       role = VALUES(role),
+                       data = VALUES(data),
+                       updated_at = NOW()`,
+                      [item.id, item.username || '', item.email || '', item.role || '', JSON.stringify(item)]
+                    );
+                    mysqlSuccess = true;
+                    affectedRows = writeRes?.affectedRows || 0;
+                  }
                 } else if (entityType === 'overheadExpenses') {
                   const [writeRes]: any = await conn.query(
                     `INSERT INTO crm_overhead_expenses (id, overhead_number, category, recipient, amount_idr, date, status, data)
