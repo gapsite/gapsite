@@ -88,6 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
     paymentChannels,
     teamMembers,
     currentUser,
+    isAuthenticated,
     logout,
     hasPermission,
     filters,
@@ -353,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             {/* Hostinger MySQL Database Quick Action Button */}
-            {onOpenHostingerMysql && (isAdminMaster || isMasterAdmin) && (
+            {onOpenHostingerMysql && (isAuthenticated || isAdminMaster || isMasterAdmin) && (
               <button
                 id="btn-header-hostinger-mysql"
                 onClick={onOpenHostingerMysql}
@@ -733,7 +734,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  {onOpenHostingerMysql && (isAdminMaster || isMasterAdmin) && (
+                  {onOpenHostingerMysql && (isAuthenticated || isAdminMaster || isMasterAdmin) && (
                     <button
                       id="btn-header-hostinger-mysql-dropdown"
                       type="button"

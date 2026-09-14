@@ -854,6 +854,7 @@ interface ProjectContextType {
   ) => void;
   rejectUser: (userId: string, reason?: string) => void;
   pendingMembersCount: number;
+  refreshTeamMembers: () => Promise<TeamMember[]>;
 
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
@@ -2973,6 +2974,136 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {}
   }, []);
 
+  // Dedicated multi-device team members synchronization from Hostinger MySQL & server persistent storage
+  const refreshTeamMembers = useCallback(async (): Promise<TeamMember[]> => {
+    try {
+      const res = await fetch('/api/users');
+      if (!res.ok) return teamMembers;
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.teamMembers)) {
+        const remoteMembers: TeamMember[] = json.teamMembers;
+        if (remoteMembers.length === 0) return teamMembers;
+
+        let deletedList: DeletedUserRecord[] = [];
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY_DELETED_USERS);
+          if (saved) deletedList = JSON.parse(saved);
+        } catch {}
+        const deletedIds = new Set(deletedList.map((d) => (d.id || '').toLowerCase()));
+        const deletedUsernames = new Set(deletedList.map((d) => (d.username || '').toLowerCase()));
+        const deletedEmails = new Set(deletedList.map((d) => (d.email || '').toLowerCase()));
+
+        setTeamMembers((prev) => {
+          const map = new Map<string, TeamMember>();
+          // 1. Initial baseline members
+          INITIAL_TEAM_MEMBERS.forEach((bm) => {
+            if (
+              !deletedIds.has(bm.id.toLowerCase()) &&
+              !deletedUsernames.has((bm.username || '').toLowerCase()) &&
+              !deletedEmails.has((bm.email || '').toLowerCase()) &&
+              !PURGED_DUMMY_USER_IDS.includes(bm.id)
+            ) {
+              map.set(bm.id, bm);
+            }
+          });
+
+          // 2. Existing local members (preserve pending state)
+          prev.forEach((pm) => {
+            if (
+              !deletedIds.has((pm.id || '').toLowerCase()) &&
+              !deletedUsernames.has((pm.username || '').toLowerCase()) &&
+              !deletedEmails.has((pm.email || '').toLowerCase()) &&
+              !PURGED_DUMMY_USER_IDS.includes(pm.id) &&
+              !isPurgedDummyName(pm.name)
+            ) {
+              map.set(pm.id, pm);
+            }
+          });
+
+          // 3. Merge remote members fetched from Hostinger MySQL
+          remoteMembers.forEach((rm) => {
+            if (
+              !deletedIds.has((rm.id || '').toLowerCase()) &&
+              !deletedUsernames.has((rm.username || '').toLowerCase()) &&
+              !deletedEmails.has((rm.email || '').toLowerCase()) &&
+              !PURGED_DUMMY_USER_IDS.includes(rm.id) &&
+              !isPurgedDummyName(rm.name)
+            ) {
+              const existing = map.get(rm.id);
+              map.set(rm.id, existing ? { ...existing, ...rm } : rm);
+            }
+          });
+
+          const merged = Array.from(map.values());
+          try {
+            safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+
+        // Realtime update for current active user's session if role or status was modified
+        setCurrentUser((current) => {
+          const remoteCurrent = remoteMembers.find(
+            (u) =>
+              u.id === current.id ||
+              (u.email && current.email && u.email.toLowerCase() === current.email.toLowerCase()) ||
+              (u.username && current.username && u.username.toLowerCase() === current.username.toLowerCase())
+          );
+          if (remoteCurrent) {
+            const isRoleChanged =
+              current.role !== remoteCurrent.role ||
+              current.roleTitle !== remoteCurrent.roleTitle ||
+              current.status !== remoteCurrent.status;
+            if (isRoleChanged && current.id !== 'usr-0' && current.username !== 'admin.master') {
+              setRealtimeRoleToast({
+                show: true,
+                oldRole: current.roleTitle || current.role,
+                newRole: remoteCurrent.role,
+                roleTitle: remoteCurrent.roleTitle || remoteCurrent.role,
+                updatedBy: 'Master Admin (admin.master)',
+              });
+            }
+            return { ...current, ...remoteCurrent };
+          }
+          return current;
+        });
+
+        return remoteMembers;
+      }
+    } catch (err) {
+      console.warn('Failed to refresh team members from MySQL/server:', err);
+    }
+    return teamMembers;
+  }, [teamMembers]);
+
+  // Cross-device continuous synchronization: polls every 6 seconds and syncs on window focus
+  useEffect(() => {
+    refreshTeamMembers();
+
+    const poller = setInterval(() => {
+      refreshTeamMembers();
+    }, 6000);
+
+    const handleFocus = () => {
+      refreshTeamMembers();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshTeamMembers();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(poller);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshTeamMembers]);
+
   // Real-time listener for multi-tab and multi-window synchronization
   useEffect(() => {
     const handleLiveUserUpdate = (updatedMember: TeamMember) => {
@@ -3864,8 +3995,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         retailProjects,
         overheadExpenses,
         officeRentContracts,
+        bankLoans,
         payroll: payrollRecords,
+        payrollPayments: payrollRecords,
         teamMembers,
+        serviceTypes: consultingServices,
+        documentTypes,
+        documentCategories,
+        transactionCategories,
+        paymentChannels,
+        companyCapital,
+        salaryConfigs: employeeSalaryConfigs,
+        institutionTypes,
+        termDistributionSchemes,
+        companyLetterhead,
+        roleDefinitions,
+        assignedByOptions,
       };
 
       saveAutoSnapshotToIndexedDb(snapshotPayload).catch(() => {});
@@ -3881,22 +4026,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       fetch('/api/mysql/sync/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...snapshotPayload,
-          payrollPayments: payrollRecords,
-          serviceTypes: consultingServices,
-          documentTypes,
-          documentCategories,
-          transactionCategories,
-          paymentChannels,
-          companyCapital,
-          salaryConfigs: employeeSalaryConfigs,
-          institutionTypes,
-          termDistributionSchemes,
-          companyLetterhead,
-          roleDefinitions,
-          assignedByOptions,
-        }),
+        body: JSON.stringify(snapshotPayload),
       }).catch(() => {});
     }, 2000);
     return () => clearTimeout(timer);
@@ -3910,8 +4040,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     retailProjects,
     overheadExpenses,
     officeRentContracts,
+    bankLoans,
     payrollRecords,
     teamMembers,
+    consultingServices,
+    documentTypes,
+    documentCategories,
+    transactionCategories,
+    paymentChannels,
+    companyCapital,
+    employeeSalaryConfigs,
+    institutionTypes,
+    termDistributionSchemes,
+    companyLetterhead,
+    roleDefinitions,
+    assignedByOptions,
   ]);
 
   // Firestore Real-Time Subscriptions & Baseline Initialization
@@ -4103,7 +4246,29 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       );
 
       const allMembers = [masterUser, ...nonMasterRemote, ...missingBaselines];
-      setTeamMembers(allMembers);
+      setTeamMembers((prev) => {
+        const map = new Map<string, TeamMember>();
+        allMembers.forEach((m) => map.set(m.id, m));
+        // Preserve any members currently in state / MySQL that are not in this Firestore snapshot
+        prev.forEach((pm) => {
+          if (
+            !deletedIds.has((pm.id || '').toLowerCase()) &&
+            !deletedUsernames.has((pm.username || '').toLowerCase()) &&
+            !deletedEmails.has((pm.email || '').toLowerCase()) &&
+            !PURGED_DUMMY_USER_IDS.includes(pm.id) &&
+            !isPurgedDummyName(pm.name)
+          ) {
+            if (!map.has(pm.id)) {
+              map.set(pm.id, pm);
+            }
+          }
+        });
+        const merged = Array.from(map.values());
+        try {
+          safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(merged));
+        } catch {}
+        return merged;
+      });
 
       // Persist missing baseline team members to Firestore so remote syncs them
       if (missingBaselines.length > 0) {
@@ -5047,9 +5212,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error(e);
     }
 
-    // Update lastLogin in team members and firestore
+    // Update lastLogin in team members, firestore, and MySQL
     setTeamMembers((prev) => prev.map((m) => (m.id === foundUser.id ? updatedUser : m)));
     saveUserToFirestore(updatedUser);
+    saveEntityToMysql('teamMembers', 'save', updatedUser);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedUser),
+    }).catch(() => {});
 
     return { success: true };
   };
@@ -5073,6 +5244,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setTeamMembers((prev) => prev.map((m) => (m.id === targetUser.id ? updatedUser : m)));
     saveUserToFirestore(updatedUser);
+    saveEntityToMysql('teamMembers', 'save', updatedUser);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedUser),
+    }).catch(() => {});
 
     return {
       success: true,
@@ -5246,6 +5423,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     saveUserToFirestore(newUser);
+    saveEntityToMysql('teamMembers', 'save', newUser);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newUser),
+    }).catch(() => {});
     broadcastLiveUserUpdate(newUser);
     broadcastLiveDataUpdate('MEMBERS', [...teamMembers.filter((m) => m.id !== newId), newUser]);
     return newUser;
@@ -5305,6 +5488,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     saveUserToFirestore(verifiedMember);
+    saveEntityToMysql('teamMembers', 'save', verifiedMember);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(verifiedMember),
+    }).catch(() => {});
     broadcastLiveUserUpdate(verifiedMember);
     broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
@@ -5323,6 +5512,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.error(e);
     }
     deleteUserFromFirestore(userId);
+    saveEntityToMysql('teamMembers', 'delete', undefined, userId);
+    fetch(`/api/users/${userId}`, { method: 'DELETE' }).catch(() => {});
     broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
 
@@ -5449,6 +5640,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     saveUserToFirestore(updatedMember);
+    saveEntityToMysql('teamMembers', 'save', updatedMember);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedMember),
+    }).catch(() => {});
     broadcastLiveUserUpdate(updatedMember);
     broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
@@ -5476,6 +5673,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     saveUserToFirestore(updatedMember);
+    saveEntityToMysql('teamMembers', 'save', updatedMember);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedMember),
+    }).catch(() => {});
     broadcastLiveUserUpdate(updatedMember);
     broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
@@ -5539,6 +5742,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 2. Delete user document from Firestore & MySQL
     deleteUserFromFirestore(id);
     saveEntityToMysql('teamMembers', 'delete', undefined, id);
+    fetch(`/api/users/${id}`, { method: 'DELETE' }).catch(() => {});
 
     // 3. Remove user from local state and update localStorage immediately
     const updatedMembers = teamMembers.filter(
@@ -5601,6 +5805,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     saveUserToFirestore(toggledMember);
+    saveEntityToMysql('teamMembers', 'save', toggledMember);
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(toggledMember),
+    }).catch(() => {});
     broadcastLiveUserUpdate(toggledMember);
     broadcastLiveDataUpdate('MEMBERS', nextMembers);
   };
@@ -14260,6 +14470,63 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             return merged;
           });
         }
+        if (Array.isArray(data.officeRentContracts)) {
+          setOfficeRentContracts((curr) => {
+            const currIds = new Set(curr.map((rc) => rc.id));
+            const toAdd = data.officeRentContracts.filter((rc: any) => rc && rc.id && !currIds.has(rc.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_OFFICE_RENTS, JSON.stringify(merged));
+            toAdd.forEach((rc: any) => saveOfficeRentContractToFirestore(rc).catch(() => {}));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.bankLoans)) {
+          setBankLoans((curr) => {
+            const currIds = new Set(curr.map((bl) => bl.id));
+            const toAdd = data.bankLoans.filter((bl: any) => bl && bl.id && !currIds.has(bl.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_BANK_LOANS, JSON.stringify(merged));
+            toAdd.forEach((bl: any) => saveSettingsToFirestore('bank_loans', merged).catch(() => {}));
+            return merged;
+          });
+        }
+        const mergePayroll = Array.isArray(data.payrollRecords) ? data.payrollRecords : Array.isArray(data.payrollPayments) ? data.payrollPayments : null;
+        if (mergePayroll) {
+          setPayrollRecords((curr) => {
+            const currIds = new Set(curr.map((p) => p.id));
+            const toAdd = mergePayroll.filter((p: any) => p && p.id && !currIds.has(p.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_PAYROLL, JSON.stringify(merged));
+            toAdd.forEach((p: any) => savePayrollToFirestore(p).catch(() => {}));
+            return merged;
+          });
+        }
+        const mergeSalary = Array.isArray(data.employeeSalaryConfigs) ? data.employeeSalaryConfigs : Array.isArray(data.salaryConfigs) ? data.salaryConfigs : null;
+        if (mergeSalary) {
+          setEmployeeSalaryConfigs((curr) => {
+            const currIds = new Set(curr.map((s) => s.id || `${s.employeeId}-${s.year}`));
+            const toAdd = mergeSalary.filter((s: any) => s && !currIds.has(s.id || `${s.employeeId}-${s.year}`));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_EMPLOYEE_SALARY_CONFIGS, JSON.stringify(merged));
+            return merged;
+          });
+        }
+        if (Array.isArray(data.teamMembers)) {
+          setTeamMembers((curr) => {
+            const currIds = new Set(curr.map((m) => m.id));
+            const toAdd = data.teamMembers.filter((m: any) => m && m.id && !currIds.has(m.id));
+            const merged = [...curr, ...toAdd];
+            safeLocalStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(merged));
+            toAdd.forEach((m: any) => saveUserToFirestore(m).catch(() => {}));
+            return merged;
+          });
+        }
+        if (data.companyCapital && typeof data.companyCapital === 'object') {
+          setCompanyCapital((curr) => ({ ...curr, ...data.companyCapital }));
+        }
+        if (data.companyLetterhead && typeof data.companyLetterhead === 'object') {
+          setCompanyLetterhead((curr) => ({ ...curr, ...data.companyLetterhead }));
+        }
       }
 
       return { success: true, message: 'Data berhasil dipulihkan.' };
@@ -14321,6 +14588,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         verifyUser,
         rejectUser,
         pendingMembersCount,
+        refreshTeamMembers,
         roleDefinitions,
         roleGovernanceMeta,
         updateRolePositionTitle,

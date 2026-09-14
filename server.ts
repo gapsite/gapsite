@@ -555,29 +555,29 @@ export async function executeMysqlCrmBatchWrite(rawPayload: any): Promise<{
     }
 
     // 13. App Settings
-    const settingsKeys = [
-      'serviceTypes',
-      'documentTypes',
-      'documentCategories',
-      'transactionCategories',
-      'paymentChannels',
-      'companyCapital',
-      'salaryConfigs',
-      'institutionTypes',
-      'termDistributionSchemes',
-      'companyLetterhead',
-      'roleDefinitions',
-      'assignedByOptions',
-    ];
-    for (const key of settingsKeys) {
-      if (payload[key] !== undefined) {
+    const settingsMap: Record<string, any> = {
+      serviceTypes: payload.serviceTypes !== undefined ? payload.serviceTypes : payload.consultingServices,
+      documentTypes: payload.documentTypes,
+      documentCategories: payload.documentCategories,
+      transactionCategories: payload.transactionCategories,
+      paymentChannels: payload.paymentChannels,
+      companyCapital: payload.companyCapital,
+      salaryConfigs: payload.salaryConfigs !== undefined ? payload.salaryConfigs : payload.employeeSalaryConfigs,
+      institutionTypes: payload.institutionTypes,
+      termDistributionSchemes: payload.termDistributionSchemes,
+      companyLetterhead: payload.companyLetterhead,
+      roleDefinitions: payload.roleDefinitions,
+      assignedByOptions: payload.assignedByOptions,
+    };
+    for (const [key, val] of Object.entries(settingsMap)) {
+      if (val !== undefined) {
         await conn.query(
           `INSERT INTO crm_app_settings (setting_key, data)
            VALUES (?, ?)
            ON DUPLICATE KEY UPDATE
            data = VALUES(data),
            updated_at = NOW()`,
-          [key, JSON.stringify(payload[key])]
+          [key, JSON.stringify(val)]
         );
       }
     }
@@ -936,6 +936,200 @@ app.get('/api/data', async (req, res) => {
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
+// DEDICATED USER MANAGEMENT & CROSS-DEVICE SYNC ENDPOINTS (/api/users)
+// Ensures instant multi-device propagation for new registrations and role modifications.
+// ==========================================
+app.get('/api/users', async (req, res) => {
+  try {
+    let teamMembers: any[] = [];
+    let source = 'none';
+
+    // 1. Prioritize live Hostinger MySQL crm_team_members table
+    if (isMysqlConfigured() && !isMysqlInBackoff()) {
+      try {
+        const pool = getMysqlPool();
+        const conn = await pool.getConnection();
+        try {
+          const [rows] = await conn.query<any[]>('SELECT data FROM crm_team_members');
+          teamMembers = rows
+            .map((r) => {
+              try {
+                return typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
+              } catch {
+                return null;
+              }
+            })
+            .filter(Boolean)
+            .filter((m: any) => !isPurgedUser(m));
+          source = 'mysql';
+        } finally {
+          conn.release();
+        }
+      } catch (mysqlErr: any) {
+        console.warn('[server-users] MySQL read warning, falling back to disk:', mysqlErr?.message);
+      }
+    }
+
+    // 2. Fallback to persistent disk storage if MySQL had no rows or was unreachable
+    if (teamMembers.length === 0 && fs.existsSync(SERVER_STORAGE_FILE)) {
+      try {
+        const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+        if (raw.trim()) {
+          const parsed = JSON.parse(raw);
+          const dataObj = parsed.data || parsed;
+          if (Array.isArray(dataObj.teamMembers)) {
+            teamMembers = dataObj.teamMembers.filter((m: any) => !isPurgedUser(m));
+            source = 'server_storage';
+          }
+        }
+      } catch (fsErr) {
+        console.warn('[server-users] Error reading disk storage:', fsErr);
+      }
+    }
+
+    res.json({
+      success: true,
+      source,
+      total: teamMembers.length,
+      timestamp: new Date().toISOString(),
+      teamMembers,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: sanitizeDbError(error.message) });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const user = req.body;
+    if (!user || !user.id || !user.username) {
+      return res.status(400).json({ success: false, message: 'Invalid user payload: id and username required' });
+    }
+
+    if (isPurgedUser(user)) {
+      return res.status(400).json({ success: false, message: 'User is purged or banned' });
+    }
+
+    let mysqlSaved = false;
+    let mysqlMessage = '';
+
+    // 1. Transactional write to Hostinger MySQL
+    if (isMysqlConfigured() && !isMysqlInBackoff()) {
+      try {
+        const pool = getMysqlPool();
+        const conn = await pool.getConnection();
+        try {
+          await conn.query(
+            `INSERT INTO crm_team_members (id, username, email, role, data)
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+             username = VALUES(username),
+             email = VALUES(email),
+             role = VALUES(role),
+             data = VALUES(data),
+             updated_at = NOW()`,
+            [user.id, user.username || '', user.email || '', user.role || 'GUEST', JSON.stringify(user)]
+          );
+          mysqlSaved = true;
+          mysqlMessage = `User ${user.username} saved to Hostinger MySQL (crm_team_members)`;
+        } finally {
+          conn.release();
+        }
+      } catch (err: any) {
+        mysqlMessage = sanitizeDbError(err.message);
+        console.warn('[server-users] Error saving user to MySQL:', mysqlMessage);
+      }
+    }
+
+    // 2. Dual persistence: update local server disk storage file
+    try {
+      if (fs.existsSync(SERVER_STORAGE_FILE)) {
+        const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+        if (raw.trim()) {
+          const parsed = JSON.parse(raw);
+          const dataObj = parsed.data || parsed;
+          if (!Array.isArray(dataObj.teamMembers)) {
+            dataObj.teamMembers = [];
+          }
+          const idx = dataObj.teamMembers.findIndex((m: any) => m && m.id === user.id);
+          if (idx >= 0) {
+            dataObj.teamMembers[idx] = user;
+          } else {
+            dataObj.teamMembers.push(user);
+          }
+          const temp = `${SERVER_STORAGE_FILE}.tmp`;
+          fs.writeFileSync(
+            temp,
+            JSON.stringify({ version: '1.0', updatedAt: new Date().toISOString(), data: dataObj }, null, 2),
+            'utf-8'
+          );
+          fs.renameSync(temp, SERVER_STORAGE_FILE);
+        }
+      }
+    } catch (fsErr) {
+      console.warn('[server-users] Error updating disk storage for user:', fsErr);
+    }
+
+    res.json({
+      success: true,
+      mysqlSaved,
+      mysqlMessage,
+      user,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: sanitizeDbError(error.message) });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: 'Missing user id' });
+
+    // 1. Delete from Hostinger MySQL
+    if (isMysqlConfigured() && !isMysqlInBackoff()) {
+      try {
+        const pool = getMysqlPool();
+        const conn = await pool.getConnection();
+        try {
+          await conn.query('DELETE FROM crm_team_members WHERE id = ?', [id]);
+        } finally {
+          conn.release();
+        }
+      } catch (err: any) {
+        console.warn('[server-users] Error deleting user from MySQL:', err.message);
+      }
+    }
+
+    // 2. Delete from disk storage
+    try {
+      if (fs.existsSync(SERVER_STORAGE_FILE)) {
+        const raw = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+        if (raw.trim()) {
+          const parsed = JSON.parse(raw);
+          const dataObj = parsed.data || parsed;
+          if (Array.isArray(dataObj.teamMembers)) {
+            dataObj.teamMembers = dataObj.teamMembers.filter((m: any) => m && m.id !== id);
+          }
+          const temp = `${SERVER_STORAGE_FILE}.tmp`;
+          fs.writeFileSync(
+            temp,
+            JSON.stringify({ version: '1.0', updatedAt: new Date().toISOString(), data: dataObj }, null, 2),
+            'utf-8'
+          );
+          fs.renameSync(temp, SERVER_STORAGE_FILE);
+        }
+      }
+    } catch {}
+
+    res.json({ success: true, id });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: sanitizeDbError(error.message) });
   }
 });
 

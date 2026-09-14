@@ -272,6 +272,7 @@ export const RoleManagerModal: React.FC<{
     verifyUser,
     rejectUser,
     pendingMembersCount,
+    refreshTeamMembers,
     isMasterAdmin,
     roleDefinitions,
     roleGovernanceMeta,
@@ -288,12 +289,15 @@ export const RoleManagerModal: React.FC<{
   );
 
   useEffect(() => {
+    if (isOpen) {
+      refreshTeamMembers();
+    }
     if (initialTab) {
       setActiveTab(initialTab);
     } else if (pendingMembersCount > 0 && activeTab !== 'matrix' && activeTab !== 'roles') {
       setActiveTab('pending');
     }
-  }, [initialTab, isOpen]);
+  }, [initialTab, isOpen, refreshTeamMembers]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');

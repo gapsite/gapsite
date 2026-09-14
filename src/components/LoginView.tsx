@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Lock,
@@ -151,7 +151,7 @@ const AVATAR_PRESETS = [
 ];
 
 export const LoginView: React.FC = () => {
-  const { teamMembers, login, addUser, resetPinWithEmail } = useProjects();
+  const { teamMembers, login, addUser, resetPinWithEmail, refreshTeamMembers } = useProjects();
 
   // Mode: Sign In, Register New Employee, or Forgot PIN / Reset Password
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'forgot-pin'>('signin');
@@ -163,6 +163,11 @@ export const LoginView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Sync team members on mount to ensure fresh state across all computers
+  useEffect(() => {
+    refreshTeamMembers();
+  }, [refreshTeamMembers]);
 
   // Register Form State
   const [regName, setRegName] = useState('');
@@ -204,7 +209,7 @@ export const LoginView: React.FC = () => {
     }
   };
 
-  const handleSignInSubmit = (e: React.FormEvent) => {
+  const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -223,16 +228,19 @@ export const LoginView: React.FC = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      const res = login(cleanUser, cleanPin);
-      setIsLoading(false);
-      if (!res.success) {
-        setErrorMsg(res.message || 'Login failed. Please verify your registered username/email and security PIN.');
-      }
-    }, 200);
+    let res = login(cleanUser, cleanPin);
+    if (!res.success) {
+      // Immediately refresh from Hostinger MySQL in case user registered on another computer!
+      await refreshTeamMembers();
+      res = login(cleanUser, cleanPin);
+    }
+    setIsLoading(false);
+    if (!res.success) {
+      setErrorMsg(res.message || 'Login failed. Please verify your registered username/email and security PIN.');
+    }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -254,21 +262,28 @@ export const LoginView: React.FC = () => {
       return;
     }
 
+    setIsLoading(true);
+
+    // Fetch latest user list from Hostinger MySQL to ensure true uniqueness across all computers
+    const freshMembers = await refreshTeamMembers();
+
     // Strict uniqueness check: Username cannot be reused once registered
-    const usernameTaken = teamMembers.some(
+    const usernameTaken = freshMembers.some(
       (m) => (m.username || '').toLowerCase() === cleanUsername
     );
 
     if (usernameTaken) {
+      setIsLoading(false);
       setErrorMsg(`The username "@${cleanUsername}" is already registered. Usernames cannot be reused once registered. Please choose a different username.`);
       return;
     }
 
-    const emailTaken = teamMembers.some(
+    const emailTaken = freshMembers.some(
       (m) => m.email.toLowerCase() === regEmail.trim().toLowerCase()
     );
 
     if (emailTaken) {
+      setIsLoading(false);
       setErrorMsg(`An account with email "${regEmail.trim()}" is already registered. Please sign in with your registered username.`);
       return;
     }
@@ -277,59 +292,61 @@ export const LoginView: React.FC = () => {
     const cleanConfirmPin = regConfirmPin.trim();
 
     if (!cleanPin) {
+      setIsLoading(false);
       setErrorMsg('Security PIN is required. Please create a 4-6 digit PIN for logging in.');
       return;
     }
 
     if (cleanPin.length < 4 || cleanPin.length > 6) {
+      setIsLoading(false);
       setErrorMsg('Security PIN must be between 4 and 6 digits.');
       return;
     }
 
     if (cleanPin !== cleanConfirmPin) {
+      setIsLoading(false);
       setErrorMsg('Security PIN and Confirm PIN do not match.');
       return;
     }
 
-    setIsLoading(true);
+    try {
+      const defaultRole: UserRole = 'TECHNICAL_CONSULTANT';
+      const initialStatus: TeamMember['status'] = 'PENDING_VERIFICATION';
 
-    setTimeout(() => {
-      try {
-        const defaultRole: UserRole = 'TECHNICAL_CONSULTANT';
-        const initialStatus: TeamMember['status'] = 'PENDING_VERIFICATION';
+      const newMember = addUser({
+        name: regName.trim(),
+        username: cleanUsername,
+        email: regEmail.trim().toLowerCase(),
+        phone: regPhone.trim(),
+        role: defaultRole,
+        roleTitle: ROLE_PRESETS[defaultRole].title,
+        department: ROLE_PRESETS[defaultRole].department,
+        pin: cleanPin,
+        avatar: AVATAR_PRESETS[0],
+        status: initialStatus,
+        registeredAt: 'Just now',
+        specialization: ['Statutory Compliance', 'TKDN Modeling'],
+        permissions: ROLE_PRESETS[defaultRole].defaultPermissions,
+        activeTaskCount: 0,
+        completedTaskCount: 0,
+        capacityPercentage: 70,
+      });
 
-        const newMember = addUser({
-          name: regName.trim(),
-          username: cleanUsername,
-          email: regEmail.trim().toLowerCase(),
-          phone: regPhone.trim(),
-          role: defaultRole,
-          roleTitle: ROLE_PRESETS[defaultRole].title,
-          department: ROLE_PRESETS[defaultRole].department,
-          pin: cleanPin,
-          avatar: AVATAR_PRESETS[0],
-          status: initialStatus,
-          registeredAt: 'Just now',
-          specialization: ['Statutory Compliance', 'TKDN Modeling'],
-          permissions: ROLE_PRESETS[defaultRole].defaultPermissions,
-          activeTaskCount: 0,
-          completedTaskCount: 0,
-          capacityPercentage: 70,
-        });
+      // Quick sync to guarantee all states are aligned
+      await refreshTeamMembers();
 
-        setIsLoading(false);
+      setIsLoading(false);
 
-        setAuthMode('signin');
-        setSuccessMsg(
-          `Registration submitted for ${newMember.name}! Username "@${newMember.username}" and PIN have been established. Please sign in using your username and PIN.`
-        );
-        setIdentifier(newMember.username || '');
-        setPin(cleanPin);
-      } catch (err: any) {
-        setIsLoading(false);
-        setErrorMsg(err?.message || 'Failed to register account. Please choose a different username.');
-      }
-    }, 300);
+      setAuthMode('signin');
+      setSuccessMsg(
+        `Registration submitted for ${newMember.name}! Username "@${newMember.username}" and PIN have been established. Please sign in using your username and PIN.`
+      );
+      setIdentifier(newMember.username || '');
+      setPin(cleanPin);
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMsg(err?.message || 'Failed to register account. Please choose a different username.');
+    }
   };
 
   // Handle Step 1: Send Reset to Registered Gmail
@@ -354,9 +371,16 @@ export const LoginView: React.FC = () => {
     setIsLoading(true);
 
     // Search for user with this registered email (or matching username)
-    const targetUser = teamMembers.find(
+    let targetUser = teamMembers.find(
       (m) => m.email.toLowerCase() === cleanEmail || m.username?.toLowerCase() === cleanEmail
     );
+
+    if (!targetUser) {
+      const freshMembers = await refreshTeamMembers();
+      targetUser = freshMembers.find(
+        (m) => m.email.toLowerCase() === cleanEmail || m.username?.toLowerCase() === cleanEmail
+      );
+    }
 
     if (!targetUser) {
       setIsLoading(false);
