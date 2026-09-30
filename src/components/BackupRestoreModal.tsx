@@ -112,7 +112,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
     currentUser,
   } = useProjects();
 
-  const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
+  const [activeTab, setActiveTab] = useState<'export' | 'import'>('import');
   const [includeSystemConfigs, setIncludeSystemConfigs] = useState(true);
 
   // Import state
@@ -120,6 +120,9 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
   const [importedJson, setImportedJson] = useState<BackupFilePayload | null>(null);
   const [importFileName, setImportFileName] = useState<string>('');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('replace');
+  const [confirmedReplace, setConfirmedReplace] = useState(false);
+  const [importMethod, setImportMethod] = useState<'file' | 'paste'>('file');
+  const [pasteJsonText, setPasteJsonText] = useState('');
   const [importStatus, setImportStatus] = useState<'idle' | 'reading' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -202,8 +205,72 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
       setTimeout(() => setStatusMessage(''), 5000);
     } catch (err: any) {
       console.error('Export backup error:', err);
-      alert('Gagal mengekspor data backup: ' + (err?.message || err));
+      setStatusMessage('Gagal mengekspor data backup: ' + (err?.message || err));
+      setImportStatus('error');
     }
+  };
+
+  // Helper to parse any raw object into BackupFilePayload
+  const processParsedJson = (parsed: any, sourceName: string) => {
+    if (!parsed || typeof parsed !== 'object' || (!parsed.data && !parsed.projects && !parsed.transactions)) {
+      throw new Error('Format file JSON tidak valid. Pastikan file adalah hasil backup resmi KCK CRM.');
+    }
+
+    let normalizedPayload: BackupFilePayload;
+    if (parsed.data) {
+      normalizedPayload = parsed as BackupFilePayload;
+    } else {
+      normalizedPayload = {
+        version: parsed.version || '1.0',
+        appName: 'KCK CRM',
+        exportedAt: parsed.exportedAt || new Date().toISOString(),
+        summary: {
+          projectsCount: parsed.projects?.length || 0,
+          dispositionsCount: parsed.dispositions?.length || 0,
+          transactionsCount: parsed.transactions?.length || 0,
+          receivablesCount: parsed.receivables?.length || 0,
+          taxObligationsCount: parsed.taxObligations?.length || 0,
+          payrollsCount: parsed.payrollPayments?.length || 0,
+          governmentProjectsCount: parsed.governmentProjects?.length || 0,
+          retailProjectsCount: parsed.retailProjects?.length || 0,
+          overheadExpensesCount: parsed.overheadExpenses?.length || 0,
+          officeRentContractsCount: parsed.officeRentContracts?.length || 0,
+          bankLoansCount: parsed.bankLoans?.length || 0,
+          teamMembersCount: parsed.teamMembers?.length || 0,
+        },
+        data: {
+          projects: parsed.projects || [],
+          teamMembers: parsed.teamMembers || [],
+          dispositions: parsed.dispositions || [],
+          transactions: parsed.transactions || [],
+          receivables: parsed.receivables || [],
+          taxObligations: parsed.taxObligations || [],
+          bankLoans: parsed.bankLoans || [],
+          companyCapital: parsed.companyCapital || null,
+          payrollPayments: parsed.payrollPayments || [],
+          salaryConfigs: parsed.salaryConfigs || [],
+          governmentProjects: parsed.governmentProjects || [],
+          retailProjects: parsed.retailProjects || [],
+          overheadExpenses: parsed.overheadExpenses || [],
+          officeRentContracts: parsed.officeRentContracts || [],
+          serviceTypes: parsed.serviceTypes || [],
+          documentTypes: parsed.documentTypes || [],
+          documentCategories: parsed.documentCategories || [],
+          transactionCategories: parsed.transactionCategories || [],
+          paymentChannels: parsed.paymentChannels || [],
+          institutionTypes: parsed.institutionTypes || [],
+          termDistributionSchemes: parsed.termDistributionSchemes || [],
+          companyLetterhead: parsed.companyLetterhead || null,
+          roleDefinitions: parsed.roleDefinitions || {},
+          assignedByOptions: parsed.assignedByOptions || [],
+        },
+      };
+    }
+
+    setImportedJson(normalizedPayload);
+    setImportFileName(sourceName);
+    setImportStatus('idle');
+    setStatusMessage('File backup berhasil dibaca dan siap dipulihkan ke sistem.');
   };
 
   // Handle File Upload
@@ -220,67 +287,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
       try {
         const text = event.target?.result as string;
         const parsed = JSON.parse(text);
-
-        // Basic payload validation
-        if (!parsed || typeof parsed !== 'object' || (!parsed.data && !parsed.projects)) {
-          throw new Error('Format file JSON tidak valid. Pastikan file adalah hasil backup KCK CRM.');
-        }
-
-        // Normalize if old format
-        let normalizedPayload: BackupFilePayload;
-        if (parsed.data) {
-          normalizedPayload = parsed as BackupFilePayload;
-        } else {
-          // Legacy format fallback
-          normalizedPayload = {
-            version: parsed.version || '1.0',
-            appName: 'KCK CRM',
-            exportedAt: parsed.exportedAt || new Date().toISOString(),
-            summary: {
-              projectsCount: parsed.projects?.length || 0,
-              dispositionsCount: parsed.dispositions?.length || 0,
-              transactionsCount: parsed.transactions?.length || 0,
-              receivablesCount: parsed.receivables?.length || 0,
-              taxObligationsCount: parsed.taxObligations?.length || 0,
-              payrollsCount: parsed.payrollPayments?.length || 0,
-              governmentProjectsCount: parsed.governmentProjects?.length || 0,
-              retailProjectsCount: parsed.retailProjects?.length || 0,
-              overheadExpensesCount: parsed.overheadExpenses?.length || 0,
-              officeRentContractsCount: parsed.officeRentContracts?.length || 0,
-              bankLoansCount: parsed.bankLoans?.length || 0,
-              teamMembersCount: parsed.teamMembers?.length || 0,
-            },
-            data: {
-              projects: parsed.projects || [],
-              teamMembers: parsed.teamMembers || [],
-              dispositions: parsed.dispositions || [],
-              transactions: parsed.transactions || [],
-              receivables: parsed.receivables || [],
-              taxObligations: parsed.taxObligations || [],
-              bankLoans: parsed.bankLoans || [],
-              companyCapital: parsed.companyCapital || null,
-              payrollPayments: parsed.payrollPayments || [],
-              salaryConfigs: parsed.salaryConfigs || [],
-              governmentProjects: parsed.governmentProjects || [],
-              retailProjects: parsed.retailProjects || [],
-              overheadExpenses: parsed.overheadExpenses || [],
-              officeRentContracts: parsed.officeRentContracts || [],
-              serviceTypes: parsed.serviceTypes || [],
-              documentTypes: parsed.documentTypes || [],
-              documentCategories: parsed.documentCategories || [],
-              transactionCategories: parsed.transactionCategories || [],
-              paymentChannels: parsed.paymentChannels || [],
-              institutionTypes: parsed.institutionTypes || [],
-              termDistributionSchemes: parsed.termDistributionSchemes || [],
-              companyLetterhead: parsed.companyLetterhead || null,
-              roleDefinitions: parsed.roleDefinitions || {},
-              assignedByOptions: parsed.assignedByOptions || [],
-            },
-          };
-        }
-
-        setImportedJson(normalizedPayload);
-        setImportStatus('idle');
+        processParsedJson(parsed, file.name);
       } catch (err: any) {
         console.error('Error parsing JSON backup:', err);
         setImportStatus('error');
@@ -295,29 +302,48 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
     reader.readAsText(file);
   };
 
+  const handleParsePastedJson = () => {
+    try {
+      if (!pasteJsonText.trim()) {
+        setImportStatus('error');
+        setStatusMessage('Teks JSON belum diisi. Silakan tempelkan isi file backup.');
+        return;
+      }
+      const parsed = JSON.parse(pasteJsonText);
+      processParsedJson(parsed, 'Teks JSON yang Ditempel');
+    } catch (err: any) {
+      setImportStatus('error');
+      setStatusMessage('Format teks JSON tidak valid: ' + (err?.message || err));
+      setImportedJson(null);
+    }
+  };
+
   // Trigger Restore
   const handleExecuteRestore = async () => {
     if (!importedJson || !importedJson.data) {
-      alert('Pilih file backup JSON terlebih dahulu.');
+      setImportStatus('error');
+      setStatusMessage('Pilih file backup JSON atau tempel teks JSON terlebih dahulu.');
       return;
     }
 
-    const confirmText =
-      importMode === 'replace'
-        ? 'Perhatian: Mode "Ganti Seluruh Data" akan mengganti data saat ini dengan isi file backup ini. Apakah Anda yakin ingin melanjutkan?'
-        : 'Mode "Gabungkan Data (Merge)" akan menambahkan data baru dari file backup tanpa menghapus entri yang sudah ada. Lanjutkan?';
-
-    if (!window.confirm(confirmText)) {
+    if (importMode === 'replace' && !confirmedReplace) {
+      setImportStatus('error');
+      setStatusMessage('Harap centang kotak konfirmasi persetujuan di bawah untuk mengganti seluruh data input.');
       return;
     }
 
     setIsProcessing(true);
+    setStatusMessage('Sedang memulihkan seluruh data dan menyinkronkan ke server...');
     try {
-      await restoreAllDataFromBackup(importedJson.data, importMode);
+      const res = await restoreAllDataFromBackup(importedJson.data, importMode);
+      if (res && !res.success) {
+        throw new Error(res.message || 'Gagal memulihkan data');
+      }
       setImportStatus('success');
-      setStatusMessage('Data berhasil dipulihkan (Restore Sukses)! Halaman siap digunakan.');
+      setStatusMessage('Seluruh data berhasil dipulihkan (Restore Sukses)! Semua data input telah diperbarui.');
       setTimeout(() => {
         onClose();
+        window.location.reload();
       }, 1500);
     } catch (err: any) {
       console.error('Error during restore:', err);
@@ -489,32 +515,85 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
           {/* TAB 2: IMPORT / RESTORE */}
           {activeTab === 'import' && (
             <div className="space-y-4">
-              {/* File Upload Zone */}
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-indigo-50/30 transition-all group"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <div className="w-12 h-12 mx-auto mb-3 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center transition-colors">
-                  <FileJson className="w-6 h-6" />
-                </div>
-                <div className="text-xs font-bold text-slate-800 mb-1">
-                  {importFileName ? (
-                    <span className="text-indigo-600 flex items-center justify-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4" /> {importFileName}
-                    </span>
-                  ) : (
-                    'Klik atau geser file backup (.json) ke sini'
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500">Mendukung format file cadangan resmi KCK CRM</p>
+              {/* Method Switcher */}
+              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl text-xs">
+                <button
+                  type="button"
+                  onClick={() => setImportMethod('file')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg font-bold transition-all ${
+                    importMethod === 'file'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Pilih File Backup (.json)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImportMethod('paste')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg font-bold transition-all ${
+                    importMethod === 'paste'
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Tempel Teks JSON (Paste)
+                </button>
               </div>
+
+              {/* Method 1: File Upload Zone */}
+              {importMethod === 'file' && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-indigo-50/30 transition-all group"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <div className="w-12 h-12 mx-auto mb-3 bg-indigo-50 group-hover:bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center transition-colors">
+                    <FileJson className="w-6 h-6" />
+                  </div>
+                  <div className="text-xs font-bold text-slate-800 mb-1">
+                    {importFileName ? (
+                      <span className="text-indigo-600 flex items-center justify-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" /> {importFileName}
+                      </span>
+                    ) : (
+                      'Klik atau geser file backup (.json) ke sini'
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500">Mendukung file hasil backup KCK CRM (seperti KCK_CRM_Backup_*.json)</p>
+                </div>
+              )}
+
+              {/* Method 2: Paste JSON Text */}
+              {importMethod === 'paste' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Tempelkan (Paste) Seluruh Isi File JSON Backup di Sini:
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={pasteJsonText}
+                    onChange={(e) => setPasteJsonText(e.target.value)}
+                    placeholder='{"version": "2.0", "appName": "KCK CRM", "data": { ... }}'
+                    className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleParsePastedJson}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs"
+                    >
+                      Muat &amp; Validasi Teks JSON
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Preview of Imported File */}
               {importedJson && (
@@ -522,7 +601,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
                   <div className="flex items-center justify-between text-xs font-bold text-indigo-950">
                     <span className="flex items-center gap-1.5">
                       <Layers className="w-4 h-4 text-indigo-600" />
-                      Konten File Backup Ditemukan
+                      Konten File Backup Ditemukan ({importFileName})
                     </span>
                     <span className="text-[10px] font-mono text-indigo-600 bg-white px-2 py-0.5 rounded border border-indigo-200">
                       Versi {importedJson.version || '2.0'}
@@ -557,7 +636,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
                     <div className="bg-white p-2 rounded-lg border border-indigo-100">
                       <span className="text-slate-500 block text-[10px]">Gaji / Payroll</span>
                       <span className="font-bold text-slate-900">
-                        {importedJson.data.payrollPayments?.length || 0} slip
+                        {(importedJson.data.payrollPayments || (importedJson.data as any).payrollRecords)?.length || 0} slip
                       </span>
                     </div>
                     <div className="bg-white p-2 rounded-lg border border-indigo-100">
@@ -602,7 +681,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
                         <div>
                           <span className="font-bold text-slate-900 block">Ganti Seluruh Data (Replace)</span>
                           <span className="text-[11px] text-slate-500">
-                            Menghapus data saat ini dan menggantinya persis seperti isi file backup.
+                            Menghapus data input saat ini dan menggantinya persis dengan data file backup ini.
                           </span>
                         </div>
                       </label>
@@ -630,6 +709,22 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
                         </div>
                       </label>
                     </div>
+
+                    {importMode === 'replace' && (
+                      <div className="p-3 bg-red-50/80 border border-red-200 rounded-xl space-y-2 mt-2">
+                        <label className="flex items-start gap-2.5 text-xs text-red-900 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={confirmedReplace}
+                            onChange={(e) => setConfirmedReplace(e.target.checked)}
+                            className="mt-0.5 rounded border-red-300 text-red-600 focus:ring-red-500"
+                          />
+                          <span className="font-semibold">
+                            Saya mengonfirmasi untuk mengganti seluruh data input yang ada di sistem saat ini dengan seluruh data dari file backup ini.
+                          </span>
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -652,10 +747,10 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
                 </button>
                 <button
                   type="button"
-                  disabled={!importedJson || isProcessing}
+                  disabled={!importedJson || isProcessing || (importMode === 'replace' && !confirmedReplace)}
                   onClick={handleExecuteRestore}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold rounded-xl transition-all shadow-sm ${
-                    !importedJson || isProcessing
+                    !importedJson || isProcessing || (importMode === 'replace' && !confirmedReplace)
                       ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                       : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:shadow active:scale-95'
                   }`}
@@ -668,7 +763,7 @@ export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({ isOpen, 
                   ) : (
                     <>
                       <ArrowRight className="w-4 h-4" />
-                      <span>Pulihkan Data Sekarang (Restore)</span>
+                      <span>Ganti Seluruh Data Sekarang (Restore)</span>
                     </>
                   )}
                 </button>

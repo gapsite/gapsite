@@ -735,7 +735,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                             <span className="text-slate-400 italic">None (Physical / Audit Review)</span>
                           ) : (
                             m.requiredDocTypes.map((dt) => {
-                              const isFulfilled = currentProject.documents.some((d) => d.type === dt);
+                              const isFulfilled = (currentProject.documents || []).some((d) => d.type === dt);
                               return (
                                 <span
                                   key={dt}
@@ -1020,7 +1020,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {milestone.requiredDocTypes.map((reqDocType) => {
-                            const matchingUploaded = currentProject.documents.filter((d) => d.type === reqDocType);
+                            const matchingUploaded = (currentProject.documents || []).filter((d) => d.type === reqDocType);
                             const hasUploaded = matchingUploaded.length > 0;
 
                             return (
@@ -1165,7 +1165,7 @@ export const CertificationChecklist: React.FC<CertificationChecklistProps> = ({
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {milestone.optionalDocTypes.map((optType) => {
-                            const optUploaded = currentProject.documents.filter((d) => d.type === optType);
+                            const optUploaded = (currentProject.documents || []).filter((d) => d.type === optType);
                             return (
                               <div
                                 key={optType}

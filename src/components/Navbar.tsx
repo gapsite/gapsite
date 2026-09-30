@@ -66,11 +66,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const pendingDispositions = dispositions.filter(
+  const pendingDispositions = (dispositions || []).filter(
     (d) => d.status === 'PENDING' || d.status === 'IN_PROGRESS' || d.status === 'UNDER_REVIEW'
   );
 
-  const totalDocs = projects.reduce((acc, p) => acc + p.documents.length, 0);
+  const totalDocs = (projects || []).reduce((acc, p) => acc + (p?.documents?.length || 0), 0);
 
   return (
     <header className="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 text-white shadow-lg print:hidden">

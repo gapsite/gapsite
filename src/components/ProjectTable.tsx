@@ -329,7 +329,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                     </p>
                     <div className="flex items-center gap-1 mt-1">
                       <span className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.2 rounded font-mono">
-                        {project.documents.length} Docs
+                        {project.documents?.length || 0} Docs
                       </span>
                       {openDisps.length > 0 ? (
                         <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.2 rounded font-mono font-bold">

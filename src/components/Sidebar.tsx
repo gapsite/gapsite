@@ -138,11 +138,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const pendingDispositions = dispositions.filter(
+  const pendingDispositions = (dispositions || []).filter(
     (d) => d.status === 'PENDING' || d.status === 'IN_PROGRESS' || d.status === 'UNDER_REVIEW'
   );
 
-  const totalDocs = projects.reduce((acc, p) => acc + p.documents.length, 0);
+  const totalDocs = (projects || []).reduce((acc, p) => acc + (p?.documents?.length || 0), 0);
 
   const handleNavClick = (tab: MainTabType) => {
     setActiveTab(tab);

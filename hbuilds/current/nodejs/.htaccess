@@ -1,0 +1,65 @@
+# =================================================================
+# Hostinger / Apache / LiteSpeed Reverse Proxy & SPA Routing Config
+# For GAP Horizon Consulting CRM Application (gaphorizon.com)
+# =================================================================
+
+# 1. Phusion Passenger / CloudLinux / LiteSpeed Node.js Handler
+# Directs hosting engine to hbuilds/current/nodejs/server.js
+<IfModule mod_passenger.c>
+  PassengerEnabled on
+  PassengerAppRoot hbuilds/current/nodejs
+  PassengerStartupFile server.js
+  PassengerAppType node
+</IfModule>
+
+# 2. URL Rewriting & Dynamic Reverse Proxy
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Security: Deny access to sensitive files
+  RewriteRule ^(\.env|data/mysql_config\.json)$ - [F,L]
+
+  # Allow direct access to existing files in hbuilds/current/nodejs/dist/ or dist/
+  RewriteCond %{DOCUMENT_ROOT}/hbuilds/current/nodejs/dist/$1 -f
+  RewriteRule ^(.*)$ hbuilds/current/nodejs/dist/$1 [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
+  RewriteRule ^(.*)$ dist/$1 [L]
+
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Dynamic Node.js Reverse Proxy pass-through for API and Health checks
+  # Reads process.env.PORT dynamically when provided by hosting, avoiding hardcoded port mismatches
+  <IfModule mod_proxy.c>
+    # When PORT environment variable is exposed by hosting environment
+    RewriteCond %{ENV:PORT} ^[0-9]+$
+    RewriteCond %{REQUEST_URI} ^/(api/|health)
+    RewriteRule ^(.*)$ http://127.0.0.1:%{ENV:PORT}/$1 [P,L]
+
+    # Fallback reverse proxy using dynamic port resolution
+    RewriteCond %{REQUEST_URI} ^/(api/|health)
+    RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+  </IfModule>
+
+  # SPA HTML5 History Fallback to index.html in hbuilds/current/nodejs/dist or dist
+  RewriteCond %{DOCUMENT_ROOT}/hbuilds/current/nodejs/dist/index.html -f
+  RewriteRule ^ hbuilds/current/nodejs/dist/index.html [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule ^ dist/index.html [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# 3. Browser Caching & MIME types
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(html|json)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>

@@ -288,7 +288,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
               activeTab === 'documents' ? 'bg-slate-800 text-emerald-300' : 'bg-slate-200 text-slate-700'
             }`}>
-              {project.documents.length}
+              {project.documents?.length || 0}
             </span>
           </button>
 
@@ -709,7 +709,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>All ({project.documents.length})</span>
+                  <span>All ({project.documents?.length || 0})</span>
                 </button>
 
                 <button
@@ -725,7 +725,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   <span>
                     Offers / SPK (
                     {
-                      project.documents.filter(
+                      (project.documents || []).filter(
                         (d) => (d.categoryGroup || getDocCategoryGroup(d.type)) === 'OFFER_QUOTATION'
                       ).length
                     }
@@ -746,7 +746,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   <span>
                     Invoices & Receipts (
                     {
-                      project.documents.filter(
+                      (project.documents || []).filter(
                         (d) => (d.categoryGroup || getDocCategoryGroup(d.type)) === 'INVOICE_RECEIPT'
                       ).length
                     }
@@ -767,7 +767,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   <span>
                     Expense Proofs (
                     {
-                      project.documents.filter(
+                      (project.documents || []).filter(
                         (d) => (d.categoryGroup || getDocCategoryGroup(d.type)) === 'EXPENSE_PROOF'
                       ).length
                     }
@@ -788,7 +788,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   <span>
                     Technical BOM (
                     {
-                      project.documents.filter(
+                      (project.documents || []).filter(
                         (d) => (d.categoryGroup || getDocCategoryGroup(d.type)) === 'TECHNICAL_DOSSIER'
                       ).length
                     }
@@ -799,7 +799,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
               {/* Filtered Document List */}
               <div className="space-y-2.5">
-                {project.documents.filter((doc) => {
+                {(project.documents || []).filter((doc) => {
                   if (docCategorySubTab === 'ALL') return true;
                   const cat = doc.categoryGroup || getDocCategoryGroup(doc.type);
                   return cat === docCategorySubTab;
@@ -815,7 +815,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     </button>
                   </div>
                 ) : (
-                  project.documents
+                  (project.documents || [])
                     .filter((doc) => {
                       if (docCategorySubTab === 'ALL') return true;
                       const cat = doc.categoryGroup || getDocCategoryGroup(doc.type);

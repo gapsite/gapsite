@@ -107,8 +107,8 @@ export const DocumentManager: React.FC = () => {
     Boolean(currentUser?.permissions?.includes('MANAGE_DOCUMENT_TYPES'));
 
   // Flatten all documents across projects and augment with project metadata and categoryGroup
-  const allDocs = projects.flatMap((p) =>
-    p.documents.map((d) => {
+  const allDocs = (projects || []).flatMap((p) =>
+    (p.documents || []).map((d) => {
       const derivedCategory = d.categoryGroup || getDocCategoryGroup(d.type);
       return {
         ...d,

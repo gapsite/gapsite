@@ -1,34 +1,8 @@
 {
   "version": "1.0",
-  "updatedAt": "2026-09-14T08:14:23.756Z",
+  "updatedAt": "2026-09-28T08:00:40.678Z",
   "data": {
-    "projects": [
-      {
-        "clientName": "Concurrent Client 2 (Latest)",
-        "id": "CONCURRENT_TEST_1789370603362",
-        "stage": "Proposal",
-        "updatedAt": "2026-09-14T07:30:50.328Z"
-      },
-      {
-        "clientName": "Concurrent Client 2 (Latest)",
-        "id": "CONCURRENT_TEST_1789370938349",
-        "stage": "Proposal",
-        "updatedAt": "2026-09-14T07:30:50.453Z"
-      },
-      {
-        "clientName": "Audit Persistence Client",
-        "id": "RESTART_TEST_1789370601980",
-        "stage": "Lead",
-        "updatedAt": "2026-09-14T07:30:50.453Z"
-      },
-      {
-        "clientName": "Audit Persistence Client",
-        "id": "RESTART_TEST_1789370937174",
-        "stage": "Lead",
-        "updatedAt": "2026-09-14T07:30:50.454Z"
-      }
-    ],
-    "dispositions": [],
+    "projects": [],
     "transactions": [
       {
         "amountIDR": 24200000,
@@ -1672,7 +1646,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:54:02.550Z",
-        "date": "2026-09-11",
+        "date": "2023-01-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-0dvqyv-1789120442550-0233-c5ts2l",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1682,7 +1656,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202301-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0001",
+        "transactionNumber": "TRX-OVH-202301-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.332Z"
       },
@@ -1695,7 +1669,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:55:42.023Z",
-        "date": "2026-09-11",
+        "date": "2023-07-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-51oph9-1789120542023-0245-jazcit",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1705,7 +1679,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202307-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0007",
+        "transactionNumber": "TRX-OVH-202307-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.334Z"
       },
@@ -1718,7 +1692,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:56:24.091Z",
-        "date": "2026-09-11",
+        "date": "2023-10-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-a74a4r-1789120584091-0251-6569jg",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1728,7 +1702,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202310-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0010",
+        "transactionNumber": "TRX-OVH-202310-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.335Z"
       },
@@ -1741,7 +1715,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:54:33.450Z",
-        "date": "2026-09-11",
+        "date": "2023-03-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-ch0v03-1789120473450-0237-s7re29",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1751,7 +1725,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202303-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0003",
+        "transactionNumber": "TRX-OVH-202303-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.336Z"
       },
@@ -1764,7 +1738,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:56:38.861Z",
-        "date": "2026-09-11",
+        "date": "2023-11-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-e69sep-1789120598861-0253-y06aau",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1774,7 +1748,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202311-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0011",
+        "transactionNumber": "TRX-OVH-202311-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.336Z"
       },
@@ -1787,7 +1761,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:55:13.759Z",
-        "date": "2026-09-11",
+        "date": "2023-05-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-hkozek-1789120513759-0241-hdv8yx",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1797,7 +1771,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202305-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0005",
+        "transactionNumber": "TRX-OVH-202305-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.337Z"
       },
@@ -1810,7 +1784,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:56:11.153Z",
-        "date": "2026-09-11",
+        "date": "2023-09-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-mew2ye-1789120571153-0249-2m2pud",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1820,7 +1794,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202309-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0009",
+        "transactionNumber": "TRX-OVH-202309-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.337Z"
       },
@@ -1833,7 +1807,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:54:20.750Z",
-        "date": "2026-09-11",
+        "date": "2023-02-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-oqw6zu-1789120460750-0235-sbirt3",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1843,7 +1817,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202302-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0002",
+        "transactionNumber": "TRX-OVH-202302-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.338Z"
       },
@@ -1856,7 +1830,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:55:55.786Z",
-        "date": "2026-09-11",
+        "date": "2023-08-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-qvr9f3-1789120555786-0247-n9omug",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1866,7 +1840,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202308-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0008",
+        "transactionNumber": "TRX-OVH-202308-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.338Z"
       },
@@ -1879,7 +1853,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:55:00.334Z",
-        "date": "2026-09-11",
+        "date": "2023-04-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-vitnrj-1789120500334-0239-qjni3l",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1889,7 +1863,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202304-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0004",
+        "transactionNumber": "TRX-OVH-202304-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.339Z"
       },
@@ -1902,7 +1876,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:56:50.427Z",
-        "date": "2026-09-11",
+        "date": "2023-12-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-vumlfz-1789120610427-0255-9l9p27",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1910,9 +1884,9 @@
         "projectCode": "",
         "projectId": "",
         "recordedBy": "Adryan kelvianto",
-        "referenceNumber": "OVH-202612-0001",
+        "referenceNumber": "OVH-202312-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0012",
+        "transactionNumber": "TRX-OVH-202312-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.340Z"
       },
@@ -1925,7 +1899,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PT. PLN",
         "createdAt": "2026-09-11T09:55:25.466Z",
-        "date": "2026-09-11",
+        "date": "2023-06-15",
         "description": "[Overhead - LISTRIK_UTILITAS] PEMBAYARAN LISTRIK KANTOR  (PT. PLN)",
         "id": "trx-ovh-vvpij0-1789120525466-0243-kidbi3",
         "notes": "Pengeluaran kebutuhan operasional kantor: -",
@@ -1935,7 +1909,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "OVH-202306-0001",
         "status": "CLEARED",
-        "transactionNumber": "TRX-OVH-202609-0006",
+        "transactionNumber": "TRX-OVH-202306-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.340Z"
       },
@@ -5738,7 +5712,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PAK ERI",
         "createdAt": "2026-09-11T09:43:40.845Z",
-        "date": "2026-09-11",
+        "date": "2023-01-05",
         "description": "Beban Sewa Kantor: Bulan Januari 2023 - KCK PEJATEN",
         "id": "trx-sewa-7777m1-1789119820845-0181-7sulze",
         "notes": "Pembayaran sewa kantor bulanan ke landlord: Pembayaran cepat sewa kantor bulan Januari 2023",
@@ -5748,7 +5722,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "SEWA-2023-01-QUICK",
         "status": "CLEARED",
-        "transactionNumber": "TRX-SEWA-202609-0001",
+        "transactionNumber": "TRX-SEWA-202301-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.341Z"
       },
@@ -5761,7 +5735,7 @@
         "category": "OPERATIONAL_OFFICE",
         "clientOrVendorName": "PAK ERI",
         "createdAt": "2026-09-11T09:43:42.277Z",
-        "date": "2026-09-11",
+        "date": "2023-02-05",
         "description": "Beban Sewa Kantor: Bulan Februari 2023 - KCK PEJATEN",
         "id": "trx-sewa-7777m2-1789119822276-0182-t74vua",
         "notes": "Pembayaran sewa kantor bulanan ke landlord: Pembayaran cepat sewa kantor bulan Februari 2023",
@@ -5771,7 +5745,7 @@
         "recordedBy": "Adryan kelvianto",
         "referenceNumber": "SEWA-2023-02-QUICK",
         "status": "CLEARED",
-        "transactionNumber": "TRX-SEWA-202609-0002",
+        "transactionNumber": "TRX-SEWA-202302-0001",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.341Z"
       },
@@ -5981,6 +5955,370 @@
         "transactionNumber": "TRX-SEWA-202609-0003",
         "type": "EXPENSE",
         "updatedAt": "2026-09-11T09:57:40.342Z"
+      },
+      {
+        "id": "tx-ovh-001",
+        "transactionNumber": "TRX-OVH-2026-01-001",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 4850000,
+        "date": "2026-01-05",
+        "description": "[Overhead - LISTRIK] Pembayaran Tagihan Listrik PLN Pascabayar Kantor Pusat Lantai 15 (PT PLN (Persero) UP3 Menteng)",
+        "clientOrVendorName": "PT PLN (Persero) UP3 Menteng",
+        "paymentMethod": "BANK_TRANSFER_BCA",
+        "referenceNumber": "PLN-20260105-9921",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Pembayaran Tagihan Listrik PLN Pascabayar Kantor Pusat Lantai 15",
+        "recordedBy": "Dewi Sartika",
+        "createdAt": "2026-01-05T08:30:00Z"
+      },
+      {
+        "id": "tx-ovh-002",
+        "transactionNumber": "TRX-OVH-2026-01-002",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 3200000,
+        "date": "2026-01-08",
+        "description": "[Overhead - IURAN] Iuran Pengelolaan Lingkungan (IPL), Keamanan & Kebersihan Gedung (Badan Pengelola Gedung Menara Kadin)",
+        "clientOrVendorName": "Badan Pengelola Gedung Menara Kadin",
+        "paymentMethod": "BANK_TRANSFER_BCA",
+        "referenceNumber": "IPL-KADIN-202601-042",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Iuran Pengelolaan Lingkungan (IPL), Keamanan & Kebersihan Gedung",
+        "recordedBy": "Dewi Sartika",
+        "createdAt": "2026-01-08T09:15:00Z"
+      },
+      {
+        "id": "tx-ovh-003",
+        "transactionNumber": "TRX-OVH-2026-01-003",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 2450000,
+        "date": "2026-01-14",
+        "description": "[Overhead - KONSUMSI] Konsumsi Rapat Pleno Finalisasi Dokumen TKDN & Snack Pantry Bulanan (Catering Berkah Rasa & Super Indo)",
+        "clientOrVendorName": "Catering Berkah Rasa & Super Indo",
+        "paymentMethod": "PETTY_CASH",
+        "referenceNumber": "KAS-KCL-20260114-11",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Konsumsi Rapat Pleno Finalisasi Dokumen TKDN & Snack Pantry Bulanan",
+        "recordedBy": "Dewi Sartika",
+        "createdAt": "2026-01-14T11:45:00Z"
+      },
+      {
+        "id": "tx-ovh-004",
+        "transactionNumber": "TRX-OVH-2026-01-004",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 1650000,
+        "date": "2026-01-20",
+        "description": "[Overhead - TRANSPORTASI] BBM Pertamax & E-Toll Operasional Kunjungan Pabrik Mitra Cikarang (SPBU Pertamina 31-12902 & PT Jasa Marga)",
+        "clientOrVendorName": "SPBU Pertamina 31-12902 & PT Jasa Marga",
+        "paymentMethod": "PETTY_CASH",
+        "referenceNumber": "BBM-TOLL-20260120-77",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: BBM Pertamax & E-Toll Operasional Kunjungan Pabrik Mitra Cikarang",
+        "recordedBy": "Ahmad Fauzi",
+        "createdAt": "2026-01-20T16:00:00Z"
+      },
+      {
+        "id": "tx-ovh-005",
+        "transactionNumber": "TRX-OVH-2026-01-005",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 3800000,
+        "date": "2026-01-26",
+        "description": "[Overhead - AKOMODASI] Akomodasi Hotel & Penginapan Tim Surveyor Verifikasi Pabrik Surabaya (Hotel Santika Premiere Gubeng Surabaya)",
+        "clientOrVendorName": "Hotel Santika Premiere Gubeng Surabaya",
+        "paymentMethod": "BANK_TRANSFER_MANDIRI",
+        "referenceNumber": "HTL-SBY-20260126-08",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Akomodasi Hotel & Penginapan Tim Surveyor Verifikasi Pabrik Surabaya",
+        "recordedBy": "Rian Pratama",
+        "createdAt": "2026-01-26T14:30:00Z"
+      },
+      {
+        "id": "tx-ovh-006",
+        "transactionNumber": "TRX-OVH-2026-02-006",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 5120000,
+        "date": "2026-02-04",
+        "description": "[Overhead - LISTRIK] Pembayaran Tagihan Listrik PLN Pascabayar Kantor Pusat Periode Februari (PT PLN (Persero) UP3 Menteng)",
+        "clientOrVendorName": "PT PLN (Persero) UP3 Menteng",
+        "paymentMethod": "BANK_TRANSFER_BCA",
+        "referenceNumber": "PLN-20260204-1029",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Pembayaran Tagihan Listrik PLN Pascabayar Kantor Pusat Periode Februari",
+        "recordedBy": "Dewi Sartika",
+        "createdAt": "2026-02-04T09:00:00Z"
+      },
+      {
+        "id": "tx-ovh-007",
+        "transactionNumber": "TRX-OVH-2026-02-007",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 3200000,
+        "date": "2026-02-06",
+        "description": "[Overhead - IURAN] Iuran Pengelolaan Lingkungan & Keamanan Gedung Februari 2026 (Badan Pengelola Gedung Menara Kadin)",
+        "clientOrVendorName": "Badan Pengelola Gedung Menara Kadin",
+        "paymentMethod": "BANK_TRANSFER_BCA",
+        "referenceNumber": "IPL-KADIN-202602-088",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Iuran Pengelolaan Lingkungan & Keamanan Gedung Februari 2026",
+        "recordedBy": "Dewi Sartika",
+        "createdAt": "2026-02-06T10:00:00Z"
+      },
+      {
+        "id": "tx-ovh-008",
+        "transactionNumber": "TRX-OVH-2026-02-008",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 1850000,
+        "date": "2026-02-18",
+        "description": "[Overhead - KONSUMSI] Konsumsi Rapat Koordinasi Bersama Sucofindo & Kemenperin (Restoran Sari Kuring Sudirman)",
+        "clientOrVendorName": "Restoran Sari Kuring Sudirman",
+        "paymentMethod": "BANK_TRANSFER_BCA",
+        "referenceNumber": "RESTO-20260218-44",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Konsumsi Rapat Koordinasi Bersama Sucofindo & Kemenperin",
+        "recordedBy": "Budi Santoso",
+        "createdAt": "2026-02-18T14:00:00Z"
+      },
+      {
+        "id": "tx-ovh-009",
+        "transactionNumber": "TRX-OVH-2026-02-009",
+        "type": "EXPENSE",
+        "category": "OPERATIONAL_OFFICE",
+        "amountIDR": 1450000,
+        "date": "2026-02-22",
+        "description": "[Overhead - ATK_OFFICE] Pengadaan Kertas Continuous Form, Toner Printer Laser & Map Berkas (Toko ATK Gunung Agung & Mitra Office)",
+        "clientOrVendorName": "Toko ATK Gunung Agung & Mitra Office",
+        "paymentMethod": "PETTY_CASH",
+        "referenceNumber": "ATK-20260222-19",
+        "status": "CLEARED",
+        "notes": "Sinkronisasi pengeluaran kebutuhan operasional kantor: Pengadaan Kertas Continuous Form, Toner Printer Laser & Map Berkas",
+        "recordedBy": "Dewi Sartika",
+        "createdAt": "2026-02-22T11:20:00Z"
+      },
+      {
+        "amountIDR": 540000000,
+        "category": "BANK_LOAN_DISBURSEMENT",
+        "clientOrVendorName": "Bank Rakyat Indonesia (BRI)",
+        "createdAt": "2026-09-28T07:47:54.131Z",
+        "date": "2024-09-10",
+        "description": "Pencairan Pokok Fasilitas Pinjaman Bank (Non-Revolving): Pinjaman Perorangan (Bank Rakyat Indonesia (BRI))",
+        "id": "trx-1790581674131-0027-u1as4j",
+        "notes": "Pencairan pokok fasilitas pinjaman modal kerja Pinjaman Perorangan (Bank Rakyat Indonesia (BRI))",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "projectCode": "",
+        "projectId": "",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "LOAN-DISB-BANK-1754",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-202409-0004",
+        "type": "INCOME",
+        "updatedAt": "2026-09-28T07:47:54.136Z"
+      },
+      {
+        "amountIDR": 540000000,
+        "category": "RETAIL_PROJECT_INCOME",
+        "clientOrVendorName": "Adryan",
+        "createdAt": "2026-09-28T07:49:13.077Z",
+        "date": "2024-09-25",
+        "description": "Penerimaan Pembayaran Termin 1: Pembayaran Lunas Dimuka (100% DP) - Pinjaman Modal (Adryan)",
+        "id": "trx-retail-inc-ret-1790581753077-0028-2d1kbg-ret-m-1kbg-t1-1790581753077-0029-rrx909",
+        "notes": "Pembayaran Klien Retail: Adryan | Termin 1 | Bruto DPP: Rp 540.000.000 | PPN 11%: Rp 0 | Potongan PPh 23: Rp 0 | Kas Bersih Diterima: Rp 540.000.000",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "projectCode": "",
+        "projectId": "ret-1790581753077-0028-2d1kbg",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "TRF-753077",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-RTL-202409-687",
+        "type": "INCOME",
+        "updatedAt": "2026-09-28T07:49:13.081Z"
+      },
+      {
+        "amountIDR": 77700000,
+        "category": "OPERATIONAL_OFFICE",
+        "clientOrVendorName": "PT Surveyor Indonesia",
+        "createdAt": "2026-09-28T07:22:57.381Z",
+        "date": "2024-04-04",
+        "description": "[Overhead - LAIN_LAIN] Pembayaran Pelatihan TKDN (PT Surveyor Indonesia)",
+        "id": "trx-ovh-005646-1790580177381-0006-gld88n",
+        "notes": "Pengeluaran kebutuhan operasional kantor: -",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "projectCode": "",
+        "projectId": "",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "OVH-202404-0002",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-OVH-202404-0001",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:22:57.384Z"
+      },
+      {
+        "amountIDR": 153180000,
+        "category": "OPERATIONAL_OFFICE",
+        "clientOrVendorName": "PT Surveyor Indonesia",
+        "createdAt": "2026-09-28T07:23:44.660Z",
+        "date": "2024-08-28",
+        "description": "[Overhead - LAIN_LAIN] Pembayaran Pelatihan TKDN (PT Surveyor Indonesia)",
+        "id": "trx-ovh-7lumka-1790580224660-0008-ffnrrp",
+        "notes": "Pengeluaran kebutuhan operasional kantor: -",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "projectCode": "",
+        "projectId": "",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "OVH-202408-0006",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-OVH-202408-0001",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:23:44.663Z"
+      },
+      {
+        "amountIDR": 297588000,
+        "category": "OPERATIONAL_OFFICE",
+        "clientOrVendorName": "PT Surveyor Indonesia",
+        "createdAt": "2026-09-28T07:24:35.439Z",
+        "date": "2024-08-28",
+        "description": "[Overhead - LAIN_LAIN] Pembayaran Pelatihan TKDN (PT Surveyor Indonesia)",
+        "id": "trx-ovh-n3b6ke-1790580275439-0010-io4kci",
+        "notes": "Pengeluaran kebutuhan operasional kantor: -",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "projectCode": "",
+        "projectId": "",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "OVH-202408-0007",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-OVH-202408-0002",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:24:35.441Z"
+      },
+      {
+        "amountIDR": 63825000,
+        "category": "OPERATIONAL_OFFICE",
+        "clientOrVendorName": "PT Surveyor Indonesia",
+        "createdAt": "2026-09-28T07:32:25.654Z",
+        "date": "2024-07-03",
+        "description": "[Overhead - LAIN_LAIN] Pembayaran TKDN DP 50% PT Epower Motor Indonesia (PT Surveyor Indonesia)",
+        "id": "trx-ovh-zoc56r-1790580745655-0013-b9y86s",
+        "notes": "Pengeluaran kebutuhan operasional kantor: -",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER",
+        "projectCode": "",
+        "projectId": "",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "OVH-202407-0002",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-OVH-202407-0001",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:32:25.658Z"
+      },
+      {
+        "amountIDR": 65490000,
+        "category": "OPERATIONAL_OFFICE",
+        "clientOrVendorName": "PT Surveyor Indonesia",
+        "createdAt": "2026-09-28T07:38:09.711Z",
+        "date": "2024-07-10",
+        "description": "[Overhead - LAIN_LAIN] Pembayaran DP 50% PT Triangle Motorindo (PT Surveyor Indonesia)",
+        "id": "trx-ovh-ei5g1k-1790581089711-0015-yvir5q",
+        "notes": "Pengeluaran kebutuhan operasional kantor: -",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "projectCode": "",
+        "projectId": "",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "OVH-202407-0003",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-OVH-202407-0002",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:38:09.715Z"
+      },
+      {
+        "amountIDR": 63825000,
+        "category": "OPERATIONAL_OFFICE",
+        "clientOrVendorName": "PT Surveyor Indonesia",
+        "createdAt": "2026-09-28T07:38:59.836Z",
+        "date": "2024-07-03",
+        "description": "[Overhead - LAIN_LAIN] Pembayaran TKDN Pelunasan PT Epower Motor Indonesia (PT Surveyor Indonesia)",
+        "id": "trx-ovh-6fab6w-1790581139836-0017-lsra41",
+        "notes": "Pengeluaran kebutuhan operasional kantor: -",
+        "paymentMethod": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "projectCode": "",
+        "projectId": "",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "OVH-202407-0004",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-OVH-202407-0003",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:38:59.839Z"
+      },
+      {
+        "amountIDR": 15000000,
+        "category": "GAJI_KARYAWAN",
+        "clientOrVendorName": "Adryan kelvianto",
+        "createdAt": "2026-09-28T07:41:17.098Z",
+        "date": "2024-04-08",
+        "description": "THR Karyawan: Adryan kelvianto (Chief Role Master & System SuperAdmin) - Idul Fitri 1447 H / 2026 M",
+        "id": "trx-1790581277098-0019-1pa5me",
+        "notes": "Slip: THR/2026/09/EMP-238 | Kategori: THR | Bruto: Rp 15.000.000 | Potongan: Rp 0 | Net THP: Rp 15.000.000",
+        "paymentMethod": "BANK_TRANSFER",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "THR/2026/09/EMP-238",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-202404-0002",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:41:17.103Z"
+      },
+      {
+        "amountIDR": 15000000,
+        "category": "GAJI_KARYAWAN",
+        "clientOrVendorName": "Christoblle Bayu A.P",
+        "createdAt": "2026-09-28T07:45:56.528Z",
+        "date": "2024-04-08",
+        "description": "THR Karyawan: Christoblle Bayu A.P (Technical Assessor / BOM Specialist) - Idul Fitri 1445 H",
+        "id": "trx-1790581556528-0021-qp3482",
+        "notes": "Slip: THR/2026/09/EMP-239 | Kategori: THR | Bruto: Rp 15.000.000 | Potongan: Rp 0 | Net THP: Rp 15.000.000",
+        "paymentMethod": "BANK_TRANSFER",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "THR/2026/09/EMP-239",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-202404-0003",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:45:56.533Z"
+      },
+      {
+        "amountIDR": 5000000,
+        "category": "GAJI_KARYAWAN",
+        "clientOrVendorName": "Amanda Alma Septiriani",
+        "createdAt": "2026-09-28T07:46:33.351Z",
+        "date": "2024-04-08",
+        "description": "THR Karyawan: Amanda Alma Septiriani (Technical Assessor / BOM Specialist) - Idul Fitri 1445 H",
+        "id": "trx-1790581593351-0023-y69pb7",
+        "notes": "Slip: THR/2026/09/EMP-240 | Kategori: THR | Bruto: Rp 5.000.000 | Potongan: Rp 0 | Net THP: Rp 5.000.000",
+        "paymentMethod": "BANK_TRANSFER",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "THR/2026/09/EMP-240",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-202404-0004",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:46:33.357Z"
+      },
+      {
+        "amountIDR": 5000000,
+        "category": "GAJI_KARYAWAN",
+        "clientOrVendorName": "Satrio Budi Margono Alghifari",
+        "createdAt": "2026-09-28T07:46:56.062Z",
+        "date": "2024-04-08",
+        "description": "THR Karyawan: Satrio Budi Margono Alghifari (Technical Assessor / BOM Specialist) - Idul Fitri 1445 H",
+        "id": "trx-1790581616062-0025-pnesfv",
+        "notes": "Slip: THR/2026/09/EMP-241 | Kategori: THR | Bruto: Rp 5.000.000 | Potongan: Rp 0 | Net THP: Rp 5.000.000",
+        "paymentMethod": "BANK_TRANSFER",
+        "recordedBy": "Adryan kelvianto",
+        "referenceNumber": "THR/2026/09/EMP-241",
+        "status": "CLEARED",
+        "transactionNumber": "TRX-202404-0005",
+        "type": "EXPENSE",
+        "updatedAt": "2026-09-28T07:46:56.067Z"
       }
     ],
     "receivables": [
@@ -6025,7 +6363,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN Industri Kecil",
         "totalAmountIDR": 24200000,
-        "updatedAt": "2026-09-14T07:30:50.330Z"
+        "updatedAt": "2026-09-25T03:08:48.458Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6068,7 +6406,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN Industri Kecil",
         "totalAmountIDR": 22500000,
-        "updatedAt": "2026-09-14T07:30:50.457Z"
+        "updatedAt": "2026-09-25T03:08:48.574Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6111,7 +6449,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - JASA PERIZINAN",
         "totalAmountIDR": 76530612,
-        "updatedAt": "2026-09-14T07:30:50.458Z"
+        "updatedAt": "2026-09-25T03:08:48.574Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6154,7 +6492,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 1 - TKDN BARANG",
         "totalAmountIDR": 35000000,
-        "updatedAt": "2026-09-14T07:30:50.458Z"
+        "updatedAt": "2026-09-25T03:08:48.575Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6197,7 +6535,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 - TKDN BARANG",
         "totalAmountIDR": 35000000,
-        "updatedAt": "2026-09-14T07:30:50.459Z"
+        "updatedAt": "2026-09-25T03:08:48.575Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6240,7 +6578,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 1 (Uang Muka 50% SPK) - TKDN Industri Kecil",
         "totalAmountIDR": 11500000,
-        "updatedAt": "2026-09-14T07:30:50.460Z"
+        "updatedAt": "2026-09-25T03:08:48.579Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6283,7 +6621,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN SA PROJECT",
         "totalAmountIDR": 50000000,
-        "updatedAt": "2026-09-14T07:30:50.463Z"
+        "updatedAt": "2026-09-25T03:08:48.579Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6326,7 +6664,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN SA PROJECT",
         "totalAmountIDR": 100000000,
-        "updatedAt": "2026-09-14T07:30:50.463Z"
+        "updatedAt": "2026-09-25T03:08:48.579Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6369,7 +6707,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN SA PROJECT",
         "totalAmountIDR": 50000000,
-        "updatedAt": "2026-09-14T07:30:50.464Z"
+        "updatedAt": "2026-09-25T03:08:48.580Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6412,7 +6750,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN SA PROJECT",
         "totalAmountIDR": 40000000,
-        "updatedAt": "2026-09-14T07:30:50.464Z"
+        "updatedAt": "2026-09-25T03:08:48.580Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6455,7 +6793,7 @@
         "taxIncluded": true,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - PELATIHAN TKDN",
         "totalAmountIDR": 60000000,
-        "updatedAt": "2026-09-14T07:30:50.464Z"
+        "updatedAt": "2026-09-25T03:08:48.581Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6498,7 +6836,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN Industri Kecil",
         "totalAmountIDR": 23500000,
-        "updatedAt": "2026-09-14T07:30:50.465Z"
+        "updatedAt": "2026-09-25T03:08:48.581Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6541,7 +6879,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 1 (Uang Muka 50% SPK) - TKDN Industri Kecil",
         "totalAmountIDR": 12500000,
-        "updatedAt": "2026-09-14T07:30:50.465Z"
+        "updatedAt": "2026-09-25T03:08:48.581Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6584,7 +6922,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN SA PROJECT",
         "totalAmountIDR": 27500000,
-        "updatedAt": "2026-09-14T07:30:50.465Z"
+        "updatedAt": "2026-09-25T03:08:48.582Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6627,7 +6965,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - PELATIHAN TKDN",
         "totalAmountIDR": 60000000,
-        "updatedAt": "2026-09-14T07:30:50.466Z"
+        "updatedAt": "2026-09-25T03:08:48.582Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6670,7 +7008,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN Industri Kecil",
         "totalAmountIDR": 24200000,
-        "updatedAt": "2026-09-14T07:30:50.466Z"
+        "updatedAt": "2026-09-25T03:08:48.582Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6713,7 +7051,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 1 (Uang Muka 50% SPK) - TKDN Industri Kecil",
         "totalAmountIDR": 11250000,
-        "updatedAt": "2026-09-14T07:30:50.466Z"
+        "updatedAt": "2026-09-25T03:08:48.583Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6742,7 +7080,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN Industri Kecil",
         "totalAmountIDR": 11250000,
-        "updatedAt": "2026-09-14T07:30:50.467Z"
+        "updatedAt": "2026-09-25T03:08:48.583Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6785,7 +7123,7 @@
         "taxIncluded": false,
         "title": "Tagihan Pembayaran Lunas Dimuka (100% DP) - TKDN Industri Kecil",
         "totalAmountIDR": 23500000,
-        "updatedAt": "2026-09-14T07:30:50.467Z"
+        "updatedAt": "2026-09-25T03:08:48.583Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6828,7 +7166,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 45000000,
-        "updatedAt": "2026-09-14T07:30:50.467Z"
+        "updatedAt": "2026-09-25T03:08:48.583Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6871,7 +7209,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 195000000,
-        "updatedAt": "2026-09-14T07:30:50.467Z"
+        "updatedAt": "2026-09-25T03:08:48.584Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6914,7 +7252,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 110000000,
-        "updatedAt": "2026-09-14T07:30:50.467Z"
+        "updatedAt": "2026-09-25T03:08:48.584Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -6957,7 +7295,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 80000000,
-        "updatedAt": "2026-09-14T07:30:50.468Z"
+        "updatedAt": "2026-09-25T03:08:48.584Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -7000,7 +7338,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 55000000,
-        "updatedAt": "2026-09-14T07:30:50.468Z"
+        "updatedAt": "2026-09-25T03:08:48.584Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -7043,7 +7381,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 202500000,
-        "updatedAt": "2026-09-14T07:30:50.468Z"
+        "updatedAt": "2026-09-25T03:08:48.584Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -7086,7 +7424,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 75000000,
-        "updatedAt": "2026-09-14T07:30:50.468Z"
+        "updatedAt": "2026-09-25T03:08:48.584Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -7129,7 +7467,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 170000000,
-        "updatedAt": "2026-09-14T07:30:50.468Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -7172,7 +7510,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 150000000,
-        "updatedAt": "2026-09-14T07:30:50.468Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
       },
       {
         "category": "PROYEK_RETAIL",
@@ -7215,7 +7553,7 @@
         "taxIncluded": false,
         "title": "Tagihan Termin 2 (Pelunasan 50% BAST & Sertifikat) - TKDN INDUSTRI BESAR",
         "totalAmountIDR": 47500000,
-        "updatedAt": "2026-09-14T07:30:50.468Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
       },
       {
         "category": "PROYEK_PEMERINTAH_BUMN",
@@ -7257,7 +7595,7 @@
         "taxIncluded": true,
         "title": "Tagihan Termin I - Uang Muka & Pelaksanaan Awal (50%) - KONSULTANSI LITBANG PENGUKURAN TECHNOLOGY READINESS LEVEL (TRL) PADA ENGINEERING AND MANUFACTURING DEVELOPMENT (EMD) PHASE PROGRAM PENGEMBANGAN PESAWAT TEMPUR KF-X/IF-X TA. 2025",
         "totalAmountIDR": 389932200,
-        "updatedAt": "2026-09-14T07:30:50.469Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
       },
       {
         "category": "PROYEK_PEMERINTAH_BUMN",
@@ -7299,7 +7637,7 @@
         "taxIncluded": true,
         "title": "Tagihan Termin II - BAST Akhir & Pelunasan (50%) - KONSULTANSI LITBANG PENGUKURAN TECHNOLOGY READINESS LEVEL (TRL) PADA ENGINEERING AND MANUFACTURING DEVELOPMENT (EMD) PHASE PROGRAM PENGEMBANGAN PESAWAT TEMPUR KF-X/IF-X TA. 2025",
         "totalAmountIDR": 1559728800,
-        "updatedAt": "2026-09-14T07:30:50.469Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
       },
       {
         "category": "PROYEK_PEMERINTAH_BUMN",
@@ -7341,7 +7679,7 @@
         "taxIncluded": true,
         "title": "Tagihan Termin I - Uang Muka & Pelaksanaan Awal (50%) - KONSULTANSI LITBANG PENGUKURAN MANUFACTURE READINESS LEVEL (TRL) PADA ENGINEERING AND MANUFACTURING DEVELOPMENT (EMD) PHASE PROGRAM PENGEMBANGAN PESAWAT TEMPUR KF-X/IF-X TA. 2025",
         "totalAmountIDR": 389888400,
-        "updatedAt": "2026-09-14T07:30:50.469Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
       },
       {
         "category": "PROYEK_PEMERINTAH_BUMN",
@@ -7383,7 +7721,7 @@
         "taxIncluded": true,
         "title": "Tagihan Termin II - BAST Akhir & Pelunasan (50%) - KONSULTANSI LITBANG PENGUKURAN MANUFACTURE READINESS LEVEL (TRL) PADA ENGINEERING AND MANUFACTURING DEVELOPMENT (EMD) PHASE PROGRAM PENGEMBANGAN PESAWAT TEMPUR KF-X/IF-X TA. 2025",
         "totalAmountIDR": 1559553600,
-        "updatedAt": "2026-09-14T07:30:50.469Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
       },
       {
         "category": "PROYEK_PEMERINTAH_BUMN",
@@ -7425,7 +7763,36 @@
         "taxIncluded": true,
         "title": "Tagihan Pembayaran 100% Sekaligus (BAST Selesai) - HARWAT SYSTEM APLIKASI RUP & LPBJ",
         "totalAmountIDR": 2252320980,
-        "updatedAt": "2026-09-14T07:30:50.469Z"
+        "updatedAt": "2026-09-25T03:08:48.585Z"
+      },
+      {
+        "category": "TERMIN_KONSULTASI_TKDN",
+        "clientAddress": "",
+        "clientContactPerson": "Ibu Listya",
+        "clientEmail": "",
+        "clientName": "PT Epower Motor Indonesia",
+        "clientPhone": "",
+        "createdAt": "2026-09-28T07:31:05.306Z",
+        "createdBy": "admin.master",
+        "dueDate": "2024-08-14",
+        "id": "rec-1790580665306-0011-mzchwi",
+        "invoiceNumber": "004/KCK-Fk/TKDN-EMI/VII/24",
+        "issueDate": "2024-07-15",
+        "linkedTransactionIds": [],
+        "milestoneTitle": "Pelunasan 100%",
+        "notes": "",
+        "paidAmountIDR": 0,
+        "paymentTermsDays": 30,
+        "payments": [],
+        "projectCode": "",
+        "projectId": "",
+        "remainingAmountIDR": 540000000,
+        "status": "JATUH_TEMPO",
+        "taxAmountIDR": 0,
+        "taxIncluded": false,
+        "title": "Tagihan Pelunasan Konsultansi TKDN 4 Produk Motor Listrik",
+        "totalAmountIDR": 540000000,
+        "updatedAt": "2026-09-28T07:50:39.626Z"
       }
     ],
     "taxObligations": [
@@ -11406,6 +11773,148 @@
         "createdBy": "System Retail Sync"
       }
     ],
+    "payrollPayments": [
+      {
+        "bankAccountHolder": "Adryan kelvianto",
+        "bankAccountNumber": "122-00-983100-2",
+        "bankName": "Bank Mandiri",
+        "basicSalary": 7500000,
+        "bpjsKesehatan": 75000,
+        "bpjsKetenagakerjaan": 150000,
+        "cashAdvanceDeduction": 0,
+        "createdAt": "2026-09-11T05:02:28.426Z",
+        "department": "Central Compliance Governance & Board",
+        "employeeEmail": "",
+        "employeeId": "usr-0",
+        "employeeName": "Adryan kelvianto",
+        "employeeNik": "3171012304950001",
+        "employeePhone": "",
+        "id": "pay-2023-1789102948426-0056-s47q14",
+        "mealAllowance": 0,
+        "netSalary": 7500000,
+        "notes": "Penggajian Masal (Batch Payroll) Periode Januari 2023",
+        "otherAllowances": 0,
+        "otherDeductions": 0,
+        "overtimeAmount": 0,
+        "paidAt": "2023-01-31",
+        "paymentChannelId": "BANK_TRANSFER_BRI",
+        "paymentDate": "2023-01-31",
+        "paymentMethod": "BANK_TRANSFER_BRI",
+        "payrollNumber": "PAY/2026/09/EMP-001",
+        "period": "Januari 2023",
+        "positionAllowance": 0,
+        "pph21Amount": 93750,
+        "projectBonus": 0,
+        "recordedBy": "Adryan kelvianto",
+        "roleTitle": "Chief Role Master & System SuperAdmin",
+        "status": "PAID",
+        "totalDeductions": 0,
+        "totalEarnings": 7500000,
+        "transactionId": "trx-pay-s47q14-1789102948426-0057-32v0v7",
+        "transportAllowance": 0,
+        "updatedAt": "2026-09-11T05:02:28.427Z"
+      },
+      {
+        "bankAccountHolder": "Christoblle Bayu A.P",
+        "basicSalary": 15000000,
+        "createdAt": "2026-09-28T07:45:56.534Z",
+        "department": "Technical & TKDN Calculations",
+        "employeeId": "emp-1789372522588",
+        "employeeName": "Christoblle Bayu A.P",
+        "holidayName": "Idul Fitri 1445 H",
+        "id": "pay-1445-1790581556528-0020-s6d1n2",
+        "netSalary": 15000000,
+        "paidAt": "2024-04-08",
+        "paymentCategory": "THR",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "paymentDate": "2024-04-08",
+        "paymentMethod": "BANK_TRANSFER",
+        "payrollNumber": "THR/2026/09/EMP-239",
+        "period": "THR Idul Fitri 1445 H",
+        "recordedBy": "Adryan kelvianto",
+        "roleTitle": "Technical Assessor / BOM Specialist",
+        "status": "PAID",
+        "thrAmount": 15000000,
+        "totalEarnings": 15000000,
+        "transactionId": "trx-1790581556528-0021-qp3482",
+        "updatedAt": "2026-09-28T07:45:56.534Z"
+      },
+      {
+        "bankAccountHolder": "Christoblle Bayu A.P",
+        "basicSalary": 5000000,
+        "createdAt": "2026-09-28T07:46:33.357Z",
+        "department": "Technical & TKDN Calculations",
+        "employeeId": "emp-1789372522588",
+        "employeeName": "Amanda Alma Septiriani",
+        "holidayName": "Idul Fitri 1445 H",
+        "id": "pay-1445-1790581593351-0022-uulhif",
+        "netSalary": 5000000,
+        "paidAt": "2024-04-08",
+        "paymentCategory": "THR",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "paymentDate": "2024-04-08",
+        "paymentMethod": "BANK_TRANSFER",
+        "payrollNumber": "THR/2026/09/EMP-240",
+        "period": "THR Idul Fitri 1445 H",
+        "recordedBy": "Adryan kelvianto",
+        "roleTitle": "Technical Assessor / BOM Specialist",
+        "status": "PAID",
+        "thrAmount": 5000000,
+        "totalEarnings": 5000000,
+        "transactionId": "trx-1790581593351-0023-y69pb7",
+        "updatedAt": "2026-09-28T07:46:33.357Z"
+      },
+      {
+        "bankAccountHolder": "Christoblle Bayu A.P",
+        "basicSalary": 5000000,
+        "createdAt": "2026-09-28T07:46:56.068Z",
+        "department": "Technical & TKDN Calculations",
+        "employeeId": "emp-1789372522588",
+        "employeeName": "Satrio Budi Margono Alghifari",
+        "holidayName": "Idul Fitri 1445 H",
+        "id": "pay-1445-1790581616062-0024-rvczyq",
+        "netSalary": 5000000,
+        "paidAt": "2024-04-08",
+        "paymentCategory": "THR",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "paymentDate": "2024-04-08",
+        "paymentMethod": "BANK_TRANSFER",
+        "payrollNumber": "THR/2026/09/EMP-241",
+        "period": "THR Idul Fitri 1445 H",
+        "recordedBy": "Adryan kelvianto",
+        "roleTitle": "Technical Assessor / BOM Specialist",
+        "status": "PAID",
+        "thrAmount": 5000000,
+        "totalEarnings": 5000000,
+        "transactionId": "trx-1790581616062-0025-pnesfv",
+        "updatedAt": "2026-09-28T07:46:56.068Z"
+      },
+      {
+        "bankAccountHolder": "Adryan kelvianto",
+        "basicSalary": 15000000,
+        "createdAt": "2026-09-28T07:41:17.104Z",
+        "department": "Central Compliance Governance & Board",
+        "employeeId": "usr-0",
+        "employeeName": "Adryan kelvianto",
+        "holidayName": "Idul Fitri 1447 H / 2026 M",
+        "id": "pay-2024-1790581277098-0018-gtwjjk",
+        "netSalary": 15000000,
+        "paidAt": "2024-04-08",
+        "paymentCategory": "THR",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER",
+        "paymentDate": "2024-04-08",
+        "paymentMethod": "BANK_TRANSFER",
+        "payrollNumber": "THR/2026/09/EMP-238",
+        "period": "THR Idul Fitri 2024",
+        "recordedBy": "Adryan kelvianto",
+        "roleTitle": "Chief Role Master & System SuperAdmin",
+        "status": "PAID",
+        "thrAmount": 15000000,
+        "totalEarnings": 15000000,
+        "transactionId": "trx-1790581277098-0019-1pa5me",
+        "updatedAt": "2026-09-28T07:41:17.104Z"
+      }
+    ],
     "governmentProjects": [
       {
         "agencyAddress": "",
@@ -11487,7 +11996,7 @@
         "totalReceivedAmountIDR": 1910667780,
         "treasurerName": "",
         "treasurerPhone": "",
-        "updatedAt": "2026-09-14T07:30:50.330Z",
+        "updatedAt": "2026-09-25T03:08:48.458Z",
         "vatWapuRate": 11,
         "whtRatePph": 2
       },
@@ -11571,7 +12080,7 @@
         "totalReceivedAmountIDR": 1910453160,
         "treasurerName": "",
         "treasurerPhone": "",
-        "updatedAt": "2026-09-14T07:30:50.469Z",
+        "updatedAt": "2026-09-25T03:08:48.585Z",
         "vatWapuRate": 11,
         "whtRatePph": 2
       },
@@ -11629,7 +12138,7 @@
         "totalReceivedAmountIDR": 2207274560,
         "treasurerName": "",
         "treasurerPhone": "",
-        "updatedAt": "2026-09-14T07:30:50.469Z",
+        "updatedAt": "2026-09-25T03:08:48.585Z",
         "vatWapuRate": 11,
         "whtRatePph": 2
       },
@@ -11732,7 +12241,7 @@
         "totalReceivedAmountIDR": 290000000,
         "treasurerName": "Nurul Hidayati, S.E. (Bendahara Pengeluaran)",
         "treasurerPhone": "+62 812-9844-3120",
-        "updatedAt": "2026-09-14T07:30:50.469Z",
+        "updatedAt": "2026-09-25T03:08:48.586Z",
         "vatWapuRate": 11,
         "whtRatePph": 2
       },
@@ -11815,7 +12324,7 @@
         "totalReceivedAmountIDR": 204000000,
         "treasurerName": "Dadan Ramdani, S.Sos",
         "treasurerPhone": "+62 813-2210-9944",
-        "updatedAt": "2026-09-14T07:30:50.469Z",
+        "updatedAt": "2026-09-25T03:08:48.586Z",
         "vatWapuRate": 11,
         "whtRatePph": 2
       },
@@ -11936,7 +12445,7 @@
         "totalReceivedAmountIDR": 420000000,
         "treasurerName": "Finance Div. PLN Pusmanpro",
         "treasurerPhone": "+62 811-270-192",
-        "updatedAt": "2026-09-14T07:30:50.469Z",
+        "updatedAt": "2026-09-25T03:08:48.586Z",
         "vatWapuRate": 11,
         "whtRatePph": 2
       }
@@ -12005,7 +12514,7 @@
         "totalContractValueIDR": 24200000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 24200000,
-        "updatedAt": "2026-09-14T07:30:50.333Z"
+        "updatedAt": "2026-09-25T03:08:48.461Z"
       },
       {
         "clientAddress": "",
@@ -12070,7 +12579,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 22500000,
-        "updatedAt": "2026-09-14T07:30:50.471Z"
+        "updatedAt": "2026-09-25T03:08:48.587Z"
       },
       {
         "clientAddress": "",
@@ -12135,7 +12644,7 @@
         "totalContractValueIDR": 23500000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 23500000,
-        "updatedAt": "2026-09-14T07:30:50.473Z"
+        "updatedAt": "2026-09-25T03:08:48.594Z"
       },
       {
         "clientAddress": "",
@@ -12205,7 +12714,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 25000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.480Z"
+        "updatedAt": "2026-09-25T03:08:48.598Z"
       },
       {
         "clientAddress": "",
@@ -12256,7 +12765,7 @@
         "totalContractValueIDR": 27500000,
         "totalOutstandingAmountIDR": 27500000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.487Z"
+        "updatedAt": "2026-09-25T03:08:48.607Z"
       },
       {
         "clientAddress": "",
@@ -12307,7 +12816,7 @@
         "totalContractValueIDR": 60000000,
         "totalOutstandingAmountIDR": 60000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.490Z"
+        "updatedAt": "2026-09-25T03:08:48.609Z"
       },
       {
         "clientAddress": "",
@@ -12358,7 +12867,7 @@
         "totalContractValueIDR": 24200000,
         "totalOutstandingAmountIDR": 24200000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.493Z"
+        "updatedAt": "2026-09-25T03:08:48.612Z"
       },
       {
         "clientAddress": "",
@@ -12447,7 +12956,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 22500000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.495Z"
+        "updatedAt": "2026-09-25T03:08:48.614Z"
       },
       {
         "clientAddress": "",
@@ -12517,7 +13026,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 22500000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.498Z"
+        "updatedAt": "2026-09-25T03:08:48.617Z"
       },
       {
         "clientAddress": "",
@@ -12606,7 +13115,7 @@
         "totalContractValueIDR": 24000000,
         "totalOutstandingAmountIDR": 24000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.500Z"
+        "updatedAt": "2026-09-25T03:08:48.619Z"
       },
       {
         "clientAddress": "",
@@ -12695,7 +13204,7 @@
         "totalContractValueIDR": 24000000,
         "totalOutstandingAmountIDR": 24000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.503Z"
+        "updatedAt": "2026-09-25T03:08:48.621Z"
       },
       {
         "clientAddress": "",
@@ -12746,7 +13255,7 @@
         "totalContractValueIDR": 38500000,
         "totalOutstandingAmountIDR": 38500000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.507Z"
+        "updatedAt": "2026-09-25T03:08:48.626Z"
       },
       {
         "clientAddress": "",
@@ -12835,7 +13344,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 40000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.509Z"
+        "updatedAt": "2026-09-25T03:08:48.629Z"
       },
       {
         "clientAddress": "",
@@ -12924,7 +13433,7 @@
         "totalContractValueIDR": 90000000,
         "totalOutstandingAmountIDR": 90000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.512Z"
+        "updatedAt": "2026-09-25T03:08:48.631Z"
       },
       {
         "clientAddress": "",
@@ -13013,7 +13522,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 22500000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.514Z"
+        "updatedAt": "2026-09-25T03:08:48.634Z"
       },
       {
         "clientAddress": "",
@@ -13102,7 +13611,7 @@
         "totalContractValueIDR": 150000000,
         "totalOutstandingAmountIDR": 150000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.520Z"
+        "updatedAt": "2026-09-25T03:08:48.637Z"
       },
       {
         "clientAddress": "",
@@ -13191,7 +13700,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 40000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.522Z"
+        "updatedAt": "2026-09-25T03:08:48.642Z"
       },
       {
         "clientAddress": "",
@@ -13280,7 +13789,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 25000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.524Z"
+        "updatedAt": "2026-09-25T03:08:48.644Z"
       },
       {
         "clientAddress": "",
@@ -13331,7 +13840,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 40000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.526Z"
+        "updatedAt": "2026-09-25T03:08:48.646Z"
       },
       {
         "clientAddress": "",
@@ -13382,7 +13891,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 40000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.528Z"
+        "updatedAt": "2026-09-25T03:08:48.648Z"
       },
       {
         "clientAddress": "",
@@ -13452,7 +13961,7 @@
         "totalContractValueIDR": 150000000,
         "totalOutstandingAmountIDR": 150000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.531Z"
+        "updatedAt": "2026-09-25T03:08:48.651Z"
       },
       {
         "clientAddress": "",
@@ -13503,7 +14012,7 @@
         "totalContractValueIDR": 30000000,
         "totalOutstandingAmountIDR": 30000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.536Z"
+        "updatedAt": "2026-09-25T03:08:48.656Z"
       },
       {
         "clientAddress": "",
@@ -13554,7 +14063,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 25000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.538Z"
+        "updatedAt": "2026-09-25T03:08:48.658Z"
       },
       {
         "clientAddress": "",
@@ -13605,7 +14114,7 @@
         "totalContractValueIDR": 390000000,
         "totalOutstandingAmountIDR": 390000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.540Z"
+        "updatedAt": "2026-09-25T03:08:48.660Z"
       },
       {
         "clientAddress": "",
@@ -13656,7 +14165,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 40000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.542Z"
+        "updatedAt": "2026-09-25T03:08:48.662Z"
       },
       {
         "clientAddress": "",
@@ -13754,7 +14263,7 @@
         "totalContractValueIDR": 70000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 70000000,
-        "updatedAt": "2026-09-14T07:30:50.544Z"
+        "updatedAt": "2026-09-25T03:08:48.664Z"
       },
       {
         "clientAddress": "",
@@ -13805,7 +14314,7 @@
         "totalContractValueIDR": 190000000,
         "totalOutstandingAmountIDR": 190000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.546Z"
+        "updatedAt": "2026-09-25T03:08:48.666Z"
       },
       {
         "clientAddress": "",
@@ -13856,7 +14365,7 @@
         "totalContractValueIDR": 20000000,
         "totalOutstandingAmountIDR": 20000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.550Z"
+        "updatedAt": "2026-09-25T03:08:48.671Z"
       },
       {
         "clientAddress": "",
@@ -13907,7 +14416,7 @@
         "totalContractValueIDR": 220000000,
         "totalOutstandingAmountIDR": 220000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.552Z"
+        "updatedAt": "2026-09-25T03:08:48.674Z"
       },
       {
         "clientAddress": "",
@@ -13977,7 +14486,7 @@
         "totalContractValueIDR": 245000000,
         "totalOutstandingAmountIDR": 245000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.554Z"
+        "updatedAt": "2026-09-25T03:08:48.676Z"
       },
       {
         "clientAddress": "",
@@ -14028,7 +14537,7 @@
         "totalContractValueIDR": 160000000,
         "totalOutstandingAmountIDR": 160000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.556Z"
+        "updatedAt": "2026-09-25T03:08:48.677Z"
       },
       {
         "clientAddress": "",
@@ -14079,7 +14588,7 @@
         "totalContractValueIDR": 110000000,
         "totalOutstandingAmountIDR": 110000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.558Z"
+        "updatedAt": "2026-09-25T03:08:48.679Z"
       },
       {
         "clientAddress": "",
@@ -14149,7 +14658,7 @@
         "totalContractValueIDR": 375000000,
         "totalOutstandingAmountIDR": 375000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.560Z"
+        "updatedAt": "2026-09-25T03:08:48.681Z"
       },
       {
         "clientAddress": "",
@@ -14219,7 +14728,7 @@
         "totalContractValueIDR": 290000000,
         "totalOutstandingAmountIDR": 290000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.564Z"
+        "updatedAt": "2026-09-25T03:08:48.686Z"
       },
       {
         "clientAddress": "",
@@ -14270,7 +14779,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 40000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.566Z"
+        "updatedAt": "2026-09-25T03:08:48.688Z"
       },
       {
         "clientAddress": "",
@@ -14340,7 +14849,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 25000000,
         "totalReceivedAmountIDR": 0,
-        "updatedAt": "2026-09-14T07:30:50.568Z"
+        "updatedAt": "2026-09-25T03:08:48.689Z"
       },
       {
         "clientAddress": "",
@@ -14405,7 +14914,7 @@
         "totalContractValueIDR": 76530612,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 76530612,
-        "updatedAt": "2026-09-14T07:30:50.570Z"
+        "updatedAt": "2026-09-25T03:08:48.691Z"
       },
       {
         "clientAddress": "",
@@ -14489,7 +14998,7 @@
         "totalContractValueIDR": 23000000,
         "totalOutstandingAmountIDR": 11500000,
         "totalReceivedAmountIDR": 11500000,
-        "updatedAt": "2026-09-14T07:30:50.572Z"
+        "updatedAt": "2026-09-25T03:08:48.693Z"
       },
       {
         "clientAddress": "",
@@ -14554,7 +15063,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 50000000,
-        "updatedAt": "2026-09-14T07:30:50.573Z"
+        "updatedAt": "2026-09-25T03:08:48.694Z"
       },
       {
         "clientAddress": "",
@@ -14619,7 +15128,7 @@
         "totalContractValueIDR": 100000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 100000000,
-        "updatedAt": "2026-09-14T07:30:50.577Z"
+        "updatedAt": "2026-09-25T03:08:48.696Z"
       },
       {
         "clientAddress": "",
@@ -14685,7 +15194,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 50000000,
-        "updatedAt": "2026-09-14T07:30:50.579Z"
+        "updatedAt": "2026-09-25T03:08:48.701Z"
       },
       {
         "clientAddress": "",
@@ -14751,7 +15260,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 40000000,
-        "updatedAt": "2026-09-14T07:30:50.581Z"
+        "updatedAt": "2026-09-25T03:08:48.702Z"
       },
       {
         "clientAddress": "",
@@ -14806,7 +15315,7 @@
         "totalContractValueIDR": 24200000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 24200000,
-        "updatedAt": "2026-09-14T07:30:50.582Z"
+        "updatedAt": "2026-09-25T03:08:48.704Z"
       },
       {
         "clientAddress": "",
@@ -14903,7 +15412,7 @@
         "totalContractValueIDR": 5000000000,
         "totalOutstandingAmountIDR": 3530000000,
         "totalReceivedAmountIDR": 1470000000,
-        "updatedAt": "2026-09-14T07:30:50.584Z"
+        "updatedAt": "2026-09-25T03:08:48.705Z"
       },
       {
         "clientAddress": "",
@@ -14964,7 +15473,7 @@
         "totalContractValueIDR": 24200000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 23716000,
-        "updatedAt": "2026-09-14T07:30:50.586Z"
+        "updatedAt": "2026-09-25T03:08:48.707Z"
       },
       {
         "clientAddress": "",
@@ -15026,7 +15535,7 @@
         "totalContractValueIDR": 24200000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 23716000,
-        "updatedAt": "2026-09-14T07:30:50.588Z"
+        "updatedAt": "2026-09-25T03:08:48.708Z"
       },
       {
         "clientAddress": "",
@@ -15088,7 +15597,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 22050000,
-        "updatedAt": "2026-09-14T07:30:50.592Z"
+        "updatedAt": "2026-09-25T03:08:48.710Z"
       },
       {
         "clientAddress": "",
@@ -15150,7 +15659,7 @@
         "totalContractValueIDR": 23500000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 23030000,
-        "updatedAt": "2026-09-14T07:30:50.593Z"
+        "updatedAt": "2026-09-25T03:08:48.714Z"
       },
       {
         "clientAddress": "",
@@ -15232,7 +15741,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 12500000,
         "totalReceivedAmountIDR": 12250000,
-        "updatedAt": "2026-09-14T07:30:50.595Z"
+        "updatedAt": "2026-09-25T03:08:48.715Z"
       },
       {
         "clientAddress": "",
@@ -15294,7 +15803,7 @@
         "totalContractValueIDR": 24200000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 23716000,
-        "updatedAt": "2026-09-14T07:30:50.596Z"
+        "updatedAt": "2026-09-25T03:08:48.717Z"
       },
       {
         "clientAddress": "",
@@ -15394,7 +15903,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 15750000,
         "totalReceivedAmountIDR": 6615000,
-        "updatedAt": "2026-09-14T07:30:50.597Z"
+        "updatedAt": "2026-09-25T03:08:48.718Z"
       },
       {
         "clientAddress": "",
@@ -15456,7 +15965,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 22050000,
-        "updatedAt": "2026-09-14T07:30:50.599Z"
+        "updatedAt": "2026-09-25T03:08:48.720Z"
       },
       {
         "clientAddress": "",
@@ -15538,7 +16047,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 11250000,
         "totalReceivedAmountIDR": 11025000,
-        "updatedAt": "2026-09-14T07:30:50.600Z"
+        "updatedAt": "2026-09-25T03:08:48.721Z"
       },
       {
         "clientAddress": "",
@@ -15600,7 +16109,7 @@
         "totalContractValueIDR": 24000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 23520000,
-        "updatedAt": "2026-09-14T07:30:50.601Z"
+        "updatedAt": "2026-09-25T03:08:48.722Z"
       },
       {
         "clientAddress": "",
@@ -15662,7 +16171,7 @@
         "totalContractValueIDR": 24000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 23520000,
-        "updatedAt": "2026-09-14T07:30:50.605Z"
+        "updatedAt": "2026-09-25T03:08:48.724Z"
       },
       {
         "clientAddress": "",
@@ -15724,7 +16233,7 @@
         "totalContractValueIDR": 22500000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 22050000,
-        "updatedAt": "2026-09-14T07:30:50.606Z"
+        "updatedAt": "2026-09-25T03:08:48.727Z"
       },
       {
         "clientAddress": "",
@@ -15786,7 +16295,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 24500000,
-        "updatedAt": "2026-09-14T07:30:50.607Z"
+        "updatedAt": "2026-09-25T03:08:48.729Z"
       },
       {
         "clientAddress": "",
@@ -15848,7 +16357,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 24500000,
-        "updatedAt": "2026-09-14T07:30:50.609Z"
+        "updatedAt": "2026-09-25T03:08:48.730Z"
       },
       {
         "clientAddress": "",
@@ -15930,7 +16439,7 @@
         "totalContractValueIDR": 25000000,
         "totalOutstandingAmountIDR": 12500000,
         "totalReceivedAmountIDR": 12250000,
-        "updatedAt": "2026-09-14T07:30:50.610Z"
+        "updatedAt": "2026-09-25T03:08:48.731Z"
       },
       {
         "clientAddress": "",
@@ -15992,7 +16501,7 @@
         "totalContractValueIDR": 27250000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 26705000,
-        "updatedAt": "2026-09-14T07:30:50.611Z"
+        "updatedAt": "2026-09-25T03:08:48.732Z"
       },
       {
         "clientAddress": "",
@@ -16054,7 +16563,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 39200000,
-        "updatedAt": "2026-09-14T07:30:50.612Z"
+        "updatedAt": "2026-09-25T03:08:48.733Z"
       },
       {
         "clientAddress": "",
@@ -16116,7 +16625,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 39200000,
-        "updatedAt": "2026-09-14T07:30:50.613Z"
+        "updatedAt": "2026-09-25T03:08:48.735Z"
       },
       {
         "clientAddress": "",
@@ -16178,7 +16687,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 39200000,
-        "updatedAt": "2026-09-14T07:30:50.615Z"
+        "updatedAt": "2026-09-25T03:08:48.736Z"
       },
       {
         "clientAddress": "",
@@ -16240,7 +16749,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 39200000,
-        "updatedAt": "2026-09-14T07:30:50.616Z"
+        "updatedAt": "2026-09-25T03:08:48.737Z"
       },
       {
         "clientAddress": "",
@@ -16302,7 +16811,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 39200000,
-        "updatedAt": "2026-09-14T07:30:50.620Z"
+        "updatedAt": "2026-09-25T03:08:48.741Z"
       },
       {
         "clientAddress": "",
@@ -16364,7 +16873,7 @@
         "totalContractValueIDR": 40000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 39200000,
-        "updatedAt": "2026-09-14T07:30:50.621Z"
+        "updatedAt": "2026-09-25T03:08:48.743Z"
       },
       {
         "clientAddress": "",
@@ -16446,7 +16955,7 @@
         "totalContractValueIDR": 150000000,
         "totalOutstandingAmountIDR": 75000000,
         "totalReceivedAmountIDR": 73500000,
-        "updatedAt": "2026-09-14T07:30:50.622Z"
+        "updatedAt": "2026-09-25T03:08:48.744Z"
       },
       {
         "clientAddress": "",
@@ -16508,7 +17017,7 @@
         "totalContractValueIDR": 30000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 29400000,
-        "updatedAt": "2026-09-14T07:30:50.623Z"
+        "updatedAt": "2026-09-25T03:08:48.745Z"
       },
       {
         "clientAddress": "",
@@ -16604,7 +17113,7 @@
         "totalContractValueIDR": 390000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 382200000,
-        "updatedAt": "2026-09-14T07:30:50.624Z"
+        "updatedAt": "2026-09-25T03:08:48.746Z"
       },
       {
         "clientAddress": "",
@@ -16686,7 +17195,7 @@
         "totalContractValueIDR": 290000000,
         "totalOutstandingAmountIDR": 145000000,
         "totalReceivedAmountIDR": 142100000,
-        "updatedAt": "2026-09-14T07:30:50.625Z"
+        "updatedAt": "2026-09-25T03:08:48.747Z"
       },
       {
         "clientAddress": "",
@@ -16768,7 +17277,7 @@
         "totalContractValueIDR": 190000000,
         "totalOutstandingAmountIDR": 95000000,
         "totalReceivedAmountIDR": 93100000,
-        "updatedAt": "2026-09-14T07:30:50.626Z"
+        "updatedAt": "2026-09-25T03:08:48.748Z"
       },
       {
         "clientAddress": "",
@@ -16830,7 +17339,7 @@
         "totalContractValueIDR": 20000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 19600000,
-        "updatedAt": "2026-09-14T07:30:50.627Z"
+        "updatedAt": "2026-09-25T03:08:48.748Z"
       },
       {
         "clientAddress": "",
@@ -16927,7 +17436,7 @@
         "totalContractValueIDR": 220000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 215600000,
-        "updatedAt": "2026-09-14T07:30:50.628Z"
+        "updatedAt": "2026-09-25T03:08:48.749Z"
       },
       {
         "clientAddress": "",
@@ -17009,7 +17518,7 @@
         "totalContractValueIDR": 245000000,
         "totalOutstandingAmountIDR": 122500000,
         "totalReceivedAmountIDR": 120050000,
-        "updatedAt": "2026-09-14T07:30:50.629Z"
+        "updatedAt": "2026-09-25T03:08:48.750Z"
       },
       {
         "clientAddress": "",
@@ -17105,7 +17614,7 @@
         "totalContractValueIDR": 160000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 156800000,
-        "updatedAt": "2026-09-14T07:30:50.630Z"
+        "updatedAt": "2026-09-25T03:08:48.751Z"
       },
       {
         "clientAddress": "",
@@ -17201,7 +17710,7 @@
         "totalContractValueIDR": 110000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 107800000,
-        "updatedAt": "2026-09-14T07:30:50.633Z"
+        "updatedAt": "2026-09-25T03:08:48.752Z"
       },
       {
         "clientAddress": "",
@@ -17283,7 +17792,7 @@
         "totalContractValueIDR": 375000000,
         "totalOutstandingAmountIDR": 187500000,
         "totalReceivedAmountIDR": 183750000,
-        "updatedAt": "2026-09-14T07:30:50.634Z"
+        "updatedAt": "2026-09-25T03:08:48.755Z"
       },
       {
         "clientAddress": "",
@@ -17363,7 +17872,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 25000000,
         "totalReceivedAmountIDR": 25000000,
-        "updatedAt": "2026-09-14T07:30:50.635Z"
+        "updatedAt": "2026-09-25T03:08:48.756Z"
       },
       {
         "clientAddress": "",
@@ -17445,7 +17954,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 25000000,
         "totalReceivedAmountIDR": 24500000,
-        "updatedAt": "2026-09-14T07:30:50.636Z"
+        "updatedAt": "2026-09-25T03:08:48.757Z"
       },
       {
         "clientAddress": "",
@@ -17527,7 +18036,7 @@
         "totalContractValueIDR": 150000000,
         "totalOutstandingAmountIDR": 75000000,
         "totalReceivedAmountIDR": 83250000,
-        "updatedAt": "2026-09-14T07:30:50.637Z"
+        "updatedAt": "2026-09-25T03:08:48.758Z"
       },
       {
         "clientAddress": "",
@@ -17609,7 +18118,7 @@
         "totalContractValueIDR": 350000000,
         "totalOutstandingAmountIDR": 175000000,
         "totalReceivedAmountIDR": 171500000,
-        "updatedAt": "2026-09-14T07:30:50.638Z"
+        "updatedAt": "2026-09-25T03:08:48.758Z"
       },
       {
         "clientAddress": "",
@@ -17705,7 +18214,7 @@
         "totalContractValueIDR": 90000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 88200000,
-        "updatedAt": "2026-09-14T07:30:50.638Z"
+        "updatedAt": "2026-09-25T03:08:48.759Z"
       },
       {
         "clientAddress": "",
@@ -17800,7 +18309,7 @@
         "totalContractValueIDR": 405000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 405000000,
-        "updatedAt": "2026-09-14T07:30:50.639Z"
+        "updatedAt": "2026-09-25T03:08:48.760Z"
       },
       {
         "clientAddress": "",
@@ -17882,7 +18391,7 @@
         "totalContractValueIDR": 150000000,
         "totalOutstandingAmountIDR": 75000000,
         "totalReceivedAmountIDR": 73648649,
-        "updatedAt": "2026-09-14T07:30:50.640Z"
+        "updatedAt": "2026-09-25T03:08:48.760Z"
       },
       {
         "clientAddress": "",
@@ -17978,7 +18487,7 @@
         "totalContractValueIDR": 150000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 147000000,
-        "updatedAt": "2026-09-14T07:30:50.640Z"
+        "updatedAt": "2026-09-25T03:08:48.761Z"
       },
       {
         "clientAddress": "",
@@ -18040,7 +18549,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 49000000,
-        "updatedAt": "2026-09-14T07:30:50.641Z"
+        "updatedAt": "2026-09-25T03:08:48.762Z"
       },
       {
         "clientAddress": "",
@@ -18136,7 +18645,7 @@
         "totalContractValueIDR": 340000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 333200000,
-        "updatedAt": "2026-09-14T07:30:50.641Z"
+        "updatedAt": "2026-09-25T03:08:48.762Z"
       },
       {
         "clientAddress": "",
@@ -18198,7 +18707,7 @@
         "totalContractValueIDR": 20000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 19600000,
-        "updatedAt": "2026-09-14T07:30:50.642Z"
+        "updatedAt": "2026-09-25T03:08:48.763Z"
       },
       {
         "clientAddress": "",
@@ -18294,7 +18803,7 @@
         "totalContractValueIDR": 300000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 294000000,
-        "updatedAt": "2026-09-14T07:30:50.642Z"
+        "updatedAt": "2026-09-25T03:08:48.763Z"
       },
       {
         "clientAddress": "",
@@ -18376,7 +18885,7 @@
         "totalContractValueIDR": 130000000,
         "totalOutstandingAmountIDR": 65000000,
         "totalReceivedAmountIDR": 63700000,
-        "updatedAt": "2026-09-14T07:30:50.643Z"
+        "updatedAt": "2026-09-25T03:08:48.764Z"
       },
       {
         "clientAddress": "",
@@ -18438,7 +18947,7 @@
         "totalContractValueIDR": 70000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 68600000,
-        "updatedAt": "2026-09-14T07:30:50.643Z"
+        "updatedAt": "2026-09-25T03:08:48.764Z"
       },
       {
         "clientAddress": "",
@@ -18534,7 +19043,7 @@
         "totalContractValueIDR": 95000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 93100000,
-        "updatedAt": "2026-09-14T07:30:50.644Z"
+        "updatedAt": "2026-09-25T03:08:48.764Z"
       },
       {
         "clientAddress": "",
@@ -18596,7 +19105,7 @@
         "totalContractValueIDR": 76530612,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 75000000,
-        "updatedAt": "2026-09-14T07:30:50.644Z"
+        "updatedAt": "2026-09-25T03:08:48.765Z"
       },
       {
         "clientAddress": "",
@@ -18658,7 +19167,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 49000000,
-        "updatedAt": "2026-09-14T07:30:50.644Z"
+        "updatedAt": "2026-09-25T03:08:48.765Z"
       },
       {
         "clientAddress": "",
@@ -18760,7 +19269,7 @@
         "totalContractValueIDR": 100000000,
         "totalOutstandingAmountIDR": 70000000,
         "totalReceivedAmountIDR": 29400000,
-        "updatedAt": "2026-09-14T07:30:50.648Z"
+        "updatedAt": "2026-09-25T03:08:48.766Z"
       },
       {
         "clientAddress": "",
@@ -18822,7 +19331,7 @@
         "totalContractValueIDR": 75000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 73500000,
-        "updatedAt": "2026-09-14T07:30:50.648Z"
+        "updatedAt": "2026-09-25T03:08:48.766Z"
       },
       {
         "clientAddress": "",
@@ -18884,7 +19393,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 49000000,
-        "updatedAt": "2026-09-14T07:30:50.648Z"
+        "updatedAt": "2026-09-25T03:08:48.766Z"
       },
       {
         "clientAddress": "",
@@ -18946,7 +19455,7 @@
         "totalContractValueIDR": 90000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 88200000,
-        "updatedAt": "2026-09-14T07:30:50.649Z"
+        "updatedAt": "2026-09-25T03:08:48.769Z"
       },
       {
         "clientAddress": "",
@@ -19008,7 +19517,7 @@
         "totalContractValueIDR": 50000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 49000000,
-        "updatedAt": "2026-09-14T07:30:50.649Z"
+        "updatedAt": "2026-09-25T03:08:48.769Z"
       },
       {
         "clientAddress": "",
@@ -19071,7 +19580,7 @@
         "totalContractValueIDR": 30000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 32700000,
-        "updatedAt": "2026-09-14T07:30:50.649Z"
+        "updatedAt": "2026-09-25T03:08:48.770Z"
       },
       {
         "clientAddress": "",
@@ -19134,7 +19643,7 @@
         "totalContractValueIDR": 95000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 103550000,
-        "updatedAt": "2026-09-14T07:30:50.649Z"
+        "updatedAt": "2026-09-25T03:08:48.770Z"
       },
       {
         "clientAddress": "",
@@ -19196,7 +19705,7 @@
         "totalContractValueIDR": 60000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 58800000,
-        "updatedAt": "2026-09-14T07:30:50.650Z"
+        "updatedAt": "2026-09-25T03:08:48.770Z"
       },
       {
         "clientAddress": "",
@@ -19257,7 +19766,7 @@
         "totalContractValueIDR": 90000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 90000000,
-        "updatedAt": "2026-09-14T07:30:50.650Z"
+        "updatedAt": "2026-09-25T03:08:48.771Z"
       },
       {
         "clientAddress": "",
@@ -19319,7 +19828,7 @@
         "totalContractValueIDR": 100000000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 98000000,
-        "updatedAt": "2026-09-14T07:30:50.650Z"
+        "updatedAt": "2026-09-25T03:08:48.771Z"
       },
       {
         "clientAddress": "Kawasan Industri Jababeka V Blok C-12, Cikarang, Bekasi",
@@ -19441,7 +19950,7 @@
         "totalContractValueIDR": 111000000,
         "totalOutstandingAmountIDR": 77700000,
         "totalReceivedAmountIDR": 32700000,
-        "updatedAt": "2026-09-14T07:30:50.650Z"
+        "updatedAt": "2026-09-25T03:08:48.771Z"
       },
       {
         "clientAddress": "Jl. Raya Serang Km. 18, Balaraja, Tangerang",
@@ -19535,7 +20044,7 @@
         "totalContractValueIDR": 166500000,
         "totalOutstandingAmountIDR": 83250000,
         "totalReceivedAmountIDR": 81750000,
-        "updatedAt": "2026-09-14T07:30:50.650Z"
+        "updatedAt": "2026-09-25T03:08:48.771Z"
       },
       {
         "clientAddress": "Jl. Rungkut Industri III No. 8, Surabaya",
@@ -19607,7 +20116,7 @@
         "totalContractValueIDR": 66600000,
         "totalOutstandingAmountIDR": 0,
         "totalReceivedAmountIDR": 65400000,
-        "updatedAt": "2026-09-14T07:30:50.650Z"
+        "updatedAt": "2026-09-25T03:08:48.771Z"
       },
       {
         "clientAddress": "Kawasan Industri MM2100 Blok H-5, Cikarang Barat",
@@ -19702,7 +20211,1375 @@
         "totalContractValueIDR": 99900000,
         "totalOutstandingAmountIDR": 49950000,
         "totalReceivedAmountIDR": 49050000,
-        "updatedAt": "2026-09-14T07:30:50.650Z"
+        "updatedAt": "2026-09-25T03:08:48.771Z"
+      },
+      {
+        "clientName": "Adryan",
+        "contractDate": "2024-09-25",
+        "createdAt": "2026-09-28T07:49:13.077Z",
+        "createdBy": "Adryan kelvianto",
+        "id": "ret-1790581753077-0028-2d1kbg",
+        "initialPaymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "initialPaymentDate": "2024-09-25",
+        "invoicePaymentTermDays": 14,
+        "milestones": [
+          {
+            "termNumber": 1,
+            "title": "Pembayaran Lunas Dimuka (100% DP)",
+            "percentage": 100,
+            "grossAmountIDR": 540000000,
+            "pricingType": "NON_PKP",
+            "dppAmountIDR": 540000000,
+            "ppnRatePercent": 0,
+            "ppnAmountIDR": 0,
+            "pphType": "NON_PPH",
+            "pphRatePercent": 0,
+            "pphAmountIDR": 0,
+            "netDisbursementIDR": 540000000,
+            "targetDate": "2024-09-25",
+            "status": "LUNAS",
+            "paidAmountIDR": 540000000,
+            "paymentDate": "2024-09-25",
+            "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+            "referenceNumber": "TRF-753077",
+            "id": "ret-m-1kbg-t1-1790581753077-0029-rrx909",
+            "projectId": "ret-1790581753077-0028-2d1kbg",
+            "createdAt": "2026-09-28T07:49:13.077Z",
+            "transactionId": "trx-retail-inc-ret-1790581753077-0028-2d1kbg-ret-m-1kbg-t1-1790581753077-0029-rrx909"
+          }
+        ],
+        "paymentScheme": "LUNAS_DIMUKA",
+        "pphRatePercent": 0,
+        "pphType": "NON_PPH",
+        "ppnRatePercent": 0,
+        "pricingType": "NON_PKP",
+        "projectName": "Pinjaman Modal",
+        "recordInitialPaymentToCash": true,
+        "serviceCategory": "LAINNYA",
+        "status": "AKTIF",
+        "totalBilledAmountIDR": 540000000,
+        "totalContractValueIDR": 540000000,
+        "totalOutstandingAmountIDR": 0,
+        "totalReceivedAmountIDR": 540000000,
+        "updatedAt": "2026-09-28T07:50:39.665Z"
+      }
+    ],
+    "bankLoans": [
+      {
+        "loanName": "KMK REKENING KORAN BRI",
+        "facilityType": "REVOLVING",
+        "bankName": "Bank Rakyat Indonesia (BRI)",
+        "accountNumber": "118801000511309",
+        "principalAmount": 1000000000,
+        "annualInterestRate": 11.7,
+        "tenureMonths": 12,
+        "startDate": "2024-11-28",
+        "paymentChannelId": "BANK_BANK_BRI_SUNTER",
+        "purpose": "Modal Kerja & Operasional Sertifikasi TKDN",
+        "isDisbursed": true,
+        "status": "PAID_OFF",
+        "id": "loan-1789119416502-0149-kaka3m",
+        "monthlyPrincipal": 0,
+        "monthlyInterest": 9750000,
+        "monthlyInstallment": 9750000,
+        "totalInterest": 117000000,
+        "totalPayment": 1117000000,
+        "remainingPrincipal": 0,
+        "paidPrincipal": 1000000000,
+        "paidInterest": 117000000,
+        "schedule": [
+          {
+            "monthNumber": 1,
+            "dueDate": "2024-12-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:23.241Z",
+            "transactionIds": [
+              "trx-1789119443240-0150-ez43fr"
+            ]
+          },
+          {
+            "monthNumber": 2,
+            "dueDate": "2025-01-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:29.443Z",
+            "transactionIds": [
+              "trx-1789119449442-0151-xlivcg"
+            ]
+          },
+          {
+            "monthNumber": 3,
+            "dueDate": "2025-02-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:31.243Z",
+            "transactionIds": [
+              "trx-1789119451242-0152-ilwb13"
+            ]
+          },
+          {
+            "monthNumber": 4,
+            "dueDate": "2025-03-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:39.285Z",
+            "transactionIds": [
+              "trx-1789119459284-0153-5qbb37"
+            ]
+          },
+          {
+            "monthNumber": 5,
+            "dueDate": "2025-04-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:40.685Z",
+            "transactionIds": [
+              "trx-1789119460684-0154-jktd09"
+            ]
+          },
+          {
+            "monthNumber": 6,
+            "dueDate": "2025-05-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:42.032Z",
+            "transactionIds": [
+              "trx-1789119462032-0155-t4gq6j"
+            ]
+          },
+          {
+            "monthNumber": 7,
+            "dueDate": "2025-06-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:43.379Z",
+            "transactionIds": [
+              "trx-1789119463378-0156-loyi6y"
+            ]
+          },
+          {
+            "monthNumber": 8,
+            "dueDate": "2025-07-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:44.502Z",
+            "transactionIds": [
+              "trx-1789119464502-0157-s7s4fe"
+            ]
+          },
+          {
+            "monthNumber": 9,
+            "dueDate": "2025-08-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:46.475Z",
+            "transactionIds": [
+              "trx-1789119466474-0158-e61yxn"
+            ]
+          },
+          {
+            "monthNumber": 10,
+            "dueDate": "2025-09-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:48.006Z",
+            "transactionIds": [
+              "trx-1789119468006-0159-yh6a6i"
+            ]
+          },
+          {
+            "monthNumber": 11,
+            "dueDate": "2025-10-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 0,
+            "interestPayment": 9750000,
+            "totalPayment": 9750000,
+            "endingBalance": 1000000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:49.657Z",
+            "transactionIds": [
+              "trx-1789119469656-0160-hqq84n"
+            ]
+          },
+          {
+            "monthNumber": 12,
+            "dueDate": "2025-11-28",
+            "beginningBalance": 1000000000,
+            "principalPayment": 1000000000,
+            "interestPayment": 9750000,
+            "totalPayment": 1009750000,
+            "endingBalance": 0,
+            "isPaid": true,
+            "paymentType": "BALLOON_PAYOFF",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:37:50.931Z",
+            "transactionIds": [
+              "trx-1789119470930-0161-4ya0lx",
+              "trx-1789119470931-0162-9ia5in"
+            ]
+          }
+        ],
+        "createdAt": "2026-09-11T09:36:56.502Z",
+        "createdBy": "admin.master",
+        "updatedAt": "2026-09-11T09:41:56.795Z",
+        "disbursedAt": "2026-09-11T09:41:56.794Z",
+        "disbursementTransactionId": "trx-1789119716793-0179-i38e2g"
+      },
+      {
+        "loanName": "KMK REKENING KORAN",
+        "facilityType": "REVOLVING",
+        "bankName": "Bank Rakyat Indonesia (BRI)",
+        "accountNumber": "118801000511309",
+        "principalAmount": 2500000000,
+        "annualInterestRate": 11.7,
+        "tenureMonths": 24,
+        "startDate": "2025-08-25",
+        "paymentChannelId": "BANK_BANK_BRI_SUNTER",
+        "purpose": "Modal Kerja & Operasional Sertifikasi TKDN",
+        "isDisbursed": true,
+        "status": "ACTIVE",
+        "id": "loan-1789119610076-0164-0sfzu8",
+        "monthlyPrincipal": 0,
+        "monthlyInterest": 24375000,
+        "monthlyInstallment": 24375000,
+        "totalInterest": 585000000,
+        "totalPayment": 3085000000,
+        "remainingPrincipal": 2500000000,
+        "paidPrincipal": 2500000000,
+        "paidInterest": 292500000,
+        "schedule": [
+          {
+            "monthNumber": 1,
+            "dueDate": "2025-09-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:27.971Z",
+            "transactionIds": [
+              "trx-1789119627970-0166-qmaq0r"
+            ]
+          },
+          {
+            "monthNumber": 2,
+            "dueDate": "2025-10-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:29.471Z",
+            "transactionIds": [
+              "trx-1789119629470-0167-8zo2ye"
+            ]
+          },
+          {
+            "monthNumber": 3,
+            "dueDate": "2025-11-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:31.125Z",
+            "transactionIds": [
+              "trx-1789119631124-0168-rcfo6f"
+            ]
+          },
+          {
+            "monthNumber": 4,
+            "dueDate": "2025-12-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:33.295Z",
+            "transactionIds": [
+              "trx-1789119633294-0169-ozj0ha"
+            ]
+          },
+          {
+            "monthNumber": 5,
+            "dueDate": "2026-01-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:35.625Z",
+            "transactionIds": [
+              "trx-1789119635624-0170-xxvdmi"
+            ]
+          },
+          {
+            "monthNumber": 6,
+            "dueDate": "2026-02-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:36.879Z",
+            "transactionIds": [
+              "trx-1789119636878-0171-avmr4c"
+            ]
+          },
+          {
+            "monthNumber": 7,
+            "dueDate": "2026-03-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:38.319Z",
+            "transactionIds": [
+              "trx-1789119638318-0172-veqgbe"
+            ]
+          },
+          {
+            "monthNumber": 8,
+            "dueDate": "2026-04-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:39.671Z",
+            "transactionIds": [
+              "trx-1789119639670-0173-sei24y"
+            ]
+          },
+          {
+            "monthNumber": 9,
+            "dueDate": "2026-05-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:41.455Z",
+            "transactionIds": [
+              "trx-1789119641454-0174-idzslm"
+            ]
+          },
+          {
+            "monthNumber": 10,
+            "dueDate": "2026-06-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:42.686Z",
+            "transactionIds": [
+              "trx-1789119642685-0175-czo53g"
+            ]
+          },
+          {
+            "monthNumber": 11,
+            "dueDate": "2026-07-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:44.105Z",
+            "transactionIds": [
+              "trx-1789119644104-0176-meck3n"
+            ]
+          },
+          {
+            "monthNumber": 12,
+            "dueDate": "2026-08-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": true,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 1,
+            "paidAt": "2026-09-11T09:40:45.625Z",
+            "transactionIds": [
+              "trx-1789119645624-0177-2akzeg",
+              "trx-1789119645625-0178-mrlhzr"
+            ]
+          },
+          {
+            "monthNumber": 13,
+            "dueDate": "2026-09-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 14,
+            "dueDate": "2026-10-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 15,
+            "dueDate": "2026-11-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 16,
+            "dueDate": "2026-12-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 17,
+            "dueDate": "2027-01-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 18,
+            "dueDate": "2027-02-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 19,
+            "dueDate": "2027-03-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 20,
+            "dueDate": "2027-04-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 21,
+            "dueDate": "2027-05-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 22,
+            "dueDate": "2027-06-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 23,
+            "dueDate": "2027-07-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 0,
+            "interestPayment": 24375000,
+            "totalPayment": 24375000,
+            "endingBalance": 2500000000,
+            "isPaid": false,
+            "paymentType": "INTEREST_ONLY",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          },
+          {
+            "monthNumber": 24,
+            "dueDate": "2027-08-25",
+            "beginningBalance": 2500000000,
+            "principalPayment": 2500000000,
+            "interestPayment": 24375000,
+            "totalPayment": 2524375000,
+            "endingBalance": 0,
+            "isPaid": false,
+            "paymentType": "BALLOON_PAYOFF",
+            "cycleNumber": 2,
+            "renewalId": "renew-1789119695680"
+          }
+        ],
+        "createdAt": "2026-09-11T09:40:10.076Z",
+        "createdBy": "admin.master",
+        "disbursedAt": "2026-09-11T09:40:24.372Z",
+        "disbursementTransactionId": "trx-1789119624370-0165-74y6bu",
+        "updatedAt": "2026-09-11T09:41:35.680Z",
+        "renewalsCount": 1,
+        "renewalHistory": [
+          {
+            "id": "renew-1789119695680",
+            "renewalNumber": 1,
+            "renewalDate": "2026-08-25",
+            "previousMaturityDate": "2026-08-25",
+            "newMaturityDate": "2027-08-25",
+            "tenureMonthsAdded": 12,
+            "previousPrincipal": 2500000000,
+            "newPrincipal": 2500000000,
+            "previousInterestRate": 11.7,
+            "newInterestRate": 11.7,
+            "adendumNumber": "PK-ADD/BANK/2026/3706",
+            "provisionFeeRecordedToLedger": false,
+            "notes": "Perpanjangan kredit modal kerja revolving (KMK Roll-over KMK REKENING KORAN periode ke-1).",
+            "approvedBy": "Adryan kelvianto",
+            "createdAt": "2026-09-11T09:41:35.680Z"
+          }
+        ],
+        "lastRenewalDate": "2026-08-25",
+        "currentMaturityDate": "2027-08-25",
+        "originalMaturityDate": "2026-08-25"
+      },
+      {
+        "loanName": "Pinjaman Perorangan",
+        "facilityType": "OTHER",
+        "bankName": "Bank Rakyat Indonesia (BRI)",
+        "principalAmount": 540000000,
+        "annualInterestRate": 0,
+        "tenureMonths": 24,
+        "startDate": "2024-09-10",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "purpose": "Modal Kerja & Operasional Sertifikasi TKDN",
+        "isDisbursed": true,
+        "status": "ACTIVE",
+        "id": "loan-1790581667689-0026-628bru",
+        "monthlyPrincipal": 22500000,
+        "monthlyInterest": 0,
+        "monthlyInstallment": 22500000,
+        "totalInterest": 0,
+        "totalPayment": 540000000,
+        "remainingPrincipal": 540000000,
+        "paidPrincipal": 0,
+        "paidInterest": 0,
+        "schedule": [
+          {
+            "monthNumber": 1,
+            "dueDate": "2024-10-10",
+            "beginningBalance": 540000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 517500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 2,
+            "dueDate": "2024-11-10",
+            "beginningBalance": 517500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 495000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 3,
+            "dueDate": "2024-12-10",
+            "beginningBalance": 495000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 472500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 4,
+            "dueDate": "2025-01-10",
+            "beginningBalance": 472500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 450000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 5,
+            "dueDate": "2025-02-10",
+            "beginningBalance": 450000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 427500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 6,
+            "dueDate": "2025-03-10",
+            "beginningBalance": 427500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 405000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 7,
+            "dueDate": "2025-04-10",
+            "beginningBalance": 405000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 382500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 8,
+            "dueDate": "2025-05-10",
+            "beginningBalance": 382500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 360000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 9,
+            "dueDate": "2025-06-10",
+            "beginningBalance": 360000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 337500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 10,
+            "dueDate": "2025-07-10",
+            "beginningBalance": 337500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 315000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 11,
+            "dueDate": "2025-08-10",
+            "beginningBalance": 315000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 292500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 12,
+            "dueDate": "2025-09-10",
+            "beginningBalance": 292500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 270000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 13,
+            "dueDate": "2025-10-10",
+            "beginningBalance": 270000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 247500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 14,
+            "dueDate": "2025-11-10",
+            "beginningBalance": 247500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 225000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 15,
+            "dueDate": "2025-12-10",
+            "beginningBalance": 225000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 202500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 16,
+            "dueDate": "2026-01-10",
+            "beginningBalance": 202500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 180000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 17,
+            "dueDate": "2026-02-10",
+            "beginningBalance": 180000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 157500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 18,
+            "dueDate": "2026-03-10",
+            "beginningBalance": 157500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 135000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 19,
+            "dueDate": "2026-04-10",
+            "beginningBalance": 135000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 112500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 20,
+            "dueDate": "2026-05-10",
+            "beginningBalance": 112500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 90000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 21,
+            "dueDate": "2026-06-10",
+            "beginningBalance": 90000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 67500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 22,
+            "dueDate": "2026-07-10",
+            "beginningBalance": 67500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 45000000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 23,
+            "dueDate": "2026-08-10",
+            "beginningBalance": 45000000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 22500000,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          },
+          {
+            "monthNumber": 24,
+            "dueDate": "2026-09-10",
+            "beginningBalance": 22500000,
+            "principalPayment": 22500000,
+            "interestPayment": 0,
+            "totalPayment": 22500000,
+            "endingBalance": 0,
+            "isPaid": false,
+            "paymentType": "PRINCIPAL_AND_INTEREST"
+          }
+        ],
+        "createdAt": "2026-09-28T07:47:47.689Z",
+        "createdBy": "admin.master",
+        "disbursedAt": "2026-09-28T07:47:54.136Z",
+        "disbursementTransactionId": "trx-1790581674131-0027-u1as4j",
+        "updatedAt": "2026-09-28T07:47:54.138Z"
+      }
+    ],
+    "dispositions": [],
+    "teamMembers": [
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Adryan kelvianto",
+        "bankAccountNumber": "122-00-983100-2",
+        "bankName": "Bank Mandiri",
+        "capacityPercentage": 0,
+        "completedTaskCount": 0,
+        "department": "Central Compliance Governance & Board",
+        "email": "adryankelvianto250@gmail.com",
+        "id": "usr-0",
+        "idType": "NIK",
+        "lastLoginAt": "Just now",
+        "lastSyncedAt": "2026-09-11T10:08:28.265Z",
+        "name": "Adryan kelvianto",
+        "nik": "3171012304950001",
+        "permissions": [
+          "MANAGE_USERS_ROLES",
+          "VERIFY_NEW_USERS",
+          "MANAGE_SERVICE_TYPES",
+          "MANAGE_DOCUMENT_TYPES",
+          "VIEW_PROJECTS",
+          "CREATE_PROJECTS",
+          "EDIT_PROJECTS",
+          "DELETE_PROJECTS",
+          "CALCULATE_TKDN",
+          "UPLOAD_DOCUMENTS",
+          "VERIFY_DOCUMENTS",
+          "SIGNOFF_MILESTONES",
+          "MANAGE_DISPOSITIONS",
+          "MANAGE_FINANCE",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 811-9988-7711",
+        "pin": "120812",
+        "role": "MASTER_ADMIN",
+        "roleTitle": "Chief Role Master & System SuperAdmin",
+        "specialization": [
+          "Master Access Governance",
+          "Statutory Verification Audits",
+          "SIINas National Registry",
+          "Supreme RBAC Authority"
+        ],
+        "status": "ACTIVE",
+        "username": "admin.master",
+        "bio": "",
+        "clientCompany": "",
+        "notificationPreferences": {
+          "emailNotifications": true,
+          "inAppDispatches": true,
+          "weeklySummary": false,
+          "whatsappAlerts": true
+        },
+        "registrationNumber": "",
+        "signatureImage": "",
+        "signatureText": "Adryan kelvianto",
+        "themeAccent": "amber"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742075?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Christobelle Bayu A.P",
+        "bankAccountNumber": "4650362263",
+        "bankName": "Bank BCA",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "bayu@gmail.com",
+        "id": "usr-1789120416828",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T09:54:53.930Z",
+        "name": "Christobelle Bayu A.P",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "CREATE_PROJECTS",
+          "EDIT_PROJECTS",
+          "CALCULATE_TKDN",
+          "UPLOAD_DOCUMENTS",
+          "VERIFY_DOCUMENTS",
+          "SIGNOFF_MILESTONES",
+          "MANAGE_DISPOSITIONS",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "LEAD_CONSULTANT",
+        "roleTitle": "Lead Assessor / Senior Consultant",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "bayugapsite"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742432?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Ahmad Dolly Syukur",
+        "bankAccountNumber": "444936374",
+        "bankName": "Bank BNI",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "dolly@gmail.com",
+        "id": "usr-1789120489324",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T09:56:13.309Z",
+        "name": "Ahmad Dolly Syukur",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "CREATE_PROJECTS",
+          "EDIT_PROJECTS",
+          "CALCULATE_TKDN",
+          "UPLOAD_DOCUMENTS",
+          "VERIFY_DOCUMENTS",
+          "SIGNOFF_MILESTONES",
+          "MANAGE_DISPOSITIONS",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "LEAD_CONSULTANT",
+        "roleTitle": "Lead Assessor / Senior Consultant",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "ahmaddolly"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528741987?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Riswanto Chendra Putra",
+        "bankAccountNumber": "7615366251",
+        "bankName": "Bank BCA",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "riswanto@gmail.com",
+        "id": "usr-1789120560149",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T09:56:00.149Z",
+        "name": "Riswanto Chendra Putra",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "CREATE_PROJECTS",
+          "EDIT_PROJECTS",
+          "CALCULATE_TKDN",
+          "UPLOAD_DOCUMENTS",
+          "VERIFY_DOCUMENTS",
+          "SIGNOFF_MILESTONES",
+          "MANAGE_DISPOSITIONS",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "LEAD_CONSULTANT",
+        "roleTitle": "Lead Assessor / Senior Consultant",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "riswanto"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528741909?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Amanda Alma Septiriani",
+        "bankAccountNumber": "2860460869",
+        "bankName": "Bank BCA",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "amanda@gmail.com",
+        "id": "usr-1789120635415",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T09:57:15.415Z",
+        "name": "Amanda Alma Septiriani",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "UPLOAD_DOCUMENTS",
+          "MANAGE_FINANCE",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "FINANCE_OFFICER",
+        "roleTitle": "Financial Controller / Billing Specialist",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "amandaalma"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742095?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Yoga Erlangga",
+        "bankAccountNumber": "0083398946",
+        "bankName": "Bank BCA",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "yoga@gmail.com",
+        "id": "usr-1789120698552",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T09:58:18.552Z",
+        "name": "Yoga Erlangga",
+        "nik": "3204320307990003",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "UPLOAD_DOCUMENTS",
+          "MANAGE_FINANCE",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+6282217277031",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "FINANCE_OFFICER",
+        "roleTitle": "Financial Controller / Billing Specialist",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "yogagapsite"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742637?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Prasillia Oktika Sari",
+        "bankAccountNumber": "201201014448500",
+        "bankName": "Bank BRI",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "prasillia@gmail.com",
+        "id": "usr-1789120760241",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T09:59:20.241Z",
+        "name": "Prasillia Oktika Sari",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "UPLOAD_DOCUMENTS",
+          "MANAGE_FINANCE",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "FINANCE_OFFICER",
+        "roleTitle": "Financial Controller / Billing Specialist",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "acil"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742653?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Muhammad Faisal",
+        "bankAccountNumber": "1055362562",
+        "bankName": "Bank BNI",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "ical@gmail.com",
+        "id": "usr-1789120827344",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T10:00:27.344Z",
+        "name": "Muhammad Faisal",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "CALCULATE_TKDN",
+          "UPLOAD_DOCUMENTS",
+          "MANAGE_DISPOSITIONS",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "TECHNICAL_CONSULTANT",
+        "roleTitle": "Technical Assessor",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "icale"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742649?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Yuridawati",
+        "bankAccountNumber": "486301023961534",
+        "bankName": "Bank BRI",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Technical & TKDN Calculations",
+        "email": "ujang@gmail.com",
+        "id": "usr-1789120889218",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T10:01:29.218Z",
+        "name": "Jayusman",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "CALCULATE_TKDN",
+          "UPLOAD_DOCUMENTS",
+          "MANAGE_DISPOSITIONS",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "TECHNICAL_CONSULTANT",
+        "roleTitle": "Technical Assessor",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "ujangbintaro"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742308?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "M Tedi Saputra",
+        "bankAccountNumber": "813101008596503",
+        "bankName": "Bank BRI",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Driver",
+        "email": "tedi@gmail.com",
+        "id": "usr-1789120938790",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T10:02:18.790Z",
+        "name": "M Tedi Saputra",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "UPLOAD_DOCUMENTS",
+          "MANAGE_FINANCE",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "FINANCE_OFFICER",
+        "roleTitle": "Financial Controller / Billing Specialist",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "tedibintaro"
+      },
+      {
+        "activeTaskCount": 0,
+        "avatar": "https://images.unsplash.com/photo-1534528742499?w=150&auto=format&fit=crop&q=80",
+        "bankAccountHolder": "Asep Erwan",
+        "bankAccountNumber": "24501580014167",
+        "bankName": "Bank BTN",
+        "capacityPercentage": 50,
+        "clientCompany": "",
+        "completedTaskCount": 0,
+        "department": "Driver",
+        "email": "asep@gmail.com",
+        "id": "usr-1789120976758",
+        "idType": "NIK",
+        "lastLoginAt": "Never",
+        "lastSyncedAt": "2026-09-11T10:02:56.758Z",
+        "name": "Asep Erwan",
+        "nik": "",
+        "permissions": [
+          "VIEW_PROJECTS",
+          "UPLOAD_DOCUMENTS",
+          "MANAGE_FINANCE",
+          "EXPORT_AUDIT_REPORTS"
+        ],
+        "phone": "+62 ",
+        "pin": "1234",
+        "registeredAt": "Just now",
+        "role": "FINANCE_OFFICER",
+        "roleTitle": "Financial Controller / Billing Specialist",
+        "specialization": [],
+        "status": "ACTIVE",
+        "username": "asepbintaro"
       }
     ],
     "overheadExpenses": [
@@ -19727,7 +21604,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-0dvqyv-1789120442550-0233-c5ts2l",
-        "updatedAt": "2026-09-14T07:30:50.337Z",
+        "updatedAt": "2026-09-25T03:08:48.462Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19751,7 +21628,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-oqw6zu-1789120460750-0235-sbirt3",
-        "updatedAt": "2026-09-14T07:30:50.652Z",
+        "updatedAt": "2026-09-25T03:08:48.772Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19775,7 +21652,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-ch0v03-1789120473450-0237-s7re29",
-        "updatedAt": "2026-09-14T07:30:50.652Z",
+        "updatedAt": "2026-09-25T03:08:48.773Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19799,7 +21676,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-vitnrj-1789120500334-0239-qjni3l",
-        "updatedAt": "2026-09-14T07:30:50.652Z",
+        "updatedAt": "2026-09-25T03:08:48.773Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19823,7 +21700,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-hkozek-1789120513759-0241-hdv8yx",
-        "updatedAt": "2026-09-14T07:30:50.652Z",
+        "updatedAt": "2026-09-25T03:08:48.773Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19847,7 +21724,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-vvpij0-1789120525466-0243-kidbi3",
-        "updatedAt": "2026-09-14T07:30:50.653Z",
+        "updatedAt": "2026-09-25T03:08:48.773Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19871,7 +21748,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-51oph9-1789120542023-0245-jazcit",
-        "updatedAt": "2026-09-14T07:30:50.653Z",
+        "updatedAt": "2026-09-25T03:08:48.773Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19895,7 +21772,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-qvr9f3-1789120555786-0247-n9omug",
-        "updatedAt": "2026-09-14T07:30:50.653Z",
+        "updatedAt": "2026-09-25T03:08:48.774Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19919,7 +21796,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-mew2ye-1789120571153-0249-2m2pud",
-        "updatedAt": "2026-09-14T07:30:50.653Z",
+        "updatedAt": "2026-09-25T03:08:48.774Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19943,7 +21820,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-a74a4r-1789120584091-0251-6569jg",
-        "updatedAt": "2026-09-14T07:30:50.653Z",
+        "updatedAt": "2026-09-25T03:08:48.774Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19967,7 +21844,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-e69sep-1789120598861-0253-y06aau",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.774Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -19991,7 +21868,7 @@
         "taxAmountIDR": 0,
         "title": "PEMBAYARAN LISTRIK KANTOR ",
         "transactionId": "trx-ovh-vumlfz-1789120610427-0255-9l9p27",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.774Z",
         "vendorOrMerchant": "PT. PLN"
       },
       {
@@ -20019,7 +21896,7 @@
         "taxType": "NONE",
         "title": "Pembayaran Tagihan Listrik PLN Pascabayar Kantor Pusat Lantai 15",
         "transactionId": "tx-ovh-001",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.774Z",
         "vendorOrMerchant": "PT PLN (Persero) UP3 Menteng"
       },
       {
@@ -20047,7 +21924,7 @@
         "taxType": "NONE",
         "title": "Iuran Pengelolaan Lingkungan (IPL), Keamanan & Kebersihan Gedung",
         "transactionId": "tx-ovh-002",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.774Z",
         "vendorOrMerchant": "Badan Pengelola Gedung Menara Kadin"
       },
       {
@@ -20076,7 +21953,7 @@
         "taxType": "PPH_23",
         "title": "Konsumsi Rapat Pleno Finalisasi Dokumen TKDN & Snack Pantry Bulanan",
         "transactionId": "tx-ovh-003",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "Catering Berkah Rasa & Super Indo"
       },
       {
@@ -20104,7 +21981,7 @@
         "taxType": "NONE",
         "title": "BBM Pertamax & E-Toll Operasional Kunjungan Pabrik Mitra Cikarang",
         "transactionId": "tx-ovh-004",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "SPBU Pertamina 31-12902 & PT Jasa Marga"
       },
       {
@@ -20132,7 +22009,7 @@
         "taxType": "NONE",
         "title": "Akomodasi Hotel & Penginapan Tim Surveyor Verifikasi Pabrik Surabaya",
         "transactionId": "tx-ovh-005",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "Hotel Santika Premiere Gubeng Surabaya"
       },
       {
@@ -20160,7 +22037,7 @@
         "taxType": "NONE",
         "title": "Pembayaran Tagihan Listrik PLN Pascabayar Kantor Pusat Periode Februari",
         "transactionId": "tx-ovh-006",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "PT PLN (Persero) UP3 Menteng"
       },
       {
@@ -20188,7 +22065,7 @@
         "taxType": "NONE",
         "title": "Iuran Pengelolaan Lingkungan & Keamanan Gedung Februari 2026",
         "transactionId": "tx-ovh-007",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "Badan Pengelola Gedung Menara Kadin"
       },
       {
@@ -20216,7 +22093,7 @@
         "taxType": "NONE",
         "title": "Konsumsi Rapat Koordinasi Bersama Sucofindo & Kemenperin",
         "transactionId": "tx-ovh-008",
-        "updatedAt": "2026-09-14T07:30:50.654Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "Restoran Sari Kuring Sudirman"
       },
       {
@@ -20244,7 +22121,7 @@
         "taxType": "NONE",
         "title": "Pengadaan Kertas Continuous Form, Toner Printer Laser & Map Berkas",
         "transactionId": "tx-ovh-009",
-        "updatedAt": "2026-09-14T07:30:50.655Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "Toko ATK Gunung Agung & Mitra Office"
       },
       {
@@ -20268,8 +22145,152 @@
         "taxRatePercent": 0,
         "taxType": "NONE",
         "title": "Estimasi Tagihan Listrik PLN Pascabayar Kantor Pusat Periode Maret",
-        "updatedAt": "2026-09-14T07:30:50.655Z",
+        "updatedAt": "2026-09-25T03:08:48.775Z",
         "vendorOrMerchant": "PT PLN (Persero) UP3 Menteng"
+      },
+      {
+        "amountIDR": 77700000,
+        "approvedBy": "Finance Manager",
+        "category": "LAIN_LAIN",
+        "createdAt": "2026-09-28T07:22:57.381Z",
+        "createdBy": "Adryan kelvianto",
+        "date": "2024-04-04",
+        "division": "Konsultan & Teknis",
+        "hasTax": false,
+        "id": "ovh-1790580177381-0005-005646",
+        "netPaymentIDR": 77700000,
+        "notes": "",
+        "overheadNumber": "OVH-202404-0002",
+        "paidDate": "2024-04-04",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "receiptAttachment": "",
+        "requestedBy": "Staff Operasional",
+        "status": "PAID",
+        "taxAmountIDR": 0,
+        "title": "Pembayaran Pelatihan TKDN",
+        "transactionId": "trx-ovh-005646-1790580177381-0006-gld88n",
+        "updatedAt": "2026-09-28T07:50:39.682Z",
+        "vendorOrMerchant": "PT Surveyor Indonesia"
+      },
+      {
+        "amountIDR": 153180000,
+        "approvedBy": "Finance Manager",
+        "category": "LAIN_LAIN",
+        "createdAt": "2026-09-28T07:23:44.660Z",
+        "createdBy": "Adryan kelvianto",
+        "date": "2024-08-28",
+        "division": "Konsultan & Teknis",
+        "hasTax": false,
+        "id": "ovh-1790580224660-0007-7lumka",
+        "netPaymentIDR": 153180000,
+        "notes": "",
+        "overheadNumber": "OVH-202408-0006",
+        "paidDate": "2024-08-28",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "receiptAttachment": "",
+        "requestedBy": "Staff Operasional",
+        "status": "PAID",
+        "taxAmountIDR": 0,
+        "title": "Pembayaran Pelatihan TKDN",
+        "transactionId": "trx-ovh-7lumka-1790580224660-0008-ffnrrp",
+        "updatedAt": "2026-09-28T07:50:39.682Z",
+        "vendorOrMerchant": "PT Surveyor Indonesia"
+      },
+      {
+        "amountIDR": 297588000,
+        "approvedBy": "Finance Manager",
+        "category": "LAIN_LAIN",
+        "createdAt": "2026-09-28T07:24:35.439Z",
+        "createdBy": "Adryan kelvianto",
+        "date": "2024-08-28",
+        "division": "Konsultan & Teknis",
+        "hasTax": false,
+        "id": "ovh-1790580275439-0009-n3b6ke",
+        "netPaymentIDR": 297588000,
+        "notes": "",
+        "overheadNumber": "OVH-202408-0007",
+        "paidDate": "2024-08-28",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "receiptAttachment": "",
+        "requestedBy": "Staff Operasional",
+        "status": "PAID",
+        "taxAmountIDR": 0,
+        "title": "Pembayaran Pelatihan TKDN",
+        "transactionId": "trx-ovh-n3b6ke-1790580275439-0010-io4kci",
+        "updatedAt": "2026-09-28T07:50:39.683Z",
+        "vendorOrMerchant": "PT Surveyor Indonesia"
+      },
+      {
+        "amountIDR": 63825000,
+        "approvedBy": "Finance Manager",
+        "category": "LAIN_LAIN",
+        "createdAt": "2026-09-28T07:32:25.654Z",
+        "createdBy": "Adryan kelvianto",
+        "date": "2024-07-03",
+        "division": "Konsultan & Teknis",
+        "hasTax": false,
+        "id": "ovh-1790580745655-0012-zoc56r",
+        "netPaymentIDR": 63825000,
+        "notes": "",
+        "overheadNumber": "OVH-202407-0002",
+        "paidDate": "2024-07-03",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER",
+        "receiptAttachment": "",
+        "requestedBy": "Staff Operasional",
+        "status": "PAID",
+        "taxAmountIDR": 0,
+        "title": "Pembayaran TKDN DP 50% PT Epower Motor Indonesia",
+        "transactionId": "trx-ovh-zoc56r-1790580745655-0013-b9y86s",
+        "updatedAt": "2026-09-28T07:50:39.683Z",
+        "vendorOrMerchant": "PT Surveyor Indonesia"
+      },
+      {
+        "amountIDR": 65490000,
+        "approvedBy": "Finance Manager",
+        "category": "LAIN_LAIN",
+        "createdAt": "2026-09-28T07:38:09.711Z",
+        "createdBy": "Adryan kelvianto",
+        "date": "2024-07-10",
+        "division": "Konsultan & Teknis",
+        "hasTax": false,
+        "id": "ovh-1790581089711-0014-ei5g1k",
+        "netPaymentIDR": 65490000,
+        "notes": "",
+        "overheadNumber": "OVH-202407-0003",
+        "paidDate": "2024-07-10",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "receiptAttachment": "",
+        "requestedBy": "Staff Operasional",
+        "status": "PAID",
+        "taxAmountIDR": 0,
+        "title": "Pembayaran DP 50% PT Triangle Motorindo",
+        "transactionId": "trx-ovh-ei5g1k-1790581089711-0015-yvir5q",
+        "updatedAt": "2026-09-28T07:50:39.683Z",
+        "vendorOrMerchant": "PT Surveyor Indonesia"
+      },
+      {
+        "amountIDR": 63825000,
+        "approvedBy": "Finance Manager",
+        "category": "LAIN_LAIN",
+        "createdAt": "2026-09-28T07:38:59.836Z",
+        "createdBy": "Adryan kelvianto",
+        "date": "2024-07-03",
+        "division": "Konsultan & Teknis",
+        "hasTax": false,
+        "id": "ovh-1790581139836-0016-6fab6w",
+        "netPaymentIDR": 63825000,
+        "notes": "",
+        "overheadNumber": "OVH-202407-0004",
+        "paidDate": "2024-07-03",
+        "paymentChannelId": "BANK_BRI_CORPORATE_TRANSFER_OPS",
+        "receiptAttachment": "",
+        "requestedBy": "Staff Operasional",
+        "status": "PAID",
+        "taxAmountIDR": 0,
+        "title": "Pembayaran TKDN Pelunasan PT Epower Motor Indonesia",
+        "transactionId": "trx-ovh-6fab6w-1790581139836-0017-lsra41",
+        "updatedAt": "2026-09-28T07:50:39.683Z",
+        "vendorOrMerchant": "PT Surveyor Indonesia"
       }
     ],
     "officeRentContracts": [
@@ -20759,7 +22780,7 @@
         "securityDepositIDR": 40000000,
         "startDate": "2026-01-01",
         "status": "ACTIVE",
-        "updatedAt": "2026-09-14T07:30:50.339Z",
+        "updatedAt": "2026-09-25T03:08:48.463Z",
         "year": 2023
       },
       {
@@ -21248,7 +23269,7 @@
         "securityDepositIDR": 40000000,
         "startDate": "2026-01-01",
         "status": "ACTIVE",
-        "updatedAt": "2026-09-14T07:30:50.655Z",
+        "updatedAt": "2026-09-25T03:08:48.776Z",
         "year": 2023
       },
       {
@@ -21765,7 +23786,7 @@
         "securityDepositIDR": 40000000,
         "startDate": "2026-01-01",
         "status": "ACTIVE",
-        "updatedAt": "2026-09-14T07:30:50.656Z",
+        "updatedAt": "2026-09-25T03:08:48.777Z",
         "year": 2023
       },
       {
@@ -22422,7 +24443,7 @@
         "securityDepositIDR": 40000000,
         "startDate": "2026-01-01",
         "status": "ACTIVE",
-        "updatedAt": "2026-09-14T07:30:50.657Z",
+        "updatedAt": "2026-09-25T03:08:48.778Z",
         "year": 2023
       },
       {
@@ -23079,7 +25100,7 @@
         "securityDepositIDR": 40000000,
         "startDate": "2026-01-01",
         "status": "ACTIVE",
-        "updatedAt": "2026-09-14T07:30:50.658Z",
+        "updatedAt": "2026-09-25T03:08:48.779Z",
         "year": 2024
       },
       {
@@ -23677,7 +25698,7 @@
         "startDate": "2025-01-01",
         "status": "EXTENDED",
         "tenureMonths": 12,
-        "updatedAt": "2026-09-14T07:30:50.659Z",
+        "updatedAt": "2026-09-25T03:08:48.780Z",
         "year": 2025
       },
       {
@@ -24334,7 +26355,7 @@
         "securityDepositIDR": 40000000,
         "startDate": "2026-01-01",
         "status": "ACTIVE",
-        "updatedAt": "2026-09-14T07:30:50.659Z",
+        "updatedAt": "2026-09-25T03:08:48.780Z",
         "year": 2025
       },
       {
@@ -24872,7 +26893,7 @@
         "startDate": "2026-01-01",
         "status": "ACTIVE",
         "tenureMonths": 12,
-        "updatedAt": "2026-09-14T07:30:50.660Z",
+        "updatedAt": "2026-09-25T03:08:48.780Z",
         "year": 2026
       },
       {
@@ -25487,1116 +27508,8 @@
         "securityDepositIDR": 40000000,
         "startDate": "2026-01-01",
         "status": "ACTIVE",
-        "updatedAt": "2026-09-14T07:30:50.660Z",
+        "updatedAt": "2026-09-25T03:08:48.781Z",
         "year": 2026
-      }
-    ],
-    "bankLoans": [
-      {
-        "loanName": "KMK REKENING KORAN BRI",
-        "facilityType": "REVOLVING",
-        "bankName": "Bank Rakyat Indonesia (BRI)",
-        "accountNumber": "118801000511309",
-        "principalAmount": 1000000000,
-        "annualInterestRate": 11.7,
-        "tenureMonths": 12,
-        "startDate": "2024-11-28",
-        "paymentChannelId": "BANK_BANK_BRI_SUNTER",
-        "purpose": "Modal Kerja & Operasional Sertifikasi TKDN",
-        "isDisbursed": true,
-        "status": "PAID_OFF",
-        "id": "loan-1789119416502-0149-kaka3m",
-        "monthlyPrincipal": 0,
-        "monthlyInterest": 9750000,
-        "monthlyInstallment": 9750000,
-        "totalInterest": 117000000,
-        "totalPayment": 1117000000,
-        "remainingPrincipal": 0,
-        "paidPrincipal": 1000000000,
-        "paidInterest": 117000000,
-        "schedule": [
-          {
-            "monthNumber": 1,
-            "dueDate": "2024-12-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:23.241Z",
-            "transactionIds": [
-              "trx-1789119443240-0150-ez43fr"
-            ]
-          },
-          {
-            "monthNumber": 2,
-            "dueDate": "2025-01-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:29.443Z",
-            "transactionIds": [
-              "trx-1789119449442-0151-xlivcg"
-            ]
-          },
-          {
-            "monthNumber": 3,
-            "dueDate": "2025-02-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:31.243Z",
-            "transactionIds": [
-              "trx-1789119451242-0152-ilwb13"
-            ]
-          },
-          {
-            "monthNumber": 4,
-            "dueDate": "2025-03-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:39.285Z",
-            "transactionIds": [
-              "trx-1789119459284-0153-5qbb37"
-            ]
-          },
-          {
-            "monthNumber": 5,
-            "dueDate": "2025-04-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:40.685Z",
-            "transactionIds": [
-              "trx-1789119460684-0154-jktd09"
-            ]
-          },
-          {
-            "monthNumber": 6,
-            "dueDate": "2025-05-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:42.032Z",
-            "transactionIds": [
-              "trx-1789119462032-0155-t4gq6j"
-            ]
-          },
-          {
-            "monthNumber": 7,
-            "dueDate": "2025-06-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:43.379Z",
-            "transactionIds": [
-              "trx-1789119463378-0156-loyi6y"
-            ]
-          },
-          {
-            "monthNumber": 8,
-            "dueDate": "2025-07-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:44.502Z",
-            "transactionIds": [
-              "trx-1789119464502-0157-s7s4fe"
-            ]
-          },
-          {
-            "monthNumber": 9,
-            "dueDate": "2025-08-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:46.475Z",
-            "transactionIds": [
-              "trx-1789119466474-0158-e61yxn"
-            ]
-          },
-          {
-            "monthNumber": 10,
-            "dueDate": "2025-09-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:48.006Z",
-            "transactionIds": [
-              "trx-1789119468006-0159-yh6a6i"
-            ]
-          },
-          {
-            "monthNumber": 11,
-            "dueDate": "2025-10-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 0,
-            "interestPayment": 9750000,
-            "totalPayment": 9750000,
-            "endingBalance": 1000000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:49.657Z",
-            "transactionIds": [
-              "trx-1789119469656-0160-hqq84n"
-            ]
-          },
-          {
-            "monthNumber": 12,
-            "dueDate": "2025-11-28",
-            "beginningBalance": 1000000000,
-            "principalPayment": 1000000000,
-            "interestPayment": 9750000,
-            "totalPayment": 1009750000,
-            "endingBalance": 0,
-            "isPaid": true,
-            "paymentType": "BALLOON_PAYOFF",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:37:50.931Z",
-            "transactionIds": [
-              "trx-1789119470930-0161-4ya0lx",
-              "trx-1789119470931-0162-9ia5in"
-            ]
-          }
-        ],
-        "createdAt": "2026-09-11T09:36:56.502Z",
-        "createdBy": "admin.master",
-        "updatedAt": "2026-09-11T09:41:56.795Z",
-        "disbursedAt": "2026-09-11T09:41:56.794Z",
-        "disbursementTransactionId": "trx-1789119716793-0179-i38e2g"
-      },
-      {
-        "loanName": "KMK REKENING KORAN",
-        "facilityType": "REVOLVING",
-        "bankName": "Bank Rakyat Indonesia (BRI)",
-        "accountNumber": "118801000511309",
-        "principalAmount": 2500000000,
-        "annualInterestRate": 11.7,
-        "tenureMonths": 24,
-        "startDate": "2025-08-25",
-        "paymentChannelId": "BANK_BANK_BRI_SUNTER",
-        "purpose": "Modal Kerja & Operasional Sertifikasi TKDN",
-        "isDisbursed": true,
-        "status": "ACTIVE",
-        "id": "loan-1789119610076-0164-0sfzu8",
-        "monthlyPrincipal": 0,
-        "monthlyInterest": 24375000,
-        "monthlyInstallment": 24375000,
-        "totalInterest": 585000000,
-        "totalPayment": 3085000000,
-        "remainingPrincipal": 2500000000,
-        "paidPrincipal": 2500000000,
-        "paidInterest": 292500000,
-        "schedule": [
-          {
-            "monthNumber": 1,
-            "dueDate": "2025-09-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:27.971Z",
-            "transactionIds": [
-              "trx-1789119627970-0166-qmaq0r"
-            ]
-          },
-          {
-            "monthNumber": 2,
-            "dueDate": "2025-10-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:29.471Z",
-            "transactionIds": [
-              "trx-1789119629470-0167-8zo2ye"
-            ]
-          },
-          {
-            "monthNumber": 3,
-            "dueDate": "2025-11-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:31.125Z",
-            "transactionIds": [
-              "trx-1789119631124-0168-rcfo6f"
-            ]
-          },
-          {
-            "monthNumber": 4,
-            "dueDate": "2025-12-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:33.295Z",
-            "transactionIds": [
-              "trx-1789119633294-0169-ozj0ha"
-            ]
-          },
-          {
-            "monthNumber": 5,
-            "dueDate": "2026-01-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:35.625Z",
-            "transactionIds": [
-              "trx-1789119635624-0170-xxvdmi"
-            ]
-          },
-          {
-            "monthNumber": 6,
-            "dueDate": "2026-02-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:36.879Z",
-            "transactionIds": [
-              "trx-1789119636878-0171-avmr4c"
-            ]
-          },
-          {
-            "monthNumber": 7,
-            "dueDate": "2026-03-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:38.319Z",
-            "transactionIds": [
-              "trx-1789119638318-0172-veqgbe"
-            ]
-          },
-          {
-            "monthNumber": 8,
-            "dueDate": "2026-04-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:39.671Z",
-            "transactionIds": [
-              "trx-1789119639670-0173-sei24y"
-            ]
-          },
-          {
-            "monthNumber": 9,
-            "dueDate": "2026-05-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:41.455Z",
-            "transactionIds": [
-              "trx-1789119641454-0174-idzslm"
-            ]
-          },
-          {
-            "monthNumber": 10,
-            "dueDate": "2026-06-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:42.686Z",
-            "transactionIds": [
-              "trx-1789119642685-0175-czo53g"
-            ]
-          },
-          {
-            "monthNumber": 11,
-            "dueDate": "2026-07-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:44.105Z",
-            "transactionIds": [
-              "trx-1789119644104-0176-meck3n"
-            ]
-          },
-          {
-            "monthNumber": 12,
-            "dueDate": "2026-08-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": true,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 1,
-            "paidAt": "2026-09-11T09:40:45.625Z",
-            "transactionIds": [
-              "trx-1789119645624-0177-2akzeg",
-              "trx-1789119645625-0178-mrlhzr"
-            ]
-          },
-          {
-            "monthNumber": 13,
-            "dueDate": "2026-09-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 14,
-            "dueDate": "2026-10-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 15,
-            "dueDate": "2026-11-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 16,
-            "dueDate": "2026-12-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 17,
-            "dueDate": "2027-01-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 18,
-            "dueDate": "2027-02-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 19,
-            "dueDate": "2027-03-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 20,
-            "dueDate": "2027-04-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 21,
-            "dueDate": "2027-05-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 22,
-            "dueDate": "2027-06-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 23,
-            "dueDate": "2027-07-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 0,
-            "interestPayment": 24375000,
-            "totalPayment": 24375000,
-            "endingBalance": 2500000000,
-            "isPaid": false,
-            "paymentType": "INTEREST_ONLY",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          },
-          {
-            "monthNumber": 24,
-            "dueDate": "2027-08-25",
-            "beginningBalance": 2500000000,
-            "principalPayment": 2500000000,
-            "interestPayment": 24375000,
-            "totalPayment": 2524375000,
-            "endingBalance": 0,
-            "isPaid": false,
-            "paymentType": "BALLOON_PAYOFF",
-            "cycleNumber": 2,
-            "renewalId": "renew-1789119695680"
-          }
-        ],
-        "createdAt": "2026-09-11T09:40:10.076Z",
-        "createdBy": "admin.master",
-        "disbursedAt": "2026-09-11T09:40:24.372Z",
-        "disbursementTransactionId": "trx-1789119624370-0165-74y6bu",
-        "updatedAt": "2026-09-11T09:41:35.680Z",
-        "renewalsCount": 1,
-        "renewalHistory": [
-          {
-            "id": "renew-1789119695680",
-            "renewalNumber": 1,
-            "renewalDate": "2026-08-25",
-            "previousMaturityDate": "2026-08-25",
-            "newMaturityDate": "2027-08-25",
-            "tenureMonthsAdded": 12,
-            "previousPrincipal": 2500000000,
-            "newPrincipal": 2500000000,
-            "previousInterestRate": 11.7,
-            "newInterestRate": 11.7,
-            "adendumNumber": "PK-ADD/BANK/2026/3706",
-            "provisionFeeRecordedToLedger": false,
-            "notes": "Perpanjangan kredit modal kerja revolving (KMK Roll-over KMK REKENING KORAN periode ke-1).",
-            "approvedBy": "Adryan kelvianto",
-            "createdAt": "2026-09-11T09:41:35.680Z"
-          }
-        ],
-        "lastRenewalDate": "2026-08-25",
-        "currentMaturityDate": "2027-08-25",
-        "originalMaturityDate": "2026-08-25"
-      }
-    ],
-    "payroll": [
-      {
-        "bankAccountHolder": "Adryan kelvianto",
-        "bankAccountNumber": "122-00-983100-2",
-        "bankName": "Bank Mandiri",
-        "basicSalary": 7500000,
-        "bpjsKesehatan": 75000,
-        "bpjsKetenagakerjaan": 150000,
-        "cashAdvanceDeduction": 0,
-        "createdAt": "2026-09-11T05:02:28.426Z",
-        "department": "Central Compliance Governance & Board",
-        "employeeEmail": "",
-        "employeeId": "usr-0",
-        "employeeName": "Adryan kelvianto",
-        "employeeNik": "3171012304950001",
-        "employeePhone": "",
-        "id": "pay-2023-1789102948426-0056-s47q14",
-        "mealAllowance": 0,
-        "netSalary": 7500000,
-        "notes": "Penggajian Masal (Batch Payroll) Periode Januari 2023",
-        "otherAllowances": 0,
-        "otherDeductions": 0,
-        "overtimeAmount": 0,
-        "paidAt": "2023-01-31",
-        "paymentChannelId": "BANK_TRANSFER_BRI",
-        "paymentDate": "2023-01-31",
-        "paymentMethod": "BANK_TRANSFER_BRI",
-        "payrollNumber": "PAY/2026/09/EMP-001",
-        "period": "Januari 2023",
-        "positionAllowance": 0,
-        "pph21Amount": 93750,
-        "projectBonus": 0,
-        "recordedBy": "Adryan kelvianto",
-        "roleTitle": "Chief Role Master & System SuperAdmin",
-        "status": "PAID",
-        "totalDeductions": 0,
-        "totalEarnings": 7500000,
-        "transactionId": "trx-pay-s47q14-1789102948426-0057-32v0v7",
-        "transportAllowance": 0,
-        "updatedAt": "2026-09-11T05:02:28.427Z"
-      }
-    ],
-    "payrollPayments": [
-      {
-        "bankAccountHolder": "Adryan kelvianto",
-        "bankAccountNumber": "122-00-983100-2",
-        "bankName": "Bank Mandiri",
-        "basicSalary": 7500000,
-        "bpjsKesehatan": 75000,
-        "bpjsKetenagakerjaan": 150000,
-        "cashAdvanceDeduction": 0,
-        "createdAt": "2026-09-11T05:02:28.426Z",
-        "department": "Central Compliance Governance & Board",
-        "employeeEmail": "",
-        "employeeId": "usr-0",
-        "employeeName": "Adryan kelvianto",
-        "employeeNik": "3171012304950001",
-        "employeePhone": "",
-        "id": "pay-2023-1789102948426-0056-s47q14",
-        "mealAllowance": 0,
-        "netSalary": 7500000,
-        "notes": "Penggajian Masal (Batch Payroll) Periode Januari 2023",
-        "otherAllowances": 0,
-        "otherDeductions": 0,
-        "overtimeAmount": 0,
-        "paidAt": "2023-01-31",
-        "paymentChannelId": "BANK_TRANSFER_BRI",
-        "paymentDate": "2023-01-31",
-        "paymentMethod": "BANK_TRANSFER_BRI",
-        "payrollNumber": "PAY/2026/09/EMP-001",
-        "period": "Januari 2023",
-        "positionAllowance": 0,
-        "pph21Amount": 93750,
-        "projectBonus": 0,
-        "recordedBy": "Adryan kelvianto",
-        "roleTitle": "Chief Role Master & System SuperAdmin",
-        "status": "PAID",
-        "totalDeductions": 0,
-        "totalEarnings": 7500000,
-        "transactionId": "trx-pay-s47q14-1789102948426-0057-32v0v7",
-        "transportAllowance": 0,
-        "updatedAt": "2026-09-11T05:02:28.427Z"
-      }
-    ],
-    "teamMembers": [
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Adryan kelvianto",
-        "bankAccountNumber": "122-00-983100-2",
-        "bankName": "Bank Mandiri",
-        "capacityPercentage": 0,
-        "completedTaskCount": 0,
-        "department": "Central Compliance Governance & Board",
-        "email": "adryankelvianto250@gmail.com",
-        "id": "usr-0",
-        "idType": "NIK",
-        "lastLoginAt": "Just now",
-        "lastSyncedAt": "2026-09-11T10:08:28.265Z",
-        "name": "Adryan kelvianto",
-        "nik": "3171012304950001",
-        "permissions": [
-          "MANAGE_USERS_ROLES",
-          "VERIFY_NEW_USERS",
-          "MANAGE_SERVICE_TYPES",
-          "MANAGE_DOCUMENT_TYPES",
-          "VIEW_PROJECTS",
-          "CREATE_PROJECTS",
-          "EDIT_PROJECTS",
-          "DELETE_PROJECTS",
-          "CALCULATE_TKDN",
-          "UPLOAD_DOCUMENTS",
-          "VERIFY_DOCUMENTS",
-          "SIGNOFF_MILESTONES",
-          "MANAGE_DISPOSITIONS",
-          "MANAGE_FINANCE",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 811-9988-7711",
-        "pin": "120812",
-        "role": "MASTER_ADMIN",
-        "roleTitle": "Chief Role Master & System SuperAdmin",
-        "specialization": [
-          "Master Access Governance",
-          "Statutory Verification Audits",
-          "SIINas National Registry",
-          "Supreme RBAC Authority"
-        ],
-        "status": "ACTIVE",
-        "username": "admin.master",
-        "bio": "",
-        "clientCompany": "",
-        "notificationPreferences": {
-          "emailNotifications": true,
-          "inAppDispatches": true,
-          "weeklySummary": false,
-          "whatsappAlerts": true
-        },
-        "registrationNumber": "",
-        "signatureImage": "",
-        "signatureText": "Adryan kelvianto",
-        "themeAccent": "amber"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742075?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Christobelle Bayu A.P",
-        "bankAccountNumber": "4650362263",
-        "bankName": "Bank BCA",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "bayu@gmail.com",
-        "id": "usr-1789120416828",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T09:54:53.930Z",
-        "name": "Christobelle Bayu A.P",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "CREATE_PROJECTS",
-          "EDIT_PROJECTS",
-          "CALCULATE_TKDN",
-          "UPLOAD_DOCUMENTS",
-          "VERIFY_DOCUMENTS",
-          "SIGNOFF_MILESTONES",
-          "MANAGE_DISPOSITIONS",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "LEAD_CONSULTANT",
-        "roleTitle": "Lead Assessor / Senior Consultant",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "bayugapsite"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742432?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Ahmad Dolly Syukur",
-        "bankAccountNumber": "444936374",
-        "bankName": "Bank BNI",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "dolly@gmail.com",
-        "id": "usr-1789120489324",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T09:56:13.309Z",
-        "name": "Ahmad Dolly Syukur",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "CREATE_PROJECTS",
-          "EDIT_PROJECTS",
-          "CALCULATE_TKDN",
-          "UPLOAD_DOCUMENTS",
-          "VERIFY_DOCUMENTS",
-          "SIGNOFF_MILESTONES",
-          "MANAGE_DISPOSITIONS",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "LEAD_CONSULTANT",
-        "roleTitle": "Lead Assessor / Senior Consultant",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "ahmaddolly"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528741987?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Riswanto Chendra Putra",
-        "bankAccountNumber": "7615366251",
-        "bankName": "Bank BCA",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "riswanto@gmail.com",
-        "id": "usr-1789120560149",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T09:56:00.149Z",
-        "name": "Riswanto Chendra Putra",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "CREATE_PROJECTS",
-          "EDIT_PROJECTS",
-          "CALCULATE_TKDN",
-          "UPLOAD_DOCUMENTS",
-          "VERIFY_DOCUMENTS",
-          "SIGNOFF_MILESTONES",
-          "MANAGE_DISPOSITIONS",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "LEAD_CONSULTANT",
-        "roleTitle": "Lead Assessor / Senior Consultant",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "riswanto"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528741909?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Amanda Alma Septiriani",
-        "bankAccountNumber": "2860460869",
-        "bankName": "Bank BCA",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "amanda@gmail.com",
-        "id": "usr-1789120635415",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T09:57:15.415Z",
-        "name": "Amanda Alma Septiriani",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "UPLOAD_DOCUMENTS",
-          "MANAGE_FINANCE",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "FINANCE_OFFICER",
-        "roleTitle": "Financial Controller / Billing Specialist",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "amandaalma"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742095?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Yoga Erlangga",
-        "bankAccountNumber": "0083398946",
-        "bankName": "Bank BCA",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "yoga@gmail.com",
-        "id": "usr-1789120698552",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T09:58:18.552Z",
-        "name": "Yoga Erlangga",
-        "nik": "3204320307990003",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "UPLOAD_DOCUMENTS",
-          "MANAGE_FINANCE",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+6282217277031",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "FINANCE_OFFICER",
-        "roleTitle": "Financial Controller / Billing Specialist",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "yogagapsite"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742637?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Prasillia Oktika Sari",
-        "bankAccountNumber": "201201014448500",
-        "bankName": "Bank BRI",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "prasillia@gmail.com",
-        "id": "usr-1789120760241",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T09:59:20.241Z",
-        "name": "Prasillia Oktika Sari",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "UPLOAD_DOCUMENTS",
-          "MANAGE_FINANCE",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "FINANCE_OFFICER",
-        "roleTitle": "Financial Controller / Billing Specialist",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "acil"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742653?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Muhammad Faisal",
-        "bankAccountNumber": "1055362562",
-        "bankName": "Bank BNI",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "ical@gmail.com",
-        "id": "usr-1789120827344",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T10:00:27.344Z",
-        "name": "Muhammad Faisal",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "CALCULATE_TKDN",
-          "UPLOAD_DOCUMENTS",
-          "MANAGE_DISPOSITIONS",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "TECHNICAL_CONSULTANT",
-        "roleTitle": "Technical Assessor",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "icale"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742649?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Yuridawati",
-        "bankAccountNumber": "486301023961534",
-        "bankName": "Bank BRI",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Technical & TKDN Calculations",
-        "email": "ujang@gmail.com",
-        "id": "usr-1789120889218",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T10:01:29.218Z",
-        "name": "Jayusman",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "CALCULATE_TKDN",
-          "UPLOAD_DOCUMENTS",
-          "MANAGE_DISPOSITIONS",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "TECHNICAL_CONSULTANT",
-        "roleTitle": "Technical Assessor",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "ujangbintaro"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742308?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "M Tedi Saputra",
-        "bankAccountNumber": "813101008596503",
-        "bankName": "Bank BRI",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Driver",
-        "email": "tedi@gmail.com",
-        "id": "usr-1789120938790",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T10:02:18.790Z",
-        "name": "M Tedi Saputra",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "UPLOAD_DOCUMENTS",
-          "MANAGE_FINANCE",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "FINANCE_OFFICER",
-        "roleTitle": "Financial Controller / Billing Specialist",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "tedibintaro"
-      },
-      {
-        "activeTaskCount": 0,
-        "avatar": "https://images.unsplash.com/photo-1534528742499?w=150&auto=format&fit=crop&q=80",
-        "bankAccountHolder": "Asep Erwan",
-        "bankAccountNumber": "24501580014167",
-        "bankName": "Bank BTN",
-        "capacityPercentage": 50,
-        "clientCompany": "",
-        "completedTaskCount": 0,
-        "department": "Driver",
-        "email": "asep@gmail.com",
-        "id": "usr-1789120976758",
-        "idType": "NIK",
-        "lastLoginAt": "Never",
-        "lastSyncedAt": "2026-09-11T10:02:56.758Z",
-        "name": "Asep Erwan",
-        "nik": "",
-        "permissions": [
-          "VIEW_PROJECTS",
-          "UPLOAD_DOCUMENTS",
-          "MANAGE_FINANCE",
-          "EXPORT_AUDIT_REPORTS"
-        ],
-        "phone": "+62 ",
-        "pin": "1234",
-        "registeredAt": "Just now",
-        "role": "FINANCE_OFFICER",
-        "roleTitle": "Financial Controller / Billing Specialist",
-        "specialization": [],
-        "status": "ACTIVE",
-        "username": "asepbintaro"
       }
     ],
     "serviceTypes": [

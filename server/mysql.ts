@@ -6,7 +6,20 @@ import path from 'path';
 let pool: Pool | null = null;
 let currentPoolKey = '';
 
-const RUNTIME_CONFIG_PATH = path.join(process.cwd(), 'data', 'mysql_config.json');
+function resolveRuntimeConfigPath(): string {
+  const candidates = [
+    path.join(process.cwd(), 'data', 'mysql_config.json'),
+    path.join(process.cwd(), 'hbuilds', 'current', 'nodejs', 'data', 'mysql_config.json'),
+    path.resolve(process.cwd(), '..', 'data', 'mysql_config.json'),
+    path.resolve(process.cwd(), '..', '..', 'data', 'mysql_config.json'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(process.cwd(), 'data', 'mysql_config.json');
+}
+
+const RUNTIME_CONFIG_PATH = resolveRuntimeConfigPath();
 
 export interface MysqlConfig {
   host?: string;
@@ -123,7 +136,40 @@ export function clearMysqlRuntimeConfig() {
 }
 
 export function getMysqlConfig(): MysqlConfig {
-  // 1. Check if user configured runtime credentials override
+  // 1. Prioritize Hostinger MySQL environment variables (MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT)
+  const mysqlHost = (process.env.MYSQL_HOST || '').trim();
+  const mysqlUser = (process.env.MYSQL_USER || '').trim();
+  let mysqlDatabase = (process.env.MYSQL_DATABASE || '').trim();
+  const mysqlPassword = process.env.MYSQL_PASSWORD || '';
+  const mysqlPort = parseInt(process.env.MYSQL_PORT || '3306', 10);
+  const connectionLimit = parseInt(process.env.MYSQL_CONNECTION_LIMIT || process.env.DB_CONNECTION_LIMIT || '10', 10);
+  const connectTimeout = parseInt(process.env.MYSQL_CONNECT_TIMEOUT || process.env.DB_CONNECT_TIMEOUT || '10000', 10);
+
+  // Validate cross-hosting database combinations:
+  // gaphorizon.com must use database and user created on gaphorizon.com hosting (not gapsite.id)
+  const userPrefixMatch = mysqlUser.match(/^(u\d+)_/i);
+  const dbPrefixMatch = mysqlDatabase.match(/^(u\d+)_/i);
+  if (userPrefixMatch && dbPrefixMatch && userPrefixMatch[1].toLowerCase() !== dbPrefixMatch[1].toLowerCase()) {
+    console.warn(`[mysql] PERINGATAN: Terdeteksi ketidakcocokan hosting! User "${mysqlUser}" (${userPrefixMatch[1]}) berbeda prefix dengan database "${mysqlDatabase}" (${dbPrefixMatch[1]}). gaphorizon.com harus menggunakan user dan database dari hosting gaphorizon.com.`);
+    const gaphorizonDb = (process.env.GAPHORIZON_MYSQL_DATABASE || process.env.GAPHORIZON_DATABASE || '').trim();
+    if (gaphorizonDb) {
+      mysqlDatabase = gaphorizonDb;
+    }
+  }
+
+  if (mysqlHost && mysqlUser && mysqlDatabase) {
+    return {
+      host: mysqlHost,
+      port: mysqlPort,
+      user: mysqlUser,
+      password: mysqlPassword,
+      database: mysqlDatabase,
+      connectionLimit,
+      connectTimeout,
+    };
+  }
+
+  // 2. Check if user configured runtime credentials override via UI or runtime file
   if (fs.existsSync(RUNTIME_CONFIG_PATH)) {
     try {
       const content = fs.readFileSync(RUNTIME_CONFIG_PATH, 'utf-8');
@@ -142,14 +188,42 @@ export function getMysqlConfig(): MysqlConfig {
     } catch {}
   }
 
-  // 2. Prioritize MYSQL_* family first, then fallback to DB_* family
-  const host = (process.env.MYSQL_HOST || process.env.DB_HOST || '').trim();
-  const port = parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || '3306', 10);
-  const user = (process.env.MYSQL_USER || process.env.DB_USER || '').trim();
-  const password = process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || process.env.DB_PASS || '';
-  const database = (process.env.MYSQL_DATABASE || process.env.DB_NAME || process.env.DB_DATABASE || '').trim();
-  const connectionLimit = parseInt(process.env.MYSQL_CONNECTION_LIMIT || process.env.DB_CONNECTION_LIMIT || '10', 10);
-  const connectTimeout = parseInt(process.env.MYSQL_CONNECT_TIMEOUT || process.env.DB_CONNECT_TIMEOUT || '10000', 10);
+  // 3. Fallback to DATABASE_URL ONLY if it is not a placeholder template
+  const dbUrl = (process.env.DATABASE_URL || process.env.JAWSDB_URL || process.env.CLEARDB_DATABASE_URL || '').trim();
+  if (dbUrl) {
+    try {
+      const parsedUrl = new URL(dbUrl);
+      const host = parsedUrl.hostname;
+      const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : 3306;
+      const user = decodeURIComponent(parsedUrl.username || '');
+      const password = decodeURIComponent(parsedUrl.password || '');
+      const database = decodeURIComponent(parsedUrl.pathname.replace(/^\//, '') || '');
+
+      // Explicitly reject dummy/placeholder DATABASE_URL values
+      const isPlaceholder = (
+        !user ||
+        !database ||
+        user.toUpperCase() === 'USERNAME' ||
+        database.toUpperCase() === 'NAMA_DATABASE' ||
+        password.toUpperCase() === 'PASSWORD' ||
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        dbUrl.includes('USERNAME:PASSWORD') ||
+        dbUrl.includes('NAMA_DATABASE')
+      );
+
+      if (host && user && database && !isPlaceholder) {
+        return { host, port, user, password, database, connectionLimit, connectTimeout };
+      }
+    } catch {}
+  }
+
+  // 4. Fallback to DB_* family
+  const host = (process.env.DB_HOST || '').trim();
+  const port = parseInt(process.env.DB_PORT || '3306', 10);
+  const user = (process.env.DB_USER || '').trim();
+  const password = process.env.DB_PASSWORD || process.env.DB_PASS || '';
+  const database = (process.env.DB_NAME || process.env.DB_DATABASE || '').trim();
 
   return { host, port, user, password, database, connectionLimit, connectTimeout };
 }
@@ -212,9 +286,9 @@ export async function testMysqlConnection(customConfig?: MysqlConfig): Promise<{
   const startTime = Date.now();
   let tempPool: Pool | null = null;
   let connection: PoolConnection | null = null;
+  const config = customConfig || getMysqlConfig();
 
   try {
-    const config = customConfig || getMysqlConfig();
     if (!config.host || !config.user || !config.database) {
       return {
         success: false,

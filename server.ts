@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import {
   getMysqlConfig,
   isMysqlConfigured,
@@ -22,24 +21,66 @@ import {
 
 dotenv.config();
 
+// Ensure production defaults are active
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'production';
+}
+if (process.env.DISABLE_HMR === undefined) {
+  process.env.DISABLE_HMR = 'true';
+}
+if (!process.env.CORS_ORIGIN) {
+  process.env.CORS_ORIGIN = 'https://gaphorizon.com';
+}
+
+// Global Process Resilience Handlers: Ensure unhandled errors never crash Node.js silently
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[server] Unhandled Promise Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[server] Uncaught Exception:', err);
+});
+
 const app = express();
 
-// Port configuration: AI Studio strictly routes external traffic through port 3000
-const PORT = 3000;
+// Port configuration: Dynamically read process.env.PORT provided by hosting environment, fallback to 3000
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// Middleware: CORS for cross-origin access and reverse proxy compatibility
+const allowedOrigin = process.env.CORS_ORIGIN || 'https://gaphorizon.com';
+app.use((req, res, next) => {
+  const origin = req.headers.origin || allowedOrigin;
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Middleware for parsing JSON with generous payload limits for full backups
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Health Check
-app.get('/api/health', (req, res) => {
+// Health Check Endpoint (supports both /health and /api/health)
+app.get(['/health', '/api/health'], (req, res) => {
   const cfg = getMysqlConfig();
-  res.json({
+  const dbHealth = getMysqlHealthState();
+  res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
     mysqlConfigured: isMysqlConfigured(),
+    mysqlHealthy: dbHealth.isHealthy,
+    mysqlHost: cfg.host || null,
     port: PORT,
+    host: '0.0.0.0',
     database: cfg.database || null,
+    corsOrigin: process.env.CORS_ORIGIN || 'https://gaphorizon.com',
+    nodeVersion: process.version,
+    env: process.env.NODE_ENV || 'production',
+    deploymentPath: 'hbuilds/current/nodejs',
   });
 });
 
@@ -47,7 +88,24 @@ app.get('/api/health', (req, res) => {
 // SERVER-SIDE PERSISTENT JSON STORAGE API
 // Ensures data survives browser cache clears, private browsing, and client storage eviction.
 // ==========================================
-const DATA_DIR = path.join(process.cwd(), 'data');
+function resolveDataDir(): string {
+  const candidates = [
+    path.join(process.cwd(), 'data'),
+    path.join(process.cwd(), 'hbuilds', 'current', 'nodejs', 'data'),
+    path.resolve(process.cwd(), '..', 'data'),
+    path.resolve(process.cwd(), '..', '..', 'data'),
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(dir)) return dir;
+  }
+  const defaultDir = path.join(process.cwd(), 'data');
+  try {
+    fs.mkdirSync(defaultDir, { recursive: true });
+  } catch {}
+  return defaultDir;
+}
+
+const DATA_DIR = resolveDataDir();
 const SERVER_STORAGE_FILE = path.join(DATA_DIR, 'crm_persistent_storage.json');
 
 // Ensure data directory exists
@@ -177,10 +235,20 @@ export async function executeMysqlCrmBatchWrite(rawPayload: any): Promise<{
 
   // 1. Durably save to local disk first so data is never lost even if MySQL is offline
   try {
+    let dataToPersist = payload;
+    if (!Array.isArray(payload.projects) && fs.existsSync(SERVER_STORAGE_FILE)) {
+      try {
+        const rawExisting = fs.readFileSync(SERVER_STORAGE_FILE, 'utf-8');
+        const parsedExisting = JSON.parse(rawExisting);
+        const existingData = parsedExisting.data || parsedExisting;
+        dataToPersist = { ...existingData, ...payload };
+      } catch {}
+    }
+
     const dataToSave = {
       version: '1.0',
       updatedAt: nowIso,
-      data: payload,
+      data: dataToPersist,
     };
     const tempFile = `${SERVER_STORAGE_FILE}.tmp`;
     fs.writeFileSync(tempFile, JSON.stringify(dataToSave, null, 2), 'utf-8');
@@ -261,7 +329,7 @@ export async function executeMysqlCrmBatchWrite(rawPayload: any): Promise<{
     // 1. Projects
     if (Array.isArray(payload.projects)) {
       for (const p of payload.projects) {
-        if (!p || !p.id) continue;
+        if (!p || !p.id || p.id.startsWith('CONCURRENT_TEST_') || p.id.startsWith('RESTART_TEST_')) continue;
         await conn.query(
           `INSERT INTO crm_projects (id, code, client_name, stage, status, kbli_code, data)
            VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -663,6 +731,7 @@ export async function executeMysqlCrmBatchWrite(rawPayload: any): Promise<{
       for (const pem of PURGED_DUMMY_EMAILS) {
         await conn.query('DELETE FROM crm_team_members WHERE email = ?', [pem]);
       }
+      await conn.query("DELETE FROM crm_projects WHERE id LIKE 'CONCURRENT_TEST_%' OR id LIKE 'RESTART_TEST_%'");
     } catch {}
 
     await conn.commit();
@@ -697,6 +766,34 @@ app.post('/api/storage/sync', async (req, res) => {
   } catch (error: any) {
     console.error('[server-storage] Error in persistent sync:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to save storage' });
+  }
+});
+
+// Full Restore API: Overwrite all server storage completely from backup file
+app.post(['/api/storage/restore', '/api/backup/upload'], async (req, res) => {
+  try {
+    const payload = req.body.data || req.body;
+    const nowIso = new Date().toISOString();
+
+    const dataToSave = {
+      version: '2.0',
+      updatedAt: nowIso,
+      data: payload,
+    };
+    const tempFile = `${SERVER_STORAGE_FILE}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(dataToSave, null, 2), 'utf-8');
+    fs.renameSync(tempFile, SERVER_STORAGE_FILE);
+
+    const result = await executeMysqlCrmBatchWrite({ data: payload });
+    res.json({
+      success: true,
+      message: 'Seluruh data server berhasil diganti dari file backup!',
+      restoredAt: nowIso,
+      syncResult: result,
+    });
+  } catch (error: any) {
+    console.error('[server-storage] Error in storage restore:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to restore storage' });
   }
 });
 
@@ -2013,37 +2110,64 @@ app.get('/api/mysql/sync/pull', async (req, res) => {
 
 // Vite Middleware for Development / Static serving for Production
 async function setupViteOrStatic() {
-  const isProduction =
-    process.env.NODE_ENV === 'production' ||
-    process.argv[1]?.includes('dist') ||
-    process.argv[1]?.endsWith('server.cjs');
+  const isTsxDev = Boolean(
+    process.argv[1]?.endsWith('server.ts') &&
+    process.env.NODE_ENV !== 'production'
+  );
+  const isProduction = process.env.NODE_ENV === 'production' || !isTsxDev;
 
   if (!isProduction) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    // Determine distPath whether executed from project root (with package.json) or directly
-    const distPath = fs.existsSync(path.join(process.cwd(), 'dist'))
-      ? path.join(process.cwd(), 'dist')
-      : (typeof __dirname !== 'undefined' ? __dirname : process.cwd());
+    // Determine candidate dist directories whether run from root, hbuilds/current/nodejs, or dist
+    const candidateDirs = [
+      path.join(process.cwd(), 'dist'),
+      path.join(process.cwd(), 'hbuilds', 'current', 'nodejs', 'dist'),
+      path.join(typeof __dirname !== 'undefined' ? __dirname : process.cwd(), 'dist'),
+      path.join(typeof __dirname !== 'undefined' ? __dirname : process.cwd(), '..', 'dist'),
+      path.join(typeof __dirname !== 'undefined' ? __dirname : process.cwd(), '..', '..', 'dist'),
+      typeof __dirname !== 'undefined' ? __dirname : process.cwd(),
+      process.cwd(),
+    ];
 
+    const distPath =
+      candidateDirs.find((dir) => fs.existsSync(path.join(dir, 'index.html'))) ||
+      path.join(process.cwd(), 'dist');
+
+    console.log(`[server] Production static files root: ${distPath}`);
+
+    // Serve static files from the found distPath
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+
+    // Fallback SPA routing
+    app.get('*', (req, res, next) => {
+      // Do not intercept API requests that had no matching route
+      if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+        return next();
+      }
       const indexPath = path.join(distPath, 'index.html');
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
-        res.sendFile(path.join(process.cwd(), 'index.html'));
+        const rootIndex = path.join(process.cwd(), 'index.html');
+        if (fs.existsSync(rootIndex)) {
+          res.sendFile(rootIndex);
+        } else {
+          res.status(503).send('Application bundle is being initialized. Please ensure npm run build has completed.');
+        }
       }
     });
   }
 
-  app.listen(PORT, '0.0.0.0', async () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Hostinger MySQL configured: ${isMysqlConfigured() ? 'YES' : 'NO'}`);
+  const server = app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`[server] Server running on http://0.0.0.0:${PORT} (env PORT=${process.env.PORT || 'default 3000'})`);
+    console.log(`[server] Node version: ${process.version}, Environment: ${process.env.NODE_ENV || 'production'}`);
+    console.log(`[server] Hostinger MySQL configured: ${isMysqlConfigured() ? 'YES' : 'NO'}`);
 
     // Server startup persistence verification:
     // Ensures persistent data storage file exists and verifies MySQL connectivity
@@ -2073,13 +2197,16 @@ async function setupViteOrStatic() {
       console.warn('[startup] Persistence check note:', startupErr);
     }
   });
+
+  server.on('error', (err: any) => {
+    console.error(`[server] Server listen error on port ${PORT}:`, err);
+  });
 }
 
-const isMainScript =
-  typeof process !== 'undefined' &&
-  process.argv[1] &&
-  (process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.cjs') || process.argv[1].endsWith('server.js'));
-
-if (isMainScript) {
-  setupViteOrStatic();
+// Auto-start server unless explicitly disabled via environment variable
+const shouldStart = typeof process !== 'undefined' && !process.env.NO_SERVER_AUTOSTART;
+if (shouldStart) {
+  setupViteOrStatic().catch((err) => {
+    console.error('[server] Fatal error during setupViteOrStatic:', err);
+  });
 }

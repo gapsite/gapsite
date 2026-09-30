@@ -364,6 +364,12 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
     }
     const netPaymentIDR = formData.amountIDR - calculatedTaxAmount;
 
+    // Ensure paidDate aligns with transaction date year and period
+    const rawPaidDate = formData.paidDate || formData.date;
+    const effectivePaidDate = formData.status === 'PAID'
+      ? (rawPaidDate && formData.date && rawPaidDate.slice(0, 4) !== formData.date.slice(0, 4) ? formData.date : rawPaidDate)
+      : undefined;
+
     if (editingExpense) {
       updateOverheadExpense(editingExpense.id, {
         category: formData.category,
@@ -371,7 +377,7 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
         vendorOrMerchant: formData.vendorOrMerchant,
         amountIDR: Number(formData.amountIDR),
         date: formData.date,
-        paidDate: formData.status === 'PAID' ? formData.paidDate : undefined,
+        paidDate: effectivePaidDate,
         paymentChannelId: formData.paymentChannelId,
         status: formData.status,
         division: formData.division,
@@ -392,7 +398,7 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
         vendorOrMerchant: formData.vendorOrMerchant,
         amountIDR: Number(formData.amountIDR),
         date: formData.date,
-        paidDate: formData.status === 'PAID' ? formData.paidDate : undefined,
+        paidDate: effectivePaidDate,
         paymentChannelId: formData.paymentChannelId,
         status: formData.status,
         division: formData.division,
@@ -1175,7 +1181,14 @@ export const OverheadManagement: React.FC<OverheadManagementProps> = ({ onOpenRe
                   <input
                     type="date"
                     value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        date: newDate,
+                        paidDate: newDate,
+                      }));
+                    }}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                     required
                     id="input-form-date"

@@ -85,6 +85,7 @@ import {
   Priority,
   SurveyorBody,
   FinancialTransaction,
+  TransactionStatus,
   UserRole,
   UserPermission,
   RoleDefinition,
@@ -1248,9 +1249,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const parsed: ConsultingProject[] = JSON.parse(saved);
         const mockProjectCodes = new Set(['PRJ-2025-041', 'PRJ-2025-054', 'PRJ-2025-060', 'PRJ-2025-067', 'PRJ-2025-072', 'PRJ-2025-078']);
         const mockProjectIds = new Set(['prj-101', 'prj-102', 'prj-103', 'prj-104', 'prj-105', 'prj-106']);
-        return parsed.filter((p) => p && p.id && !mockProjectIds.has(p.id) && !mockProjectCodes.has(p.code) && !deletedIds.has(p.id));
+        return parsed
+          .filter((p) => p && p.id && !p.id.startsWith('CONCURRENT_TEST_') && !p.id.startsWith('RESTART_TEST_') && !mockProjectIds.has(p.id) && !mockProjectCodes.has(p.code) && !deletedIds.has(p.id))
+          .map((p) => ({
+            ...p,
+            documents: Array.isArray(p.documents) ? p.documents : [],
+          }));
       }
-      return INITIAL_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id));
+      return INITIAL_PROJECTS.filter((p) => p && p.id && !deletedIds.has(p.id)).map((p) => ({
+        ...p,
+        documents: Array.isArray(p.documents) ? p.documents : [],
+      }));
     } catch {
       return INITIAL_PROJECTS;
     }
@@ -1727,6 +1736,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
+          // If stored paidInCapital is the old legacy 100M or retainedEarningsOpening is negative legacy,
+          // migrate to the legal default of 1.25B with 0 opening retained earnings!
+          if (parsed.paidInCapital === 100000000 || parsed.retainedEarningsOpening === -3235650) {
+            return {
+              ...DEFAULT_COMPANY_CAPITAL,
+              ...parsed,
+              paidInCapital: 1250000000,
+              retainedEarningsOpening: 0,
+            };
+          }
           return { ...DEFAULT_COMPANY_CAPITAL, ...parsed };
         }
       }
@@ -3764,6 +3783,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 }
                 if (d.companyCapital) {
                   setCompanyCapital(d.companyCapital);
+                  safeLocalStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, JSON.stringify(d.companyCapital));
                 }
                 if (Array.isArray(d.salaryConfigs) && d.salaryConfigs.length > 0) {
                   setEmployeeSalaryConfigs(d.salaryConfigs);
@@ -3841,8 +3861,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (Array.isArray(serverData.projects) && serverData.projects.length > 0) {
               setProjects((curr) => {
                 const currIds = new Set(curr.map((p) => p.id));
-                const toAdd = serverData.projects.filter((p: any) => p && p.id && !currIds.has(p.id));
-                const serverMap = new Map<string, any>(serverData.projects.map((p: any) => [p.id, p]));
+                const validServerProjects = serverData.projects
+                  .filter((p: any) => p && p.id && !p.id.startsWith('CONCURRENT_TEST_') && !p.id.startsWith('RESTART_TEST_'))
+                  .map((p: any) => ({
+                    ...p,
+                    documents: Array.isArray(p.documents) ? p.documents : [],
+                  }));
+                const toAdd = validServerProjects.filter((p: any) => !currIds.has(p.id));
+                const serverMap = new Map<string, any>(validServerProjects.map((p: any) => [p.id, p]));
                 const updated = curr.map((p) => (serverMap.has(p.id) ? { ...p, ...(serverMap.get(p.id) as Record<string, any>) } : p));
                 const merged = [...updated, ...toAdd];
                 safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(merged));
@@ -4569,7 +4595,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const unsubCompanyCapital = subscribeToSettings('company_capital', (data) => {
       if (data && typeof data === 'object') {
-        setCompanyCapital((prev) => ({ ...prev, ...data }));
+        // Prevent stale or legacy corrupted Firestore documents (100M or negative opening) from overwriting
+        if (data.paidInCapital === 100000000 || data.retainedEarningsOpening === -3235650) {
+          return;
+        }
+        setCompanyCapital((prev) => {
+          if (prev?.updatedAt && data.updatedAt && new Date(data.updatedAt) < new Date(prev.updatedAt)) {
+            return prev;
+          }
+          return { ...prev, ...data };
+        });
       }
     });
 
@@ -7778,17 +7813,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Akses Ditolak: Hanya Master Admin atau Tim Finance yang dapat memperbarui pengaturan modal perusahaan.' };
     }
 
-    setCompanyCapital((prev) => {
-      const updated: CompanyCapitalSettings = {
-        ...prev,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-        updatedBy: currentUser.username || currentUser.name || 'Master Admin',
-      };
-      broadcastLiveDataUpdate('COMPANY_CAPITAL', updated);
-      saveSettingsToFirestore('company_capital', updated);
-      return updated;
-    });
+    const updated: CompanyCapitalSettings = {
+      ...companyCapital,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentUser.username || currentUser.name || 'Master Admin',
+    };
+
+    setCompanyCapital(updated);
+    safeLocalStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, JSON.stringify(updated));
+    broadcastLiveDataUpdate('COMPANY_CAPITAL', updated);
+    saveSettingsToFirestore('company_capital', updated).catch(() => {});
+
+    // Save directly to server storage & persistence
+    fetch('/api/storage/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyCapital: updated }),
+    }).catch((err) => console.warn('[ProjectContext] Gagal sync modal ke server:', err));
 
     return {
       success: true,
@@ -7802,8 +7844,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     setCompanyCapital(DEFAULT_COMPANY_CAPITAL);
+    safeLocalStorage.setItem(STORAGE_KEY_COMPANY_CAPITAL, JSON.stringify(DEFAULT_COMPANY_CAPITAL));
     broadcastLiveDataUpdate('COMPANY_CAPITAL', DEFAULT_COMPANY_CAPITAL);
-    saveSettingsToFirestore('company_capital', DEFAULT_COMPANY_CAPITAL);
+    saveSettingsToFirestore('company_capital', DEFAULT_COMPANY_CAPITAL).catch(() => {});
+
+    fetch('/api/storage/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyCapital: DEFAULT_COMPANY_CAPITAL }),
+    }).catch((err) => console.warn('[ProjectContext] Gagal reset modal ke server:', err));
+
     return {
       success: true,
       message: 'Pengaturan modal perusahaan berhasil direset ke standar default sistem.',
@@ -9953,9 +10003,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const newMilestone: RetailMilestone = {
       ...milestone,
-      id: generateRetailMilestoneId(projectId, milestone.termNumber || project.milestones.length + 1),
+      id: generateRetailMilestoneId(projectId, milestone.termNumber || (project.milestones?.length || 0) + 1),
       projectId,
-      termNumber: milestone.termNumber || project.milestones.length + 1,
+      termNumber: milestone.termNumber || (project.milestones?.length || 0) + 1,
       grossAmountIDR: gross,
       pricingType,
       dppAmountIDR: dpp,
@@ -10464,58 +10514,63 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let linkedTxId = data.transactionId;
     let linkedTaxId = data.taxObligationId;
 
-    if (data.status === 'PAID') {
-      const newTx: FinancialTransaction = {
-        id: generateTransactionId('trx-ovh', newId),
-        transactionNumber: generateNextTransactionNumber(transactions, 'TRX-OVH', data.paidDate || data.date),
-        type: 'EXPENSE',
-        category: 'OPERATIONAL_OFFICE',
-        amountIDR: data.amountIDR,
-        date: data.paidDate || data.date,
-        description: `[Overhead - ${data.category}] ${data.title} (${data.vendorOrMerchant})`,
-        clientOrVendorName: data.vendorOrMerchant,
-        paymentMethod: data.paymentChannelId || 'BANK_TRANSFER_BCA',
-        referenceNumber: data.referenceNumber || autoNumber,
-        status: 'CLEARED',
-        notes: `Pengeluaran kebutuhan operasional kantor: ${data.notes || '-'}`,
-        recordedBy: currentUser.name || 'Admin Officer',
+    const rawTxDate = data.paidDate || data.date;
+    const finalTxDate =
+      data.date && data.paidDate && data.date.slice(0, 4) !== data.paidDate.slice(0, 4)
+        ? data.date
+        : rawTxDate;
+
+    const txStatus: TransactionStatus = data.status === 'PAID' ? 'CLEARED' : 'PENDING';
+    const newTx: FinancialTransaction = {
+      id: generateTransactionId('trx-ovh', newId),
+      transactionNumber: generateNextTransactionNumber(transactions, 'TRX-OVH', finalTxDate),
+      type: 'EXPENSE',
+      category: 'OPERATIONAL_OFFICE',
+      amountIDR: data.amountIDR,
+      date: finalTxDate,
+      description: `[Overhead - ${data.category}] ${data.title} (${data.vendorOrMerchant})`,
+      clientOrVendorName: data.vendorOrMerchant,
+      paymentMethod: data.paymentChannelId || 'BANK_TRANSFER_BCA',
+      referenceNumber: data.referenceNumber || autoNumber,
+      status: txStatus,
+      notes: `Pengeluaran kebutuhan operasional kantor: ${data.notes || '-'}`,
+      recordedBy: currentUser.name || 'Admin Officer',
+      createdAt: now,
+    };
+    setTransactions((prev) => {
+      const updated = deduplicateTransactions([newTx, ...prev]);
+      safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
+      broadcastLiveDataUpdate('TRANSACTIONS', updated);
+      saveSettingsToFirestore('transactions', updated);
+      saveTransactionToFirestore(newTx);
+      return updated;
+    });
+    linkedTxId = newTx.id;
+
+    if (data.hasTax && taxAmount > 0) {
+      const newTax: TaxObligation = {
+        id: generateTaxObligationId(data.taxType || 'tax', newId),
+        taxType: data.taxType === 'PPH_23' ? 'PPH_23' : data.taxType === 'PPH_4_2' ? 'PPH_4_2' : 'PPN',
+        taxPeriod: data.date.slice(0, 7),
+        taxYear: dateObj.getFullYear(),
+        title: `PPh Potongan Overhead ${data.title} - ${data.vendorOrMerchant}`,
+        description: `PPh Potongan Overhead ${data.title} - ${data.vendorOrMerchant}`,
+        taxAmount: taxAmount,
+        paidAmount: 0,
+        remainingAmount: taxAmount,
+        dueDate: `${data.date.slice(0, 7)}-15`,
+        status: 'TERHUTANG',
         createdAt: now,
+        createdBy: currentUser.name || 'Finance Officer',
       };
-      setTransactions((prev) => {
-        const updated = deduplicateTransactions([newTx, ...prev]);
-        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(updated));
-        broadcastLiveDataUpdate('TRANSACTIONS', updated);
-        saveSettingsToFirestore('transactions', updated);
-        saveTransactionToFirestore(newTx);
+      setTaxObligations((prev) => {
+        const updated = deduplicateById([newTax, ...prev]);
+        safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
+        broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
+        saveSettingsToFirestore('tax_obligations', updated);
         return updated;
       });
-      linkedTxId = newTx.id;
-
-      if (data.hasTax && taxAmount > 0) {
-        const newTax: TaxObligation = {
-          id: generateTaxObligationId(data.taxType || 'tax', newId),
-          taxType: data.taxType === 'PPH_23' ? 'PPH_23' : data.taxType === 'PPH_4_2' ? 'PPH_4_2' : 'PPN',
-          taxPeriod: data.date.slice(0, 7),
-          taxYear: dateObj.getFullYear(),
-          title: `PPh Potongan Overhead ${data.title} - ${data.vendorOrMerchant}`,
-          description: `PPh Potongan Overhead ${data.title} - ${data.vendorOrMerchant}`,
-          taxAmount: taxAmount,
-          paidAmount: 0,
-          remainingAmount: taxAmount,
-          dueDate: `${data.date.slice(0, 7)}-15`,
-          status: 'TERHUTANG',
-          createdAt: now,
-          createdBy: currentUser.name || 'Finance Officer',
-        };
-        setTaxObligations((prev) => {
-          const updated = deduplicateById([newTax, ...prev]);
-          safeLocalStorage.setItem(STORAGE_KEY_TAX_OBLIGATIONS, JSON.stringify(updated));
-          broadcastLiveDataUpdate('TAX_OBLIGATIONS', updated);
-          saveSettingsToFirestore('tax_obligations', updated);
-          return updated;
-        });
-        linkedTaxId = newTax.id;
-      }
+      linkedTaxId = newTax.id;
     }
 
     const newExpense: OverheadExpense = {
@@ -10533,6 +10588,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setOverheadExpenses((prev) => {
       const updated = deduplicateById([newExpense, ...prev]);
+      safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(updated));
       broadcastLiveDataUpdate('OVERHEAD_EXPENSES', updated);
       saveOverheadExpenseToFirestore(newExpense);
       return updated;
@@ -10553,14 +10609,74 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!target) return { success: false, message: 'Data overhead tidak ditemukan.' };
 
     const now = new Date().toISOString();
+    const effectiveDate = updates.date || target.date;
+    const rawPaidDate = updates.paidDate !== undefined ? updates.paidDate : target.paidDate;
+    const effectivePaidDate = (rawPaidDate && effectiveDate && rawPaidDate.slice(0, 4) !== effectiveDate.slice(0, 4))
+      ? effectiveDate
+      : (rawPaidDate || effectiveDate);
+
     const updated: OverheadExpense = {
       ...target,
       ...updates,
+      paidDate: updates.status === 'PAID' ? effectivePaidDate : updates.paidDate,
       updatedAt: now,
     };
 
+    const txStatus: TransactionStatus = updated.status === 'PAID' ? 'CLEARED' : 'PENDING';
+
+    // Synchronize linked financial transaction
+    if (updated.transactionId) {
+      setTransactions((prev) => {
+        const list = prev.map((t) => {
+          if (t.id === updated.transactionId) {
+            return {
+              ...t,
+              amountIDR: updated.amountIDR,
+              date: effectivePaidDate || effectiveDate,
+              description: `[Overhead - ${updated.category}] ${updated.title} (${updated.vendorOrMerchant})`,
+              clientOrVendorName: updated.vendorOrMerchant,
+              paymentMethod: updated.paymentChannelId || t.paymentMethod,
+              status: txStatus,
+            };
+          }
+          return t;
+        });
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(list));
+        broadcastLiveDataUpdate('TRANSACTIONS', list);
+        saveSettingsToFirestore('transactions', list);
+        return list;
+      });
+    } else {
+      const newTx: FinancialTransaction = {
+        id: generateTransactionId('trx-ovh', updated.id),
+        transactionNumber: generateNextTransactionNumber(transactions, 'TRX-OVH', effectivePaidDate || effectiveDate),
+        type: 'EXPENSE',
+        category: 'OPERATIONAL_OFFICE',
+        amountIDR: updated.amountIDR,
+        date: effectivePaidDate || effectiveDate,
+        description: `[Overhead - ${updated.category}] ${updated.title} (${updated.vendorOrMerchant})`,
+        clientOrVendorName: updated.vendorOrMerchant,
+        paymentMethod: updated.paymentChannelId || 'BANK_TRANSFER_BCA',
+        referenceNumber: updated.referenceNumber || updated.overheadNumber,
+        status: txStatus,
+        notes: `Pengeluaran kebutuhan operasional kantor: ${updated.notes || '-'}`,
+        recordedBy: currentUser.name || 'Admin Officer',
+        createdAt: now,
+      };
+      updated.transactionId = newTx.id;
+      setTransactions((prev) => {
+        const list = deduplicateTransactions([newTx, ...prev]);
+        safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(list));
+        broadcastLiveDataUpdate('TRANSACTIONS', list);
+        saveSettingsToFirestore('transactions', list);
+        saveTransactionToFirestore(newTx);
+        return list;
+      });
+    }
+
     setOverheadExpenses((prev) => {
       const list = prev.map((e) => (e.id === id ? updated : e));
+      safeLocalStorage.setItem(STORAGE_KEY_OVERHEAD_EXPENSES, JSON.stringify(list));
       broadcastLiveDataUpdate('OVERHEAD_EXPENSES', list);
       saveOverheadExpenseToFirestore(updated);
       return list;
@@ -10670,7 +10786,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         );
 
         if (!existingTx) {
-          const dateObj = new Date(exp.paidDate || exp.date || new Date());
+          const rawTxDate = exp.paidDate || exp.date || new Date().toISOString().slice(0, 10);
+          const finalTxDate =
+            exp.date && exp.paidDate && exp.date.slice(0, 4) !== exp.paidDate.slice(0, 4)
+              ? exp.date
+              : rawTxDate;
+          const dateObj = new Date(finalTxDate);
           const yyyymm = `${dateObj.getFullYear()}${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
           const seq = Math.floor(100 + Math.random() * 900);
           const newTx: FinancialTransaction = {
@@ -10679,7 +10800,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             type: 'EXPENSE',
             category: 'OPERATIONAL_OFFICE',
             amountIDR: exp.amountIDR,
-            date: exp.paidDate || exp.date,
+            date: finalTxDate,
             description: `[Overhead - ${exp.category}] ${exp.title} (${exp.vendorOrMerchant})`,
             clientOrVendorName: exp.vendorOrMerchant,
             paymentMethod: exp.paymentChannelId || 'BANK_TRANSFER_BCA',
@@ -12245,7 +12366,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (p.id !== projectId) return p;
         const updatedProj = {
           ...p,
-          documents: deduplicateById([newDoc, ...p.documents]),
+          documents: deduplicateById([newDoc, ...(p.documents || [])]),
         };
         saveProjectToFirestore(updatedProj);
         return updatedProj;
@@ -12282,7 +12403,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const project = projects.find((p) => p.id === projectId);
     if (!project) return { success: false, error: 'Project not found' };
 
-    const doc = project.documents.find((d) => d.id === docId);
+    const doc = (project.documents || []).find((d) => d.id === docId);
     if (!doc) return { success: false, error: 'Document not found' };
 
     const token = getActiveAccessToken();
@@ -12352,7 +12473,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
         let targetDocName = 'Document';
-        const updatedDocs = p.documents.map((d) => {
+        const updatedDocs = (p.documents || []).map((d) => {
           if (d.id !== docId) return d;
           targetDocName = d.name;
           return {
@@ -12395,7 +12516,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
         let targetDocName = 'Document';
-        const updatedDocs = p.documents.map((d) => {
+        const updatedDocs = (p.documents || []).map((d) => {
           if (d.id !== docId) return d;
           targetDocName = updates.name || d.name;
           return {
@@ -12451,7 +12572,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setProjects((prev) => {
       const updated = prev.map((p) => {
         if (p.id !== projectId) return p;
-        const targetDoc = p.documents.find((d) => d.id === docId);
+        const targetDoc = (p.documents || []).find((d) => d.id === docId);
         const docName = targetDoc ? targetDoc.name : 'document';
         
         const newAct: ProjectActivity = {
@@ -12470,7 +12591,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         const updatedProj: ConsultingProject = {
           ...p,
-          documents: p.documents.filter((d) => d.id !== docId),
+          documents: (p.documents || []).filter((d) => d.id !== docId),
           activities: [newAct, ...(p.activities || [])],
         };
 
@@ -14298,6 +14419,42 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (mode === 'replace') {
+        // Ensure paid overheads have corresponding financial transactions in transactions
+        let txList = Array.isArray(data.transactions) ? [...data.transactions] : [];
+        if (Array.isArray(data.overheadExpenses)) {
+          const txIds = new Set(txList.map((t: any) => t.id));
+          const txRefs = new Set(txList.map((t: any) => t.referenceNumber).filter(Boolean));
+          data.overheadExpenses.forEach((exp: any) => {
+            if (exp && exp.status === 'PAID') {
+              const hasTx = (exp.transactionId && txIds.has(exp.transactionId)) ||
+                (exp.referenceNumber && txRefs.has(exp.referenceNumber)) ||
+                txList.some((t: any) => t.description && t.description.includes(exp.overheadNumber));
+              if (!hasTx) {
+                const txId = exp.transactionId || `trx-${exp.id}`;
+                const newTx: FinancialTransaction = {
+                  id: txId,
+                  transactionNumber: `TRX-${(exp.overheadNumber || exp.id).replace(/\//g, '-')}`,
+                  type: 'EXPENSE',
+                  category: 'OPERATIONAL_OFFICE',
+                  amountIDR: exp.amountIDR,
+                  date: exp.paidDate || exp.date || new Date().toISOString().slice(0, 10),
+                  description: `[Overhead - ${exp.category || 'Operasional'}] ${exp.title} (${exp.vendorOrMerchant || 'Vendor'})`,
+                  clientOrVendorName: exp.vendorOrMerchant || 'Vendor Operasional',
+                  paymentMethod: exp.paymentChannelId || 'BANK_TRANSFER_BCA',
+                  referenceNumber: exp.referenceNumber || exp.overheadNumber,
+                  status: 'CLEARED',
+                  notes: `Sinkronisasi restore kebutuhan operasional kantor: ${exp.title}`,
+                  recordedBy: exp.createdBy || 'Admin Officer',
+                  createdAt: exp.createdAt || new Date().toISOString(),
+                };
+                txList.push(newTx);
+                txIds.add(txId);
+                exp.transactionId = txId;
+              }
+            }
+          });
+        }
+
         if (Array.isArray(data.projects)) {
           setProjects(data.projects);
           safeLocalStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(data.projects));
@@ -14310,11 +14467,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           saveCollectionToIndexedDb(STORAGE_KEY_DISPOSITIONS, data.dispositions).catch(() => {});
           data.dispositions.forEach((d: any) => saveDispositionToFirestore(d).catch(() => {}));
         }
-        if (Array.isArray(data.transactions)) {
-          setTransactions(data.transactions);
-          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(data.transactions));
-          saveCollectionToIndexedDb(STORAGE_KEY_TRANSACTIONS, data.transactions).catch(() => {});
-          data.transactions.forEach((t: any) => saveTransactionToFirestore(t).catch(() => {}));
+        if (txList.length > 0 || Array.isArray(data.transactions)) {
+          setTransactions(txList);
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(txList));
+          saveCollectionToIndexedDb(STORAGE_KEY_TRANSACTIONS, txList).catch(() => {});
+          txList.forEach((t: any) => saveTransactionToFirestore(t).catch(() => {}));
         }
         if (Array.isArray(data.receivables)) {
           setReceivables(data.receivables);
@@ -14388,6 +14545,92 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           safeLocalStorage.setItem(STORAGE_KEY_COMPANY_LETTERHEAD, JSON.stringify(data.companyLetterhead));
           saveSettingsToFirestore('company_letterhead', data.companyLetterhead).catch(() => {});
         }
+        const sTypes = data.serviceTypes || data.consultingServices;
+        if (Array.isArray(sTypes) && sTypes.length > 0) {
+          setConsultingServices(sTypes);
+          safeLocalStorage.setItem(STORAGE_KEY_CONSULTING_SERVICES, JSON.stringify(sTypes));
+          saveSettingsToFirestore('consulting_services', sTypes).catch(() => {});
+        }
+        if (Array.isArray(data.documentTypes) && data.documentTypes.length > 0) {
+          setDocumentTypes(data.documentTypes);
+          safeLocalStorage.setItem(STORAGE_KEY_DOCUMENT_TYPES, JSON.stringify(data.documentTypes));
+          saveSettingsToFirestore('document_types', data.documentTypes).catch(() => {});
+        }
+        if (Array.isArray(data.documentCategories) && data.documentCategories.length > 0) {
+          setDocumentCategories(data.documentCategories);
+          safeLocalStorage.setItem(STORAGE_KEY_DOCUMENT_CATEGORIES, JSON.stringify(data.documentCategories));
+          saveSettingsToFirestore('document_categories', data.documentCategories).catch(() => {});
+        }
+        if (Array.isArray(data.transactionCategories) && data.transactionCategories.length > 0) {
+          setTransactionCategories(data.transactionCategories);
+          safeLocalStorage.setItem(STORAGE_KEY_TRANSACTION_CATEGORIES, JSON.stringify(data.transactionCategories));
+          saveSettingsToFirestore('transaction_categories', data.transactionCategories).catch(() => {});
+        }
+        if (Array.isArray(data.paymentChannels) && data.paymentChannels.length > 0) {
+          setPaymentChannels(data.paymentChannels);
+          safeLocalStorage.setItem(STORAGE_KEY_PAYMENT_CHANNELS, JSON.stringify(data.paymentChannels));
+          saveSettingsToFirestore('payment_channels', data.paymentChannels).catch(() => {});
+        }
+        if (Array.isArray(data.institutionTypes) && data.institutionTypes.length > 0) {
+          setInstitutionTypes(data.institutionTypes);
+          safeLocalStorage.setItem(STORAGE_KEY_INSTITUTION_TYPES, JSON.stringify(data.institutionTypes));
+          saveSettingsToFirestore('institution_types', data.institutionTypes).catch(() => {});
+        }
+        if (Array.isArray(data.termDistributionSchemes) && data.termDistributionSchemes.length > 0) {
+          setTermDistributionSchemes(data.termDistributionSchemes);
+          safeLocalStorage.setItem(STORAGE_KEY_TERM_DISTRIBUTION_SCHEMES, JSON.stringify(data.termDistributionSchemes));
+          saveSettingsToFirestore('term_distribution_schemes', data.termDistributionSchemes).catch(() => {});
+        }
+        if (data.roleDefinitions && typeof data.roleDefinitions === 'object') {
+          setRoleDefinitions(data.roleDefinitions);
+          safeLocalStorage.setItem(STORAGE_KEY_ROLE_DEFINITIONS, JSON.stringify(data.roleDefinitions));
+          saveSettingsToFirestore('role_definitions', data.roleDefinitions).catch(() => {});
+        }
+        if (Array.isArray(data.assignedByOptions) && data.assignedByOptions.length > 0) {
+          setAssignedByOptions(data.assignedByOptions);
+          safeLocalStorage.setItem(STORAGE_KEY_ASSIGNED_BY_OPTIONS, JSON.stringify(data.assignedByOptions));
+        }
+
+        // Immediate durable server-side sync & backup file write
+        const fullPayload = {
+          projects: data.projects || [],
+          dispositions: data.dispositions || [],
+          transactions: txList,
+          receivables: data.receivables || [],
+          taxObligations: data.taxObligations || [],
+          governmentProjects: data.governmentProjects || [],
+          retailProjects: data.retailProjects || [],
+          overheadExpenses: data.overheadExpenses || [],
+          officeRentContracts: data.officeRentContracts || [],
+          bankLoans: data.bankLoans || [],
+          payroll: payrollArr || [],
+          payrollPayments: payrollArr || [],
+          teamMembers: data.teamMembers || [],
+          serviceTypes: sTypes || consultingServices,
+          documentTypes: data.documentTypes || documentTypes,
+          documentCategories: data.documentCategories || documentCategories,
+          transactionCategories: data.transactionCategories || transactionCategories,
+          paymentChannels: data.paymentChannels || paymentChannels,
+          companyCapital: data.companyCapital || companyCapital,
+          salaryConfigs: salaryArr || employeeSalaryConfigs,
+          institutionTypes: data.institutionTypes || institutionTypes,
+          termDistributionSchemes: data.termDistributionSchemes || termDistributionSchemes,
+          companyLetterhead: data.companyLetterhead || companyLetterhead,
+          roleDefinitions: data.roleDefinitions || roleDefinitions,
+          assignedByOptions: data.assignedByOptions || assignedByOptions,
+        };
+
+        fetch('/api/storage/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: fullPayload }),
+        }).catch((err) => console.warn('[ProjectContext] Server sync error during restore:', err));
+
+        fetch('/api/mysql/sync/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fullPayload),
+        }).catch(() => {});
       } else {
         // Merge mode
         if (Array.isArray(data.projects)) {

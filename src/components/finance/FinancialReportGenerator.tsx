@@ -149,6 +149,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     payrollRecords,
     syncAllPayrollToFinance,
     updateTransaction,
+    overheadExpenses,
   } = useProjects();
 
   // Active Report Type
@@ -568,7 +569,52 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       }
 
       return true;
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    });
+
+    // Reconcile paid overhead expenses that don't have a transaction in transactions
+    const existingTxIds = new Set(list.map((t) => t.id));
+    const existingRefNumbers = new Set(list.map((t) => t.referenceNumber).filter(Boolean));
+    const existingDescriptions = list.map((t) => t.description || '');
+
+    (overheadExpenses || []).forEach((ovh) => {
+      const ovhDate = ovh.paidDate || ovh.date;
+      if (!ovhDate || ovhDate < dateBounds.start || ovhDate > dateBounds.end) return;
+
+      const ovhTxStatus = ovh.status === 'PAID' ? 'CLEARED' : 'PENDING';
+      if (statusFilter === 'CLEARED_ONLY' && ovhTxStatus !== 'CLEARED') return;
+      if (statusFilter === 'PENDING_OVERDUE' && ovhTxStatus === 'CLEARED') return;
+      if (categoryFilter !== 'ALL' && categoryFilter !== 'OPERATIONAL_OFFICE') return;
+
+      const alreadyInTx =
+        (ovh.transactionId && existingTxIds.has(ovh.transactionId)) ||
+        (ovh.referenceNumber && existingRefNumbers.has(ovh.referenceNumber)) ||
+        existingDescriptions.some(
+          (d) =>
+            d.includes(ovh.overheadNumber) ||
+            (ovh.title && d.includes(ovh.title) && d.includes(ovh.vendorOrMerchant))
+        );
+
+      if (!alreadyInTx) {
+        list.push({
+          id: ovh.transactionId || `synthetic-ovh-${ovh.id}`,
+          transactionNumber: `TRX-${(ovh.overheadNumber || ovh.id).replace(/\//g, '-')}`,
+          type: 'EXPENSE',
+          category: 'OPERATIONAL_OFFICE',
+          amountIDR: ovh.amountIDR,
+          date: ovhDate,
+          description: `[Overhead - ${ovh.category}] ${ovh.title} (${ovh.vendorOrMerchant})`,
+          clientOrVendorName: ovh.vendorOrMerchant,
+          paymentMethod: ovh.paymentChannelId || 'BANK_TRANSFER_BCA',
+          referenceNumber: ovh.referenceNumber || ovh.overheadNumber,
+          status: ovhTxStatus,
+          notes: `Rekonsiliasi otomatis operasional kantor: ${ovh.notes || '-'}`,
+          recordedBy: ovh.createdBy || 'Admin Officer',
+          createdAt: ovh.createdAt || new Date().toISOString(),
+        });
+      }
+    });
+
+    list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const seenIds = new Set<string>();
     return list.filter((t) => {
@@ -578,7 +624,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       seenIds.add(normalizedId);
       return true;
     });
-  }, [transactions, dateBounds, statusFilter, selectedProjectId, categoryFilter, searchQuery]);
+  }, [transactions, overheadExpenses, dateBounds, statusFilter, selectedProjectId, categoryFilter, searchQuery]);
 
   // Transactions associated with selected drilldown bank channel
   const drilldownTransactions = useMemo(() => {
@@ -1031,6 +1077,45 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       return t.date <= dateBounds.end;
     });
 
+    // Reconcile paid overhead expenses into cumulativeTransactions
+    const cumTxIds = new Set(cumulativeTransactions.map((t) => t.id));
+    const cumTxRefs = new Set(cumulativeTransactions.map((t) => t.referenceNumber).filter(Boolean));
+    const cumDescriptions = cumulativeTransactions.map((t) => t.description || '');
+
+    (overheadExpenses || []).forEach((ovh) => {
+      const ovhDate = ovh.paidDate || ovh.date;
+      if (!ovhDate || ovhDate > dateBounds.end) return;
+      if (selectedProjectId !== 'ALL') return;
+
+      const alreadyIn =
+        (ovh.transactionId && cumTxIds.has(ovh.transactionId)) ||
+        (ovh.referenceNumber && cumTxRefs.has(ovh.referenceNumber)) ||
+        cumDescriptions.some(
+          (d) =>
+            d.includes(ovh.overheadNumber) ||
+            (ovh.title && d.includes(ovh.title) && d.includes(ovh.vendorOrMerchant))
+        );
+
+      if (!alreadyIn) {
+        cumulativeTransactions.push({
+          id: ovh.transactionId || `synthetic-ovh-${ovh.id}`,
+          transactionNumber: `TRX-${(ovh.overheadNumber || ovh.id).replace(/\//g, '-')}`,
+          type: 'EXPENSE',
+          category: 'OPERATIONAL_OFFICE',
+          amountIDR: ovh.amountIDR,
+          date: ovhDate,
+          description: `[Overhead - ${ovh.category}] ${ovh.title} (${ovh.vendorOrMerchant})`,
+          clientOrVendorName: ovh.vendorOrMerchant,
+          paymentMethod: ovh.paymentChannelId || 'BANK_TRANSFER_BCA',
+          referenceNumber: ovh.referenceNumber || ovh.overheadNumber,
+          status: ovh.status === 'PAID' ? 'CLEARED' : 'PENDING',
+          notes: `Rekonsiliasi operasional: ${ovh.notes || '-'}`,
+          recordedBy: ovh.createdBy || 'Admin Officer',
+          createdAt: ovh.createdAt || new Date().toISOString(),
+        });
+      }
+    });
+
     // Prior transactions before report period start date for Retained Earnings accumulation
     const priorTransactions = cumulativeTransactions.filter((t) => t.date < dateBounds.start);
 
@@ -1056,10 +1141,13 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
     const totalPaidAndAdditional = paidInCapital + additionalCapital;
 
     // Retained Earnings prior to current report period
-    const retainedEarningsPrior =
-      periodFilter === 'ALL'
-        ? retainedEarningsOpening
-        : retainedEarningsOpening + priorPeriodsNetProfit;
+    // If viewing all time (selectedYear === 'ALL' and periodFilter === 'ALL'), opening retained earnings applies.
+    // If viewing a specific year or period (e.g. 2023, 2024, etc.), prior retained earnings is opening + prior periods' net profit.
+    // For 2023 (founding year / first fiscal year), priorPeriodsNetProfit is naturally 0.
+    const isCumulativeAllTime = selectedYear === 'ALL' && periodFilter === 'ALL';
+    const retainedEarningsPrior = isCumulativeAllTime
+      ? (retainedEarningsOpening || 0)
+      : ((retainedEarningsOpening || 0) + priorPeriodsNetProfit);
 
     // Equity according to Corporate Accounting Standards:
     // Total Equity = (Paid-in Capital + Additional Capital) + Prior Retained Earnings + Current Net Profit/Loss
@@ -1667,7 +1755,7 @@ export const FinancialReportGenerator: React.FC<FinancialReportGeneratorProps> =
       rows.push(['3. EKUITAS (MODAL)', 'Modal Ditempatkan & Disetor Penuh', 'Paid-in Capital Pendiri', String(metrics.paidInCapital), 'Paid-in']);
       rows.push(['3. EKUITAS (MODAL)', 'Modal Tambahan (Additional Paid-in Capital / Agio)', 'Setoran Tambahan Modal', String(metrics.additionalCapital), 'Additional']);
       rows.push(['3. EKUITAS (MODAL)', 'Total Modal Disetor & Tambahan', 'Subtotal Modal Disetor', String(metrics.totalPaidAndAdditional), 'Capital Subtotal']);
-      rows.push(['3. EKUITAS (MODAL)', 'Saldo Laba Ditahan (Retained Earnings)', 'Saldo Laba Periode Lalu', String(metrics.retainedEarningsOpening), 'Retained']);
+      rows.push(['3. EKUITAS (MODAL)', 'Saldo Laba Ditahan (Retained Earnings)', 'Saldo Laba Periode Lalu', String(metrics.retainedEarningsPrior), 'Retained']);
       rows.push(['3. EKUITAS (MODAL)', 'Laba Bersih Periode Berjalan', 'Current Net Income YTD', String(metrics.netProfit), 'Current Profit']);
       rows.push(['3. EKUITAS (MODAL)', 'TOTAL EKUITAS BERSIH', 'Aset - Liabilitas', String(metrics.totalEquity), 'Net Equity']);
       rows.push(['3. EKUITAS (MODAL)', 'Validasi Persamaan Dasar Akuntansi', 'Aset = Liabilitas + Ekuitas', `Aset: ${formatIDR(metrics.totalAssets)} = Pasiva: ${formatIDR(metrics.totalLiabilities + metrics.totalEquity)}`, 'BALANCED']);
@@ -3710,7 +3798,7 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     </tr>
                     <tr className="bg-slate-50/50 border-b border-slate-200">
                       <td className="py-2.5 px-4 text-slate-700 font-medium pl-6">
-                        4. Laba / (Rugi) Bersih Periode Berjalan (Current Net Profit YTD)
+                        4. Laba / (Rugi) Bersih Periode Berjalan ({selectedYear !== 'ALL' ? `Tahun ${selectedYear}` : 'Kumulatif'})
                       </td>
                       <td className={`py-2.5 px-4 text-right font-mono font-semibold ${
                         metrics.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -5053,12 +5141,12 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                       3. Saldo Laba Ditahan Periode Sebelumnya (Retained Earnings)
                     </td>
                     <td className="py-2.5 px-4 text-right font-mono font-semibold text-slate-700">
-                      {formatIDR(metrics.retainedEarningsOpening)}
+                      {formatIDR(metrics.retainedEarningsPrior)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50/50 border-b border-slate-200">
                     <td className="py-2.5 px-4 text-slate-700 font-medium">
-                      4. Laba / (Rugi) Bersih Periode Berjalan (Current Net Profit YTD)
+                      4. Laba / (Rugi) Bersih Periode Berjalan ({selectedYear !== 'ALL' ? `Tahun ${selectedYear}` : 'Kumulatif'})
                     </td>
                     <td className={`py-2.5 px-4 text-right font-mono font-semibold ${
                       metrics.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -5322,10 +5410,10 @@ Sistem: GAP.CRM Financial Comprehensive Reporting Engine (Audit Ready)`;
                     </tr>
                     <tr className="bg-white">
                       <td className="py-2 px-4 pl-6 text-slate-700">3. Saldo Laba Ditahan (Retained Earnings)</td>
-                      <td className="py-2 px-4 text-right font-mono font-semibold text-slate-700">{formatIDR(metrics.retainedEarningsOpening)}</td>
+                      <td className="py-2 px-4 text-right font-mono font-semibold text-slate-700">{formatIDR(metrics.retainedEarningsPrior)}</td>
                     </tr>
                     <tr className="bg-slate-50/50">
-                      <td className="py-2 px-4 pl-6 text-slate-700">4. Laba / (Rugi) Bersih Periode Berjalan</td>
+                      <td className="py-2 px-4 pl-6 text-slate-700">4. Laba / (Rugi) Bersih Periode Berjalan ({selectedYear !== 'ALL' ? `Tahun ${selectedYear}` : 'Kumulatif'})</td>
                       <td className={`py-2 px-4 text-right font-mono font-semibold ${
                         metrics.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
                       }`}>

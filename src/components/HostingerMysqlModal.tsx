@@ -252,21 +252,34 @@ export const HostingerMysqlModal: React.FC<HostingerMysqlModalProps> = ({ isOpen
     }
   };
 
-  // Helper for safe JSON fetching against SPA fallback
-  const safeFetchJson = async (url: string, options?: RequestInit): Promise<any> => {
-    const res = await fetch(url, options);
-    const contentType = res.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      const text = await res.text();
-      const isHtml = text.trim().startsWith('<!') || text.includes('<html');
-      if (isHtml) {
-        throw new Error(
-          'Server mengembalikan halaman HTML (<!doctype...>), bukan endpoint JSON. Backend Node.js Express belum aktif di hosting ini, atau route /api dialihkan ke index.html.'
-        );
+  // Helper for safe JSON fetching against SPA fallback with auto-retry on temporary restart
+  const safeFetchJson = async (url: string, options?: RequestInit, retryCount = 0): Promise<any> => {
+    try {
+      const res = await fetch(url, options);
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await res.text();
+        const isHtml = text.trim().startsWith('<!') || text.includes('<html');
+        if (isHtml) {
+          // If server was just restarting, give it 1.2 seconds and retry once
+          if (retryCount === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+            return await safeFetchJson(url, options, 1);
+          }
+          throw new Error(
+            'Server mengembalikan halaman HTML (<!doctype...>), bukan endpoint JSON. Penyebab: (1) Server backend Express sedang restart/cold-start—silakan coba lagi dalam beberapa detik, atau (2) Jika aplikasi di-deploy di web hosting cPanel/hPanel, fitur Node.js App belum dijalankan sehingga route /api dialihkan ke index.html statis.'
+          );
+        }
+        throw new Error(`Respon server bukan format JSON (HTTP ${res.status})`);
       }
-      throw new Error(`Respon server bukan format JSON (HTTP ${res.status})`);
+      return await res.json();
+    } catch (err: any) {
+      if (retryCount === 0 && (err.message?.includes('<!doctype') || err.message?.includes('Failed to fetch'))) {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        return await safeFetchJson(url, options, 1);
+      }
+      throw err;
     }
-    return await res.json();
   };
 
   // Fetch status on open
